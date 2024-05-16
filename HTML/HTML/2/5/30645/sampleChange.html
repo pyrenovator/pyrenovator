@@ -1,0 +1,27 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            surr2 = ratios.clamp(1 - self.eps_clip, 1 + self.eps_clip) * advantages
+            policy_loss = - torch.min(surr1, surr2) - self.beta_s * entropy
+
+            value_loss = 0.5 * <a id="change">F.mse_loss(</a>values.flatten(), rewards<a id="change">)</a>
+
+            update_network_(policy_loss, self.opt_actor)
+            update_network_(value_loss, self.opt_critic)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        &#47&#47 the proposed auxiliary phase training
+        &#47&#47 where the value is distilled into the policy network, while making sure the policy network does not change the action predictions (kl div loss)
+        <a id="change">for _</a> in range(self.epochs_aux)<a id="change">:
+            </a>for states, actions, old_action_logprobs, rewards, old_values in dl:
+                action_probs, policy_values = self.actor(states)
+                action_logprobs = action_probs.log()
+
+                &#47&#47 policy network loss copmoses of both the kl div loss as well as the auxiliary loss
+                aux_loss = 0.5 * F.mse_loss(policy_values.flatten(), rewards)
+                loss_kl = F.kl_div(action_logprobs, old_action_logprobs, log_target = True, reduction = &quotbatchmean&quot)
+                policy_loss<a id="change"> = </a>aux_loss<a id="change"> + </a>loss_kl
+
+                update_network_(policy_loss, self.opt_actor)
+</code></pre>

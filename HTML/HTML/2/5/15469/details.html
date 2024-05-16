@@ -1,0 +1,141 @@
+<html><h3>Pattern ID :15469
+</h3><img src='52544327.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                index = indices[start:]
+                start = buffer_size
+            batch_rnn = (dones[index],) if self.chunk_len else None
+            yield <a id="change">(arr[index] for arr in (observations, actions, advantages, log_probs_old, returns))</a>, batch_rnn
+
+    def clear(self):
+        self.step = 0</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    def generator(self, batch_size: int, ks):
+        env_num = self.observations_next.shape[0]
+        data = <a id="change">{
+            </a>&quotobservations&quot: self.observations,
+            &quotactions&quot: self.actions,
+            &quotadvantages&quot: self.advantages,
+            &quotlog_probs_old&quot: self.log_probs_old,
+            &quotreturns&quot: self.returns,
+            &quotdones&quot: self.dones<a id="change">
+        }</a>
+        if self.chunk_len:
+            assert self.step % self.chunk_len == 0
+            assert batch_size % self.chunk_len == 0
+            chunk_size = self.step // self.chunk_len
+            buffer_size = chunk_size * env_num
+            batch_size = batch_size // self.chunk_len
+
+            &#47&#47 process RNN chunk
+            def to_rnn_chunk(arr):
+                &#47&#47 arr&quots shape is (chunk_size * chunk_len, env_num, ...)
+                &#47&#47 because chunk_size * chunk_len = step_num
+                &#47&#47 reshape to (env_num, chunk_size * chunk_len, ...)
+                arr = np.stack(arr, axis=1)
+                &#47&#47 reshape to (env_num, chunk_size, chunk_len, ...)
+                &#47&#47 len(arr.shape) may more than 2, use * operator
+                arr = arr.reshape((env_num, chunk_size, self.chunk_len, *arr.shape[2:]))
+                &#47&#47 reshape to (batch_size, chunk_len, ...)
+                &#47&#47 because batch_size = env_num * chunk_size
+                arr = np.concatenate(arr)
+                return arr
+
+            batch = {k: to_rnn_chunk(data[k]) for k in ks}
+        else:
+            buffer_size = self.step * env_num
+            batch<a id="change"> = </a>{key: np.concatenate(data[key]) for key in ks}
+
+        indices = np.arange(buffer_size)
+        np.random.shuffle(indices)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 7</div><BR><div id='size'>Non-data size: 5</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/jjccero/pbrl/commit/da918b32e29d9a6702c4d8698ea6afcce1a37d01#diff-d690f15bb7618e342887276af432ec05e01259a5e12a13ef0ff3f5ddf6fce609L38' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 52544327</div><div id='project'> Project Name: jjccero/pbrl</div><div id='commit'> Commit Name: da918b32e29d9a6702c4d8698ea6afcce1a37d01</div><div id='time'> Time: 2021-12-04</div><div id='author'> Author: 1127986703@qq.com</div><div id='file'> File Name: pbrl/algorithms/ppo/buffer.py</div><div id='m_class'> M Class Name: PGBuffer</div><div id='n_method'> N Class Name: PGBuffer</div><div id='m_method'> M Method Name: generator(3)</div><div id='n_method'> N Method Name: generator(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: pbrl/algorithms/ppo/buffer.py</div><div id='n_file'> N File Name: pbrl/algorithms/ppo/buffer.py</div><div id='m_start'> M Start Line: 61</div><div id='m_end'> M End Line: 84</div><div id='n_start'> N Start Line: 38</div><div id='n_end'> N End Line: 85</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    def to_split_dict(self):
+        Returns a list of SplitInfo protos that we have.
+        &#47&#47 Return the SplitInfo, sorted by name
+        return sorted(<a id="change">(s for s in self.values())</a>, key=lambda s: s.name)
+
+    def copy(self):
+        return SplitDict.from_split_dict(self.to_split_dict(), self.dataset_name)</code></pre><h3>After Change</h3><pre><code class='java'>
+    def to_split_dict(self):
+        Returns a list of SplitInfo protos that we have.
+        &#47&#47 Return the SplitInfo, sorted by name
+        out<a id="change"> = </a><a id="change">[]</a>
+        for split_name, split_info in sorted(self.items()):
+            split_info = copy.deepcopy(split_info)
+            split_info.name = split_name
+            out.append(split_info)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/huggingface/datasets/commit/67e65c90e9490810b89ee140da11fdd13c356c9c#diff-198ba4fdf2f94cb3e1aba8a0170a43b08d4ab5636d682374321c5a383a8be24dL559' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 52544339</div><div id='project'> Project Name: huggingface/datasets</div><div id='commit'> Commit Name: 67e65c90e9490810b89ee140da11fdd13c356c9c</div><div id='time'> Time: 2022-10-03</div><div id='author'> Author: 42851186+lhoestq@users.noreply.github.com</div><div id='file'> File Name: src/datasets/splits.py</div><div id='m_class'> M Class Name: SplitDict</div><div id='n_method'> N Class Name: SplitDict</div><div id='m_method'> M Method Name: to_split_dict(1)</div><div id='n_method'> N Method Name: to_split_dict(1)</div><div id='m_parent_class'> M Parent Class: dict</div><div id='n_parent_class'> N Parent Class: dict</div><div id='m_file'> M File Name: src/datasets/splits.py</div><div id='n_file'> N File Name: src/datasets/splits.py</div><div id='m_start'> M Start Line: 562</div><div id='m_end'> M End Line: 562</div><div id='n_start'> N Start Line: 571</div><div id='n_end'> N End Line: 576</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                if first_stage:
+                    first_stage = False
+                    self.memory_context.end_batch(b_ix)
+        return tuple(<a id="change">x</a>[:len(batch_indices)] <a id="change">for</a> <a id="change">x</a> in args)
+
+    def __next__(self):
+        result = self.output_queue.get()</code></pre><h3>After Change</h3><pre><code class='java'>
+                if cuda_event:
+                    cuda_event.wait()
+
+            args<a id="change"> = </a><a id="change">{
+                </a>&quotbatch_indices&quot: batch_indices,
+                &quotstorage_state&quot: self.storage_state,
+                &quotmetadata&quot: self.metadata,
+                **{
+                    f&quotmemory_{k}&quot: None if v is None else v[b_ix][:len(batch_indices)]
+                    for (k, v) in self.memory_allocations[&quotoperation&quot].items()
+                },
+                **{
+                    f&quotshared_memory_{k}&quot: None if v is None else v[b_ix] for (k, v) in self.memory_allocations[&quotshared&quot].items()
+                }<a id="change">
+            }</a>
+
+            for stage_code, define_outputs in code:
+                results = stage_code(**args)
+                for node_id, result in zip(define_outputs, results):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/libffcv/ffcv/commit/f8baf227d1243d4207c082d8ea11b89b5a73da32#diff-d1c1d17dd7f942f4223cf450209bcd6a3979e50b67e9c881848b09da0845f7ffL110' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 52544341</div><div id='project'> Project Name: libffcv/ffcv</div><div id='commit'> Commit Name: f8baf227d1243d4207c082d8ea11b89b5a73da32</div><div id='time'> Time: 2022-02-08</div><div id='author'> Author: leclerc@mit.edu</div><div id='file'> File Name: ffcv/loader/epoch_iterator.py</div><div id='m_class'> M Class Name: EpochIterator</div><div id='n_method'> N Class Name: EpochIterator</div><div id='m_method'> M Method Name: run_pipeline(5)</div><div id='n_method'> N Method Name: run_pipeline(5)</div><div id='m_parent_class'> M Parent Class: Thread</div><div id='n_parent_class'> N Parent Class: Thread</div><div id='m_file'> M File Name: ffcv/loader/epoch_iterator.py</div><div id='n_file'> N File Name: ffcv/loader/epoch_iterator.py</div><div id='m_start'> M Start Line: 113</div><div id='m_end'> M End Line: 142</div><div id='n_start'> N Start Line: 111</div><div id='n_end'> N End Line: 140</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        return loss
+
+    def summarize(self, stats, write=False):
+        loss = sum(<a id="change">stat</a>[&quotloss&quot] <a id="change">for</a> <a id="change">stat</a> in stats)
+        summary = {&quotloss&quot: float(loss / len(stats))}
+
+        if &quotwer&quot in stats[0]:</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 Accumulate
+        accumulator = {"loss": 0.}
+        if "wer" in stats[0]:
+            accumulator["wer"]<a id="change"> = </a><a id="change">[]</a>
+        for stat in stats:
+            for stat_type in stat:
+                accumulator[stat_type] += stat[stat_type]
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/speechbrain/speechbrain/commit/5d8525c38df3ce9b2af60b579685ff3230dd8d7e#diff-cc729d9ec20925028da905dbc287a98ba5a5d665dae4d283ef71f0b47e44741aL46' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 52544342</div><div id='project'> Project Name: speechbrain/speechbrain</div><div id='commit'> Commit Name: 5d8525c38df3ce9b2af60b579685ff3230dd8d7e</div><div id='time'> Time: 2020-04-23</div><div id='author'> Author: plantinga.peter@gmail.com</div><div id='file'> File Name: recipes/ASR_CTC/TIMIT/VGG2_BLSTM_MLP/experiment.py</div><div id='m_class'> M Class Name: ASR</div><div id='n_method'> N Class Name: ASR</div><div id='m_method'> M Method Name: summarize(3)</div><div id='n_method'> N Method Name: summarize(3)</div><div id='m_parent_class'> M Parent Class: Brain</div><div id='n_parent_class'> N Parent Class: Brain</div><div id='m_file'> M File Name: recipes/ASR_CTC/TIMIT/VGG2_BLSTM_MLP/experiment.py</div><div id='n_file'> N File Name: recipes/ASR_CTC/TIMIT/VGG2_BLSTM_MLP/experiment.py</div><div id='m_start'> M Start Line: 47</div><div id='m_end'> M End Line: 57</div><div id='n_start'> N Start Line: 49</div><div id='n_end'> N End Line: 66</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+        &#47&#47 loss and stats
+        loss = sum(out["loss"] for out in outs) / self.num_crops
+        acc1 = sum(<a id="change">out</a>["acc1"] <a id="change">for</a> <a id="change">out</a> in outs) / self.num_crops
+        acc5 = sum(out["acc5"] for out in outs) / self.num_crops
+
+        if self.multicrop:</code></pre><h3>After Change</h3><pre><code class='java'>
+        outs["acc1"] = sum(outs["acc1"]) / self.num_crops
+        outs["acc5"] = sum(outs["acc5"]) / self.num_crops
+
+        metrics<a id="change"> = </a><a id="change">{
+            </a>"train_class_loss": outs["loss"],
+            "train_acc1": outs["acc1"],
+            "train_acc5": outs["acc5"]<a id="change">,
+        }</a>
+
+        self.log_dict(metrics, on_epoch=True, sync_dist=True)
+
+        return outs</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/vturrisi/contrastive-learning/commit/12f8477aa7501dd146595f66b36b10a324bffeb0#diff-bf0f79abb0e767723150e5fe64a4a5935492d2fcf2eb222cfe5f8c901bcd11b0L344' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 52544333</div><div id='project'> Project Name: vturrisi/contrastive-learning</div><div id='commit'> Commit Name: 12f8477aa7501dd146595f66b36b10a324bffeb0</div><div id='time'> Time: 2021-08-16</div><div id='author'> Author: vt.turrisi@gmail.com</div><div id='file'> File Name: solo/methods/base.py</div><div id='m_class'> M Class Name: BaseModel</div><div id='n_method'> N Class Name: BaseModel</div><div id='m_method'> M Method Name: training_step(3)</div><div id='n_method'> N Method Name: training_step(3)</div><div id='m_parent_class'> M Parent Class: pl.LightningModule</div><div id='n_parent_class'> N Parent Class: pl.LightningModule</div><div id='m_file'> M File Name: solo/methods/base.py</div><div id='n_file'> N File Name: solo/methods/base.py</div><div id='m_start'> M Start Line: 364</div><div id='m_end'> M End Line: 385</div><div id='n_start'> N Start Line: 364</div><div id='n_end'> N End Line: 383</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    def _parse_items(self):
+        items = []
+        for p in sorted(<a id="change">p</a> <a id="change">for</a> <a id="change">p</a> in
+                glob(self._anno_dir + &quot/**/*.png&quot, recursive=True)):
+            item_id = osp.splitext(osp.relpath(p, self._anno_dir))[0]
+            items.append(DatasetItem(id=item_id, subset=self._subset,</code></pre><h3>After Change</h3><pre><code class='java'>
+            images = { osp.splitext(osp.relpath(p, image_dir))[0]: p
+                for p in find_images(image_dir, recursive=True) }
+        else:
+            images<a id="change"> = </a><a id="change">{}</a>
+
+        for p in sorted(iglob(self._anno_dir + &quot/**/*.png&quot, recursive=True)):
+            item_id = osp.splitext(osp.relpath(p, self._anno_dir))[0]
+            items.append(DatasetItem(id=item_id, subset=self._subset,</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/openvinotoolkit/datumaro/commit/053e9cdc72e099a2b006bc8dbe3e4a699c922c4a#diff-b15f1d600bd105ee7b9720168b88a2be25a4e00b8540e34ea819cce8d1f809a3L60' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 52544318</div><div id='project'> Project Name: openvinotoolkit/datumaro</div><div id='commit'> Commit Name: 053e9cdc72e099a2b006bc8dbe3e4a699c922c4a</div><div id='time'> Time: 2021-03-18</div><div id='author'> Author: maxim.zhiltsov@intel.com</div><div id='file'> File Name: datumaro/plugins/mots_format.py</div><div id='m_class'> M Class Name: MotsPngExtractor</div><div id='n_method'> N Class Name: MotsPngExtractor</div><div id='m_method'> M Method Name: _parse_items(1)</div><div id='n_method'> N Method Name: _parse_items(1)</div><div id='m_parent_class'> M Parent Class: SourceExtractor</div><div id='n_parent_class'> N Parent Class: SourceExtractor</div><div id='m_file'> M File Name: datumaro/plugins/mots_format.py</div><div id='n_file'> N File Name: datumaro/plugins/mots_format.py</div><div id='m_start'> M Start Line: 62</div><div id='m_end'> M End Line: 63</div><div id='n_start'> N Start Line: 63</div><div id='n_end'> N End Line: 70</div><BR>

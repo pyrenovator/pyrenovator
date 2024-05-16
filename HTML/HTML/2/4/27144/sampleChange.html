@@ -1,0 +1,19 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            w_head_q = self.transpose_for_scores(mixed_query_layer)  &#47&#47 [btz, n_head, q_len, d_head]
+            w_head_k = self.transpose_for_scores(mixed_key_layer)  &#47&#47 [btz, n_head, k_len, d_head]
+            w_head_v = self.transpose_for_scores(mixed_value_layer)  &#47&#47 [btz, n_head, k_len, d_head]
+            <a id="change">if </a>hasattr(self, &quotseg_embed&quot):
+                w_head_s<a id="change"> = </a>self.seg_embed(seg_mat)  &#47&#47 [btz, q_len, klen, hdsz]
+                w_head_s = w_head_s.reshape(*w_head_s.shape[:3], self.num_attention_heads, self.attention_head_size)
+
+            r_head_k = self.r(r)  &#47&#47 [hdsz, nhead*headsize] = [r_len, 1, nhead*headsize]</code></pre><h3>After Change</h3><pre><code class='java'>
+                &#47&#47 rs_head_q = w_head_q + self.r_s_bias.unsqueeze(1)
+                &#47&#47 EF = torch.einsum(&quotbnid,bijnd-&gt;bnij&quot, (rs_head_q, w_head_s))  &#47&#47 [btz, n_head, q_len, k_len]
+                
+                seg_mat<a id="change"> = </a><a id="change">F.one_hot(</a>seg_mat, 2<a id="change">)</a>.float()
+                EF = torch.einsum("bnid,snd-&gt;ibns", w_head_q + self.r_s_bias.unsqueeze(1), self.seg_embed)
+                EF = torch.einsum("bijs,ibns-&gt;bnij", seg_mat, EF)
+            else:</code></pre>

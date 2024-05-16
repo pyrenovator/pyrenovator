@@ -1,0 +1,66 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        faulthandler.dump_traceback_later(30, repeat=True)
+
+    with det._catch_sys_exit():
+        <a id="change">try:
+            &#47&#47 TODO: reorder object lifetimes so that the DistributedContext and the GenericContext
+            &#47&#47 are created here.  Nothing else in the TrialController or Trial code needs the
+            &#47&#47 rendezvous info.  Then we can remove the rendezvous info as an arg from the whole rest
+            &#47&#47 of the harness.
+            </a>rendezvous_info<a id="change"> = </a>info._rendezvous_info
+            assert rendezvous_info is not None
+            controller = load.prepare_controller(
+                env,
+                rendezvous_info,
+                hvd_config,
+            )
+        <a id="change">except </a>det.InvalidHP:
+            &#47&#47 build a Training API object just to call report_early_exit().
+            session = experimental.Session(None, None, None, certs.cli_cert)
+            training = _generic.Training(</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    config_logging(env.debug)
+
+    <a id="change">with maybe_periodic_stacktraces</a><a id="change">(env.debug):
+        &#47&#47 Step 1: Load user code.
+        &#47&#47 We can&quott build a generic.Context until we have a RankInfo, and we can&quott build a RankInfo
+        &#47&#47 without horovod, and we can&quott load the right horovod until we know which Trial class the
+        &#47&#47 user implemented.
+        </a>trial_class<a id="change">, controller_class = </a>load.get_trial_and_controller_class(env.experiment_config)
+
+        &#47&#47 Step 2: Initialize framework-specific details (horovod, random seeds, etc).
+        controller_class.pre_execute_hook(env, hvd_config)
+
+        &#47&#47 Step 3: Now that horovod is initialized, we can build a RankInfo object.
+        &#47&#47 It is always expected that the training code can figure this out based on how the
+        &#47&#47 launch layer launched the code.
+        if hvd_config.use:
+            distributed = _generic.DistributedContext(
+                rank=horovod.hvd.rank(),
+                size=horovod.hvd.size(),
+                local_rank=horovod.hvd.local_rank(),
+                local_size=horovod.hvd.local_size(),
+                cross_rank=horovod.hvd.cross_rank(),
+                cross_size=horovod.hvd.cross_size(),
+                chief_ip=chief_ip,
+                port_offset=info.task_type == "TRIAL" and info.trial._unique_port_offset or 0,
+            )
+        else:
+            distributed = _generic.DummyDistributed()
+
+        &#47&#47 Step 4: Let generic.init() create the generic.Context.
+        with _generic.init(distributed=distributed) as generic_context:
+            trial_context = trial_class.trial_context_class(generic_context, env, hvd_config)
+
+            &#47&#47 Step 5: Instantiate the user&quots Trial.
+            trial_inst = trial_class(trial_context)
+
+            &#47&#47 Step 6: Create a TrialController and execute training
+            logging.info(f"Creating {controller_class.__name__} with {trial_class.__name__}.")
+            controller<a id="change"> = </a>controller_class.from_trial(
+                trial_inst=trial_inst,
+                context=trial_context,
+                env=env,</code></pre>

@@ -1,0 +1,56 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 mxnet only supports 3d transpose convolutions with CUDNN
+        pytest.skip()
+    x, filters, padding, output_shape, true_res = x_n_filters_n_pad_n_outshp_n_res
+    x = <a id="change">tensor_fn(</a>x<a id="change">, dtype=dtype, device=device)</a>
+    filters = tensor_fn(filters, dtype=dtype, device=device)
+    true_res = tensor_fn(true_res, dtype=dtype, device=device)
+    ret<a id="change"> = </a>ivy.conv3d_transpose(x, filters, 1, padding, output_shape)
+    &#47&#47 type test
+    assert ivy.is_ivy_array(ret)
+    &#47&#47 cardinality test</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 tf conv3d transpose does not work when CUDA is installed, but array is on CPU
+        return
+    &#47&#47 smoke test
+    if fw in <a id="change">[&quotnumpy&quot</a>, <a id="change">&quotjax&quot</a>]:
+        &#47&#47 numpy and jax do not yet support 3d transpose convolutions, and mxnet only
+        &#47&#47 supports with CUDNN
+        return
+    if fw == &quotmxnet&quot and "cpu" in device:
+        &#47&#47 mxnet only supports 3d transpose convolutions with CUDNN
+        <a id="change">return</a>
+    if fw == &quottorch&quot and (&quot16&quot in dtype[0] or &quot16&quot in dtype[1]):
+        &#47&#47 not implemented for half
+        return
+    x = <a id="change">np.random.uniform(size=array_shape).astype(</a>dtype[0]<a id="change">)</a>
+    x = np.expand_dims(x, (-1))
+    filters = <a id="change">np.random.uniform(size=(filter_shape,
+                                      filter_shape,
+                                      filter_shape,
+                                      1,
+                                      1)).astype(</a>dtype[1]<a id="change">)</a>
+    <a id="change">helpers.test_array_function(
+        </a>dtype,
+        as_variable,
+        False,
+        num_positional_args,
+        native_array,
+        container,
+        instance_method,
+        fw,
+        <a id="change">"conv3d_transpose"</a><a id="change">,
+        x=x,
+        filters=filters,
+        strides=stride,
+        padding=pad,
+        output_shape=output_shape,
+        data_format=data_format,
+        dilations=dilations
+    )</a>
+
+
+&#47&#47 LSTM &#47&#47
+&#47&#47 -----&#47&#47</code></pre>

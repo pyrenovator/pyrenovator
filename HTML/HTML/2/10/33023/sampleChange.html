@@ -1,0 +1,56 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    )
+    grasp_poses = np.hstack([pcd_in_obj, quaternion_in_obj])
+
+    <a id="change">for </a>grasp_pose in grasp_poses<a id="change">:
+        </a>pp.draw_pose(
+            np.hsplit(grasp_pose, [3]),
+            parent=env.fg_object_id,
+            length=0.05,</code></pre><h3>After Change</h3><pre><code class='java'>
+    grasp_poses = np.hstack([pcd_in_obj, quaternion_in_obj])
+
+    &#47&#47 pose representation -&gt; point-normal representation
+    grasp_points<a id="change"> = </a><a id="change">[]</a>
+    <a id="change">for </a>grasp_pose in grasp_poses<a id="change">:
+        </a>ee_to_obj<a id="change"> = </a>np.hsplit(grasp_pose, [3])
+        grasp_point_start = ee_to_obj[0]
+        grasp_point_end<a id="change"> = </a>mercury.geometry.transform_points(
+            [[0, 0, 1]], mercury.geometry.transformation_matrix(*ee_to_obj)
+        )[0]
+        <a id="change">grasp_points.append(</a>np.hstack([grasp_point_start, grasp_point_end])<a id="change">)</a>
+
+        pp.draw_pose(
+            np.hsplit(grasp_pose, [3]),
+            parent=env.fg_object_id,
+            length=0.05,
+            width=3,
+        )
+    grasp_points = np.array(grasp_points)
+
+    R = reorient_poses.shape[0]
+    G = grasp_points.shape[0]
+    O = object_fg_flags.shape[0]
+
+    object_fg_flags = object_fg_flags[None].repeat(R, axis=0)
+    object_labels = object_labels[None].repeat(R, axis=0)
+    object_poses = object_poses[None].repeat(R, axis=0)
+
+    object_fg_flags = object_fg_flags[:, None].repeat(G, axis=1)
+    object_labels = object_labels[:, None].repeat(G, axis=1)
+    object_poses = object_poses[:, None].repeat(G, axis=1)
+    reorient_poses = reorient_poses[:, None].repeat(G, axis=1)
+    grasp_poses = grasp_poses[None].repeat(R, axis=0)
+    grasp_points<a id="change"> = </a>grasp_points[None].repeat(R, axis=0)
+
+    object_fg_flags = object_fg_flags.reshape(R * G, O)
+    object_labels = object_labels.reshape(R * G, O, 7)
+    object_poses = object_poses.reshape(R * G, O, 7)
+    reorient_poses = reorient_poses.reshape(R * G, 7)
+    grasp_poses = grasp_poses.reshape(R * G, 7)
+    grasp_points<a id="change"> = </a>grasp_points.reshape(R * G, 6)
+
+    with torch.no_grad():
+        pickable_pred = model(</code></pre>

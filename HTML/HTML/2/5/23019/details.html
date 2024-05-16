@@ -1,0 +1,82 @@
+<html><h3>Pattern ID :23019
+</h3><img src='73034842.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        * `x` is the Tensor at the head of a key or a query with shape `[seq_len, batch_size, n_heads, d]`
+        
+        &#47&#47 Extract the shape
+        seq_len<a id="change">, batch_size, n_heads, d</a> = x.shape
+
+        &#47&#47 $\frac{d}{2}$
+        d_2 = d // 2</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 \end{align}
+        &#47&#47
+        &#47&#47 for $i \in {1, 2, ..., \frac{d}{2}}$
+        x_rope = (x_rope * self.cos_cached[<a id="change">:x.shape[0]</a>]) + (neg_half_x * self.sin_cached[:x.shape[0]])
+
+        &#47&#47
+        <a id="change">return </a>torch.cat((x_rope, x_pass), dim=-1)
+
+
+class RotaryPEMultiHeadAttention(MultiHeadAttention):</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/lab-ml/nn/commit/0ce65adf9e602321109528b05cf99fccb16cd2de#diff-637497eb531dcbf4c4fff534c48c9dc4ec23ef7b14699edc95d8b280b04de206L132' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 73034842</div><div id='project'> Project Name: lab-ml/nn</div><div id='commit'> Commit Name: 0ce65adf9e602321109528b05cf99fccb16cd2de</div><div id='time'> Time: 2022-06-03</div><div id='author'> Author: vpjayasiri@gmail.com</div><div id='file'> File Name: labml_nn/transformers/rope/__init__.py</div><div id='m_class'> M Class Name: RotaryPositionalEmbeddings</div><div id='n_method'> N Class Name: RotaryPositionalEmbeddings</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: labml_nn/transformers/rope/__init__.py</div><div id='n_file'> N File Name: labml_nn/transformers/rope/__init__.py</div><div id='m_start'> M Start Line: 132</div><div id='m_end'> M End Line: 163</div><div id='n_start'> N Start Line: 171</div><div id='n_end'> N End Line: 193</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        else:
+            seq_mask = None
+
+        return att_feats<a id="change">, seq, att_masks, seq_mask</a>
+
+    def _forward(self, fc_feats, att_feats, seq, att_masks=None, labels=None):
+        att_feats, seq, att_masks, seq_mask = self._prepare_feature_forward(att_feats, att_masks, seq, labels)
+        out = self.model(att_feats, seq, att_masks, seq_mask, memory_matrix=self.memory_matrix, labels = labels)</code></pre><h3>After Change</h3><pre><code class='java'>
+            cur_query_matrix = torch.stack(cur_query_matrix, 0)
+            &#47&#47print(&quot111&quot,query_matrix[i, :cur_query_matrix.shape[0], :].shape, cur_query_matrix.shape)
+            query_matrix[i, :cur_query_matrix.shape[0], :] = cur_query_matrix
+            cmn_masks[i, :, <a id="change">:cur_query_matrix.shape[0]</a>] = 1
+
+        responses = self.cmn(att_feats, query_matrix, query_matrix, cmn_masks)
+        &#47&#47embeddings = embeddings + responses
+        att_feats = att_feats + responses
+
+        &quot&quot&quot
+
+        dummy_memory_matrix = torch.stack([self.memory_matrix[labels[i]==1,:] for i in range(att_feats.size(0))])
+
+
+        &#47&#47dummy_memory_matrix = torch.stack([torch.cat([self.memory_matrix, self.global_memory], 0) for index in idxs])
+        responses = self.cmn(att_feats, dummy_memory_matrix, dummy_memory_matrix)
+
+        att_feats = att_feats + responses
+        &quot&quot&quot
+        &#47&#47 Memory querying and responding for visual features
+
+        att_masks = att_masks.unsqueeze(-2)
+        if seq is not None:
+            seq = seq[:, :-1]
+            seq_mask = (seq.data &gt; 0)
+            seq_mask[:, 0] += True
+
+            seq_mask = seq_mask.unsqueeze(-2)
+            seq_mask = seq_mask & subsequent_mask(seq.size(-1)).to(seq_mask)
+        else:
+            seq_mask = None
+
+        <a id="change">return </a>att_feats, seq, att_masks, seq_mask, query_matrix, cmn_masks[:,0,:]
+
+    def _forward(self, fc_feats, att_feats, seq, att_masks=None, labels=None):
+        att_feats, seq, att_masks, seq_mask, query_matrix, cmn_masks = \</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/markin-wang/xpronet/commit/f1eadeb44fcd3ca935352b9cc7d30eab0fa8c753#diff-b630bb1eacf9d665efc0c82b70d348b40f19422267ac86cbe6329800b8b3d4d3L399' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 73034843</div><div id='project'> Project Name: markin-wang/xpronet</div><div id='commit'> Commit Name: f1eadeb44fcd3ca935352b9cc7d30eab0fa8c753</div><div id='time'> Time: 2021-11-21</div><div id='author'> Author: cserwj@gmail.com</div><div id='file'> File Name: modules/base_cmn.py</div><div id='m_class'> M Class Name: BaseCMN</div><div id='n_method'> N Class Name: BaseCMN</div><div id='m_method'> M Method Name: _prepare_feature_forward(5)</div><div id='n_method'> N Method Name: _prepare_feature_forward(5)</div><div id='m_parent_class'> M Parent Class: AttModel</div><div id='n_parent_class'> N Parent Class: AttModel</div><div id='m_file'> M File Name: modules/base_cmn.py</div><div id='n_file'> N File Name: modules/base_cmn.py</div><div id='m_start'> M Start Line: 402</div><div id='m_end'> M End Line: 451</div><div id='n_start'> N Start Line: 391</div><div id='n_end'> N End Line: 444</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+class VoiceLibrosa(AudioData):
+
+    def transform(self, aud_ft):
+        _<a id="change">, _, length</a> = aud_ft.shape
+        aud_padding = np.zeros((1, 1, 245760))
+        aud_padding[..., :length] = aud_ft
+        aud_trans = aud_padding.reshape(256, 320, 3).transpose(2, 0, 1)</code></pre><h3>After Change</h3><pre><code class='java'>
+        wav_tmp = aud_ft[..., n: n + 50176]
+        if wav_tmp.shape[-1] &lt; 50176:
+            wav_fill = np.zeros((1, 1, 50176))
+            wav_fill[..., <a id="change">:wav_tmp.shape[-1]</a>] = wav_tmp
+            wav_tmp = wav_fill
+        <a id="change">return </a>torch.as_tensor(wav_tmp, dtype=torch.float32)
+
+
+class _VoiceLibrosa(AudioData):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/liaorongfan/deeppersonality/commit/0fd86d272d808e4c0c3f6da13ea3d70a5f595585#diff-06d180c34022cd3526927c3865786f4979fa63d61e8fe21a8f6354a7e1313b34L57' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 73034845</div><div id='project'> Project Name: liaorongfan/deeppersonality</div><div id='commit'> Commit Name: 0fd86d272d808e4c0c3f6da13ea3d70a5f595585</div><div id='time'> Time: 2021-12-03</div><div id='author'> Author: 15670381505@163.com</div><div id='file'> File Name: dpcv/data/datasets/audio_data.py</div><div id='m_class'> M Class Name: VoiceLibrosa</div><div id='n_method'> N Class Name: VoiceLibrosa</div><div id='m_method'> M Method Name: transform(2)</div><div id='n_method'> N Method Name: transform(2)</div><div id='m_parent_class'> M Parent Class: AudioData</div><div id='n_parent_class'> N Parent Class: AudioData</div><div id='m_file'> M File Name: dpcv/data/datasets/audio_data.py</div><div id='n_file'> N File Name: dpcv/data/datasets/audio_data.py</div><div id='m_start'> M Start Line: 58</div><div id='m_end'> M End Line: 63</div><div id='n_start'> N Start Line: 88</div><div id='n_end'> N End Line: 97</div><BR>

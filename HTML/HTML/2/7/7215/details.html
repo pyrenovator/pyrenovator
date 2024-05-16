@@ -1,0 +1,462 @@
+<html><h3>Pattern ID :7215
+</h3><img src='24195507.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    assert torch.allclose(target, output, atol=5e-3)
+
+    &#47&#47 Continuation is not exact due to zero paddings (even for boring video)
+    output_next_frame = <a id="change">comodel.forward(input[:, :, -1]</a><a id="change">)</a>
+
+    &#47&#47 assert torch.allclose(target, output_next_frame, atol=5e-4)
+
+    next_frame_top10 = torch.topk(output_next_frame, k=10)[1][0].tolist()</code></pre><h3>After Change</h3><pre><code class='java'>
+def test_CoX3D():
+    weights_path = download_weights()  &#47&#47 s
+    frames_per_clip = 13
+    <a id="change">sample</a> = boring_video(image_size=160, frames_per_clip=frames_per_clip)
+
+    &#47&#47 Regular model
+    model = X3D(
+        dim_in=3,
+        image_size=160,
+        frames_per_clip=frames_per_clip,
+        num_classes=400,
+        x3d_conv1_dim=12,
+        x3d_conv5_dim=2048,
+        x3d_num_groups=1,
+        x3d_width_per_group=64,
+        x3d_width_factor=2.0,
+        x3d_depth_factor=2.2,
+        x3d_bottleneck_factor=2.25,
+        x3d_use_channelwise_3x3x3=1,
+        x3d_dropout_rate=0.5,
+        x3d_head_activation="softmax",
+        x3d_head_batchnorm=0,
+        x3d_fc_std_init=0.01,
+        x3d_final_batchnorm_zero_init=1,
+    )
+
+    &#47&#47 Continual model
+    comodel = CoX3D(
+        dim_in=3,
+        image_size=160,
+        frames_per_clip=frames_per_clip,
+        num_classes=400,
+        x3d_conv1_dim=12,
+        x3d_conv5_dim=2048,
+        x3d_num_groups=1,
+        x3d_width_per_group=64,
+        x3d_width_factor=2.0,
+        x3d_depth_factor=2.2,
+        x3d_bottleneck_factor=2.25,
+        x3d_use_channelwise_3x3x3=1,
+        x3d_dropout_rate=0.5,
+        x3d_head_activation="softmax",
+        x3d_head_batchnorm=0,
+        x3d_fc_std_init=0.01,
+        x3d_final_batchnorm_zero_init=1,
+        temporal_fill="zeros",
+        se_scope="clip",
+    )
+    assert comodel.delay == 220
+
+    &#47&#47 Load weights
+    model_state = torch.load(weights_path, map_location="cpu")["model_state"]
+    model.load_state_dict(model_state)
+    comodel.load_state_dict(model_state, flatten=True)
+
+    &#47&#47 Training mode has large effect on BatchNorm result - test will fail otherwise
+    model.eval()
+    comodel.eval()
+
+    target<a id="change"> = </a><a id="change">model.forward(sample</a><a id="change">)</a>
+
+    &#47&#47 forward
+    output = comodel.forward(sample)
+    assert torch.allclose(target, output)
+
+    &#47&#47 forward_steps
+    output = comodel.forward_steps(sample, pad_end=True)
+    assert torch.allclose(target, output)
+
+    &#47&#47 forward
+    comodel.clean_state()
+    &#47&#47 init
+    for i in range(frames_per_clip):
+        comodel.forward_step(sample[:, :, i])
+
+    &#47&#47 zero-pad end manually
+    zeros = <a id="change">torch.zeros_like(sample[:, :, 0]</a><a id="change">)</a>
+    for _ in range(comodel.delay - frames_per_clip):
+        comodel.forward_step(zeros)
+
+    &#47&#47 final result
+    output = comodel.forward_step(zeros)
+    torch.allclose(output, target, atol=5e-3)
+
+    target_top10 = torch.topk(target, k=10)[1][0].tolist()
+    output_top10 = torch.topk(output, k=10)[1][0].tolist()
+
+    assert len(set(target_top10) - set(output_top10)) &lt;= 3
+
+    &#47&#47 Another step - now out of comparable operation
+    output<a id="change"> = </a>comodel.forward_step(zeros)
+    output_top10 = torch.topk(output, k=10)[1][0].tolist()
+    assert len(set(target_top10) - set(output_top10)) &lt;= 3
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 7</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/lukashedegaard/co3d/commit/44e4624108b83f8ba94cfb960cdf74f36bbd5703#diff-81ebfd3b7da0e2057c99c1622bd2ed14cb38bdb040741812bc0eb3de8e60005eL599' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 24195507</div><div id='project'> Project Name: lukashedegaard/co3d</div><div id='commit'> Commit Name: 44e4624108b83f8ba94cfb960cdf74f36bbd5703</div><div id='time'> Time: 2021-09-10</div><div id='author'> Author: lh@eng.au.dk</div><div id='file'> File Name: tests/cox3d/test_x3d.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: test_CoX3D(0)</div><div id='n_method'> N Method Name: test_CoX3D(0)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: tests/cox3d/test_x3d.py</div><div id='n_file'> N File Name: tests/cox3d/test_x3d.py</div><div id='m_start'> M Start Line: 601</div><div id='m_end'> M End Line: 687</div><div id='n_start'> N Start Line: 599</div><div id='n_end'> N End Line: 688</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+def test_CoX3D():
+    weights_path = download_weights()
+    frames_per_clip = 13
+    <a id="change">input</a> = boring_video(image_size=160, frames_per_clip=frames_per_clip)
+
+    &#47&#47 Regular model
+    model = X3D(
+        dim_in=3,
+        image_size=160,
+        frames_per_clip=4,
+        num_classes=400,
+        x3d_conv1_dim=12,
+        x3d_conv5_dim=2048,
+        x3d_num_groups=1,
+        x3d_width_per_group=64,
+        x3d_width_factor=2.0,
+        x3d_depth_factor=2.2,
+        x3d_bottleneck_factor=2.25,
+        x3d_use_channelwise_3x3x3=1,
+        x3d_dropout_rate=0.5,
+        x3d_head_activation="softmax",
+        x3d_head_batchnorm=0,
+        x3d_fc_std_init=0.01,
+        x3d_final_batchnorm_zero_init=1,
+    )
+
+    &#47&#47 Continual model
+    comodel = CoX3D(
+        dim_in=3,
+        image_size=160,
+        frames_per_clip=frames_per_clip,
+        num_classes=400,
+        x3d_conv1_dim=12,
+        x3d_conv5_dim=2048,
+        x3d_num_groups=1,
+        x3d_width_per_group=64,
+        x3d_width_factor=2.0,
+        x3d_depth_factor=2.2,
+        x3d_bottleneck_factor=2.25,
+        x3d_use_channelwise_3x3x3=1,
+        x3d_dropout_rate=0.5,
+        x3d_head_activation="softmax",
+        x3d_head_batchnorm=0,
+        x3d_fc_std_init=0.01,
+        x3d_final_batchnorm_zero_init=1,
+        temporal_fill="zeros",
+        se_scope="clip",
+    )
+
+    &#47&#47 Load weights
+    model_state = torch.load(weights_path, map_location="cpu")["model_state"]
+    model.load_state_dict(model_state)
+    comodel.load_state_dict(model_state)
+
+    &#47&#47 Training mode has large effect on BatchNorm result - test will fail otherwise
+    model.eval()
+    comodel.eval()
+
+    &#47&#47 Forward
+    target = model(input)
+    target_top10 = torch.topk(target, k=10)[1][0].tolist()
+
+    &#47&#47 forward_steps produces same outputs
+    output = comodel.forward_steps(input)
+    assert torch.allclose(target, output, atol=5e-3)
+
+    &#47&#47 Continuation is not exact due to zero paddings (even for boring video)
+    output_next_frame = <a id="change">comodel.forward(</a>input[:, :, -1]<a id="change">)</a>
+
+    &#47&#47 assert torch.allclose(target, output_next_frame, atol=5e-4)
+
+    next_frame_top10 = torch.topk(output_next_frame, k=10)[1][0].tolist()</code></pre><h3>After Change</h3><pre><code class='java'>
+def test_CoX3D():
+    weights_path = download_weights()  &#47&#47 s
+    frames_per_clip = 13
+    <a id="change">sample</a> = boring_video(image_size=160, frames_per_clip=frames_per_clip)
+
+    &#47&#47 Regular model
+    model = X3D(
+        dim_in=3,
+        image_size=160,
+        frames_per_clip=frames_per_clip,
+        num_classes=400,
+        x3d_conv1_dim=12,
+        x3d_conv5_dim=2048,
+        x3d_num_groups=1,
+        x3d_width_per_group=64,
+        x3d_width_factor=2.0,
+        x3d_depth_factor=2.2,
+        x3d_bottleneck_factor=2.25,
+        x3d_use_channelwise_3x3x3=1,
+        x3d_dropout_rate=0.5,
+        x3d_head_activation="softmax",
+        x3d_head_batchnorm=0,
+        x3d_fc_std_init=0.01,
+        x3d_final_batchnorm_zero_init=1,
+    )
+
+    &#47&#47 Continual model
+    comodel = CoX3D(
+        dim_in=3,
+        image_size=160,
+        frames_per_clip=frames_per_clip,
+        num_classes=400,
+        x3d_conv1_dim=12,
+        x3d_conv5_dim=2048,
+        x3d_num_groups=1,
+        x3d_width_per_group=64,
+        x3d_width_factor=2.0,
+        x3d_depth_factor=2.2,
+        x3d_bottleneck_factor=2.25,
+        x3d_use_channelwise_3x3x3=1,
+        x3d_dropout_rate=0.5,
+        x3d_head_activation="softmax",
+        x3d_head_batchnorm=0,
+        x3d_fc_std_init=0.01,
+        x3d_final_batchnorm_zero_init=1,
+        temporal_fill="zeros",
+        se_scope="clip",
+    )
+    assert comodel.delay == 220
+
+    &#47&#47 Load weights
+    model_state = torch.load(weights_path, map_location="cpu")["model_state"]
+    model.load_state_dict(model_state)
+    comodel.load_state_dict(model_state, flatten=True)
+
+    &#47&#47 Training mode has large effect on BatchNorm result - test will fail otherwise
+    model.eval()
+    comodel.eval()
+
+    target<a id="change"> = </a><a id="change">model.forward(</a>sample<a id="change">)</a>
+
+    &#47&#47 forward
+    output = comodel.forward(sample)
+    assert torch.allclose(target, output)
+
+    &#47&#47 forward_steps
+    output = comodel.forward_steps(sample, pad_end=True)
+    assert torch.allclose(target, output)
+
+    &#47&#47 forward
+    comodel.clean_state()
+    &#47&#47 init
+    for i in range(frames_per_clip):
+        comodel.forward_step(sample[:, :, i])
+
+    &#47&#47 zero-pad end manually
+    zeros = <a id="change">torch.zeros_like(</a>sample[:, :, 0]<a id="change">)</a>
+    for _ in range(comodel.delay - frames_per_clip):
+        comodel.forward_step(zeros)
+
+    &#47&#47 final result
+    output<a id="change"> = </a>comodel.forward_step(zeros)
+    torch.allclose(output, target, atol=5e-3)
+
+    target_top10 = torch.topk(target, k=10)[1][0].tolist()</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lukashedegaard/co3d/commit/44e4624108b83f8ba94cfb960cdf74f36bbd5703#diff-81ebfd3b7da0e2057c99c1622bd2ed14cb38bdb040741812bc0eb3de8e60005eL598' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 24195506</div><div id='project'> Project Name: lukashedegaard/co3d</div><div id='commit'> Commit Name: 44e4624108b83f8ba94cfb960cdf74f36bbd5703</div><div id='time'> Time: 2021-09-10</div><div id='author'> Author: lh@eng.au.dk</div><div id='file'> File Name: tests/cox3d/test_x3d.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: test_CoX3D(0)</div><div id='n_method'> N Method Name: test_CoX3D(0)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: tests/cox3d/test_x3d.py</div><div id='n_file'> N File Name: tests/cox3d/test_x3d.py</div><div id='m_start'> M Start Line: 601</div><div id='m_end'> M End Line: 687</div><div id='n_start'> N Start Line: 599</div><div id='n_end'> N End Line: 688</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+def test_CoX3D():
+    weights_path = download_weights()
+    frames_per_clip = 13
+    <a id="change">input</a> = boring_video(image_size=160, frames_per_clip=frames_per_clip)
+
+    &#47&#47 Regular model
+    model = X3D(
+        dim_in=3,
+        image_size=160,
+        frames_per_clip=4,
+        num_classes=400,
+        x3d_conv1_dim=12,
+        x3d_conv5_dim=2048,
+        x3d_num_groups=1,
+        x3d_width_per_group=64,
+        x3d_width_factor=2.0,
+        x3d_depth_factor=2.2,
+        x3d_bottleneck_factor=2.25,
+        x3d_use_channelwise_3x3x3=1,
+        x3d_dropout_rate=0.5,
+        x3d_head_activation="softmax",
+        x3d_head_batchnorm=0,
+        x3d_fc_std_init=0.01,
+        x3d_final_batchnorm_zero_init=1,
+    )
+
+    &#47&#47 Continual model
+    comodel = CoX3D(
+        dim_in=3,
+        image_size=160,
+        frames_per_clip=frames_per_clip,
+        num_classes=400,
+        x3d_conv1_dim=12,
+        x3d_conv5_dim=2048,
+        x3d_num_groups=1,
+        x3d_width_per_group=64,
+        x3d_width_factor=2.0,
+        x3d_depth_factor=2.2,
+        x3d_bottleneck_factor=2.25,
+        x3d_use_channelwise_3x3x3=1,
+        x3d_dropout_rate=0.5,
+        x3d_head_activation="softmax",
+        x3d_head_batchnorm=0,
+        x3d_fc_std_init=0.01,
+        x3d_final_batchnorm_zero_init=1,
+        temporal_fill="zeros",
+        se_scope="clip",
+    )
+
+    &#47&#47 Load weights
+    model_state = torch.load(weights_path, map_location="cpu")["model_state"]
+    model.load_state_dict(model_state)
+    comodel.load_state_dict(model_state)
+
+    &#47&#47 Training mode has large effect on BatchNorm result - test will fail otherwise
+    model.eval()
+    comodel.eval()
+
+    &#47&#47 Forward
+    target = model(input)
+    target_top10 = torch.topk(target, k=10)[1][0].tolist()
+
+    &#47&#47 forward_steps produces same outputs
+    output = comodel.forward_steps(input)
+    assert torch.allclose(target, output, atol=5e-3)
+
+    &#47&#47 Continuation is not exact due to zero paddings (even for boring video)
+    output_next_frame = comodel.forward(input[:, :, -1])
+
+    &#47&#47 assert torch.allclose(target, output_next_frame, atol=5e-4)
+
+    next_frame_top10 = torch.topk(output_next_frame, k=10)[1][0].tolist()
+    &#47&#47 Top 2 is the same
+    assert len(set(target_top10[:2]) - set(next_frame_top10[:2])) == 0
+    &#47&#47 Top 4 is overlapping
+    assert len(set(target_top10[:4]) - set(next_frame_top10[:4])) == 0
+    &#47&#47 Top 10 is mostly overlapping
+    assert len(set(target_top10) - set(next_frame_top10)) == 1
+
+    &#47&#47 Check output if we continue for a long time
+    for _ in range(20):
+        output_next_frame = <a id="change">comodel.forward(</a>input[:, :, -1]<a id="change">)</a>
+
+    &#47&#47 They are further apart now
+    assert torch.allclose(target, output_next_frame, atol=5e-2)
+    _, next_frame_top10 = torch.topk(output_next_frame, k=10)</code></pre><h3>After Change</h3><pre><code class='java'>
+def test_CoX3D():
+    weights_path = download_weights()  &#47&#47 s
+    frames_per_clip = 13
+    <a id="change">sample</a> = boring_video(image_size=160, frames_per_clip=frames_per_clip)
+
+    &#47&#47 Regular model
+    model = X3D(
+        dim_in=3,
+        image_size=160,
+        frames_per_clip=frames_per_clip,
+        num_classes=400,
+        x3d_conv1_dim=12,
+        x3d_conv5_dim=2048,
+        x3d_num_groups=1,
+        x3d_width_per_group=64,
+        x3d_width_factor=2.0,
+        x3d_depth_factor=2.2,
+        x3d_bottleneck_factor=2.25,
+        x3d_use_channelwise_3x3x3=1,
+        x3d_dropout_rate=0.5,
+        x3d_head_activation="softmax",
+        x3d_head_batchnorm=0,
+        x3d_fc_std_init=0.01,
+        x3d_final_batchnorm_zero_init=1,
+    )
+
+    &#47&#47 Continual model
+    comodel = CoX3D(
+        dim_in=3,
+        image_size=160,
+        frames_per_clip=frames_per_clip,
+        num_classes=400,
+        x3d_conv1_dim=12,
+        x3d_conv5_dim=2048,
+        x3d_num_groups=1,
+        x3d_width_per_group=64,
+        x3d_width_factor=2.0,
+        x3d_depth_factor=2.2,
+        x3d_bottleneck_factor=2.25,
+        x3d_use_channelwise_3x3x3=1,
+        x3d_dropout_rate=0.5,
+        x3d_head_activation="softmax",
+        x3d_head_batchnorm=0,
+        x3d_fc_std_init=0.01,
+        x3d_final_batchnorm_zero_init=1,
+        temporal_fill="zeros",
+        se_scope="clip",
+    )
+    assert comodel.delay == 220
+
+    &#47&#47 Load weights
+    model_state = torch.load(weights_path, map_location="cpu")["model_state"]
+    model.load_state_dict(model_state)
+    comodel.load_state_dict(model_state, flatten=True)
+
+    &#47&#47 Training mode has large effect on BatchNorm result - test will fail otherwise
+    model.eval()
+    comodel.eval()
+
+    target<a id="change"> = </a><a id="change">model.forward(</a>sample<a id="change">)</a>
+
+    &#47&#47 forward
+    output = comodel.forward(sample)
+    assert torch.allclose(target, output)
+
+    &#47&#47 forward_steps
+    output = comodel.forward_steps(sample, pad_end=True)
+    assert torch.allclose(target, output)
+
+    &#47&#47 forward
+    comodel.clean_state()
+    &#47&#47 init
+    for i in range(frames_per_clip):
+        comodel.forward_step(sample[:, :, i])
+
+    &#47&#47 zero-pad end manually
+    zeros<a id="change"> = </a><a id="change">torch.zeros_like(</a>sample[:, :, 0]<a id="change">)</a>
+    for _ in range(comodel.delay - frames_per_clip):
+        comodel.forward_step(zeros)
+
+    &#47&#47 final result</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lukashedegaard/co3d/commit/0b7612c3dc839d75811d3b7ccb59a7a0b453f051#diff-81ebfd3b7da0e2057c99c1622bd2ed14cb38bdb040741812bc0eb3de8e60005eL598' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 24195510</div><div id='project'> Project Name: lukashedegaard/co3d</div><div id='commit'> Commit Name: 0b7612c3dc839d75811d3b7ccb59a7a0b453f051</div><div id='time'> Time: 2021-08-31</div><div id='author'> Author: lh@eng.au.dk</div><div id='file'> File Name: tests/cox3d/test_x3d.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: test_CoX3D(0)</div><div id='n_method'> N Method Name: test_CoX3D(0)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: tests/cox3d/test_x3d.py</div><div id='n_file'> N File Name: tests/cox3d/test_x3d.py</div><div id='m_start'> M Start Line: 601</div><div id='m_end'> M End Line: 687</div><div id='n_start'> N Start Line: 599</div><div id='n_end'> N End Line: 688</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                frame_list[i] = self.forward_single_frame_wrapper(self.em_split[i],
+                                                                  self.psf)
+
+        <a id="change">frames</a> = torch.stack(frame_list, dim=0)
+
+        Add background. This needs to happen here and not on a single frame, since background may be correlated.
+        if self.background is not None:
+            self.frames = <a id="change">self.background.forward(</a>frames<a id="change">)</a>.type(torch.int64)
+        else:
+            self.frames = frames.type(torch.int64)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+                frame_list[i] = self.forward_single_frame_wrapper(self.em_split[i],
+                                                                  self.psf)
+
+        <a id="change">frames</a> = torch.stack(frame_list, dim=0)
+
+        
+        Add background. This needs to happen here and not on a single frame, since background may be correlated.
+        The difference between background and noise is, 
+        that background is assumed to be independent of the emitter position / signal.
+        
+        if self.background is not None:
+            bg_frames = self.background.forward(<a id="change">torch.zeros_like(</a>frames<a id="change">)</a>)
+            frames<a id="change"> += </a>bg_frames
+
+        if self.noise is not None:
+            frames<a id="change"> = </a><a id="change">self.noise.forward(</a>frames<a id="change">)</a>
+
+        self.frames = frames
+
+        if self.out_bg:</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/turagalab/decode/commit/5806dbeaf7cca38402360f9392be727b3da2d3c3#diff-ba64703cb157bfa2feaff662a2b044f46eea1a0297b50ef001c4dd05b5926ac1L81' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 24195483</div><div id='project'> Project Name: turagalab/decode</div><div id='commit'> Commit Name: 5806dbeaf7cca38402360f9392be727b3da2d3c3</div><div id='time'> Time: 2019-09-11</div><div id='author'> Author: gitdev@LRM.photo</div><div id='file'> File Name: deepsmlm/simulation/simulator.py</div><div id='m_class'> M Class Name: Simulation</div><div id='n_method'> N Class Name: Simulation</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: deepsmlm/simulation/simulator.py</div><div id='n_file'> N File Name: deepsmlm/simulation/simulator.py</div><div id='m_start'> M Start Line: 107</div><div id='m_end'> M End Line: 115</div><div id='n_start'> N Start Line: 119</div><div id='n_end'> N End Line: 140</div><BR>

@@ -1,0 +1,43 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            tensors2 = self._get_test_data(device, dtype, N)
+            value = 2
+
+            expected = [<a id="change">torch_op(tensors[i]</a>, tensors1[i], tensors2[i]<a id="change">, value=value)</a> for i in range(N)]
+
+            res = foreach_op(tensors, tensors1, tensors2, value)
+            foreach_op_(tensors, tensors1, tensors2, value)
+            self.assertEqual(res, tensors)
+            <a id="change">self.assertEqual(</a>tensors, expected<a id="change">)</a>
+
+    def _test_bin_op_list_alpha(self, device, dtype, foreach_op, foreach_op_, torch_op, N=20):
+        tensors1 = self._get_test_data(device, dtype, N)
+        tensors2 = self._get_test_data(device, dtype, N)</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    def _test_pointwise_op(self, device, dtype, foreach_op, foreach_op_, torch_op):
+        for N in [30, 300]:
+            <a id="change">tensors</a> = self._get_test_data(device, dtype, N)
+            tensors1 = self._get_test_data(device, dtype, N)
+            tensors2 = self._get_test_data(device, dtype, N)
+            value = 2
+
+            &#47&#47 Mimics cuda kernel dtype flow.  With fp16/bf16 input, runs in fp32 and casts output back to fp16/bf16.
+            control_dtype = torch.float32<a id="change"> if (self.device_type == &quotcuda&quot and
+                                              (dtype is torch.float16 or dtype is torch.bfloat16))</a><a id="change"> else </a>dtype
+            <a id="change">expected</a> = [<a id="change">torch_op(tensors[i].to(dtype=control_dtype),
+                                 tensors1[i].to(dtype=control_dtype),
+                                 tensors2[i].to(dtype=control_dtype), value=value).to(dtype=dtype)</a> for i in range(N)]
+
+            res = foreach_op(tensors, tensors1, tensors2, value)
+            foreach_op_(tensors, tensors1, tensors2, value)
+            self.assertEqual(res, tensors)
+            <a id="change">if (dtype is torch.float16 or dtype is torch.bfloat16) and TEST_WITH_ROCM</a>:
+                <a id="change">self.assertEqual(tensors</a>, <a id="change">expected</a><a id="change">, atol=1.e-3, rtol=self.dtype_precisions[dtype][0])</a>
+            else:
+                <a id="change">self.assertEqual(</a>tensors, expected<a id="change">)</a>
+
+    def _test_bin_op_list_alpha(self, device, dtype, foreach_op, foreach_op_, torch_op):
+        for N in [30, 300]:
+            tensors1 = self._get_test_data(device, dtype, N)</code></pre>

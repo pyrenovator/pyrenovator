@@ -1,0 +1,52 @@
+<html><h3>Pattern ID :18900
+</h3><img src='61424045.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                .to(self.device)
+            )  &#47&#47 [batch_size, num_float_features]
+            float_input_x_emb = [
+                <a id="change">torch.mul(</a>self.float_embeddings[i](index), float_ffm_input.unsqueeze(2)<a id="change">)</a>
+                for i in range(self.num_fields)
+            ]  &#47&#47 [num_fields: [batch_size, num_float_features, emb_dim]]
+
+        return float_input_x_emb</code></pre><h3>After Change</h3><pre><code class='java'>
+        if len(self.float_feature_names) &gt; 0:
+            base, index = torch.split(float_ffm_input, [1, 1], dim=-1)
+            index = index.squeeze(-1).long()
+            index = index + <a id="change">index.new_tensor(self.float_offsets).unsqueeze(0</a><a id="change">)</a>
+            float_input_x_emb = [
+                self.float_embeddings[i](index)<a id="change"> * </a>base for i in range(self.num_fields)
+            ]  &#47&#47 [num_fields: [batch_size, num_float_features, emb_dim]]
+
+        return float_input_x_emb</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/rucaibox/recbole/commit/3212dad4f1cbd81d7527038ca3764929b6c1d1c9#diff-d9d6f091d0afa0130f06b143ff1c3e8d233bdd7266c7b51a4f074afa7bda5342L301' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 61424045</div><div id='project'> Project Name: rucaibox/recbole</div><div id='commit'> Commit Name: 3212dad4f1cbd81d7527038ca3764929b6c1d1c9</div><div id='time'> Time: 2022-07-16</div><div id='author'> Author: 1204216974@qq.com</div><div id='file'> File Name: recbole/model/context_aware_recommender/ffm.py</div><div id='m_class'> M Class Name: FieldAwareFactorizationMachine</div><div id='n_method'> N Class Name: FieldAwareFactorizationMachine</div><div id='m_method'> M Method Name: _emb_float_ffm_input(2)</div><div id='n_method'> N Method Name: _emb_float_ffm_input(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: recbole/model/context_aware_recommender/ffm.py</div><div id='n_file'> N File Name: recbole/model/context_aware_recommender/ffm.py</div><div id='m_start'> M Start Line: 301</div><div id='m_end'> M End Line: 309</div><div id='n_start'> N Start Line: 326</div><div id='n_end'> N End Line: 330</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        self.output = output(hidden_features, out_features)
+
+        self.embedding = torch.nn.Parameter(torch.randn((input_cases, hidden_features)).mul(embedding_std))
+        self.pos_embd_scale = torch.nn.Parameter(<a id="change">torch.ones((1, hidden_features, 1)).mul(</a>embedding_std<a id="change">)</a>)
+
+        pos_embd = torch.range(1, input_count).unsqueeze(0)
+        feature_embd = torch.range(1, hidden_features).unsqueeze(1)</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        self.embedding = torch.nn.Parameter(torch.randn((input_cases, hidden_features * 2)).mul(embedding_std))
+
+        pos_embd = <a id="change">torch.arange(0, input_count).unsqueeze(0</a><a id="change">) + </a>1
+        feature_embd = torch.arange(0, hidden_features).unsqueeze(1) + 1
+        additive = (feature_embd % 2).to(torch.float)
+        feature_embd = (feature_embd - additive) / 2</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/homebrewnlp/homebrewnlp/commit/007c929505d510af1b041da75b1dbfbcdc2f931f#diff-c98bba8dbdd18eb4e9fa8ae11c28e350c08ee816fce50f9fb86d61cbcd345276L242' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 61424044</div><div id='project'> Project Name: homebrewnlp/homebrewnlp</div><div id='commit'> Commit Name: 007c929505d510af1b041da75b1dbfbcdc2f931f</div><div id='time'> Time: 2021-08-27</div><div id='author'> Author: 39779310+ClashLuke@users.noreply.github.com</div><div id='file'> File Name: module.py</div><div id='m_class'> M Class Name: LinearAttention</div><div id='n_method'> N Class Name: LinearAttention</div><div id='m_method'> M Method Name: __init__(7)</div><div id='n_method'> N Method Name: __init__(7)</div><div id='m_parent_class'> M Parent Class: torch.nn.Module</div><div id='n_parent_class'> N Parent Class: torch.jit.ScriptModule</div><div id='m_file'> M File Name: module.py</div><div id='n_file'> N File Name: module.py</div><div id='m_start'> M Start Line: 245</div><div id='m_end'> M End Line: 255</div><div id='n_start'> N Start Line: 316</div><div id='n_end'> N End Line: 331</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    def project_to_hyperplane(self, entity_embs, normal_vec_embs):
+        &#47&#47 TODO: Check
+        projections = entity_embs - torch.sum(<a id="change">torch.mul(</a>normal_vec_embs, entity_embs<a id="change">)</a>, dim=1)
+
+        return projections
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        :return:
+        
+
+        scaling_factors = <a id="change">torch.sum(normal_vec_embs * entity_embs, dim=-1).unsqueeze(1</a><a id="change">)</a>
+        heads_projected_on_normal_vecs = scaling_factors * normal_vec_embs
+        projections = (entity_embs<a id="change"> - </a>heads_projected_on_normal_vecs).view(-1, self.embedding_dim)
+
+        return projections
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/pykeen/pykeen/commit/a0bedfd3786dcba8421b5b622b53527f652cdec0#diff-3a4be649ccddf2c08e9d2fa9b609c6f9c2224e106b7c822b0be6a1e3f5edf5afL42' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 61424049</div><div id='project'> Project Name: pykeen/pykeen</div><div id='commit'> Commit Name: a0bedfd3786dcba8421b5b622b53527f652cdec0</div><div id='time'> Time: 2018-10-24</div><div id='author'> Author: ali-mehdi@live.de</div><div id='file'> File Name: src/pykeen/kg_embeddings_model/trans_h.py</div><div id='m_class'> M Class Name: TransH</div><div id='n_method'> N Class Name: TransH</div><div id='m_method'> M Method Name: project_to_hyperplane(3)</div><div id='n_method'> N Method Name: project_to_hyperplane(3)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: src/pykeen/kg_embeddings_model/trans_h.py</div><div id='n_file'> N File Name: src/pykeen/kg_embeddings_model/trans_h.py</div><div id='m_start'> M Start Line: 44</div><div id='m_end'> M End Line: 44</div><div id='n_start'> N Start Line: 48</div><div id='n_end'> N End Line: 50</div><BR>

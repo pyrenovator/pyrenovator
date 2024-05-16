@@ -1,0 +1,53 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+            sequence_length_padding_divisor = 4
+            &#47&#47 Pad attention mask to more divisible length
+            remainder<a id="change"> = </a><a id="change">attention_mask.size(-1</a><a id="change">)</a> % sequence_length_padding_divisor
+
+            if remainder != 0:
+                pad_length = sequence_length_padding_divisor - remainder</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        if attention_mask is not None:
+            &#47&#47 make sure padded tokens output 0
+            expand_attention_mask<a id="change"> = </a><a id="change">attention_mask.unsqueeze(-1).repeat(1</a>, <a id="change">1</a>, hidden_states.shape[2]<a id="change">)</a>
+            hidden_states[~expand_attention_mask] = 0
+
+            &#47&#47 extend attention_mask
+            attention_mask = (1.0 - attention_mask[:, None, None, :].to(dtype=hidden_states.dtype)) * -10000.0
+            attention_mask = attention_mask.expand(
+                attention_mask.shape[0], 1, attention_mask.shape[-1], attention_mask.shape[-1]
+            )
+
+        position_embeddings = self.pos_conv_embed(hidden_states)
+        hidden_states = hidden_states + position_embeddings
+        hidden_states = self.layer_norm(hidden_states)
+        hidden_states = self.dropout(hidden_states)
+
+        for layer in self.layers:
+            if output_hidden_states:
+                all_hidden_states = all_hidden_states + (hidden_states,)
+
+            layer_outputs = layer(hidden_states, attention_mask=attention_mask, output_attentions=output_attentions)
+
+            &#47&#47 add LayerDrop (see https://arxiv.org/abs/1909.11556 for description)
+            dropout_probability = torch.rand(tuple())
+            skip_the_layer = torch.tensor(self.training) and (dropout_probability &lt; self.config.layerdrop)
+            if self.config.layerdrop &gt; 0.0:
+                hidden_states = torch.where(skip_the_layer, hidden_states, layer_outputs[0])
+            else:
+                hidden_states = layer_outputs[0]
+
+            if skip_the_layer:
+                layer_outputs = (None, None)
+
+            if output_attentions:
+                all_self_attentions = all_self_attentions + (layer_outputs[1],)
+
+        if output_hidden_states:
+            all_hidden_states = all_hidden_states<a id="change"> + </a>(hidden_states,)
+
+        if not return_dict:
+            return tuple(v for v in [hidden_states, all_hidden_states, all_self_attentions] if v is not None)</code></pre>

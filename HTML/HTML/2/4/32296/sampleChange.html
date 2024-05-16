@@ -1,0 +1,21 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    def forward(ctx: Any, group: dist.ProcessGroup, input: Tensor):
+        if get_world_size(group) &lt;= 1:
+            return input
+        output = <a id="change">torch.clone(input).contiguous()</a>
+        dist.all_reduce(output, op=torch.distributed.ReduceOp.SUM)
+        return output
+
+    @staticmethod</code></pre><h3>After Change</h3><pre><code class='java'>
+            return input
+        ctx.input_shape = input.shape
+        ctx.leading_dim = 0
+        chunks = <a id="change">[x.contiguous() for x in torch.chunk(input, chunks=ctx.num_nodes, dim=ctx.leading_dim)]</a>
+        assert len(chunks) == ctx.num_nodes
+        output<a id="change"> = </a>torch.empty_like(chunks[0])
+        dist.reduce_scatter(output=output, input_list=list(chunks))
+        return output
+    @staticmethod</code></pre>

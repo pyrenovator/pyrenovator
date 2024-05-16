@@ -1,0 +1,80 @@
+<html><h3>Pattern ID :37031
+</h3><img src='105312567.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 combine masks along attended time - first encoder and then decoder
+        mask = torch.cat(
+            (
+                <a id="change">encoder_mask.unsqueeze(1).expand(-1</a>, decoder_length, <a id="change">-1</a><a id="change">),
+                decoder_mask.unsqueeze(0).expand(encoder_lengths.size(0), -1, -1)</a>,
+            ),
+            dim=2,
+        )</code></pre><h3>After Change</h3><pre><code class='java'>
+        Returns causal mask to apply for self-attention layer.
+        
+        decoder_length = decoder_lengths.max()
+        <a id="change">if </a>self.hparams.causal_attention:
+            &#47&#47 indices to which is attended
+            attend_step = torch.arange(decoder_length, device=self.device)
+            &#47&#47 indices for which is predicted
+            predict_step = torch.arange(0, decoder_length, device=self.device)[:, None]
+            &#47&#47 do not attend to steps to self or after prediction
+            decoder_mask = (attend_step &gt;= predict_step).unsqueeze(0).expand(encoder_lengths.size(0), -1, -1)
+        else:
+            &#47&#47 there is value in attending to future forecasts if they are made with knowledge currently
+            &#47&#47   available
+            &#47&#47   one possibility is here to use a second attention layer for future attention (assuming different effects
+            &#47&#47   matter in the future than the past)
+            &#47&#47   or alternatively using the same layer but allowing forward attention - i.e. only
+            &#47&#47   masking out non-available data and self
+            decoder_mask<a id="change"> = </a>create_mask(decoder_length, decoder_lengths).unsqueeze(1).expand(-1, decoder_length, -1)
+        &#47&#47 do not attend to steps where data is padded
+        encoder_mask = create_mask(encoder_lengths.max(), encoder_lengths).unsqueeze(1).expand(-1, decoder_length, -1)
+        &#47&#47 combine masks along attended time - first encoder and then decoder</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/jdb78/pytorch-forecasting/commit/ca4b90615f4bfdeb357d3ad26e492ef8573c7f1c#diff-76ca71ffaeab9ec5eca22b512d1ed2460e8173ce9feb6e881188098900f5f8d4L370' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 105312567</div><div id='project'> Project Name: jdb78/pytorch-forecasting</div><div id='commit'> Commit Name: ca4b90615f4bfdeb357d3ad26e492ef8573c7f1c</div><div id='time'> Time: 2022-04-15</div><div id='author'> Author: beitner.jan@bcg.com</div><div id='file'> File Name: pytorch_forecasting/models/temporal_fusion_transformer/__init__.py</div><div id='m_class'> M Class Name: TemporalFusionTransformer</div><div id='n_method'> N Class Name: TemporalFusionTransformer</div><div id='m_method'> M Method Name: get_attention_mask(3)</div><div id='n_method'> N Method Name: get_attention_mask(3)</div><div id='m_parent_class'> M Parent Class: BaseModelWithCovariates</div><div id='n_parent_class'> N Parent Class: BaseModelWithCovariates</div><div id='m_file'> M File Name: pytorch_forecasting/models/temporal_fusion_transformer/__init__.py</div><div id='n_file'> N File Name: pytorch_forecasting/models/temporal_fusion_transformer/__init__.py</div><div id='m_start'> M Start Line: 371</div><div id='m_end'> M End Line: 391</div><div id='n_start'> N Start Line: 370</div><div id='n_end'> N End Line: 395</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+        &#47&#47 append cls token
+        cls_token = self.cls_token + self.pos_embed[:, :1, :]
+        cls_tokens = <a id="change">cls_token.expand(</a>x_masked.shape[0], <a id="change">-1</a>, <a id="change">-1</a><a id="change">)</a>
+        x = torch.cat((cls_tokens<a id="change">, x_masked</a>), dim=1)
+
+        &#47&#47 apply Transformer blocks
+        for blk in self.blocks:</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 cat x1 and x_next to encoder independently
+        BA, C, H, W = x1.size()
+        x1 = x1.unsqueeze(1)
+        <a id="change">if </a>self.time_stamp&gt;1:
+            x_ind = torch.cat((x1, x_next), dim=1) &#47&#47 [bxa, ts, C, H, W]
+        else:
+            x_ind<a id="change"> = </a>x1
+        &#47&#47 print(x_ind.size())
+        assert x_ind.size(1) == self.time_stamp
+        x_ind = x_ind.reshape(BA*self.time_stamp, C, H, W)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/coperception/star/commit/731f6b1da07455be85cd59f6a8f6e795d902aa7a#diff-a884c48041b9c06e41c73eb2c54e9b945061acd65915e9fd5c4ff7d8c4c65061L834' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 105312579</div><div id='project'> Project Name: coperception/star</div><div id='commit'> Commit Name: 731f6b1da07455be85cd59f6a8f6e795d902aa7a</div><div id='time'> Time: 2022-06-04</div><div id='author'> Author: 954742885@qq.com</div><div id='file'> File Name: coperception/models/transformers/multiagent_mae.py</div><div id='m_class'> M Class Name: AmortizedIndivMMAEViT</div><div id='n_method'> N Class Name: AmortizedIndivMMAEViT</div><div id='m_method'> M Method Name: forward_encoder(4)</div><div id='n_method'> N Method Name: forward_encoder(4)</div><div id='m_parent_class'> M Parent Class: MultiAgentMaskedAutoencoderViT</div><div id='n_parent_class'> N Parent Class: MultiAgentMaskedAutoencoderViT</div><div id='m_file'> M File Name: coperception/models/transformers/multiagent_mae.py</div><div id='n_file'> N File Name: coperception/models/transformers/multiagent_mae.py</div><div id='m_start'> M Start Line: 842</div><div id='m_end'> M End Line: 865</div><div id='n_start'> N Start Line: 869</div><div id='n_end'> N End Line: 898</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+        &#47&#47 append cls token
+        cls_token = self.cls_token + self.pos_embed[:, :1, :]
+        cls_tokens = <a id="change">cls_token.expand(</a>x_masked.shape[0], <a id="change">-1</a>, <a id="change">-1</a><a id="change">)</a>
+        x = torch.cat((cls_tokens, x_masked), dim=1)
+
+        &#47&#47 apply Transformer blocks
+        for blk in self.blocks:
+            x = blk(x)
+        x = self.norm(x)
+        &#47&#47 compress for communication
+        x = self.compressor(x)
+
+        return x<a id="change">, mask, ids_restore</a>
+
+    def forward_decoder(self, x):
+        
+        overwrite the original forward_decoder, now input latent are fused</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 cat x1 and x_next to encoder independently
+        BA, C, H, W = x1.size()
+        x1 = x1.unsqueeze(1)
+        <a id="change">if </a>self.time_stamp&gt;1:
+            x_ind = torch.cat((x1, x_next), dim=1) &#47&#47 [bxa, ts, C, H, W]
+        else:
+            x_ind<a id="change"> = </a>x1
+        &#47&#47 print(x_ind.size())
+        assert x_ind.size(1) == self.time_stamp
+        x_ind = x_ind.reshape(BA*self.time_stamp, C, H, W)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/coperception/star/commit/731f6b1da07455be85cd59f6a8f6e795d902aa7a#diff-a884c48041b9c06e41c73eb2c54e9b945061acd65915e9fd5c4ff7d8c4c65061L556' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 105312572</div><div id='project'> Project Name: coperception/star</div><div id='commit'> Commit Name: 731f6b1da07455be85cd59f6a8f6e795d902aa7a</div><div id='time'> Time: 2022-06-04</div><div id='author'> Author: 954742885@qq.com</div><div id='file'> File Name: coperception/models/transformers/multiagent_mae.py</div><div id='m_class'> M Class Name: AmortizedFusionMMAEViT</div><div id='n_method'> N Class Name: AmortizedFusionMMAEViT</div><div id='m_method'> M Method Name: forward_encoder(4)</div><div id='n_method'> N Method Name: forward_encoder(4)</div><div id='m_parent_class'> M Parent Class: MultiAgentMaskedAutoencoderViT</div><div id='n_parent_class'> N Parent Class: MultiAgentMaskedAutoencoderViT</div><div id='m_file'> M File Name: coperception/models/transformers/multiagent_mae.py</div><div id='n_file'> N File Name: coperception/models/transformers/multiagent_mae.py</div><div id='m_start'> M Start Line: 564</div><div id='m_end'> M End Line: 589</div><div id='n_start'> N Start Line: 577</div><div id='n_end'> N End Line: 611</div><BR>

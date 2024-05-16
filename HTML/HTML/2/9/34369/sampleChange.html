@@ -1,0 +1,30 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    
+    area = size[0] * size[1]
+    crop_area = tf.random.uniform((), *scale) * area
+    ww_fraction_min = tf.maximum(crop_area / <a id="change">size[0]</a>, tf.sqrt(crop_area / ratio[1]))
+    ww_fraction_max = tf.minimum(tf.cast(size[1], "float32"), tf.sqrt(crop_area / ratio[0]))
+    ww_fraction = tf.random.uniform((), ww_fraction_min, ww_fraction_max)
+    &#47&#47 hh_crop, ww_crop = tf.cast(tf.math.ceil(crop_area / ww_fraction), "int32"), tf.cast(tf.math.ceil(ww_fraction), "int32")
+    hh_crop, ww_crop = tf.cast(tf.math.floor(crop_area / ww_fraction), "int32"), tf.cast(tf.math.floor(ww_fraction), "int32")
+    &#47&#47 return hh_crop, ww_crop, crop_area, ww_fraction_min, ww_fraction_max, ww_fraction
+    return tf.minimum(hh_crop, size[0] - 1), tf.minimum(ww_crop, <a id="change">size[1]</a> - 1)
+
+
+class RandomProcessImage:</code></pre><h3>After Change</h3><pre><code class='java'>
+    crop_area = tf.random.uniform((), *scale) * area
+    hh_fraction_min = tf.maximum(crop_area / size[1], tf.sqrt(crop_area / ratio[1]))
+    hh_fraction_max = tf.minimum(tf.cast(size[0], "float32"), tf.sqrt(crop_area / ratio[0]))
+    <a id="change">if </a>log_distribute:  &#47&#47 More likely to select a smaller value
+        log_min, log_max = tf.math.log(hh_fraction_min), tf.math.log(hh_fraction_max)
+        hh_fraction = tf.random.uniform((), log_min, log_max)
+        hh_fraction<a id="change"> = </a>tf.math.exp(hh_fraction)
+    else:
+        hh_fraction<a id="change"> = </a><a id="change">tf.random.uniform(</a>(), hh_fraction_min, hh_fraction_max<a id="change">)</a>
+    &#47&#47 hh_crop, ww_crop = tf.cast(tf.math.ceil(hh_fraction), "int32"), tf.cast(tf.math.ceil(crop_area / hh_fraction), "int32")
+    hh_crop, ww_crop = tf.cast(tf.math.floor(hh_fraction), "int32"), tf.cast(tf.math.floor(crop_area / hh_fraction), "int32")
+    &#47&#47 return hh_crop, ww_crop, crop_area, hh_fraction_min, hh_fraction_max, hh_fraction
+    return hh_crop, ww_crop</code></pre>

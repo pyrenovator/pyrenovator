@@ -1,0 +1,30 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+    def __getitem__(self, idx):
+        &#47&#47 get index data
+        data = self.data.iloc[self.data_index.index_start.iloc[idx] : self.data_index.index_end.iloc[idx]<a id="change"> + 1</a>].copy()
+
+        &#47&#47 todo: handle missings -&gt; fill them up with strategy
+        &#47&#47 determine data window
+        sequence_length = len(data)
+        max_prediction_length = self.max_prediction_length
+        if self.randomize_length is not None:
+            &#47&#47 modify sequence length
+            sequence_length_prob, encode_length_probability = Beta(*self.randomize_length).sample(torch.Size([2]))
+            sequence_length = int(max(1, Binomial(sequence_length, sequence_length_prob).sample()))
+            max_prediction_length = int(max(1, Binomial(max_prediction_length, encode_length_probability).sample()))
+            if sequence_length &lt; len(data):
+                data = data.iloc[<a id="change">-sequence_length:</a>]  &#47&#47 select subset of sequence
+
+        encode_length = min(max(0, sequence_length - max_prediction_length), self.max_encode_length)
+        decode_length = sequence_length - encode_length</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 todo: handle missings -&gt; fill them up with strategy
+        &#47&#47 determine data window
+        sequence_length = len(data)
+        <a id="change">assert </a>sequence_length &gt;= self.min_prediction_length
+        &#47&#47 determine prediction/decode length and encode length
+        decode_length = min(
+            data.iloc[-1]["__time_idx__"] - (self.min_prediction_idx - 1), self.max_prediction_length, sequence_length</code></pre>

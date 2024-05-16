@@ -1,0 +1,96 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            for p in group[&quotparams&quot]:
+                if p.grad is None:
+                    continue
+                grad<a id="change"> = </a>p.grad
+                if grad.is_sparse:
+                    raise RuntimeError(&quotRMSprop does not support sparse gradients&quot)
+                state = self.state[p]
+
+                &#47&#47 State initialization
+                if len(state) == 0:
+                    state[&quotstep&quot] = 0
+                    state[&quotsquare_avg&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+                    if group[&quotmomentum&quot] &gt; 0:
+                        state[&quotmomentum_buffer&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+                    if group[&quotcentered&quot]:
+                        state[&quotgrad_avg&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+
+                square_avg = state[&quotsquare_avg&quot]
+                alpha = group[&quotalpha&quot]
+
+                state[&quotstep&quot] += 1
+
+                if group[&quotweight_decay&quot] != 0:
+                    grad<a id="change"> = </a>grad.add(p, alpha=group[&quotweight_decay&quot])
+
+                <a id="change">square_avg.mul_(</a>alpha<a id="change">)</a>.addcmul_(grad, grad, value=1 - alpha)
+
+                if <a id="change">group[&quotcentered&quot]</a>:
+                    grad_avg = state[&quotgrad_avg&quot]
+                    <a id="change">grad_avg.mul_(</a>alpha<a id="change">)</a>.add_(grad, alpha=1 - alpha)
+                    avg = square_avg.addcmul(grad_avg, grad_avg, value=-1).sqrt_().add_(group[&quoteps&quot])
+                else:
+                    avg = square_avg.sqrt().add_(group[&quoteps&quot])
+
+                <a id="change">if </a>group[&quotmomentum&quot] &gt; 0:
+                    buf<a id="change"> = </a>state[&quotmomentum_buffer&quot]
+                    buf.mul_(<a id="change">group[&quotmomentum&quot]</a>).addcdiv_(grad, avg)
+                    p.add_(buf, alpha=-group[&quotlr&quot])
+                else:
+                    p.addcdiv_(grad, avg, value=-group[&quotlr&quot])</code></pre><h3>After Change</h3><pre><code class='java'>
+                loss = closure()
+
+        for group in self.param_groups:
+            params_with_grad<a id="change"> = []</a>
+            grads<a id="change"> = </a><a id="change">[]</a>
+            square_avgs<a id="change"> = []</a>
+            grad_avgs = []
+            momentum_buffer_list<a id="change"> = []</a>
+
+            for <a id="change">p</a> in group[&quotparams&quot]:
+                if p.grad is None:
+                    continue
+                <a id="change">params_with_grad.append(p</a><a id="change">)</a>
+
+                if p.grad.is_sparse:
+                    raise RuntimeError(&quotRMSprop does not support sparse gradients&quot)
+                <a id="change">grads.append(</a>p.grad<a id="change">)</a>
+
+                state = self.state[p]
+
+                &#47&#47 State initialization
+                if len(state) == 0:
+                    state[&quotstep&quot] = 0
+                    state[&quotsquare_avg&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+                    if group[&quotmomentum&quot] &gt; 0:
+                        state[&quotmomentum_buffer&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+                    if group[&quotcentered&quot]:
+                        state[&quotgrad_avg&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+
+                <a id="change">square_avgs.append(</a>state[&quotsquare_avg&quot]<a id="change">)</a>
+
+                if group[&quotmomentum&quot] &gt; 0:
+                    <a id="change">momentum_buffer_list.append(</a>state[&quotmomentum_buffer&quot]<a id="change">)</a>
+                if group[&quotcentered&quot]:
+                    grad_avgs.append(state[&quotgrad_avg&quot])
+
+                state[&quotstep&quot] += 1
+
+
+            F.rmsprop(params_with_grad,
+                      grads,
+                      square_avgs,
+                      grad_avgs,
+                      momentum_buffer_list,
+                      group[&quotlr&quot],
+                      group[&quotalpha&quot],
+                      group[&quoteps&quot],
+                      <a id="change">group[&quotweight_decay&quot]</a>,
+                      <a id="change">group[&quotmomentum&quot]</a>,
+                      group[&quotcentered&quot])
+
+        return loss</code></pre>

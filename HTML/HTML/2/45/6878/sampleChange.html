@@ -1,0 +1,87 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                                  correct_train_loss, correct_val_loss,
+                                  correct_fewshot_acc_sum):
+    &#47&#47 Go two directories up to the root of the UB directory.
+    ub_root_dir<a id="change"> = pathlib.Path(__file__).parents[2]</a>
+    data_dir<a id="change"> = str(</a>ub_root_dir<a id="change">)</a><a id="change"> + &quot/.tfds/metadata&quot</a>
+    <a id="change">logging.info(&quotdata_dir contents: %s&quot</a>, <a id="change">os.listdir(</a>data_dir<a id="change">)</a><a id="change">)</a>
+
+    &#47&#47 Set flags.
+    FLAGS.xm_runlocal = True
+    FLAGS.config = get_config(
+        classifier=classifier, representation_size=representation_size)
+    FLAGS.output_dir = tempfile.mkdtemp(dir=self.get_temp_dir())
+    FLAGS.config.dataset_dir = data_dir
+
+    &#47&#47 Check for any errors.
+    with tfds.testing.mock_data(num_examples=100, data_dir=data_dir):
+      train_loss, val_loss, fewshot_results = heteroscedastic.main(None)
+
+    &#47&#47 Check for reproducibility.
+    <a id="change">fewshot_acc_sum = sum(</a><a id="change">jax.tree_util.tree_flatten(fewshot_results)[0])</a>
+    <a id="change">logging.info(&quot(train_loss, val_loss, fewshot_acc_sum) = %s, %s, %s&quot</a>,
+                 <a id="change">train_loss</a>, <a id="change">val_loss</a>, <a id="change">fewshot_acc_sum</a><a id="change">)</a>
+    <a id="change">self.assertAllClose(train_loss</a>, correct_train_loss<a id="change">)</a>
+    <a id="change">self.assertAllClose(val_loss</a>, correct_val_loss<a id="change">)</a>
+    &#47&#47 The fewshot training pipeline is not completely deterministic. For now, we
+    &#47&#47 increase the tolerance to avoid the test being flaky.
+    <a id="change">self.assertAllClose(
+        fewshot_acc_sum</a>, correct_fewshot_acc_sum<a id="change">, atol=0.02, rtol=0.15)</a>
+
+    &#47&#47 Check for the ability to restart from a previous checkpoint (after
+    &#47&#47 failure, etc.).
+    FLAGS.output_dir = tempfile.mkdtemp(dir=self.get_temp_dir())
+    &#47&#47 NOTE: Use this flag to simulate failing at a certain step.
+    FLAGS.config.testing_failure_step<a id="change"> = </a>FLAGS.config.total_steps - 1
+    FLAGS.config.checkpoint_steps<a id="change"> = </a>FLAGS.config.testing_failure_step
+    FLAGS.config.keep_checkpoint_steps<a id="change"> = </a>FLAGS.config.checkpoint_steps
+    with tfds.testing.mock_data(num_examples=100, data_dir=data_dir):
+      heteroscedastic.main(None)
+
+    checkpoint_path<a id="change"> = </a>os.path.join(FLAGS.output_dir, &quotcheckpoint.npz&quot)
+    <a id="change">self.assertTrue(</a>os.path.exists(checkpoint_path)<a id="change">)</a>
+    checkpoint<a id="change"> = </a>checkpoint_utils.load_checkpoint(None, checkpoint_path)
+    <a id="change">self.assertEqual(
+        </a>int(checkpoint[&quotopt&quot][&quotstate&quot][&quotstep&quot]),
+        FLAGS.config.testing_failure_step<a id="change">)</a>
+
+    &#47&#47 This should resume from the failed step.
+    <a id="change">del FLAGS.config.testing_failure_step</a>
+    with tfds.testing.mock_data(num_examples=100, data_dir=data_dir):
+      train_loss, val_loss, fewshot_results = heteroscedastic.main(None)
+
+    fewshot_acc_sum = sum(jax.tree_util.tree_flatten(fewshot_results)[0])</code></pre><h3>After Change</h3><pre><code class='java'>
+    FLAGS.output_dir = tempfile.mkdtemp(dir=self.get_temp_dir())
+    FLAGS.config.dataset_dir = self.data_dir
+
+    <a id="change">if not simulate_failure</a>:
+      &#47&#47 Check for any errors.
+      with tfds.testing.mock_data(num_examples=100, data_dir=self.data_dir):
+        train_loss, val_loss, fewshot_results = heteroscedastic.main(None)
+    else:
+      &#47&#47 Check for the ability to restart from a previous checkpoint (after
+      &#47&#47 failure, etc.).
+      FLAGS.output_dir = tempfile.mkdtemp(dir=self.get_temp_dir())
+      &#47&#47 NOTE: Use this flag to simulate failing at a certain step.
+      FLAGS.config.testing_failure_step<a id="change"> = </a>FLAGS.config.total_steps - 1
+      FLAGS.config.checkpoint_steps<a id="change"> = </a>FLAGS.config.testing_failure_step
+      FLAGS.config.keep_checkpoint_steps<a id="change"> = </a>FLAGS.config.checkpoint_steps
+      with tfds.testing.mock_data(num_examples=100, data_dir=self.data_dir):
+        heteroscedastic.main(None)
+
+      checkpoint_path<a id="change"> = </a>os.path.join(FLAGS.output_dir, &quotcheckpoint.npz&quot)
+      <a id="change">self.assertTrue(</a>os.path.exists(checkpoint_path)<a id="change">)</a>
+      checkpoint<a id="change"> = </a>checkpoint_utils.load_checkpoint(None, checkpoint_path)
+      <a id="change">self.assertEqual(
+          </a>int(checkpoint[&quotopt&quot][&quotstate&quot][&quotstep&quot]),
+          FLAGS.config.testing_failure_step<a id="change">)</a>
+
+      &#47&#47 This should resume from the failed step.
+      <a id="change">del FLAGS.config.testing_failure_step</a>
+      with tfds.testing.mock_data(num_examples=100, data_dir=self.data_dir):
+        train_loss, val_loss, fewshot_results = heteroscedastic.main(None)
+
+    &#47&#47 Check for reproducibility.</code></pre>

@@ -1,0 +1,93 @@
+<html><h3>Pattern ID :26385
+</h3><img src='79180361.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        for metric_with_utils in self.__phase2metrics[phase]:
+            metric_value = metric_with_utils.compute()
+            if isinstance(metric_value, dict):
+                metric_value = <a id="change">list(metric_value.values())[0]</a>
+            
+            if len(metric_value.shape) != 0:
+                raise ValueError(f&quot{metric_with_utils.log_name} must compute float value, &quot
+                                f&quotnot torch tensor with shap {metric_value.shape}.&quot)</code></pre><h3>After Change</h3><pre><code class='java'>
+                raise ValueError(f&quot{metric_with_utils.log_name} must compute number value, &quot 
+                                 f&quotnot numpy array with shape {metric_value.shape}.&quot)
+            &#47&#47 If it numpy array with one element but wrong dtype
+            <a id="change">if </a>(isinstance(metric_value, np.ndarray) and <a id="change">len(metric_value.shape) == 0</a> and 
+                np.issubdtype(metric_value.dtype, np.number)):
+                <a id="change">raise ValueError(f&quot{metric_with_utils.log_name} must compute number value, &quot 
+                                 f&quotnot numpy array element with dtype {metric_value.dtype}.&quot</a><a id="change">)</a>
+
+            is_number<a id="change"> = </a>isinstance(metric_value, numbers.Number)
+            &#47&#47 If not numeric type.
+            if not (is_number or isinstance(metric_value, Tensor) or  isinstance(metric_value, np.ndarray)):
+                raise ValueError(f&quot{metric_with_utils.log_name} must compute number value, &quot </code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 7</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/eora-ai/torchok/commit/d8c48d17577a0f16e28022ba1ead8e9e07e7f62f#diff-7455508f96fab95aee3143a9cf2993cbd82fe0e2daf7958b4772abf4bbdbb83aL165' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 79180361</div><div id='project'> Project Name: eora-ai/torchok</div><div id='commit'> Commit Name: d8c48d17577a0f16e28022ba1ead8e9e07e7f62f</div><div id='time'> Time: 2022-05-05</div><div id='author'> Author: rashit.bayazitov.1995@gmail.com</div><div id='file'> File Name: src/metrics/metric_manager.py</div><div id='m_class'> M Class Name: MetricManager</div><div id='n_method'> N Class Name: MetricManager</div><div id='m_method'> M Method Name: on_epoch_end(2)</div><div id='n_method'> N Method Name: on_epoch_end(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: src/metrics/metric_manager.py</div><div id='n_file'> N File Name: src/metrics/metric_manager.py</div><div id='m_start'> M Start Line: 170</div><div id='m_end'> M End Line: 180</div><div id='n_start'> N Start Line: 165</div><div id='n_end'> N End Line: 187</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            if isinstance(self._student_inputs, Tensor)
+            else self._student_inputs[0].device
+            if isinstance(self._student_inputs, Iterable)
+            else <a id="change">[
+                tens.device
+                for tens in self._student_inputs.values()
+                if isinstance(tens, Tensor)
+            ][0]</a>
+        )
+        self._teacher.to(target_device)
+
+        teacher_outputs = tensors_module_forward(</code></pre><h3>After Change</h3><pre><code class='java'>
+                teacher_inputs, self._teacher, check_feat_lab_inp=False
+            )
+
+        <a id="change">if type(student_outputs) != type(teacher_outputs)</a>:
+            <a id="change">raise ValueError(
+                "Student and teacher models must have the same output type"</a><a id="change">
+            )</a>
+
+        distill_losses = []
+        if isinstance(student_outputs, Tensor):
+            distill_losses.append(
+                self._calc_distill_loss(student_outputs, teacher_outputs)
+            )
+        elif isinstance(student_outputs, Dict):
+            for key in self._distill_output_keys or student_outputs:
+                distill_losses.append(
+                    self._calc_distill_loss(student_outputs[key], teacher_outputs[key])
+                )
+        elif isinstance(student_outputs, Iterable):
+            for idx in self._distill_output_keys or range(len(student_outputs)):
+                distill_losses.append(
+                    self._calc_distill_loss(student_outputs[idx], teacher_outputs[idx])
+                )
+
+        &#47&#47 get distillation loss as average of individual output distillation loss values
+        teacher_loss = sum(distill_losses) / len(distill_losses)
+        distillation_loss = ((1.0 - self._hardness) * loss) + (
+            self._hardness * teacher_loss
+        )
+        global_step<a id="change"> = </a>kwargs.get("global_step")
+        global_step = epoch * steps_per_epoch if global_step is None else global_step
+        _log_losses(self.loggers, global_step, loss, teacher_loss, distillation_loss)
+        return distillation_loss</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/neuralmagic/sparseml/commit/6a4767337b993070bc55cc0bac99c076ab84cb47#diff-37a1d70c58e00289a182955989f1d34a7b14be0cae1ced43409e44cb36926904L217' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 79180362</div><div id='project'> Project Name: neuralmagic/sparseml</div><div id='commit'> Commit Name: 6a4767337b993070bc55cc0bac99c076ab84cb47</div><div id='time'> Time: 2021-10-07</div><div id='author'> Author: tuan@neuralmagic.com</div><div id='file'> File Name: src/sparseml/pytorch/optim/modifier_distillation.py</div><div id='m_class'> M Class Name: DistillationModifier</div><div id='n_method'> N Class Name: DistillationModifier</div><div id='m_method'> M Method Name: loss_update(8)</div><div id='n_method'> N Method Name: loss_update(6)</div><div id='m_parent_class'> M Parent Class: ScheduledModifier</div><div id='n_parent_class'> N Parent Class: ScheduledModifier</div><div id='m_file'> M File Name: src/sparseml/pytorch/optim/modifier_distillation.py</div><div id='n_file'> N File Name: src/sparseml/pytorch/optim/modifier_distillation.py</div><div id='m_start'> M Start Line: 241</div><div id='m_end'> M End Line: 297</div><div id='n_start'> N Start Line: 225</div><div id='n_end'> N End Line: 290</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 TODO: filter inputs  by valid name
+        &#47&#47  inputs = {k: v for k, v in inputs.items() if k in self.input_names}
+        &#47&#47 temporary fix: reorder by expected QA input order
+        inps = list(<a id="change">inputs.values()</a>)
+        inps[1], inps[2] = inps[2], <a id="change">inps[1]</a>
+
+        if self.engine_type == ORT_ENGINE:
+            return self.model.run(None, dict(zip(self.input_names, inps)))
+            &#47&#47 return self.model.run(None, dict(zip(self.input_names, inputs.values())))</code></pre><h3>After Change</h3><pre><code class='java'>
+        self._forward(inputs)
+
+    def _forward(self, inputs):
+        <a id="change">if </a>not all(<a id="change">name in inputs</a> for name in self.input_names):
+            <a id="change">raise ValueError(
+                f"pipeline expected arrays with names {self.input_names}, received "
+                f"inputs: {list(inputs.keys())}"</a><a id="change">
+            )</a>
+
+        if self.engine_type == ORT_ENGINE:
+            inputs<a id="change"> = </a>{k: v for k, v in inputs.items() if k in self.input_names}
+            return self.model.run(None, inputs)
+        elif self.engine_type == DEEPSPARSE_ENGINE:
+            return self.model.run([inputs[name] for name in self.input_names])</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/neuralmagic/deepsparse/commit/845837b0c5f2ee40d4c8a9d1950ce47b7dafadd6#diff-d37b8da69f82ac62e9495d51de793dd6d36eba477b662e83a2231a0f89d327b9L249' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 79180354</div><div id='project'> Project Name: neuralmagic/deepsparse</div><div id='commit'> Commit Name: 845837b0c5f2ee40d4c8a9d1950ce47b7dafadd6</div><div id='time'> Time: 2021-07-19</div><div id='author'> Author: bfineran@users.noreply.github.com</div><div id='file'> File Name: examples/huggingface-transformers/pipelines.py</div><div id='m_class'> M Class Name: Pipeline</div><div id='n_method'> N Class Name: Pipeline</div><div id='m_method'> M Method Name: _forward(2)</div><div id='n_method'> N Method Name: _forward(2)</div><div id='m_parent_class'> M Parent Class: _ScikitCompat</div><div id='n_parent_class'> N Parent Class: _ScikitCompat</div><div id='m_file'> M File Name: examples/huggingface-transformers/pipelines.py</div><div id='n_file'> N File Name: examples/huggingface-transformers/pipelines.py</div><div id='m_start'> M Start Line: 254</div><div id='m_end'> M End Line: 261</div><div id='n_start'> N Start Line: 250</div><div id='n_end'> N End Line: 260</div><BR>

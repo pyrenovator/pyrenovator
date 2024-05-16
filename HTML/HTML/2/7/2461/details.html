@@ -1,0 +1,100 @@
+<html><h3>Pattern ID :2461
+</h3><img src='10457029.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    &#47&#47 Create gaussians with mean=mu and variance=sigma^2
+    g = torch.distributions.Normal(loc=mu, scale=sigma)
+    &#47&#47 p(y|x,w) = exp(log p(y|x,w))
+    loss<a id="change"> = </a>torch.exp(g.log_prob(target))
+    &#47&#47 Sum along the dimension of target variables to reduce the dim of loss
+    &#47&#47 (B, max(T), G, D_out) -&gt; (B, max(T), G)
+    loss = torch.sum(loss, dim=3)
+    &#47&#47 Sum all Gaussians with weight coefficients pi
+    &#47&#47 (B, max(T), G) -&gt; (B, max(T))
+    loss = torch.sum(loss * pi, dim=2)
+    &#47&#47 Calculate negative log likelihood and average it
+    <a id="change">return </a>torch.mean(-torch.log(loss), dim=1)
+
+def mdn_sample_mode(pi, mu):
+     Returns the mean of the Gaussian component whose weight coefficient is the largest</code></pre><h3>After Change</h3><pre><code class='java'>
+    target = target.unsqueeze(2).expand_as(sigma)
+
+    &#47&#47 Expand the dim of pi as (B,max(T),G) -&gt; (B,max(T),G,1)-&gt; (B,max(T),G,D_out)
+    pi<a id="change"> = pi.unsqueeze(3</a><a id="change">).expand_as(</a>sigma<a id="change">)</a>
+
+    &#47&#47 Create gaussians with mean=mu and variance=sigma^2
+    dist = torch.distributions.Normal(loc=mu, scale=sigma)
+
+    &#47&#47 Use torch.log_sum_exp instead of the combination of torch.sum and torch.log
+    &#47&#47 Please see https://github.com/r9y9/nnsvs/pull/20&#47&#47discussion_r495514563
+    &#47&#47 log p(y|x,w) + log pi
+    loss = dist.log_prob(target) + torch.log(pi)
+    
+    &#47&#47 Calculate negative log likelihood and average it
+    &#47&#47 (B, max(T), G, D_out) -&gt; (B, max(T), D_out) -&gt; (B, D_out)
+    loss = torch.logsumexp(loss, dim=2)
+    loss = -torch.mean(loss, dim=1)
+    
+    &#47&#47 Sum along the dimension of target variables to reduce the dim of loss
+    &#47&#47 (B, D_out) -&gt; (B)
+    loss = torch.sum(loss, dim=1)
+    <a id="change">return </a>loss
+
+&#47&#47 from r9y9/wavenet_vocoder/wavenet_vocoder/mixture.py
+def to_one_hot(tensor, n, fill_with=1.):</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 6</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/r9y9/nnsvs/commit/8653e3d78bbf083f1aafea140c759b253dcb6cbd#diff-07be291dc48d26158e1fa277ae4baac6f32bd8d40153691cea42f429dc0c4406L65' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 10457029</div><div id='project'> Project Name: r9y9/nnsvs</div><div id='commit'> Commit Name: 8653e3d78bbf083f1aafea140c759b253dcb6cbd</div><div id='time'> Time: 2020-09-27</div><div id='author'> Author: taroushirani@gmail.com</div><div id='file'> File Name: nnsvs/mdn.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: mdn_loss(4)</div><div id='n_method'> N Method Name: mdn_loss(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: nnsvs/mdn.py</div><div id='n_file'> N File Name: nnsvs/mdn.py</div><div id='m_start'> M Start Line: 66</div><div id='m_end'> M End Line: 78</div><div id='n_start'> N Start Line: 65</div><div id='n_end'> N End Line: 86</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    for i in range(batch_size):
+        for j in range(max_T):
+            for k in range(out_dim):
+                mode[i, j, k]<a id="change"> = </a>mu[i, j, max_component[i, j], k]
+    <a id="change">return </a>mode
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    one_hot = to_one_hot(max_component, num_gaussians)
+
+    &#47&#47 Expand the dim of one_hot as (B, max(T), G) -&gt; (B, max(T), G, d_out)
+    one_hot = <a id="change">one_hot.unsqueeze(3).expand_as(</a>mu<a id="change">)</a>
+    
+    &#47&#47 Multply one_hot and sum to get mean(mu) of the Gaussians
+    &#47&#47 whose weight coefficient(pi) is the largest.
+    &#47&#47  (B, max(T), G, d_out) -&gt; (B, max(T), d_out)
+    max_mu<a id="change"> = </a>torch.sum(mu * one_hot, dim=2)
+
+    <a id="change">return </a>max_mu
+
+
+def mdn_sample(pi, sigma, mu):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/r9y9/nnsvs/commit/8653e3d78bbf083f1aafea140c759b253dcb6cbd#diff-07be291dc48d26158e1fa277ae4baac6f32bd8d40153691cea42f429dc0c4406L80' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 10457026</div><div id='project'> Project Name: r9y9/nnsvs</div><div id='commit'> Commit Name: 8653e3d78bbf083f1aafea140c759b253dcb6cbd</div><div id='time'> Time: 2020-09-27</div><div id='author'> Author: taroushirani@gmail.com</div><div id='file'> File Name: nnsvs/mdn.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: mdn_sample_mode(2)</div><div id='n_method'> N Method Name: mdn_sample_mode(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: nnsvs/mdn.py</div><div id='n_file'> N File Name: nnsvs/mdn.py</div><div id='m_start'> M Start Line: 93</div><div id='m_end'> M End Line: 101</div><div id='n_start'> N Start Line: 110</div><div id='n_end'> N End Line: 126</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 fetch the last hidden state of last timestamp
+        c_global = ht = self.gather_indexes(gru_out, interaction[self.ITEM_LIST_LEN] - 1)
+        &#47&#47 avoid the influence of padding
+        mask<a id="change"> = </a>item_id_list.gt(0).unsqueeze(2).expand_as(gru_out)
+        q1 = self.a_1(gru_out)
+        q2 = self.a_2(ht)
+        q2_expand = q2.unsqueeze(1).expand_as(q1)
+        &#47&#47 calculate weighted factors α
+        alpha = self.v_t(mask * torch.sigmoid(q1 + q2_expand))
+        c_local = torch.sum(alpha.expand_as(gru_out) * gru_out, 1)
+        c_t = torch.cat([c_local, c_global], 1)
+        c_t = self.ct_dropout(c_t)
+        pred = self.b(c_t)
+
+        <a id="change">return </a>pred
+
+    def calculate_loss(self, interaction):
+        target_id = interaction[self.TARGET_ITEM_ID]</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 fetch the last hidden state of last timestamp
+        c_global = ht = self.gather_indexes(gru_out, item_seq_len - 1)
+        &#47&#47 avoid the influence of padding
+        mask<a id="change"> = item_seq.gt(0).unsqueeze(2</a><a id="change">).expand_as(</a>gru_out<a id="change">)</a>
+        q1 = self.a_1(gru_out)
+        q2 = self.a_2(ht)
+        q2_expand = q2.unsqueeze(1).expand_as(q1)
+        &#47&#47 calculate weighted factors α
+        alpha = self.v_t(mask * torch.sigmoid(q1 + q2_expand))
+        c_local = torch.sum(alpha.expand_as(gru_out) * gru_out, 1)
+        c_t = torch.cat([c_local, c_global], 1)
+        c_t = self.ct_dropout(c_t)
+        seq_output = self.b(c_t)
+        <a id="change">return </a>seq_output
+
+    def calculate_loss(self, interaction):
+        item_seq = interaction[self.ITEM_SEQ]</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/rucaibox/recbole/commit/1714ed39db89b102bc46fc23155f92de0d8996bd#diff-307e63abec22600af104a8dbc42fb12688d997b677ad0c5898022038427c17e6L80' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 10457024</div><div id='project'> Project Name: rucaibox/recbole</div><div id='commit'> Commit Name: 1714ed39db89b102bc46fc23155f92de0d8996bd</div><div id='time'> Time: 2020-10-15</div><div id='author'> Author: hui.wang@ruc.edu.cn</div><div id='file'> File Name: recbox/model/sequential_recommender/narm.py</div><div id='m_class'> M Class Name: NARM</div><div id='n_method'> N Class Name: NARM</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: SequentialRecommender</div><div id='n_parent_class'> N Parent Class: SequentialRecommender</div><div id='m_file'> M File Name: recbox/model/sequential_recommender/narm.py</div><div id='n_file'> N File Name: recbox/model/sequential_recommender/narm.py</div><div id='m_start'> M Start Line: 81</div><div id='m_end'> M End Line: 100</div><div id='n_start'> N Start Line: 76</div><div id='n_end'> N End Line: 95</div><BR>

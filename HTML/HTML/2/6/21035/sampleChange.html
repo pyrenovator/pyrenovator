@@ -1,0 +1,23 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 training_step is needed 2 step for 1 batch (1 step: 0~99, 2 step: 100~199)
+        &#47&#47 very cleverly, we just using hiddens parameter, lightning&quots tbptt not connected new batch&quots hiddens to past one
+        x, y = batch
+        <a id="change">if hiddens is not None</a>:
+            hiddens1<a id="change">, hiddens2 = </a>hiddens
+        else:
+            hiddens1 = None
+            hiddens2<a id="change"> = </a>None
+        lstm_last, hiddens1 = self.lstm(x, hiddens1)
+        lstm2_last, hiddens2 = self.lstm2(x, hiddens2)
+        concat_lstm = torch.concat([lstm_last, lstm2_last], dim=-1)</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 training_step is needed 2 step for 1 batch (1 step: 0~99, 2 step: 100~199)
+        &#47&#47 very cleverly, we just using hiddens parameter, lightning&quots tbptt not connected new batch&quots hiddens to past one
+        x, y = batch
+        logits, hiddens1, hiddens2 = <a id="change">self(</a>x, hiddens<a id="change">)</a>
+        loss = self.loss_func(logits, y)
+        self.log("train_loss", loss, sync_dist=(self.device != "cpu"))
+        &#47&#47 look this discussion for tbptt experiment (https://github.com/Lightning-AI/lightning/discussions/15643)
+        return {"loss": loss, "hiddens": (hiddens1, hiddens2)}</code></pre>

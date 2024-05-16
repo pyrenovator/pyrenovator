@@ -1,0 +1,82 @@
+<html><h3>Pattern ID :11030
+</h3><img src='37961603.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        X_ks = torch.zeros(len(L), spec_shape[1], spec_shape[2]).to(self.device)
+        sum_X_k = torch.zeros(spec_shape[1], spec_shape[2]).to(self.device)
+        for (i, k) in enumerate(L):
+            X_k<a id="change"> = </a>nmf_dictionary[:, k].unsqueeze(1) @ <a id="change">psi_out[k, :].unsqueeze(0</a><a id="change">)</a>
+            sum_X_k<a id="change"> += </a>X_k
+            X_ks[i] = X_k
+            &#47&#47 cem : for the denominator we need to sum over all K, not just the selected ones. 
+
+        &#47&#47 need the eps for the denominator
+        eps = 1e-10
+        X_int<a id="change"> = </a>(X_ks<a id="change"> / </a>(sum_X_k.unsqueeze(0)+eps)).sum(0) * X_stft_power_log
+
+        &#47&#47 get back to the standard stft
+        X_int = torch.exp(X_int) - 1</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47     sum_X_k += X_k
+        &#47&#47     X_ks[i] = X_k
+        &#47&#47 cem : for the denominator we need to sum over all K, not just the selected ones. 
+        X_withselected = <a id="change">nmf_dictionary[:, L]</a> @ psi_out[L, :]
+        Xhat = nmf_dictionary @ psi_out
+
+        &#47&#47 need the eps for the denominator</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 7</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/speechbrain/speechbrain/commit/2efd11efe6d6a7c1741a0525e762ceac1837b706#diff-8f3874d114f157f94ccdf7b656a9cc7738dfe21aef4a26c86929a9f19edda806L83' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 37961603</div><div id='project'> Project Name: speechbrain/speechbrain</div><div id='commit'> Commit Name: 2efd11efe6d6a7c1741a0525e762ceac1837b706</div><div id='time'> Time: 2022-11-21</div><div id='author'> Author: csubakan@gmail.com</div><div id='file'> File Name: recipes/ESC50/classification/train_interpreter.py</div><div id='m_class'> M Class Name: InterpreterESC50Brain</div><div id='n_method'> N Class Name: InterpreterESC50Brain</div><div id='m_method'> M Method Name: interpret_batch(2)</div><div id='n_method'> N Method Name: interpret_batch(2)</div><div id='m_parent_class'> M Parent Class: sb.core.Brain</div><div id='n_parent_class'> N Parent Class: sb.core.Brain</div><div id='m_file'> M File Name: recipes/ESC50/classification/train_interpreter.py</div><div id='n_file'> N File Name: recipes/ESC50/classification/train_interpreter.py</div><div id='m_start'> M Start Line: 83</div><div id='m_end'> M End Line: 117</div><div id='n_start'> N Start Line: 84</div><div id='n_end'> N End Line: 120</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    def forward(self, q, r):
+        x = q + self.num_q * r
+        Mvt<a id="change"> = </a><a id="change">self.Mv.unsqueeze(0</a><a id="change">)</a>
+
+        p = []
+        Mv = []
+
+        for qt, xt in zip(q.permute(1, 0), x.permute(1, 0)):
+            kt = self.k_emb_layer(qt)
+            vt = self.v_emb_layer(xt)
+
+            wt = torch.softmax(torch.matmul(kt, self.Mk), dim=-1)
+
+            &#47&#47 Read Process
+            rt<a id="change"> = </a>(wt.unsqueeze(-1)<a id="change"> * </a>Mvt).sum(1)
+            ft = torch.tanh(self.f_layer(torch.cat([rt, kt], dim=-1)))
+            pt = torch.sigmoid(self.p_layer(ft)).squeeze()
+
+            &#47&#47 Write Process
+            et = torch.sigmoid(self.e_layer(vt))
+            Mvt = Mvt * (1 - (wt.unsqueeze(-1) * et.unsqueeze(1)))
+            at = torch.tanh(self.a_layer(vt))
+            Mvt<a id="change"> = </a>Mvt + (wt.unsqueeze(-1) * at.unsqueeze(1))
+
+            p.append(pt)
+            Mv.append(Mvt)</code></pre><h3>After Change</h3><pre><code class='java'>
+            self.f_layer(
+                torch.cat(
+                    [
+                        (w.unsqueeze(-1) * <a id="change">Mv[:, :-1]</a>).sum(-2),
+                        k
+                    ],
+                    dim=-1</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/hcnoh/knowledge-tracing-collection-pytorch/commit/c42b01b83dbe54e94f4294009fbfe8bd910e3638#diff-f2ab9795149528e0325dcc207d9bb2ee66e3cdd4dff09817a550ab5174cc8763L39' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 37961858</div><div id='project'> Project Name: hcnoh/knowledge-tracing-collection-pytorch</div><div id='commit'> Commit Name: c42b01b83dbe54e94f4294009fbfe8bd910e3638</div><div id='time'> Time: 2021-10-06</div><div id='author'> Author: rhc0624@gmail.com</div><div id='file'> File Name: models/dkvmn.py</div><div id='m_class'> M Class Name: DKVMN</div><div id='n_method'> N Class Name: DKVMN</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: Module</div><div id='n_parent_class'> N Parent Class: Module</div><div id='m_file'> M File Name: models/dkvmn.py</div><div id='n_file'> N File Name: models/dkvmn.py</div><div id='m_start'> M Start Line: 40</div><div id='m_end'> M End Line: 66</div><div id='n_start'> N Start Line: 50</div><div id='n_end'> N End Line: 87</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    Returns:
+        torch.Tensor: torch.Tensor(N,4) as centerx centery width height
+    
+    o_boxes<a id="change"> = </a><a id="change">boxes.clone().unsqueeze(0</a><a id="change">)</a>
+
+    &#47&#47 x1,y1,x2,y2
+    w = o_boxes[:, :, 2] - o_boxes[:, :, 0]
+    h = o_boxes[:, :, 3]<a id="change"> - </a>o_boxes[:, :, 1]
+
+    o_boxes[:, :, :2] = (o_boxes[:, :, :2] + o_boxes[:, :, 2:]) / 2
+    o_boxes[:, :, 2]<a id="change"> = </a>w
+    o_boxes[:, :, 3]<a id="change"> = </a>h
+
+    return o_boxes.squeeze(0)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    Returns:
+        torch.Tensor: torch.Tensor(N,4) as centerx centery width height
+    
+    wh = <a id="change">boxes[:, 2:]</a> - boxes[:, :2]
+    cxcy = (boxes[:, 2:] + boxes[:, :2]) / 2
+
+    return torch.cat([cxcy, wh], dim=1)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/borhanmorphy/fastface/commit/6ee4e76aa1ee02b6cddc42fa8cc2d2a0f89970f8#diff-d324bf3c6838f0ef9f5ff1ec76d8cb3b2573e3e07168976c8b4a6ba2f1561cfbL84' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 37961940</div><div id='project'> Project Name: borhanmorphy/fastface</div><div id='commit'> Commit Name: 6ee4e76aa1ee02b6cddc42fa8cc2d2a0f89970f8</div><div id='time'> Time: 2021-09-16</div><div id='author'> Author: borhano.f.42@gmail.com</div><div id='file'> File Name: fastface/utils/box.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: xyxy2cxcywh(1)</div><div id='n_method'> N Method Name: xyxy2cxcywh(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: fastface/utils/box.py</div><div id='n_file'> N File Name: fastface/utils/box.py</div><div id='m_start'> M Start Line: 93</div><div id='m_end'> M End Line: 103</div><div id='n_start'> N Start Line: 127</div><div id='n_end'> N End Line: 130</div><BR>

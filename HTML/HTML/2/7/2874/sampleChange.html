@@ -1,0 +1,30 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        tokens_replaced = logits_masked.multinomial(num_samples=1, replacement=True).view(-1)
+        input_ids_disc = labels.clone()
+        input_ids_disc[masked_bool] = tokens_replaced
+        labels_disc<a id="change"> = </a><a id="change">(input_ids_disc != labels).to(</a>torch.long<a id="change">)</a>
+
+        outputs_disc = self.discriminator(
+            input_ids=input_ids_disc, attention_mask=attention_mask, token_type_ids=token_type_ids, 
+            position_ids=position_ids, head_mask=head_mask, inputs_embeds=inputs_embeds, </code></pre><h3>After Change</h3><pre><code class='java'>
+
+        loss_gen = outputs_gen.loss &#47&#47 (1,)
+        logits_gen = outputs_gen.logits &#47&#47 (batch_size, seq_length, config.vocab_size)
+        <a id="change">with torch</a><a id="change">.no_grad():
+            </a>masked_bool = (labels == -100)
+            &#47&#47 logits_masked: (batch_size*masked_length, config.vocab_size)
+            &#47&#47 logits_masked = F.softmax(logits_gen[masked_bool].reshape(-1, self.discriminator.electra.config.vocab_size), dim=1)
+            &#47&#47 replaced tokens are set with logits
+            &#47&#47 tokens_replaced = logits_masked.multinomial(num_samples=1, replacement=True).reshape(-1)
+            logits = logits_gen[masked_bool]&#47&#47.reshape(-1, self.discriminator.electra.config.vocab_size)
+            gumbel = self.gumbel_dist.sample(logits.shape)&#47&#47.to(logits.device)
+            tokens_replaced<a id="change"> = </a>(logits + gumbel).argmax(dim=-1)
+            input_ids_disc = labels.clone()
+            input_ids_disc[masked_bool] = tokens_replaced
+            labels_disc<a id="change"> = </a>(input_ids_disc != labels)&#47&#47.to(torch.long)
+
+        outputs_disc = self.discriminator(
+            input_ids=input_ids_disc, attention_mask=attention_mask, token_type_ids=token_type_ids, </code></pre>

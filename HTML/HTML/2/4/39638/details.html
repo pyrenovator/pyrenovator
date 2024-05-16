@@ -1,0 +1,78 @@
+<html><h3>Pattern ID :39638
+</h3><img src='112723022.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    - https://arxiv.org/pdf/1903.08066.pdf
+    
+    zero_point_rounded = int((zero_point + 0.5).clamp(quant_min, quant_max).item())
+    Xq = <a id="change">torch.round(X * (1.0 / scale) + zero_point_rounded).clamp(</a>quant_min, quant_max<a id="change">)</a>
+    Xfq = (Xq - zero_point_rounded) * scale
+
+    indicate_small_scale = (Xq == quant_min).float().to(device)
+    indicate_big_scale = (Xq == quant_max).float().to(device)
+    indicate_middle_scale = torch.ones(indicate_small_scale.shape).to(device) - \
+        indicate_small_scale - indicate_big_scale
+
+    indicate_saturate_zp<a id="change"> = </a>((Xq == quant_min).float() + (Xq == quant_max).float()).to(device)
+    indicate_unsaturate_zp = torch.ones(indicate_saturate_zp.shape).to(device) - indicate_saturate_zp
+
+    grad_small_scale = quant_min - zero_point_rounded</code></pre><h3>After Change</h3><pre><code class='java'>
+    indicate_middle_scale = torch.ones(indicate_small_scale.shape).to(device) - \
+        indicate_small_scale - indicate_big_scale
+
+    indicate_saturate_zp<a id="change"> = </a><a id="change">((Xq &lt; quant_min).float() + (Xq &gt; quant_max).float()).to(</a>device<a id="change">)</a>
+    indicate_unsaturate_zp = torch.ones(indicate_saturate_zp.shape).to(device) - indicate_saturate_zp
+
+    Xq = Xq.clamp(quant_min, quant_max)
+    Xfq = (Xq - zero_point_rounded) * scale</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/pytorch/pytorch/commit/0c60922fb0614132433779ad45ab8f30783db2ae#diff-a1ad3ccb2c291d8bbc6e0a986f133b7da6bb380e3dd5d2ae6e428c4efd780738L76' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 112723022</div><div id='project'> Project Name: pytorch/pytorch</div><div id='commit'> Commit Name: 0c60922fb0614132433779ad45ab8f30783db2ae</div><div id='time'> Time: 2021-02-03</div><div id='author'> Author: haichuan@fb.com</div><div id='file'> File Name: test/quantization/test_workflow_module.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: _fake_quantize_learnable_per_tensor_affine_grad_reference(7)</div><div id='n_method'> N Method Name: _fake_quantize_learnable_per_tensor_affine_grad_reference(7)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: test/quantization/test_workflow_module.py</div><div id='n_file'> N File Name: test/quantization/test_workflow_module.py</div><div id='m_start'> M Start Line: 79</div><div id='m_end'> M End Line: 87</div><div id='n_start'> N Start Line: 76</div><div id='n_end'> N End Line: 87</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    delta, offset = _compute_delta_and_offset(tensor, encoding_min, encoding_max, steps, channel_axis)
+
+    quantize_out = torch.round(tensor / delta) - offset
+    clamp_out = <a id="change">quantize_out.clamp(</a>n, p<a id="change">)</a>
+    dequantize_out = (clamp_out + offset) * delta
+
+    mask_tensor = quantize_out.ge(n) * quantize_out.le(p)
+
+    &#47&#47 NOTE: There is no uint4, uint16 in PyTorch
+    &#47&#47 Use uint8 if bitwidth less than or equal to 8, otherwise use int32 as fallback
+    dtype_for_clamp_out = torch.uint8 if tensor_quantizer.bitwidth &lt;= 8 else torch.int32
+    intermediate_result<a id="change"> = </a>IntermediateResult(clamp_out.to(dtype=dtype_for_clamp_out),
+                                             encoding_min, encoding_max,
+                                             delta, offset, mask_tensor, steps)
+    return dequantize_out, intermediate_result</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    &#47&#47 Downcast x_quant if bitwidth is less than or equal to 8 to reduce memory consumption
+    if tensor_quantizer.bitwidth &lt;= 8:
+        x_quant<a id="change"> = </a><a id="change">x_quant.to(dtype=torch.uint8)</a>
+
+    intermediate_result = IntermediateResult(x_quant,
+                                             encoding_min, encoding_max,
+                                             delta, offset, mask_tensor, num_steps,</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/quic/aimet/commit/558cce71e5d8f55f75a7f101e0fed690e5732ba5#diff-b2f96b89478a93e69873eb98010efb6e08d1224ae44c6034c14355f04497a669L320' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 112723026</div><div id='project'> Project Name: quic/aimet</div><div id='commit'> Commit Name: 558cce71e5d8f55f75a7f101e0fed690e5732ba5</div><div id='time'> Time: 2022-10-06</div><div id='author'> Author: quic_geunlee@quicinc.com</div><div id='file'> File Name: TrainingExtensions/torch/src/python/aimet_torch/quantsim_straight_through_grad.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: calculate_forward_pass(4)</div><div id='n_method'> N Method Name: calculate_forward_pass(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: TrainingExtensions/torch/src/python/aimet_torch/quantsim_straight_through_grad.py</div><div id='n_file'> N File Name: TrainingExtensions/torch/src/python/aimet_torch/quantsim_straight_through_grad.py</div><div id='m_start'> M Start Line: 332</div><div id='m_end'> M End Line: 350</div><div id='n_start'> N Start Line: 440</div><div id='n_end'> N End Line: 466</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            item = self.item_fc_layers[idx](item)
+
+        vector = torch.cosine_similarity(user, item).view(-1,)
+        vector<a id="change"> = </a><a id="change">torch.clamp(</a>vector<a id="change">, min=1e-6, max=1)</a>
+        &#47&#47print(vector.shape)
+        return vector
+
+    def calculate_loss(self, interaction):</code></pre><h3>After Change</h3><pre><code class='java'>
+        self.interaction_matrix = train_data.inter_matrix(form=&quotcsr&quot).astype(np.float32)
+
+    def forward(self, user, item):
+        user = <a id="change">torch.from_numpy(self.interaction_matrix[user].todense()).to(</a>self.device<a id="change">)</a>
+        item = torch.from_numpy(self.interaction_matrix[:, item].todense()).to(self.device).t()
+        user = self.linear_user(user)
+        item = self.linear_item(item)
+
+        user = F.relu(user)
+        user = self.user_fc_layers(user)
+
+        item = F.relu(item)
+        item = self.item_fc_layers(item)
+
+        vector = torch.cosine_similarity(user, item).view(-1,)
+        vector<a id="change"> = </a>torch.max(vector, torch.tensor([self.min_y_hat]))
+        return vector
+
+    def calculate_loss(self, interaction):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/rucaibox/recbole/commit/651670713d8b7b348dfa878bfb4ca231a1289c91#diff-c0fe1d45c47ca036a8c10b653717b9e13ef033a28d761ee73169dd2741cf1ae5L48' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 112723028</div><div id='project'> Project Name: rucaibox/recbole</div><div id='commit'> Commit Name: 651670713d8b7b348dfa878bfb4ca231a1289c91</div><div id='time'> Time: 2020-08-23</div><div id='author'> Author: 1024425445@qq.com</div><div id='file'> File Name: recbox/model/general_recommender/dmf.py</div><div id='m_class'> M Class Name: DMF</div><div id='n_method'> N Class Name: DMF</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: GeneralRecommender</div><div id='n_parent_class'> N Parent Class: GeneralRecommender</div><div id='m_file'> M File Name: recbox/model/general_recommender/dmf.py</div><div id='n_file'> N File Name: recbox/model/general_recommender/dmf.py</div><div id='m_start'> M Start Line: 49</div><div id='m_end'> M End Line: 63</div><div id='n_start'> N Start Line: 50</div><div id='n_end'> N End Line: 62</div><BR>

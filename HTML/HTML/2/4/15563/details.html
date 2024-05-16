@@ -1,0 +1,130 @@
+<html><h3>Pattern ID :15563
+</h3><img src='52601462.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    config_name = _store_config(config, config_name)
+
+    if config_dir is not None:
+        config_dir = str(<a id="change">Path(config_dir).absolute()</a>)
+    search_path = create_config_search_path(config_dir)
+
+    hydra = Hydra.create_main_hydra2(task_name=job_name, config_search_path=search_path)</code></pre><h3>After Change</h3><pre><code class='java'>
+    
+
+    &#47&#47 used for check below
+    _num_dataclass_fields<a id="change"> = </a>0
+    if is_dataclass(config):
+        _num_dataclass_fields = len(fields(config))
+
+    &#47&#47 store config in ConfigStore
+    if to_dictconfig and is_dataclass(config):
+        &#47&#47 convert Dataclass to a DictConfig
+        dictconfig = OmegaConf.create(
+            OmegaConf.to_container(OmegaConf.structured(config))
+        )
+        config_name = _store_config(dictconfig, config_name)
+    else:
+        config_name = _store_config(config, config_name)
+
+    &#47&#47 Initializes Hydra and add the config_path to the config search path
+    with initialize(config_path=None, job_name=job_name):
+
+        &#47&#47 taken from hydra.compose with support for MULTIRUN
+        gh = GlobalHydra.instance()
+        assert gh.hydra is not None
+
+        &#47&#47 Load configuration
+        cfg = gh.hydra.compose_config(
+            config_name=config_name,
+            overrides=overrides if overrides is not None else [],
+            run_mode=RunMode.RUN if not multirun else RunMode.MULTIRUN,
+            from_shell=False,
+            with_log_configuration=with_log_configuration,
+        )
+
+        callbacks = Callbacks(cfg)
+        run_start = (
+            callbacks.on_run_start if not multirun else callbacks.on_multirun_start
+        )
+        run_start(config=cfg, config_name=config_name)
+
+        hydra_context = HydraContext(
+            config_loader=gh.config_loader(), callbacks=callbacks
+        )
+
+        if not multirun:
+            job = run_job(
+                hydra_context=hydra_context,
+                task_function=task_function,
+                config=cfg,
+                job_dir_key="hydra.run.dir",
+                job_subdir_key=None,
+                configure_logging=with_log_configuration,
+            )
+            callbacks.on_run_end(config=cfg, config_name=config_name, job_return=job)
+
+            &#47&#47 access the result to trigger an exception in case the job failed.
+            _ = job.return_value
+        else:
+            &#47&#47 Instantiate sweeper without using Hydra&quots Plugin discovery (Zen!)
+            sweeper = instantiate(cfg.hydra.sweeper)
+            assert isinstance(sweeper, Sweeper)
+            sweeper.setup(
+                config=cfg,
+                hydra_context=hydra_context,
+                task_function=task_function,
+            )
+
+            task_overrides = OmegaConf.to_container(
+                cfg.hydra.overrides.task, resolve=False
+            )
+            assert isinstance(task_overrides, list)
+            job = sweeper.sweep(arguments=task_overrides)
+            callbacks.on_multirun_end(config=cfg, config_name=config_name)
+
+    if is_dataclass(config):
+        _num_dataclass_fields_after = len(fields(config))
+        <a id="change">if </a>(
+            _num_dataclass_fields_after == 0
+            and <a id="change">_num_dataclass_fields_after &lt; _num_dataclass_fields</a>
+        ):
+            warnings.warn(
+                "Your dataclass-based config was mutated by this run. If you just executed with a "
+                "`hydra/launcher` that utilizes cloudpickle (e.g., hydra-submitit-launcher), there is a known "</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/mit-ll-responsible-ai/hydra-zen/commit/8e74625510437b9329bdf66abfc6e6556382f8f2#diff-0a093622bb31e6a6dd59f163efd06848ce97b3508bb5b79044e1cc7bf12e00edL57' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 52601462</div><div id='project'> Project Name: mit-ll-responsible-ai/hydra-zen</div><div id='commit'> Commit Name: 8e74625510437b9329bdf66abfc6e6556382f8f2</div><div id='time'> Time: 2022-05-06</div><div id='author'> Author: jgoodwin@ll.mit.edu</div><div id='file'> File Name: src/hydra_zen/_launch.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: launch(8)</div><div id='n_method'> N Method Name: launch(8)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/hydra_zen/_launch.py</div><div id='n_file'> N File Name: src/hydra_zen/_launch.py</div><div id='m_start'> M Start Line: 57</div><div id='m_end'> M End Line: 259</div><div id='n_start'> N Start Line: 61</div><div id='n_end'> N End Line: 293</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                arg = getattr(args, path)
+                if arg is not None:
+                    assert arg.exists() is True and arg.is_file() is True
+                    setattr(args, path, str(<a id="change">arg.absolute()</a>))
+
+        config = parser.convert_args_to_config(args)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    @classmethod
+    def parse_args_config(cls, parser, args):
+        if parser._inited:
+            cname<a id="change"> = </a>"config_filepath"
+            &#47&#47 arg: a list of pathlib.Path
+            cpaths = getattr(args, cname)
+            <a id="change">if cpaths is not None</a>:
+                for path in cpaths:
+                    assert path.exists() is True and path.is_file() is True
+                setattr(args, cname, [str(path.absolute()) for path in cpaths])</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/spico197/rex/commit/d89f3ca2f5c2d87e8a4cfbcbf34b82ba08b52c78#diff-2382e7de4755221f6ff1d5a3ff68834d7b277846e904fea3689ef92c857df5f4L85' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 52601460</div><div id='project'> Project Name: spico197/rex</div><div id='commit'> Commit Name: d89f3ca2f5c2d87e8a4cfbcbf34b82ba08b52c78</div><div id='time'> Time: 2022-12-27</div><div id='author'> Author: tzhu1997@outlook.com</div><div id='file'> File Name: rex/utils/config.py</div><div id='m_class'> M Class Name: ConfigParser</div><div id='n_method'> N Class Name: ConfigParser</div><div id='m_method'> M Method Name: parse_args_config(3)</div><div id='n_method'> N Method Name: parse_args_config(3)</div><div id='m_parent_class'> M Parent Class: argparse.ArgumentParser</div><div id='n_parent_class'> N Parent Class: argparse.ArgumentParser</div><div id='m_file'> M File Name: rex/utils/config.py</div><div id='n_file'> N File Name: rex/utils/config.py</div><div id='m_start'> M Start Line: 87</div><div id='m_end'> M End Line: 94</div><div id='n_start'> N Start Line: 82</div><div id='n_end'> N End Line: 90</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    except ValueError:
+        raise FileNotFoundError(&quotCould not find built Sky wheels.&quot) from None
+    cleanup_wheels_dir(wheel_dir, latest_wheel)
+    return <a id="change">wheel_dir.absolute()</a>
+
+
+if __name__ == &quot__main__&quot:
+    build_sky_wheel()</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 This implements a classic "compare, update and clone" consistency
+        &#47&#47 protocol. "compare, update and clone" has to be atomic to avoid
+        &#47&#47 race conditions.
+        last_modification_time<a id="change"> = </a>_get_latest_modification_time(SKY_PACKAGE_PATH)
+        last_wheel_modification_time = _get_latest_modification_time(WHEEL_DIR)
+
+        &#47&#47 only build wheels if the wheel is outdated
+        <a id="change">if last_wheel_modification_time &lt; last_modification_time</a>:
+            if not WHEEL_DIR.exists():
+                WHEEL_DIR.mkdir(parents=True, exist_ok=True)
+            _build_sky_wheel()</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/skypilot-org/skypilot/commit/0a608d00efa0185e4df609396072acb18083db19#diff-45ea312d3249749a748781a6971d9914e88fe7c03e254fbbbcbe3de7661176e3L28' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 52601468</div><div id='project'> Project Name: skypilot-org/skypilot</div><div id='commit'> Commit Name: 0a608d00efa0185e4df609396072acb18083db19</div><div id='time'> Time: 2022-04-29</div><div id='author'> Author: suquark@gmail.com</div><div id='file'> File Name: sky/backends/wheel_utils.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: build_sky_wheel(0)</div><div id='n_method'> N Method Name: build_sky_wheel(0)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: sky/backends/wheel_utils.py</div><div id='n_file'> N File Name: sky/backends/wheel_utils.py</div><div id='m_start'> M Start Line: 39</div><div id='m_end'> M End Line: 73</div><div id='n_start'> N Start Line: 94</div><div id='n_end'> N End Line: 112</div><BR>

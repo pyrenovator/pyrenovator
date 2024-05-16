@@ -1,0 +1,66 @@
+<html><h3>Pattern ID :37021
+</h3><img src='105305892.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            &#47&#47 Block the candidates that exceed the max shift
+            _, attn_peak = torch.max(attn, dim=1)
+            condition = (
+                <a id="change">(attn_peak &lt; (prev_attn_peak + self.max_attn_shift))
+                .unsqueeze(1)
+                .expand(-1</a>, vocab_size<a id="change">)
+            )</a>
+            log_probs = torch.where(
+                condition, log_probs, torch.Tensor([self.minus_inf]).to(device)
+            )
+            prev_attn_peak = attn_peak</code></pre><h3>After Change</h3><pre><code class='java'>
+                mt_cond = attn_peak &gt; (prev_attn_peak - self.max_attn_shift)
+
+                &#47&#47 multiplication equals to element-wise and
+                cond = <a id="change">(lt_cond * mt_cond).unsqueeze(1</a><a id="change">)</a>.expand(-1, vocab_size)
+                log_probs = torch.where(
+                    cond, log_probs, torch.Tensor([self.minus_inf]).to(device),
+                )</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 2</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/speechbrain/speechbrain/commit/c0a3faefaa86bfe264c57d0d8a3da2ed2e866bf5#diff-78015fecb67f15cfe679f1f82f75c70d3f6c1a445d2dbd830698ee708999a0dbL296' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 105305892</div><div id='project'> Project Name: speechbrain/speechbrain</div><div id='commit'> Commit Name: c0a3faefaa86bfe264c57d0d8a3da2ed2e866bf5</div><div id='time'> Time: 2020-06-09</div><div id='author'> Author: jjery2243542@gmail.com</div><div id='file'> File Name: speechbrain/decoders/seq2seq.py</div><div id='m_class'> M Class Name: S2SBeamSearcher</div><div id='n_method'> N Class Name: S2SBeamSearcher</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: S2SBaseSearcher</div><div id='n_parent_class'> N Parent Class: S2SBaseSearcher</div><div id='m_file'> M File Name: speechbrain/decoders/seq2seq.py</div><div id='n_file'> N File Name: speechbrain/decoders/seq2seq.py</div><div id='m_start'> M Start Line: 296</div><div id='m_end'> M End Line: 372</div><div id='n_start'> N Start Line: 298</div><div id='n_end'> N End Line: 376</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        for i, branch in enumerate(self._branches):
+            &#47&#47 Choose control for branch of only active command
+            &#47&#47 We check for (command - 1) since navigational command 0 is ignored
+            control_pred += branch(embedding) * <a id="change">(i == (command - 1)).expand(</a>batch_size, <a id="change">3</a><a id="change">)</a>
+
+        if self.predict_speed:
+            speed_pred = self._speed_out(embedding)
+            return control_pred, speed_pred</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    def forward(self, embedding, speed, command):
+        if self._input_speed:
+            embedding += self._speed_in(<a id="change">speed.unsqueeze(1</a><a id="change">)</a>)
+
+        control_pred = 0.
+        for i, branch in enumerate(self._branches):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/opendilab/di-drive/commit/7d846cbfe584e0ef3b1af1632d3089f6c1a7b7ed#diff-afb1ffd7d94dce2600e68cf0ed4dc808b2c0ec0be512bd73f9e1dea5018bed78L91' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 105305893</div><div id='project'> Project Name: opendilab/di-drive</div><div id='commit'> Commit Name: 7d846cbfe584e0ef3b1af1632d3089f6c1a7b7ed</div><div id='time'> Time: 2021-10-18</div><div id='author'> Author: chenruobing@sensetime.com</div><div id='file'> File Name: core/models/cilrs_model.py</div><div id='m_class'> M Class Name: CILRSModel</div><div id='n_method'> N Class Name: CILRSModel</div><div id='m_method'> M Method Name: forward(4)</div><div id='n_method'> N Method Name: forward(4)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: core/models/cilrs_model.py</div><div id='n_file'> N File Name: core/models/cilrs_model.py</div><div id='m_start'> M Start Line: 92</div><div id='m_end'> M End Line: 101</div><div id='n_start'> N Start Line: 93</div><div id='n_end'> N End Line: 99</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 combine masks along attended time - first encoder and then decoder
+        mask = torch.cat(
+            (
+                <a id="change">encoder_mask.unsqueeze(1).expand(-1</a>, decoder_length, -1<a id="change">)</a>,
+                decoder_mask.unsqueeze(0).expand(encoder_lengths.size(0), -1, -1),
+            ),
+            dim=2,</code></pre><h3>After Change</h3><pre><code class='java'>
+            &#47&#47   masking out non-available data and self
+            decoder_mask = create_mask(decoder_length, decoder_lengths).unsqueeze(1).expand(-1, decoder_length, -1)
+        &#47&#47 do not attend to steps where data is padded
+        encoder_mask = <a id="change">create_mask(encoder_lengths.max(), encoder_lengths).unsqueeze(1</a><a id="change">)</a>.expand(-1, decoder_length, -1)
+        &#47&#47 combine masks along attended time - first encoder and then decoder
+        mask = torch.cat(
+            (</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/jdb78/pytorch-forecasting/commit/ca4b90615f4bfdeb357d3ad26e492ef8573c7f1c#diff-76ca71ffaeab9ec5eca22b512d1ed2460e8173ce9feb6e881188098900f5f8d4L363' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 105305890</div><div id='project'> Project Name: jdb78/pytorch-forecasting</div><div id='commit'> Commit Name: ca4b90615f4bfdeb357d3ad26e492ef8573c7f1c</div><div id='time'> Time: 2022-04-15</div><div id='author'> Author: beitner.jan@bcg.com</div><div id='file'> File Name: pytorch_forecasting/models/temporal_fusion_transformer/__init__.py</div><div id='m_class'> M Class Name: TemporalFusionTransformer</div><div id='n_method'> N Class Name: TemporalFusionTransformer</div><div id='m_method'> M Method Name: get_attention_mask(3)</div><div id='n_method'> N Method Name: get_attention_mask(3)</div><div id='m_parent_class'> M Parent Class: BaseModelWithCovariates</div><div id='n_parent_class'> N Parent Class: BaseModelWithCovariates</div><div id='m_file'> M File Name: pytorch_forecasting/models/temporal_fusion_transformer/__init__.py</div><div id='n_file'> N File Name: pytorch_forecasting/models/temporal_fusion_transformer/__init__.py</div><div id='m_start'> M Start Line: 371</div><div id='m_end'> M End Line: 391</div><div id='n_start'> N Start Line: 370</div><div id='n_end'> N End Line: 395</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                torch.ones(1, 1, dtype=self.t.dtype, device=self.device),
+            )
+        )
+        a = (end_nodes - start_nodes) / <a id="change">(t0[1:] - t0[:-1]).expand(-1</a>, D<a id="change">)</a>  &#47&#47 (num_edges)xD
+        b = start_nodes - a * t0[:-1].expand(-1, D)  &#47&#47 (num_edges)xD
+
+        idx = (</code></pre><h3>After Change</h3><pre><code class='java'>
+            self.register_buffer("params", params)
+
+    def forward(self, t: torch.Tensor) -&gt; torch.Tensor:
+        start_nodes = torch.cat((<a id="change">self.begin.unsqueeze(0</a><a id="change">)</a>, self.params))  &#47&#47 (num_edges)xBxD
+        end_nodes = torch.cat((self.params, self.end.unsqueeze(0)))  &#47&#47 (num_edges)xBxD
+        num_edges, B, D = start_nodes.shape
+        t0 = torch.cat(</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/machinelearninglifescience/stochman/commit/bc92c7edddb2f19f51f7f73909c7c80f8bd53fce#diff-48bec1b4c49721f52a5f283223a2ff8703e78e6e147bc044ac9dcf9578aede8cL142' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 105305889</div><div id='project'> Project Name: machinelearninglifescience/stochman</div><div id='commit'> Commit Name: bc92c7edddb2f19f51f7f73909c7c80f8bd53fce</div><div id='time'> Time: 2021-01-25</div><div id='author'> Author: skaftenicki@gmail.com</div><div id='file'> File Name: stochman/curves.py</div><div id='m_class'> M Class Name: DiscreteCurve</div><div id='n_method'> N Class Name: DiscreteCurve</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: BasicCurve</div><div id='n_parent_class'> N Parent Class: BasicCurve</div><div id='m_file'> M File Name: stochman/curves.py</div><div id='n_file'> N File Name: stochman/curves.py</div><div id='m_start'> M Start Line: 143</div><div id='m_end'> M End Line: 161</div><div id='n_start'> N Start Line: 168</div><div id='n_end'> N End Line: 186</div><BR>

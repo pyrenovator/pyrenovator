@@ -1,0 +1,19 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+def _processing_op(bufs: List[Tuple[str, GPUBuffer]]=[], code:str="acc", C=None):
+  if C is not None:
+    ret<a id="change"> = </a><a id="change">GPUBuffer(</a>C.out_shape<a id="change">)</a>
+    ints = &quot&quot.join(f"int {x} = {getattr(C, x)};" for x in ["H", "W", "ys", "xs", "dx", "dy", "px", "py"] + (["cin"] if C.cin == 1 else []))
+    params = [(f"int {x}", getattr(C, x)) for x in ["groups", "rcout", "oy", "ox", "iy", "ix"] + (["cin"] if C.cin &gt; 1 else [])]
+    options = []
+    if C.px == 0 and C.py == 0: options.append("-DALLVALID")</code></pre><h3>After Change</h3><pre><code class='java'>
+    ewbufs = bufs
+
+  elementwise_prefix = &quot\n&quot.join([contiguous_view(name, buf) for name, buf in ewbufs])+ \
+    "inline float _ewop("+&quot,&quot.join(<a id="change">[</a>"int gid", "float acc"<a id="change"></a>]+[f"__global const float *{name}_g" for name, _ in ewbufs])+") {"+ \
+    &quot\n&quot.join([f"float {name} = get_{name}({name}_g, gid);" for name, _ in ewbufs])+ \
+    f"return {code}; }}"
+</code></pre>

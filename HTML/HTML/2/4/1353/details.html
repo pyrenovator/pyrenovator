@@ -1,0 +1,174 @@
+<html><h3>Pattern ID :1353
+</h3><img src='6501891.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47backward()
+        if self.optimizer is not None and self.stage=="train":
+            if self.accelerator is  None:
+                <a id="change">loss.backward()</a>
+            else:
+                self.accelerator.backward(loss)
+            self.optimizer.step()
+            if self.lr_scheduler is not None:</code></pre><h3>After Change</h3><pre><code class='java'>
+        
+        &#47&#47all_preds,all_labels = self.accelerator.gather_for_metrics((preds, labels))
+        all_preds = self.accelerator.gather(preds)
+        all_labels<a id="change"> = </a>self.accelerator.gather(labels)
+        all_loss<a id="change"> = </a>self.accelerator.gather(loss).sum()
+            
+        &#47&#47metrics
+        step_metrics = {self.stage+"_"+name:metric_fn(all_preds, all_labels).item() 
+                        for name,metric_fn in self.metrics_dict.items()}
+        
+        return all_loss.item()<a id="change">,step_metrics</a>
+
+
+class EpochRunner:
+    def __init__(self,steprunner):</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/lyhue1991/torchkeras/commit/b4ca8240901c64ca88e75864f000f5b9d0dcda42#diff-2340827ee87dc1d70a43716c677682d7af53aea8418f9a1f9f927ff92519c444L41' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 6501891</div><div id='project'> Project Name: lyhue1991/torchkeras</div><div id='commit'> Commit Name: b4ca8240901c64ca88e75864f000f5b9d0dcda42</div><div id='time'> Time: 2022-11-20</div><div id='author'> Author: liangyun2@tuhu.cn@macbook</div><div id='file'> File Name: torchkeras/kerasmodel.py</div><div id='m_class'> M Class Name: StepRunner</div><div id='n_method'> N Class Name: StepRunner</div><div id='m_method'> M Method Name: __call__(2)</div><div id='n_method'> N Method Name: __call__(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: torchkeras/kerasmodel.py</div><div id='n_file'> N File Name: torchkeras/kerasmodel.py</div><div id='m_start'> M Start Line: 41</div><div id='m_end'> M End Line: 58</div><div id='n_start'> N Start Line: 55</div><div id='n_end'> N End Line: 76</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                n_totals += nTotal
+
+        &#47&#47 Perform backpropatation
+        <a id="change">loss.backward()</a>
+
+        
+        _ = nn.utils.clip_grad_norm_(self.encoder.parameters(), self.clip)
+        _ = nn.utils.clip_grad_norm_(self.decoder.parameters(), self.clip)</code></pre><h3>After Change</h3><pre><code class='java'>
+        self.dec_optimizer.zero_grad()
+        
+        loss = 0
+        ac_loss<a id="change"> = </a>0
+        total_loss = 0
+        print_losses = []
+        n_totals = 0
+        
+        input_variable = input_variable.to(self.device)
+        motion_variable = motion_variable.to(self.device)
+        
+        input_variable,motion_variable = self.encoder(input_variable,motion_variable)  
+        &#47&#47print(&quotinput variable shape :&quot,input_variable.size())
+        &#47&#47print(&quotmotion variable shape :&quot,motion_variable.size())
+        target_variable = target_variable.to(self.device)
+        mask = mask.byte().to(self.device)
+        
+        &#47&#47 Forward pass through encoder
+        decoder_input = torch.LongTensor([[self.cfg.SOS_token for _ in range(self.cfg.batch_size)]])
+        decoder_input = decoder_input.to(self.device)
+        decoder_hidden = torch.zeros(self.cfg.n_layers, self.cfg.batch_size,
+                                      self.cfg.decoder_hidden_size).to(self.device)
+        if self.cfg.decoder_type == &quotlstm&quot:
+            decoder_hidden = (decoder_hidden,decoder_hidden)
+            
+        
+        &#47&#47 Forward batch of sequences through decoder one time step at a time
+        if use_teacher_forcing:
+            for t in range(max_target_len):
+                hidden_last = decoder_hidden
+                decoder_output, decoder_hidden,attn_weight,ct,et = self.decoder(decoder_input, decoder_hidden,
+                                                input_variable.float(),motion_variable.float())
+                &#47&#47 Teacher forcing: next input comes from ground truth(data distribution)
+                decoder_input = target_variable[t].view(1, -1)
+                &#47&#47Run Attended memory decoder and return Pm(wk)
+                if self.opt_memory_decoder:
+                    mem_out = self.memory_decoder(ct,et,hidden_last,self.memory) &#47&#47(B,V)
+                    decoder_output = (1-self.cfg.lamb)*decoder_output + self.cfg.lamb*mem_out
+                    
+                &#47&#47 decoder_output : (100,voc.num_words); target_variable[t] : (100); mask[t] : (100)
+                mask_loss, nTotal = utils.maskNLLLoss(decoder_output.unsqueeze(0), target_variable[t], mask[t],self.device)
+                loss += mask_loss
+                print_losses.append(mask_loss.item() * nTotal)
+                n_totals += nTotal
+        else:
+            for t in range(max_target_len):
+                decoder_output, decoder_hidden,attn_weight,ct,et = self.decoder(decoder_input,
+                                            decoder_hidden,input_variable.float(),motion_variable.float())
+                &#47&#47 No teacher forcing: next input is decoder&quots own current output(model distribution)
+                _, topi = decoder_output.squeeze(0).topk(1)
+                decoder_input = torch.LongTensor([[topi[i][0] for i in range(self.cfg.batch_size)]])
+                decoder_input = decoder_input.to(self.device)
+                
+                if self.opt_memory_decoder:
+                    mem_out = self.memory_decoder(ct,et,hidden_last,self.memory) &#47&#47(B,V)
+                    decoder_output = (1-self.cfg.lamb)*decoder_output + self.cfg.lamb*mem_out
+                
+                &#47&#47 Calculate and accumulate loss
+                mask_loss, nTotal = utils.maskNLLLoss(decoder_output, target_variable[t], mask[t],self.device)
+                loss += mask_loss
+                print_losses.append(mask_loss.item() * nTotal)
+                n_totals += nTotal
+
+        ac_loss<a id="change"> = </a>self._calculate_AC_loss(attn_weight)
+        total_loss = self.cfg.acl_weight*ac_loss+loss
+        &#47&#47 Perform backpropatation
+        total_loss.backward()
+
+        
+        _ = nn.utils.clip_grad_norm_(self.encoder.parameters(), self.clip)
+        _ = nn.utils.clip_grad_norm_(self.decoder.parameters(), self.clip)
+            
+        self.enc_optimizer.step()
+        self.dec_optimizer.step()
+        
+        
+        return sum(print_losses) / n_totals<a id="change">, ac_loss.item()</a>
+    
+    def _calculate_AC_loss(self,alphas):
+        &quot&quot&quot
+        Calculate Attention-Coherent Loss.</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/nasib-ullah/video-captioning-models-in-pytorch/commit/a18c50080e6d79be0f52335143f7fbf13462f23c#diff-c99b37adc968771053feef320e7a3e2ad6bc1ab7c847a5002557e672495ac15cL307' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 6501874</div><div id='project'> Project Name: nasib-ullah/video-captioning-models-in-pytorch</div><div id='commit'> Commit Name: a18c50080e6d79be0f52335143f7fbf13462f23c</div><div id='time'> Time: 2021-06-19</div><div id='author'> Author: 41543508+nasib-ullah@users.noreply.github.com</div><div id='file'> File Name: models/MARN/model.py</div><div id='m_class'> M Class Name: MARN</div><div id='n_method'> N Class Name: MARN</div><div id='m_method'> M Method Name: train_iter(8)</div><div id='n_method'> N Method Name: train_iter(8)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: models/MARN/model.py</div><div id='n_file'> N File Name: models/MARN/model.py</div><div id='m_start'> M Start Line: 328</div><div id='m_end'> M End Line: 384</div><div id='n_start'> N Start Line: 363</div><div id='n_end'> N End Line: 437</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        v_loss = F.mse_loss(curr_state_v_value, target_v_value)
+        v_loss_value = v_loss.detach().cpu().numpy()
+        self.v_optimizer.zero_grad()
+        <a id="change">v_loss.backward()</a>
+        self.v_optimizer.step()
+        
+        &#47&#47compute q loss
+        target_q_value = (reward_batch + (1.0 - done_batch) * self.gamma * next_state_target_v_value).detach()</code></pre><h3>After Change</h3><pre><code class='java'>
+        new_curr_state_q1_value = self.q1_network(state_batch, new_curr_state_action)
+        new_curr_state_q2_value = self.q2_network(state_batch, new_curr_state_action)
+
+        next_state_q1_value<a id="change"> = </a>self.target_q1_network(next_state_batch, next_state_action)
+        next_state_q2_value<a id="change"> = </a>self.target_q2_network(next_state_batch, next_state_action)
+        next_state_min_q = torch.min(next_state_q1_value, next_state_q2_value)
+        target_q = (next_state_min_q - self.alpha * next_state_log_pi)
+        target_q = reward_batch + self.gamma * (1. - done_batch) * target_q
+
+        new_min_curr_state_q_value = torch.min(new_curr_state_q1_value, new_curr_state_q2_value)
+
+        &#47&#47compute q loss
+        q1_loss = F.mse_loss(curr_state_q1_value, target_q.detach())
+        q2_loss = F.mse_loss(curr_state_q2_value, target_q.detach())
+        q1_loss_value = q1_loss.detach().cpu().numpy()
+        q2_loss_value = q2_loss.detach().cpu().numpy()
+        self.q1_optimizer.zero_grad()
+        q1_loss.backward()
+        self.q1_optimizer.step()
+        self.q2_optimizer.zero_grad()
+        q2_loss.backward()
+        self.q2_optimizer.step()
+
+        &#47&#47compute policy loss
+        policy_loss = ((self.alpha * new_curr_state_log_pi) - new_min_curr_state_q_value).mean()
+        policy_loss_value = policy_loss.detach().cpu().numpy()
+        self.policy_optimizer.zero_grad()
+        policy_loss.backward()
+        self.policy_optimizer.step()
+
+        &#47&#47compute entropy loss
+        if self.automatic_entropy_tuning:
+            alpha_loss = -(self.log_alpha * (new_curr_state_log_pi + self.target_entropy).detach()).mean()
+            alpha_loss_value = alpha_loss.detach().cpu().numpy()
+            self.alpha_optim.zero_grad()
+            alpha_loss.backward()
+            self.alpha_optim.step()
+
+            self.alpha = self.log_alpha.exp()
+            alpha_value = self.alpha.detach().cpu().numpy()
+        else:
+            alpha_loss = torch.tensor(0.).to(util.device)
+            alpha_value = self.alpha.detach().cpu().numpy()
+        self.tot_update_count += 1
+        return q1_loss_value<a id="change">, q2_loss_value, policy_loss_value, alpha_loss_value, alpha_value</a>
+
+    def try_update_target_network(self):
+        if self.tot_update_count % self.update_target_network_interval == 0:
+            util.soft_update_network(self.q1_network, self.target_q1_network, self.target_smoothing_tau)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/x35f/unstable_baselines/commit/0fc82ae6328814fe2dad0c8e0ae1b172d3e5f981#diff-5db644cd5bd54e3d73a4e86c3b2e245fd8f43751389307d15efbb99043bc1b0fL73' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 6501878</div><div id='project'> Project Name: x35f/unstable_baselines</div><div id='commit'> Commit Name: 0fc82ae6328814fe2dad0c8e0ae1b172d3e5f981</div><div id='time'> Time: 2021-03-12</div><div id='author'> Author: ym8411012@126.com</div><div id='file'> File Name: sac/models.py</div><div id='m_class'> M Class Name: SACAgent</div><div id='n_method'> N Class Name: SACAgent</div><div id='m_method'> M Method Name: update(2)</div><div id='n_method'> N Method Name: update(2)</div><div id='m_parent_class'> M Parent Class: BaseAgent,torch.nn.Module</div><div id='n_parent_class'> N Parent Class: BaseAgent,torch.nn.Module</div><div id='m_file'> M File Name: sac/models.py</div><div id='n_file'> N File Name: sac/models.py</div><div id='m_start'> M Start Line: 75</div><div id='m_end'> M End Line: 129</div><div id='n_start'> N Start Line: 83</div><div id='n_end'> N End Line: 129</div><BR>

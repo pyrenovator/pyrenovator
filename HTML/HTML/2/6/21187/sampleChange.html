@@ -1,0 +1,21 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        &gt;&gt;&gt; a, b = default_uncollate(torch.rand((2,1)))
+    
+
+    batch_type = <a id="change">type(</a>batch<a id="change">)</a>
+
+    if isinstance(batch, Tensor):
+        if len(batch.shape) == 0:  &#47&#47 0 shape tensors
+            return batch</code></pre><h3>After Change</h3><pre><code class='java'>
+    if isinstance(batch, dict):
+        if any(not _is_list_like_excluding_str(sub_batch) for sub_batch in batch.values()):
+            raise ValueError("When uncollating a dict, all sub-batches (values) are expected to be list-like.")
+        <a id="change">if </a><a id="change">len({len(sub_batch) for sub_batch in batch.values()}) &gt; 1</a>:
+            raise ValueError("When uncollating a dict, all sub-batches (values) are expected to have the same length.")
+        elements<a id="change"> = </a>list(default_uncollate(element) for element in zip(*batch.values()))
+        return [dict(zip(batch.keys(), element)) for element in elements]
+
+    if _is_list_like_excluding_str(batch):</code></pre>

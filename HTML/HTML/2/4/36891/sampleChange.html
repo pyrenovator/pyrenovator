@@ -1,0 +1,20 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            script_module = torch.jit.script(model)
+        else:
+            dummy_input = get_torch_tensor(dataloader)
+            script_module = torch.jit.trace(model, tuple(<a id="change">t.to(</a>target_device<a id="change">)</a> for t in sample_to_tuple(dummy_input)))
+
+        torch.jit.save(script_module, exported_model_path.as_posix())
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        if self.target_jit_type == JitType.SCRIPT:
+            script_module = torch.jit.script(model)
+        else:
+            dummy_input<a id="change"> = </a>tuple(
+                <a id="change">torch.from_numpy(val.astype(spec.dtype)).to(</a>target_device<a id="change">)</a>
+                for (val, spec) in zip(profiling_sample.values(), input_metadata.values())
+            )
+            script_module = torch.jit.trace(model, dummy_input)
+</code></pre>

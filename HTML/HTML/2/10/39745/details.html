@@ -1,0 +1,180 @@
+<html><h3>Pattern ID :39745
+</h3><img src='113211005.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+                        &#47&#47 run request tensors through all requested modules, update caches
+                        for backend, backend_cache_handles, prompt in zip(requested_backends, cache_handles, prompts):
+                            <a id="change">if </a>not is_dummy(prompt):
+                                <a id="change">hidden_states[:, : prompt.shape[1]]</a> += prompt
+                            if hidden_states.numel() == 0:
+                                continue  &#47&#47 user passed a tensor with 0 tokens. This is a special case that occurs, e.g.
+                                &#47&#47 when user wants to pre-allocate cache or check that server *can* allocate that cache
+
+                            metadata<a id="change"> = </a>InferenceMetadata(prefix_length, tuple(backend_cache_handles))
+                            assert isinstance(
+                                hidden_states, torch.Tensor
+                            ), f"hidden states must be tensor, got {type(hidden_states)}"</code></pre><h3>After Change</h3><pre><code class='java'>
+                batch_size = request.tensors[0].size[0] if request.tensors else 1
+                prefix_length = 0
+
+                async with self._allocate_cache(requested_backends, batch_size, max_length) as <a id="change">cache_handles</a>:
+                    assert len(cache_handles) == len(requested_backends)
+                    while request.tensors:  &#47&#47 iterate while user is willing to supply tensors
+                        hidden_states, prompts, hypo_ids = map(deserialize_torch_tensor, request.tensors)
+
+                        &#47&#47 Cast inputs to backend dtype
+                        hidden_states = hidden_states.to(requested_backends[0].dtype)
+                        assert hypo_ids.dtype == torch.int64, f"hypo ids must be int64, got {hypo_ids.dtype}"
+
+                        &#47&#47 parse deep prompts (optional argument)
+                        if prompts is None or is_dummy(prompts):
+                            prompts = [None] * len(requested_backends)
+                        else:
+                            prompts = [p.squeeze(0) for p in prompts.to(requested_backends[0].dtype).split(1, dim=0)]
+                            prompts<a id="change"> = </a>[prompt if not is_dummy(prompt) else None for prompt in prompts]
+
+                        if not (len(requested_backends) == len(prompts)):
+                            raise ValueError(f"Received {len(prompts)} prompts for {len(requested_backends)} backends")
+
+                        length_increment = hidden_states.shape[1]  &#47&#47 how many tokens are added this step (in each seq)
+                        if prefix_length + length_increment &gt; max_length:
+                            raise ValueError(
+                                f"Maximum length exceeded: prefix {prefix_length} + current {length_increment}"
+                                f" exceeds pre-allocated maximum {max_length}"
+                            )
+
+                        priority = self._prioritizer.prioritize(
+                            hidden_states,
+                            hypo_ids,
+                            points=point_per_piece,
+                            requested_uids=requested_uids,
+                            type="inference",
+                        )
+
+                        inference_infos<a id="change"> = </a><a id="change">tuple(
+                            </a>InferenceMetadata<a id="change">(uid, prefix_length, tuple(handles))
+                            for uid, handles in zip(requested_uids, cache_handles)
+                        )</a>
+
+                        if hidden_states.numel() == 0:
+                            pass  &#47&#47 user passed a tensor with 0 tokens. This is a special case that occurs, e.g.
+                            &#47&#47 when user wants to pre-allocate cache or check that server *can* allocate that cache</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 8</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/bigscience-workshop/petals/commit/c4938bc23efe22e3ab6d638261bfd56c6ad807a9#diff-1ec81fca927b01043d0984c86a71115967ba3530e5d168e50ebd69d48a3c0728L109' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 113211005</div><div id='project'> Project Name: bigscience-workshop/petals</div><div id='commit'> Commit Name: c4938bc23efe22e3ab6d638261bfd56c6ad807a9</div><div id='time'> Time: 2023-01-19</div><div id='author'> Author: justheuristic@gmail.com</div><div id='file'> File Name: src/petals/server/handler.py</div><div id='m_class'> M Class Name: TransformerConnectionHandler</div><div id='n_method'> N Class Name: TransformerConnectionHandler</div><div id='m_method'> M Method Name: rpc_inference(3)</div><div id='n_method'> N Method Name: rpc_inference(3)</div><div id='m_parent_class'> M Parent Class: ConnectionHandler</div><div id='n_parent_class'> N Parent Class: ConnectionHandler</div><div id='m_file'> M File Name: src/petals/server/handler.py</div><div id='n_file'> N File Name: src/petals/server/handler.py</div><div id='m_start'> M Start Line: 113</div><div id='m_end'> M End Line: 189</div><div id='n_start'> N Start Line: 109</div><div id='n_end'> N End Line: 183</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        return 0
+
+    with tqdm(total=n_val, desc=&quotValidation round&quot, unit=&quotbatch&quot, leave=False) as pbar:
+        for <a id="change">batch</a> in loader:
+            x, labels = batch
+            <a id="change">if </a>net.n_classes &gt; 1:
+                &#47&#47 classification
+                labels = <a id="change">(labels * 255.0).to(device=device, dtype=torch.long)[:, 0, :, :]</a>  &#47&#47 get rid of extra dim for loss
+            else:
+                &#47&#47 regression
+                labels = labels.to(device=device, dtype=torch.float32)
+            x = x.to(device=device, dtype=torch.float32)
+
+            with torch.no_grad():
+                labels_pred<a id="change"> = </a>net(x)
+
+            &#47&#47 if net.n_classes &gt; 1:
+            &#47&#47     tot += F.cross_entropy(labels_pred, labels).item()</code></pre><h3>After Change</h3><pre><code class='java'>
+      val_loss = 0
+
+      with tqdm(total=n_val, desc=&quotValidation round&quot, unit=&quotbatch&quot, leave=False) as pbar:
+          for <a id="change">batch</a> in loader:
+              labels = batch[-1]
+              x<a id="change"> = </a><a id="change">tuple(</a>[batch[i] <a id="change">for</a> i in range(len(batch)-1)]<a id="change">)</a>
+              x = [x[i].to(device=device, dtype=torch.float32) for i in range(len(x))]
+              labels = labels.to(device=device)
+
+              &#47&#47 Predict
+              labels_pred<a id="change"> = </a>net(*x) &#47&#47 Unpack tuple
+
+              val_loss += net.loss_fn(labels_pred, labels).item()/n_val
+              pbar.update()</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/aangelopoulos/im2im-uq/commit/256b11fc82bbf038db0037558d9b13a5d00fc1d3#diff-5028cc2ad8345aeaaed2dfa47dca918d265fa615167f033bcab627db95c868e1L7' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 113211003</div><div id='project'> Project Name: aangelopoulos/im2im-uq</div><div id='commit'> Commit Name: 256b11fc82bbf038db0037558d9b13a5d00fc1d3</div><div id='time'> Time: 2021-06-03</div><div id='author'> Author: angelopoulos@n0025.abc0</div><div id='file'> File Name: core/scripts/eval.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: eval_net(3)</div><div id='n_method'> N Method Name: eval_net(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: core/scripts/eval.py</div><div id='n_file'> N File Name: core/scripts/eval.py</div><div id='m_start'> M Start Line: 8</div><div id='m_end'> M End Line: 39</div><div id='n_start'> N Start Line: 8</div><div id='n_end'> N End Line: 32</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                batch_size = request.tensors[0].size[0] if request.tensors else 1
+                prefix_length = 0
+
+                async with self._allocate_cache(requested_backends, batch_size, max_length) as <a id="change">cache_handles</a>:
+                    assert len(cache_handles) == len(requested_backends)
+                    while request.tensors:  &#47&#47 iterate while user is willing to supply tensors
+                        hidden_states, prompts, hypo_ids = map(deserialize_torch_tensor, request.tensors)
+
+                        &#47&#47 Cast inputs to backend dtype
+                        hidden_states = hidden_states.to(requested_backends[0].dtype)
+                        assert hypo_ids.dtype == torch.int64, f"hypo ids must be int64, got {hypo_ids.dtype}"
+
+                        &#47&#47 parse deep prompts (optional argument)
+                        if prompts is None or is_dummy(prompts) or is_dummy(prompts):
+                            prompts = [DUMMY] * len(requested_backends)
+                        else:
+                            prompts = [p.squeeze(0) for p in prompts.to(requested_backends[0].dtype).split(1, dim=0)]
+
+                        if not (len(requested_backends) == len(prompts)):
+                            raise ValueError(f"Received {len(prompts)} prompts for {len(requested_backends)} backends")
+
+                        length_increment = hidden_states.shape[1]  &#47&#47 how many tokens are added this step (in each seq)
+                        if prefix_length + length_increment &gt; max_length:
+                            raise ValueError(
+                                f"Maximum length exceeded: prefix {prefix_length} + current {length_increment}"
+                                f" exceeds pre-allocated maximum {max_length}"
+                            )
+
+                        &#47&#47 run request tensors through all requested modules, update caches
+                        for backend, backend_cache_handles, prompt in zip(requested_backends, cache_handles, prompts):
+                            <a id="change">if </a>not is_dummy(prompt):
+                                <a id="change">hidden_states[:, : prompt.shape[1]]</a> += prompt
+                            if hidden_states.numel() == 0:
+                                continue  &#47&#47 user passed a tensor with 0 tokens. This is a special case that occurs, e.g.
+                                &#47&#47 when user wants to pre-allocate cache or check that server *can* allocate that cache
+
+                            metadata<a id="change"> = </a>InferenceMetadata(prefix_length, tuple(backend_cache_handles))
+                            assert isinstance(
+                                hidden_states, torch.Tensor
+                            ), f"hidden states must be tensor, got {type(hidden_states)}"</code></pre><h3>After Change</h3><pre><code class='java'>
+                batch_size = request.tensors[0].size[0] if request.tensors else 1
+                prefix_length = 0
+
+                async with self._allocate_cache(requested_backends, batch_size, max_length) as <a id="change">cache_handles</a>:
+                    assert len(cache_handles) == len(requested_backends)
+                    while request.tensors:  &#47&#47 iterate while user is willing to supply tensors
+                        hidden_states, prompts, hypo_ids = map(deserialize_torch_tensor, request.tensors)
+
+                        &#47&#47 Cast inputs to backend dtype
+                        hidden_states = hidden_states.to(requested_backends[0].dtype)
+                        assert hypo_ids.dtype == torch.int64, f"hypo ids must be int64, got {hypo_ids.dtype}"
+
+                        &#47&#47 parse deep prompts (optional argument)
+                        if prompts is None or is_dummy(prompts):
+                            prompts = [None] * len(requested_backends)
+                        else:
+                            prompts = [p.squeeze(0) for p in prompts.to(requested_backends[0].dtype).split(1, dim=0)]
+                            prompts<a id="change"> = </a>[prompt if not is_dummy(prompt) else None for prompt in prompts]
+
+                        if not (len(requested_backends) == len(prompts)):
+                            raise ValueError(f"Received {len(prompts)} prompts for {len(requested_backends)} backends")
+
+                        length_increment = hidden_states.shape[1]  &#47&#47 how many tokens are added this step (in each seq)
+                        if prefix_length + length_increment &gt; max_length:
+                            raise ValueError(
+                                f"Maximum length exceeded: prefix {prefix_length} + current {length_increment}"
+                                f" exceeds pre-allocated maximum {max_length}"
+                            )
+
+                        priority = self._prioritizer.prioritize(
+                            hidden_states,
+                            hypo_ids,
+                            points=point_per_piece,
+                            requested_uids=requested_uids,
+                            type="inference",
+                        )
+
+                        inference_infos<a id="change"> = </a><a id="change">tuple(
+                            </a>InferenceMetadata<a id="change">(uid, prefix_length, tuple(handles))
+                            for uid, handles in zip(requested_uids, cache_handles)
+                        )</a>
+
+                        if hidden_states.numel() == 0:
+                            pass  &#47&#47 user passed a tensor with 0 tokens. This is a special case that occurs, e.g.
+                            &#47&#47 when user wants to pre-allocate cache or check that server *can* allocate that cache</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/bigscience-workshop/distributed-bloom/commit/c4938bc23efe22e3ab6d638261bfd56c6ad807a9#diff-1ec81fca927b01043d0984c86a71115967ba3530e5d168e50ebd69d48a3c0728L95' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 113211001</div><div id='project'> Project Name: bigscience-workshop/distributed-bloom</div><div id='commit'> Commit Name: c4938bc23efe22e3ab6d638261bfd56c6ad807a9</div><div id='time'> Time: 2023-01-19</div><div id='author'> Author: justheuristic@gmail.com</div><div id='file'> File Name: src/petals/server/handler.py</div><div id='m_class'> M Class Name: TransformerConnectionHandler</div><div id='n_method'> N Class Name: TransformerConnectionHandler</div><div id='m_method'> M Method Name: rpc_inference(3)</div><div id='n_method'> N Method Name: rpc_inference(3)</div><div id='m_parent_class'> M Parent Class: ConnectionHandler</div><div id='n_parent_class'> N Parent Class: ConnectionHandler</div><div id='m_file'> M File Name: src/petals/server/handler.py</div><div id='n_file'> N File Name: src/petals/server/handler.py</div><div id='m_start'> M Start Line: 113</div><div id='m_end'> M End Line: 189</div><div id='n_start'> N Start Line: 109</div><div id='n_end'> N End Line: 183</div><BR>

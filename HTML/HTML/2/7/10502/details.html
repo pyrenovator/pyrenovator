@@ -1,0 +1,111 @@
+<html><h3>Pattern ID :10502
+</h3><img src='36490860.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                    self._send_pm_cmd(command)
+                    rsps = self._get_pm_resp()
+                    for rsp in rsps:
+                        <a id="change">if not enum_equal(rsp, MGMT_RESPONSE.TERMINATED)</a>:
+                            <a id="change">raise </a><a id="change">ValueError(</a>f"Wrong Response Received : {rsp}"<a id="change">)</a>
+                    &#47&#47 Inform the runtime about successful termination
+                    self.service_to_runtime.send(MGMT_RESPONSE.TERMINATED)
+                    self.join()
+                    return</code></pre><h3>After Change</h3><pre><code class='java'>
+                                                command)
+                        &#47&#47 Advance to the next phase
+                        phase = self._next_phase(is_last_ts)
+                        <a id="change">if </a>enum_equal(phase, MGMT_COMMAND.STOP):
+                            self.service_to_runtime.send(MGMT_RESPONSE.REQ_STOP)
+                            break
+                        if enum_equal(phase, MGMT_COMMAND.PAUSE):
+                            self.service_to_runtime.send(
+                                MGMT_RESPONSE.REQ_PAUSE)
+                            break
+                        &#47&#47 Increase time step if spiking phase
+                        if enum_equal(phase, LoihiPyRuntimeService.Phase.SPK):
+                            curr_time_step += 1
+                        &#47&#47 Inform ProcessModels about current phase
+                        self._send_pm_cmd(phase)
+                        &#47&#47 ProcessModels respond with DONE if not HOST phase
+                        if not enum_equal(
+                                phase, LoihiPyRuntimeService.Phase.HOST):
+                            self._get_pm_resp()
+                            if self._error:
+                                &#47&#47 Forward error to runtime
+                                self.service_to_runtime.send(
+                                    MGMT_RESPONSE.ERROR)
+                                &#47&#47 stop all other pm
+                                self._send_pm_cmd(MGMT_COMMAND.STOP)
+                                return
+                        &#47&#47 Check if pause or stop received from Runtime
+                        &#47&#47 TODO: Do we actualy need to wait for PMs to be in
+                        &#47&#47 HOST or MGMT phase to stop or pause them?
+                        if self.runtime_to_service.probe():
+                            cmd = self.runtime_to_service.peek()
+                            if enum_equal(cmd, MGMT_COMMAND.STOP):
+                                self.runtime_to_service.recv()
+                                self._handle_stop()
+                                return
+                            if enum_equal(cmd, MGMT_COMMAND.PAUSE):
+                                self.runtime_to_service.recv()
+                                self._handle_pause()
+                                self.paused<a id="change"> = </a>True
+                                <a id="change">break</a>
+
+                        &#47&#47 If HOST phase (last time step ended) break the loop
+                        if enum_equal(
+                                phase, LoihiPyRuntimeService.Phase.HOST):</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 7</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/lava-nc/lava/commit/4956db0191ef2d0b51c026fb9c1bb50ea57e6c90#diff-92a2d9166185e8fd9185c65d0c6ed303a14113cdb72e19495a3a2f4fe32d2978L207' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 36490860</div><div id='project'> Project Name: lava-nc/lava</div><div id='commit'> Commit Name: 4956db0191ef2d0b51c026fb9c1bb50ea57e6c90</div><div id='time'> Time: 2022-02-17</div><div id='author'> Author: yashwardhan.singh@intel.com</div><div id='file'> File Name: src/lava/magma/runtime/runtime_service.py</div><div id='m_class'> M Class Name: LoihiPyRuntimeService</div><div id='n_method'> N Class Name: LoihiPyRuntimeService</div><div id='m_method'> M Method Name: run(1)</div><div id='n_method'> N Method Name: run(1)</div><div id='m_parent_class'> M Parent Class: PyRuntimeService</div><div id='n_parent_class'> N Parent Class: PyRuntimeService</div><div id='m_file'> M File Name: src/lava/magma/runtime/runtime_service.py</div><div id='n_file'> N File Name: src/lava/magma/runtime/runtime_service.py</div><div id='m_start'> M Start Line: 207</div><div id='m_end'> M End Line: 266</div><div id='n_start'> N Start Line: 296</div><div id='n_end'> N End Line: 360</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    probs = {}
+    backoffs = {}
+    for line in fstream:
+        <a id="change">if not line.strip()</a>:
+            break
+        parts = line.strip().split()
+        prob = float(parts[0])
+        if len(parts[1:]) == order + 1:
+            context = tuple(parts[1:-2])
+            token = parts[-2]
+            backoff = float(parts[-1])
+        elif len(parts[1:]) == order:
+            context = tuple(parts[1:-1])
+            token = parts[-1]
+            backoff = 0.0
+        else:
+            <a id="change">raise </a><a id="change">ValueError(</a>"Not a properly formatted ARPA file"<a id="change">)</a>
+        backoff_context = context + (token,)
+        probs.setdefault(context, {})[token] = prob
+        backoffs[backoff_context] = backoff
+    return probs, backoffs</code></pre><h3>After Change</h3><pre><code class='java'>
+    backoff_line_length = order + 2
+    for line in fstream:
+        line = line.strip()
+        <a id="change">if </a>not line:
+            <a id="change">break</a>
+        all_parts<a id="change"> = </a>tuple(line.split())
+        prob = float(all_parts[0])
+        if len(all_parts) == backoff_line_length:
+            context = all_parts[1:-2]</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/speechbrain/speechbrain/commit/b4a9d07f14534ca3812650fbac6daddbab24e11c#diff-7b78e922f706b37671c299e8e1131f995e7827812005a64717b8d1485b574cf3L75' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 36490820</div><div id='project'> Project Name: speechbrain/speechbrain</div><div id='commit'> Commit Name: b4a9d07f14534ca3812650fbac6daddbab24e11c</div><div id='time'> Time: 2020-05-26</div><div id='author'> Author: aku.rouhe@aalto.fi</div><div id='file'> File Name: speechbrain/lm/arpa.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: read_ngrams_section(2)</div><div id='n_method'> N Method Name: read_ngrams_section(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: speechbrain/lm/arpa.py</div><div id='n_file'> N File Name: speechbrain/lm/arpa.py</div><div id='m_start'> M Start Line: 79</div><div id='m_end'> M End Line: 99</div><div id='n_start'> N Start Line: 180</div><div id='n_end'> N End Line: 200</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            else:
+                add_fields.append(field_name)
+
+        <a id="change">if not</a> expand_schema and add_fields:
+            <a id="change">raise </a><a id="change">ValueError(
+                </a>"%s fields %s do not exist" % (cls._doc_name(), add_fields)<a id="change">
+            )</a>
+
+        for field_name in add_fields:
+            field = schema[field_name]
+            cls._add_field_schema(field_name, **get_field_kwargs(field))</code></pre><h3>After Change</h3><pre><code class='java'>
+            docs = parent_docs
+            for k in keys:
+                for f in docs:
+                    <a id="change">if </a>k == f.name:
+                        field = f
+                        docs = field.fields
+                        <a id="change">break</a>
+
+            field.fields<a id="change"> = </a>list(updated_docs.values())
+
+        dataset_field_docs.save()
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/voxel51/fiftyone/commit/e9fbeb57e709499a6d69bd4c54fa77e5e8b1a852#diff-b4e92a2491c17c73053ef81d1f4550849068f80a672bdb4c89ec7fa52439f7b0L257' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 36490853</div><div id='project'> Project Name: voxel51/fiftyone</div><div id='commit'> Commit Name: e9fbeb57e709499a6d69bd4c54fa77e5e8b1a852</div><div id='time'> Time: 2022-04-04</div><div id='author'> Author: ben@voxel51.com</div><div id='file'> File Name: fiftyone/core/odm/mixins.py</div><div id='m_class'> M Class Name: DatasetMixin</div><div id='n_method'> N Class Name: DatasetMixin</div><div id='m_method'> M Method Name: merge_field_schema(4)</div><div id='n_method'> N Method Name: merge_field_schema(4)</div><div id='m_parent_class'> M Parent Class: object</div><div id='n_parent_class'> N Parent Class: object</div><div id='m_file'> M File Name: fiftyone/core/odm/mixins.py</div><div id='n_file'> N File Name: fiftyone/core/odm/mixins.py</div><div id='m_start'> M Start Line: 278</div><div id='m_end'> M End Line: 320</div><div id='n_start'> N Start Line: 280</div><div id='n_end'> N End Line: 327</div><BR>

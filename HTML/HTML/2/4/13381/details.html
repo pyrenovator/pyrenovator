@@ -1,0 +1,81 @@
+<html><h3>Pattern ID :13381
+</h3><img src='45138513.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        adjust_learning_rate(optimizer, epoch, args)
+
+        &#47&#47 train for one epoch
+        <a id="change">train(</a>train_loader, model, criterion, optimizer, epoch, local_rank, args<a id="change">)</a>
+
+        &#47&#47 evaluate on validation set
+        acc1 = validate(val_loader, model, criterion, local_rank, args)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        for step, (images, labels) in enumerate(train_loader):
+            &#47&#47 将对应进程的数据放到对应 GPU 上
+            images = images.cuda(local_rank, non_blocking=True)
+            labels = <a id="change">labels.cuda(</a>local_rank<a id="change">, non_blocking=True)</a>
+
+            outputs = model(images)
+            loss<a id="change"> = </a>criterion(outputs, labels)
+
+            &#47&#47 torch.distributed.barrier()的作用是，阻塞进程，保证每个进程运行完这一行代码之前的所有代码，才能继续执行，这样才计算平均loss和平均acc的时候不会出现因为进程执行速度不一致的错误
+            torch.distributed.barrier()
+            reduced_loss<a id="change"> = </a>reduce_mean(loss, args.nprocs)
+
+            &#47&#47 更新优化模型权重
+            optimizer.zero_grad()</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/rentainhe/pytorch-distributed-training/commit/924a65892510a4cf1352ee408d6186344043f3a4#diff-f080c66d54726c9df3b2a7a496310425104eddad5c79eb4dc09c30d7d71f0a50L41' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 45138513</div><div id='project'> Project Name: rentainhe/pytorch-distributed-training</div><div id='commit'> Commit Name: 924a65892510a4cf1352ee408d6186344043f3a4</div><div id='time'> Time: 2021-01-05</div><div id='author'> Author: 596106517@qq.com</div><div id='file'> File Name: distributed.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main_worker(3)</div><div id='n_method'> N Method Name: main_worker(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: distributed.py</div><div id='n_file'> N File Name: distributed.py</div><div id='m_start'> M Start Line: 60</div><div id='m_end'> M End Line: 111</div><div id='n_start'> N Start Line: 41</div><div id='n_end'> N End Line: 110</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        print("lr={:.5f}".format(optimizer.param_groups[0][&quotlr&quot]))
+
+        &#47&#47 train for one epoch
+        <a id="change">train(</a>train_source_iter, train_target_iter, classifier, optimizer, epoch, iters_per_epoch, domain_adv, args<a id="change">)</a>
+
+        &#47&#47 evaluate on validation set
+        acc1 = validate(val_loader, classifier, args)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    print("=&gt; using pre-trained model &quot{}&quot".format(args.arch))
+    backbone = models.__dict__[args.arch](pretrained=True)
+    num_classes = train_source_dataset.num_classes
+    classifier<a id="change"> = </a><a id="change">ImageClassifier(backbone, num_classes).cuda()</a>
+    classifier_feature_dim = classifier.features_dim
+    domain_discri = DomainDiscriminator(
+        in_feature=classifier_feature_dim * num_classes,
+        hidden_size=1024
+    ).cuda()
+    all_parameters = classifier.get_parameters() + domain_discri.get_parameters()
+    classifier = torch.nn.DataParallel(classifier).cuda()
+    domain_discri = torch.nn.DataParallel(domain_discri).cuda()
+
+    &#47&#47 define optimizer and lr scheduler
+    optimizer = SGD(all_parameters, args.lr, momentum=args.momentum, weight_decay=args.weight_decay, nesterov=True)
+    lr_sheduler<a id="change"> = </a>StepwiseLR(optimizer, init_lr=args.lr, gamma=0.001, decay_rate=0.75)
+
+    &#47&#47 define loss function
+    domain_adv = ConditionalDomainAdversarialLoss(</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/thuml/transfer-learning-library/commit/540d571d6454ca34ee2687a3fb6a2e63e27be111#diff-6cd863430f90cf7619294694a4f3ea43cd79a287c5bcf7f14554bcec43875be1L24' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 45138515</div><div id='project'> Project Name: thuml/transfer-learning-library</div><div id='commit'> Commit Name: 540d571d6454ca34ee2687a3fb6a2e63e27be111</div><div id='time'> Time: 2020-03-16</div><div id='author'> Author: JiangJunguang1123@outlook.com</div><div id='file'> File Name: examples/cdan.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(1)</div><div id='n_method'> N Method Name: main(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples/cdan.py</div><div id='n_file'> N File Name: examples/cdan.py</div><div id='m_start'> M Start Line: 48</div><div id='m_end'> M End Line: 103</div><div id='n_start'> N Start Line: 40</div><div id='n_end'> N End Line: 100</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        print("lr={:.5f}".format(optimizer.param_groups[0][&quotlr&quot]))
+
+        &#47&#47 train for one epoch
+        <a id="change">train(</a>train_source_iter, train_target_iter, classifier, optimizer, epoch, iters_per_epoch, domain_adv, args<a id="change">)</a>
+
+        &#47&#47 evaluate on validation set
+        acc1 = validate(val_loader, classifier, args)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    print("=&gt; using pre-trained model &quot{}&quot".format(args.arch))
+    backbone = models.__dict__[args.arch](pretrained=True)
+    num_classes = train_source_dataset.num_classes
+    classifier<a id="change"> = </a><a id="change">ImageClassifier(backbone, num_classes).cuda()</a>
+    classifier_feature_dim = classifier.features_dim
+    domain_discri = DomainDiscriminator(
+        in_feature=classifier_feature_dim * num_classes,
+        hidden_size=1024
+    ).cuda()
+    all_parameters = classifier.get_parameters() + domain_discri.get_parameters()
+    classifier = torch.nn.DataParallel(classifier).cuda()
+    domain_discri = torch.nn.DataParallel(domain_discri).cuda()
+
+    &#47&#47 define optimizer and lr scheduler
+    optimizer = SGD(all_parameters, args.lr, momentum=args.momentum, weight_decay=args.weight_decay, nesterov=True)
+    lr_sheduler<a id="change"> = </a>StepwiseLR(optimizer, init_lr=args.lr, gamma=0.001, decay_rate=0.75)
+
+    &#47&#47 define loss function
+    domain_adv = ConditionalDomainAdversarialLoss(</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/thuml/transfer-learning-library/commit/a5d345dfccf4fe0912edb7566476bf26cf0a9ac0#diff-6cd863430f90cf7619294694a4f3ea43cd79a287c5bcf7f14554bcec43875be1L24' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 45138537</div><div id='project'> Project Name: thuml/transfer-learning-library</div><div id='commit'> Commit Name: a5d345dfccf4fe0912edb7566476bf26cf0a9ac0</div><div id='time'> Time: 2020-03-16</div><div id='author'> Author: JiangJunguang1123@outlook.com</div><div id='file'> File Name: examples/cdan.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(1)</div><div id='n_method'> N Method Name: main(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples/cdan.py</div><div id='n_file'> N File Name: examples/cdan.py</div><div id='m_start'> M Start Line: 48</div><div id='m_end'> M End Line: 103</div><div id='n_start'> N Start Line: 40</div><div id='n_end'> N End Line: 100</div><BR>

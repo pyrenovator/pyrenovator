@@ -1,0 +1,24 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 todo: randomize for augmentation
+        target = data["__target__"].to_numpy(dtype=np.float32)
+        encode_length = min(max(0, len(target) - self.max_prediction_length), self.max_encode_length)
+        decode_length = <a id="change">len(</a>target<a id="change">) - </a>encode_length
+
+        if self.add_relative_time_idx:
+            data["relative_time_idx"] = np.arange(-encode_length, decode_length, dtype=float) / self.max_encode_length</code></pre><h3>After Change</h3><pre><code class='java'>
+        if self.randomize_length is not None:
+            &#47&#47 modify sequence length
+            sequence_length_prob, encode_length_probability = Beta(*self.randomize_length).sample(torch.Size([2]))
+            sequence_length<a id="change"> = </a>int(<a id="change">max(</a>1, Binomial(sequence_length, sequence_length_prob).sample()<a id="change">)</a>)
+            max_prediction_length<a id="change"> = </a>int(max(1, Binomial(max_prediction_length, encode_length_probability).sample()))
+            if sequence_length &lt; len(data):
+                data = data.iloc[-sequence_length:]  &#47&#47 select subset of sequence
+
+        encode_length = min(max(0, sequence_length - max_prediction_length), self.max_encode_length)
+        decode_length<a id="change"> = </a>sequence_length - encode_length
+
+        &#47&#47 extract data
+        target = data["__target__"].to_numpy(dtype=np.float32)</code></pre>

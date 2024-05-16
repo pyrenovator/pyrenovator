@@ -1,0 +1,31 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        neg_items = self.get_neg_items(corpus, data, batch_start, real_batch_size, phase)
+        item_ids = np.concatenate([np.expand_dims(item_ids, -1), neg_items], axis=1).reshape(-1)
+        n_candidates = len(item_ids) // len(user_ids)
+        user_ids = <a id="change">np.expand_dims(user_ids, 1).repeat(n_candidates, axis=1).reshape(-1</a><a id="change">)</a>
+        times = np.expand_dims(times, 1).repeat(n_candidates, axis=1).reshape(-1)
+        history_items = np.expand_dims(history_items, 1).repeat(n_candidates, axis=1).reshape(-1)
+        history_times = np.expand_dims(history_times, 1).repeat(n_candidates, axis=1).reshape(-1)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 - time intervals w.r.t. recent relational interactions (-1 if not existing)
+        category_ids = list()
+        relational_intervals = list()
+        <a id="change">for </a>i, <a id="change">candidate_lst</a> in <a id="change">enumerate(</a>item_ids<a id="change">):
+            </a>intervals_lst = list()
+            for r_idx in range(0, self.relation_num):
+                intervals = np.ones_like(candidate_lst) * -1.
+                for j, target_item in enumerate(candidate_lst):
+                    for k in range(len(history_items[i]))[::-1]:
+                        if (history_items[i][k], r_idx, target_item) in corpus.triplet_set:
+                            intervals[j] = times[i] - history_times[i][k]
+                            break
+                intervals_lst.append(intervals)
+            relational_intervals.append(np.stack(intervals_lst, axis=1))
+            <a id="change">category_ids.append(</a>[<a id="change">self.item2cate[x]</a> for x in candidate_lst]<a id="change">)</a>
+        relational_intervals = np.array(relational_intervals) / self.time_scalar
+        category_ids = np.array(category_ids)
+
+        feed_dict = {</code></pre>

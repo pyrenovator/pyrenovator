@@ -1,0 +1,261 @@
+<html><h3>Pattern ID :13076
+</h3><img src='44148105.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+
+def load_model(ckpt_dir: pathlib.Path, tags: Optional[List[str]] = None) -&gt; AutoTrackable:
+    saved_model_paths = list(<a id="change">ckpt_dir.glob(</a>"**/saved_model.pb"<a id="change">)</a>)
+    <a id="change">h5_paths = </a><a id="change">list(ckpt_dir.glob("**/*.h5"</a><a id="change">)</a><a id="change">)</a>
+
+    <a id="change">if not h5_paths and not saved_model_paths</a>:
+        <a id="change">raise </a><a id="change">AssertionError(
+            "No checkpoint saved_model.pb or h5 files found at {}".format(ckpt_dir</a><a id="change">)</a><a id="change">
+        )</a>
+
+    &#47&#47 Tensorflow 1 favors saved_models for tf.estimators and h5 for tf.keras
+    &#47&#47 models. Tensorflow is moving towards saved_model for both high level
+    &#47&#47 APIs in tf.2. For this reason we favor the saved_model below but also
+    &#47&#47 check for h5 models.
+    <a id="change">if saved_model_paths</a>:
+        <a id="change">if len(saved_model_paths) &gt; 1</a>:
+            <a id="change">raise </a><a id="change">AssertionError(
+                "Checkpoint directory {} contains multiple \
+                nested saved_model.pb files: {}".format(
+                    ckpt_dir</a>, saved_model_paths<a id="change">
+                )</a><a id="change">
+            )</a>
+
+        <a id="change">if tags is None</a>:
+            <a id="change">print(&quotNo tags specified. Loading "serve" tag from saved_model.&quot</a><a id="change">)</a>
+            tags<a id="change"> = </a><a id="change">["serve"</a>]
+
+        saved_model_path<a id="change"> = saved_model_paths[0]</a>
+        <a id="change">return </a><a id="change">tf.compat.v1.saved_model.load_v2(</a><a id="change">str(</a>saved_model_path.parent<a id="change">)</a>, tags<a id="change">)</a>
+
+    else:
+        <a id="change">if len(h5_paths) &gt; 1</a>:
+            <a id="change">raise </a><a id="change">AssertionError(
+                </a><a id="change">"Checkpoint directory {} contains multiple \
+                nested .h5 files: {}".format(
+                    ckpt_dir</a>, <a id="change">h5_paths</a><a id="change">
+                )
+            )</a>
+        <a id="change">return </a><a id="change">tf.keras.models.load_model(h5_paths[0]</a><a id="change">)</a>
+</code></pre><h3>After Change</h3><pre><code class='java'>
+) -&gt; AutoTrackable:
+    save_format = metadata.get("format", None)
+
+    <a id="change">if not save_format or cast(str, save_format) == "saved_model"</a>:
+        <a id="change">return </a><a id="change">load_saved_model(ckpt_dir</a><a id="change">, tags=tags)</a>
+
+    elif <a id="change">save_format == "h5"</a>:
+        trial<a id="change"> = _local_trial_from_context(
+            ckpt_dir.joinpath("code"</a><a id="change">)</a><a id="change">,
+            config=metadata["experiment_config"],
+            hparams=metadata["hparams"],
+        )</a>
+
+        trial<a id="change"> = </a><a id="change">cast(</a>TFKerasTrial, trial<a id="change">)</a>
+        <a id="change">model = </a><a id="change">trial.build_model()</a>
+        <a id="change">model.load_weights(</a><a id="change">str(ckpt_dir</a><a id="change">.joinpath("determined-keras-model.h5"</a><a id="change">)))</a>
+        <a id="change">return model</a>
+    else:
+        <a id="change">raise AssertionError("Unknown checkpoint format at {}".format(str(ckpt_dir</a><a id="change">)</a><a id="change">)</a><a id="change">)</a>
+
+
+def load_saved_model(ckpt_dir: pathlib.Path, tags: Optional[List[str]] = None) -&gt; AutoTrackable:
+    saved_model_paths = list(ckpt_dir.glob("**/saved_model.pb"))</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 61</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/determined-ai/determined/commit/f1b9a1d6f7d2359f28915d476c73dce2f592242e#diff-8b3a1d7f4746df2ab08b43e9fc330a0dea025382bbf81c27d80baca3f58a0c70L9' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 44148105</div><div id='project'> Project Name: determined-ai/determined</div><div id='commit'> Commit Name: f1b9a1d6f7d2359f28915d476c73dce2f592242e</div><div id='time'> Time: 2020-05-12</div><div id='author'> Author: sidney@determined.ai</div><div id='file'> File Name: common/determined_common/experimental/checkpoint/_tf.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: load_model(3)</div><div id='n_method'> N Method Name: load_model(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: common/determined_common/experimental/checkpoint/_tf.py</div><div id='n_file'> N File Name: common/determined_common/experimental/checkpoint/_tf.py</div><div id='m_start'> M Start Line: 9</div><div id='m_end'> M End Line: 45</div><div id='n_start'> N Start Line: 12</div><div id='n_end'> N End Line: 33</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+
+def load_model(ckpt_dir: pathlib.Path, tags: Optional[List[str]] = None) -&gt; AutoTrackable:
+    saved_model_paths = list(<a id="change">ckpt_dir.glob(</a>"**/saved_model.pb"<a id="change">)</a>)
+    <a id="change">h5_paths = </a><a id="change">list(ckpt_dir.glob("**/*.h5"</a><a id="change">)</a><a id="change">)</a>
+
+    <a id="change">if not h5_paths and not saved_model_paths</a>:
+        <a id="change">raise </a><a id="change">AssertionError(
+            "No checkpoint saved_model.pb or h5 files found at {}".format(</a>ckpt_dir<a id="change">)</a><a id="change">
+        )</a>
+
+    &#47&#47 Tensorflow 1 favors saved_models for tf.estimators and h5 for tf.keras
+    &#47&#47 models. Tensorflow is moving towards saved_model for both high level
+    &#47&#47 APIs in tf.2. For this reason we favor the saved_model below but also
+    &#47&#47 check for h5 models.
+    <a id="change">if saved_model_paths</a>:
+        <a id="change">if len(saved_model_paths) &gt; 1</a>:
+            <a id="change">raise </a><a id="change">AssertionError(
+                "Checkpoint directory {} contains multiple \
+                nested saved_model.pb files: {}".format(
+                    </a>ckpt_dir, saved_model_paths<a id="change">
+                )</a><a id="change">
+            )</a>
+
+        <a id="change">if tags is None</a>:
+            <a id="change">print(&quotNo tags specified. Loading "serve" tag from saved_model.&quot</a><a id="change">)</a>
+            tags<a id="change"> = </a><a id="change">["serve"</a>]
+
+        saved_model_path<a id="change"> = saved_model_paths[0]</a>
+        <a id="change">return </a><a id="change">tf.compat.v1.saved_model.load_v2(</a><a id="change">str(</a>saved_model_path.parent<a id="change">)</a>, tags<a id="change">)</a>
+
+    else:
+        <a id="change">if len(h5_paths) &gt; 1</a>:
+            <a id="change">raise </a><a id="change">AssertionError(
+                </a><a id="change">"Checkpoint directory {} contains multiple \
+                nested .h5 files: {}".format(
+                    </a>ckpt_dir, h5_paths<a id="change">
+                )
+            )</a>
+        <a id="change">return </a><a id="change">tf.keras.models.load_model(h5_paths[0]</a><a id="change">)</a>
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    &#47&#47 Tensorflow 1 favors saved_models for tf.estimators and h5 for tf.keras
+    &#47&#47 models. Tensorflow is moving towards saved_model for both high level
+    &#47&#47 APIs in tf.2.
+    <a id="change">if not save_format or cast(str, save_format) == "saved_model"</a>:
+        <a id="change">return </a><a id="change">load_saved_model(</a>ckpt_dir<a id="change">, tags=tags)</a>
+
+    elif <a id="change">save_format == "h5"</a>:
+        trial<a id="change"> = _local_trial_from_context(
+            ckpt_dir.joinpath("code"</a><a id="change">)</a><a id="change">,
+            config=metadata["experiment_config"],
+            hparams=metadata["hparams"],
+        )</a>
+
+        trial<a id="change"> = </a><a id="change">cast(</a>TFKerasTrial, trial<a id="change">)</a>
+        <a id="change">model = </a><a id="change">trial.build_model()</a>
+        <a id="change">model.load_weights(</a><a id="change">str(</a><a id="change">ckpt_dir.joinpath("determined-keras-model.h5"</a><a id="change">)))</a>
+        <a id="change">return </a>model
+    else:
+        <a id="change">raise AssertionError("Unknown checkpoint format at {}".format(str(</a>ckpt_dir<a id="change">)</a><a id="change">)</a><a id="change">)</a>
+
+
+def load_saved_model(ckpt_dir: pathlib.Path, tags: Optional[List[str]] = None) -&gt; AutoTrackable:
+    saved_model_paths = list(ckpt_dir.glob("**/saved_model.pb"))</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/determined-ai/determined/commit/47ec6cc32234d8e797d9ae3c23d70bfb6d3a64a9#diff-8b3a1d7f4746df2ab08b43e9fc330a0dea025382bbf81c27d80baca3f58a0c70L8' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 44148104</div><div id='project'> Project Name: determined-ai/determined</div><div id='commit'> Commit Name: 47ec6cc32234d8e797d9ae3c23d70bfb6d3a64a9</div><div id='time'> Time: 2020-05-18</div><div id='author'> Author: sidney@determined.ai</div><div id='file'> File Name: common/determined_common/experimental/checkpoint/_tf.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: load_model(3)</div><div id='n_method'> N Method Name: load_model(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: common/determined_common/experimental/checkpoint/_tf.py</div><div id='n_file'> N File Name: common/determined_common/experimental/checkpoint/_tf.py</div><div id='m_start'> M Start Line: 9</div><div id='m_end'> M End Line: 45</div><div id='n_start'> N Start Line: 12</div><div id='n_end'> N End Line: 36</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+
+def load_model(ckpt_dir: pathlib.Path, tags: Optional[List[str]] = None) -&gt; AutoTrackable:
+    saved_model_paths = list(<a id="change">ckpt_dir.glob(</a>"**/saved_model.pb"<a id="change">)</a>)
+    <a id="change">h5_paths = </a><a id="change">list(ckpt_dir.glob("**/*.h5"</a><a id="change">)</a><a id="change">)</a>
+
+    <a id="change">if not h5_paths and not saved_model_paths</a>:
+        <a id="change">raise </a><a id="change">AssertionError(
+            "No checkpoint saved_model.pb or h5 files found at {}".format(</a>ckpt_dir<a id="change">)</a><a id="change">
+        )</a>
+
+    &#47&#47 Tensorflow 1 favors saved_models for tf.estimators and h5 for tf.keras
+    &#47&#47 models. Tensorflow is moving towards saved_model for both high level
+    &#47&#47 APIs in tf.2. For this reason we favor the saved_model below but also
+    &#47&#47 check for h5 models.
+    <a id="change">if saved_model_paths</a>:
+        <a id="change">if len(saved_model_paths) &gt; 1</a>:
+            <a id="change">raise </a><a id="change">AssertionError(
+                "Checkpoint directory {} contains multiple \
+                nested saved_model.pb files: {}".format(
+                    </a>ckpt_dir, saved_model_paths<a id="change">
+                )</a><a id="change">
+            )</a>
+
+        <a id="change">if tags is None</a>:
+            <a id="change">print(&quotNo tags specified. Loading "serve" tag from saved_model.&quot</a><a id="change">)</a>
+            tags<a id="change"> = </a><a id="change">["serve"</a>]
+
+        saved_model_path<a id="change"> = saved_model_paths[0]</a>
+        <a id="change">return </a><a id="change">tf.compat.v1.saved_model.load_v2(</a><a id="change">str(</a>saved_model_path.parent<a id="change">)</a>, tags<a id="change">)</a>
+
+    else:
+        <a id="change">if len(h5_paths) &gt; 1</a>:
+            <a id="change">raise </a><a id="change">AssertionError(
+                </a><a id="change">"Checkpoint directory {} contains multiple \
+                nested .h5 files: {}".format(
+                    </a>ckpt_dir, h5_paths<a id="change">
+                )
+            )</a>
+        <a id="change">return </a><a id="change">tf.keras.models.load_model(h5_paths[0]</a><a id="change">)</a>
+</code></pre><h3>After Change</h3><pre><code class='java'>
+) -&gt; AutoTrackable:
+    save_format = metadata.get("format", None)
+
+    <a id="change">if not save_format or cast(str, save_format) == "saved_model"</a>:
+        <a id="change">return </a><a id="change">load_saved_model(</a>ckpt_dir<a id="change">, tags=tags)</a>
+
+    elif <a id="change">save_format == "h5"</a>:
+        trial<a id="change"> = _local_trial_from_context(
+            ckpt_dir.joinpath("code"</a><a id="change">)</a><a id="change">,
+            config=metadata["experiment_config"],
+            hparams=metadata["hparams"],
+        )</a>
+
+        trial<a id="change"> = </a><a id="change">cast(</a>TFKerasTrial, trial<a id="change">)</a>
+        <a id="change">model = </a><a id="change">trial.build_model()</a>
+        <a id="change">model.load_weights(</a><a id="change">str(</a><a id="change">ckpt_dir.joinpath("determined-keras-model.h5"</a><a id="change">)))</a>
+        <a id="change">return </a>model
+    else:
+        <a id="change">raise AssertionError("Unknown checkpoint format at {}".format(str(</a>ckpt_dir<a id="change">)</a><a id="change">)</a><a id="change">)</a>
+
+
+def load_saved_model(ckpt_dir: pathlib.Path, tags: Optional[List[str]] = None) -&gt; AutoTrackable:
+    saved_model_paths = list(ckpt_dir.glob("**/saved_model.pb"))</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/determined-ai/determined/commit/f1b9a1d6f7d2359f28915d476c73dce2f592242e#diff-8b3a1d7f4746df2ab08b43e9fc330a0dea025382bbf81c27d80baca3f58a0c70L8' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 44148106</div><div id='project'> Project Name: determined-ai/determined</div><div id='commit'> Commit Name: f1b9a1d6f7d2359f28915d476c73dce2f592242e</div><div id='time'> Time: 2020-05-12</div><div id='author'> Author: sidney@determined.ai</div><div id='file'> File Name: common/determined_common/experimental/checkpoint/_tf.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: load_model(3)</div><div id='n_method'> N Method Name: load_model(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: common/determined_common/experimental/checkpoint/_tf.py</div><div id='n_file'> N File Name: common/determined_common/experimental/checkpoint/_tf.py</div><div id='m_start'> M Start Line: 9</div><div id='m_end'> M End Line: 45</div><div id='n_start'> N Start Line: 12</div><div id='n_end'> N End Line: 33</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+) -&gt; AutoTrackable:
+    save_format = metadata.get("format", None)
+
+    <a id="change">if not save_format or cast(str, save_format) == "saved_model"</a>:
+        <a id="change">return </a><a id="change">load_saved_model(</a>ckpt_dir<a id="change">, tags=tags)</a>
+
+    elif <a id="change">save_format == "h5"</a>:
+        trial<a id="change"> = _local_trial_from_context(
+            ckpt_dir.joinpath("code"</a><a id="change">)</a><a id="change">,
+            config=metadata["experiment_config"],
+            hparams=metadata["hparams"],
+        )</a>
+
+        trial<a id="change"> = </a><a id="change">cast(</a>TFKerasTrial, trial<a id="change">)</a>
+        <a id="change">model = </a><a id="change">trial.build_model()</a>
+        <a id="change">model.load_weights(</a><a id="change">str(</a><a id="change">ckpt_dir.joinpath("determined-keras-model.h5"</a><a id="change">)))</a>
+        <a id="change">return </a>model
+    else:
+        <a id="change">raise </a><a id="change">AssertionError("Unknown checkpoint format at {}".format(str(</a>ckpt_dir<a id="change">)</a><a id="change">)</a><a id="change">)</a>
+
+
+def load_saved_model(ckpt_dir: pathlib.Path, tags: Optional[List[str]] = None) -&gt; AutoTrackable:
+    saved_model_paths = list(ckpt_dir.glob("**/saved_model.pb"))</code></pre><h3>After Change</h3><pre><code class='java'>
+
+
+def load_model(ckpt_dir: pathlib.Path, tags: Optional[List[str]] = None) -&gt; AutoTrackable:
+    saved_model_paths = list(<a id="change">ckpt_dir.glob(</a>"**/saved_model.pb"<a id="change">)</a>)
+    <a id="change">h5_paths = </a><a id="change">list(ckpt_dir.glob("**/*.h5"</a><a id="change">)</a><a id="change">)</a>
+
+    <a id="change">if not h5_paths and not saved_model_paths</a>:
+        <a id="change">raise </a><a id="change">AssertionError(
+            "No checkpoint saved_model.pb or h5 files found at {}".format(</a>ckpt_dir<a id="change">)</a><a id="change">
+        )</a>
+
+    &#47&#47 Tensorflow 1 favors saved_models for tf.estimators and h5 for tf.keras
+    &#47&#47 models. Tensorflow is moving towards saved_model for both high level
+    &#47&#47 APIs in tf.2. For this reason we favor the saved_model below but also
+    &#47&#47 check for h5 models.
+    <a id="change">if saved_model_paths</a>:
+        <a id="change">if len(saved_model_paths) &gt; 1</a>:
+            <a id="change">raise AssertionError(
+                "Checkpoint directory {} contains multiple \
+                nested saved_model.pb files: {}".format(
+                    </a>ckpt_dir, saved_model_paths<a id="change">
+                )</a><a id="change">
+            )</a>
+
+        <a id="change">if tags is None</a>:
+            <a id="change">print(&quotNo tags specified. Loading "serve" tag from saved_model.&quot</a><a id="change">)</a>
+            tags<a id="change"> = </a><a id="change">["serve"</a>]
+
+        saved_model_path<a id="change"> = saved_model_paths[0]</a>
+        <a id="change">return </a><a id="change">tf.compat.v1.saved_model.load_v2(</a><a id="change">str(</a>saved_model_path.parent<a id="change">)</a>, tags<a id="change">)</a>
+
+    else:
+        <a id="change">if len(h5_paths) &gt; 1</a>:
+            <a id="change">raise </a><a id="change">AssertionError(
+                </a><a id="change">"Checkpoint directory {} contains multiple \
+                nested .h5 files: {}".format(
+                    </a>ckpt_dir, h5_paths<a id="change">
+                )
+            )</a>
+        <a id="change">return </a><a id="change">tf.keras.models.load_model(h5_paths[0]</a><a id="change">)</a>
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/determined-ai/determined/commit/f1330027379a2141c85a1e9c524b63dc00e270e1#diff-8b3a1d7f4746df2ab08b43e9fc330a0dea025382bbf81c27d80baca3f58a0c70L11' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 44148109</div><div id='project'> Project Name: determined-ai/determined</div><div id='commit'> Commit Name: f1330027379a2141c85a1e9c524b63dc00e270e1</div><div id='time'> Time: 2020-05-13</div><div id='author'> Author: sidney@determined.ai</div><div id='file'> File Name: common/determined_common/experimental/checkpoint/_tf.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: load_model(2)</div><div id='n_method'> N Method Name: load_model(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: common/determined_common/experimental/checkpoint/_tf.py</div><div id='n_file'> N File Name: common/determined_common/experimental/checkpoint/_tf.py</div><div id='m_start'> M Start Line: 12</div><div id='m_end'> M End Line: 33</div><div id='n_start'> N Start Line: 9</div><div id='n_end'> N End Line: 45</div><BR>

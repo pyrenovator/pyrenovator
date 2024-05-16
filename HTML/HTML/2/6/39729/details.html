@@ -1,0 +1,61 @@
+<html><h3>Pattern ID :39729
+</h3><img src='113167344.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        dim = shape[-1]
+        x = x.view(-1, dim)
+
+        x_mean = <a id="change">x.mean(dim = 1, keepdim= True)</a>
+        x_var = <a id="change">x.var(dim = 1, unbiased = False, keepdim = True)</a>
+
+        scaled_x = (x<a id="change"> - </a>x_mean)
+        sqrt_var = (x_var + eps) ** 0.5
+        inv_var = 1. / sqrt_var
+        normed_x = scaled_x<a id="change"> * </a>inv_var
+
+        ctx.save_for_backward(scaled_x, normed_x, gamma, sqrt_var, inv_var)
+
+        out = rearrange(gamma, &quotd -&gt; () d&quot)<a id="change"> * </a>normed_x + rearrange(beta, &quotd -&gt; () d&quot)
+        return out.view(*shape)
+
+    @classmethod</code></pre><h3>After Change</h3><pre><code class='java'>
+        x = x.view(-1, dim)
+        n_rows, n_cols = x.shape
+
+        expanded_gamma = <a id="change">gamma[None, :]</a>.expand(n_rows, -1)
+        expanded_beta = beta[None, :].expand(n_rows, -1)
+
+        BLOCK_SIZE = triton.next_power_of_2(n_cols)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 6</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/lucidrains/triton-transformer/commit/c4a68c1023e8ad92b8f2beeb5a5d5c78fb2cda34#diff-efb464e8953d3171bdd3355d448443781f005f551f7281446030316b4157bb28L265' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 113167344</div><div id='project'> Project Name: lucidrains/triton-transformer</div><div id='commit'> Commit Name: c4a68c1023e8ad92b8f2beeb5a5d5c78fb2cda34</div><div id='time'> Time: 2021-09-22</div><div id='author'> Author: lucidrains@gmail.com</div><div id='file'> File Name: triton_transformer/triton_transformer.py</div><div id='m_class'> M Class Name: _layernorm</div><div id='n_method'> N Class Name: _layernorm</div><div id='m_method'> M Method Name: forward(6)</div><div id='n_method'> N Method Name: forward(6)</div><div id='m_parent_class'> M Parent Class: autograd.Function</div><div id='n_parent_class'> N Parent Class: autograd.Function</div><div id='m_file'> M File Name: triton_transformer/triton_transformer.py</div><div id='n_file'> N File Name: triton_transformer/triton_transformer.py</div><div id='m_start'> M Start Line: 265</div><div id='m_end'> M End Line: 277</div><div id='n_start'> N Start Line: 337</div><div id='n_end'> N End Line: 370</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        self.g = nn.Parameter(torch.ones(dim))
+
+    def forward(self, x):
+        var = <a id="change">torch.var(</a>x<a id="change">, dim = -1, unbiased = False, keepdim = True)</a>
+        mean = <a id="change">torch.mean(</a>x<a id="change">, dim = -1, keepdim = True)</a>
+        return (<a id="change">x - mean) / (var + self.eps).sqrt() * </a>self.g
+
+&#47&#47 parallel with residual
+&#47&#47 discovered by Wang et al + EleutherAI from GPT-J fame</code></pre><h3>After Change</h3><pre><code class='java'>
+        self.register_buffer(&quotbeta&quot, torch.zeros(dim))
+
+    def forward(self, x):
+        return F.layer_norm(x, <a id="change">x.shape[-1:]</a>, self.gamma, self.beta)
+
+&#47&#47 parallel with residual
+&#47&#47 discovered by Wang et al + EleutherAI from GPT-J fame</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lucidrains/palm-pytorch/commit/0832087f78006c10d52c0600c7377c5929568e0b#diff-a5ba5faa1b15b08f73db45e9342fcadc130f44195e1a0b082fa3d9b3e025885cL17' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 113167343</div><div id='project'> Project Name: lucidrains/palm-pytorch</div><div id='commit'> Commit Name: 0832087f78006c10d52c0600c7377c5929568e0b</div><div id='time'> Time: 2022-04-04</div><div id='author'> Author: lucidrains@gmail.com</div><div id='file'> File Name: palm_pytorch/palm_pytorch.py</div><div id='m_class'> M Class Name: LayerNorm</div><div id='n_method'> N Class Name: LayerNorm</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: palm_pytorch/palm_pytorch.py</div><div id='n_file'> N File Name: palm_pytorch/palm_pytorch.py</div><div id='m_start'> M Start Line: 18</div><div id='m_end'> M End Line: 20</div><div id='n_start'> N Start Line: 19</div><div id='n_end'> N End Line: 19</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    def forward(self, x):
+        eps = 1e-5 if x.dtype == torch.float32 else 1e-3
+        var = <a id="change">torch.var(</a>x<a id="change">, dim = 1, unbiased = False, keepdim = True)</a>
+        mean = <a id="change">torch.mean(</a>x<a id="change">, dim = 1, keepdim = True)</a>
+        return (<a id="change">x - mean) * var.clamp(min = eps).rsqrt() * </a>self.g
+
+class PreNorm(nn.Module):
+    def __init__(self, dim, fn):</code></pre><h3>After Change</h3><pre><code class='java'>
+        self.register_buffer("beta", torch.zeros(dim))
+
+    def forward(self, x):
+        return F.layer_norm(x, <a id="change">x.shape[-1:]</a>, self.gamma, self.beta)
+
+&#47&#47 positional embeds
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lucidrains/recurrent-interface-network-pytorch/commit/627fa4e8c36a59b89f571cdfdb478a7b72cbf855#diff-c245517a15c6c34e71df6f08ed422324484176189f4795463b7e58278d35b9cdL82' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 113167339</div><div id='project'> Project Name: lucidrains/recurrent-interface-network-pytorch</div><div id='commit'> Commit Name: 627fa4e8c36a59b89f571cdfdb478a7b72cbf855</div><div id='time'> Time: 2022-12-24</div><div id='author'> Author: lucidrains@gmail.com</div><div id='file'> File Name: rin_pytorch/rin_pytorch.py</div><div id='m_class'> M Class Name: LayerNorm</div><div id='n_method'> N Class Name: LayerNorm</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: rin_pytorch/rin_pytorch.py</div><div id='n_file'> N File Name: rin_pytorch/rin_pytorch.py</div><div id='m_start'> M Start Line: 83</div><div id='m_end'> M End Line: 86</div><div id='n_start'> N Start Line: 77</div><div id='n_end'> N End Line: 77</div><BR>

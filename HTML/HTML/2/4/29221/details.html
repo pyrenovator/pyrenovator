@@ -1,0 +1,51 @@
+<html><h3>Pattern ID :29221
+</h3><img src='85967359.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            running_mean = self.running_mean.broadcast(x, [0,2,3])
+            running_var = self.running_var.broadcast(x, [0,2,3])
+            norm_x = (x-running_mean)/jt.sqrt(running_var+self.eps)
+        <a id="change">if </a>not self.affine:
+            return norm_x
+        w = self.weight.broadcast(x, [0,2,3])
+        b = self.bias.broadcast(x, [0,2,3])</code></pre><h3>After Change</h3><pre><code class='java'>
+                xmean = xmean.mpi_all_reduce("mean")
+                x2mean = x2mean.mpi_all_reduce("mean")
+
+            xvar = <a id="change">(x2mean-xmean*xmean).maximum(0.0</a><a id="change">)</a>
+            w = self.weight / jt.sqrt(xvar+self.eps)
+            b<a id="change"> = </a>self.bias - xmean * w
+            norm_x = x * w.broadcast(x, dims) + b.broadcast(x, dims)
+
+            self.running_mean.update(self.running_mean +</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/jittor/jittor/commit/79579b4a30434d43d79821469eb5501bf5a5063e#diff-6be45073120e073e8b70d1326cf824cd933530478c88feb0997a32f723da35f1L349' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 85967359</div><div id='project'> Project Name: jittor/jittor</div><div id='commit'> Commit Name: 79579b4a30434d43d79821469eb5501bf5a5063e</div><div id='time'> Time: 2020-11-25</div><div id='author'> Author: randonlang@gmail.com</div><div id='file'> File Name: python/jittor/nn.py</div><div id='m_class'> M Class Name: BatchNorm</div><div id='n_method'> N Class Name: BatchNorm</div><div id='m_method'> M Method Name: execute(2)</div><div id='n_method'> N Method Name: execute(2)</div><div id='m_parent_class'> M Parent Class: Module</div><div id='n_parent_class'> N Parent Class: Module</div><div id='m_file'> M File Name: python/jittor/nn.py</div><div id='n_file'> N File Name: python/jittor/nn.py</div><div id='m_start'> M Start Line: 351</div><div id='m_end'> M End Line: 371</div><div id='n_start'> N Start Line: 349</div><div id='n_end'> N End Line: 371</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        variance = jt.mean(numerator.sqr(),dims=dims,keepdims=1)
+        denominator = jt.sqrt(variance+self.eps)
+        norm_x = numerator/denominator
+        <a id="change">if </a>self.elementwise_affine:
+            norm_x = norm_x * self.weight+self.bias
+        return norm_x
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        xmean = jt.mean(x, dims=dims)
+        x2mean = jt.mean(x*x, dims=dims)
+
+        xvar<a id="change"> = </a><a id="change">(x2mean-xmean*xmean).maximum(0.0</a><a id="change">)</a>
+        w = self.weight / jt.sqrt(xvar+self.eps)
+        b = self.bias - xmean * w
+        return x * w.broadcast(x, dims) + b.broadcast(x, dims)
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/jittor/jittor/commit/79579b4a30434d43d79821469eb5501bf5a5063e#diff-6be45073120e073e8b70d1326cf824cd933530478c88feb0997a32f723da35f1L456' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 85967358</div><div id='project'> Project Name: jittor/jittor</div><div id='commit'> Commit Name: 79579b4a30434d43d79821469eb5501bf5a5063e</div><div id='time'> Time: 2020-11-25</div><div id='author'> Author: randonlang@gmail.com</div><div id='file'> File Name: python/jittor/nn.py</div><div id='m_class'> M Class Name: LayerNorm</div><div id='n_method'> N Class Name: LayerNorm</div><div id='m_method'> M Method Name: execute(2)</div><div id='n_method'> N Method Name: execute(2)</div><div id='m_parent_class'> M Parent Class: Module</div><div id='n_parent_class'> N Parent Class: Module</div><div id='m_file'> M File Name: python/jittor/nn.py</div><div id='n_file'> N File Name: python/jittor/nn.py</div><div id='m_start'> M Start Line: 458</div><div id='m_end'> M End Line: 465</div><div id='n_start'> N Start Line: 410</div><div id='n_end'> N End Line: 417</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    smaller floating point dtypes (e.g. np.float32), then the absolute
+    step size will be calculated from the smallest floating point size.
+    
+    <a id="change">if </a>rel_step is None:
+        rel_step = _eps_for_method(x0.dtype, f0.dtype, method)
+    sign_x0 = (x0 &gt;= 0).astype(float) * 2 - 1
+    return rel_step * sign_x0 * np.maximum(1.0, np.abs(x0))</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 however we don&quott want an abs_step of 0, which can happen if
+        &#47&#47 rel_step is 0, or x0 is 0. Instead, substitute a realistic step
+        dx = ((x0 + abs_step) - x0)
+        abs_step<a id="change"> = </a>np.where(dx == 0,
+                            rstep * sign_x0 * <a id="change">np.maximum(1.0</a>, np.abs(x0)<a id="change">)</a>,
+                            abs_step)
+
+    return abs_step</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/scipy/scipy/commit/833b1b2101c701669468a75adab0ebe7067eaeca#diff-9a91c3babbbdbb26d57efee6e0ed412c0835a095b53e7a8a465cfb8436dff43cL144' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 85967357</div><div id='project'> Project Name: scipy/scipy</div><div id='commit'> Commit Name: 833b1b2101c701669468a75adab0ebe7067eaeca</div><div id='time'> Time: 2021-11-09</div><div id='author'> Author: andyfaff@gmail.com</div><div id='file'> File Name: scipy/optimize/_numdiff.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: _compute_absolute_step(4)</div><div id='n_method'> N Method Name: _compute_absolute_step(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: scipy/optimize/_numdiff.py</div><div id='n_file'> N File Name: scipy/optimize/_numdiff.py</div><div id='m_start'> M Start Line: 169</div><div id='m_end'> M End Line: 172</div><div id='n_start'> N Start Line: 171</div><div id='n_end'> N End Line: 190</div><BR>

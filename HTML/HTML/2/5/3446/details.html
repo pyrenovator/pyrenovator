@@ -1,0 +1,81 @@
+<html><h3>Pattern ID :3446
+</h3><img src='13244862.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        self.rank = rank
+
+        if len(empty_idx) == 0:
+            empty_idx = <a id="change">[</a>self.rank + 1<a id="change"></a>]  &#47&#47 jit doesn&quott seem to like empty lists
+        self.empty_idx<a id="change"> = </a>empty_idx
+
+        self.param_rank = len([i for i in range(self.rank) if i not in self.empty_idx])
+        self._set_params(method, init_diag_multi)</code></pre><h3>After Change</h3><pre><code class='java'>
+        assert all(isinstance(x, int) for x in empty_idx)
+        self.param_rank = self.rank - len(empty_idx)
+        mask = torch.zeros((self.rank, self.param_rank))
+        c<a id="change"> = </a>0
+        for r in range(self.rank):
+            if r not in empty_idx:
+                mask[r, c] = 1.
+                c += 1
+        <a id="change">self.register_buffer(&quotmask&quot</a>, mask<a id="change">)</a>
+
+        self._set_params(method, init_diag_multi)
+
+        self.var_predict_module = predict_variance</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/strongio/torchcast/commit/8880c7a14cf77655f500f452fcc29cf2825c4422#diff-65e118e1565802366914308589e1ad788cb0cd050a59e65d1c18b1195749bf05L154' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 13244862</div><div id='project'> Project Name: strongio/torchcast</div><div id='commit'> Commit Name: 8880c7a14cf77655f500f452fcc29cf2825c4422</div><div id='time'> Time: 2021-07-11</div><div id='author'> Author: jacob.dink@strong.io</div><div id='file'> File Name: torchcast/covariance/base.py</div><div id='m_class'> M Class Name: Covariance</div><div id='n_method'> N Class Name: Covariance</div><div id='m_method'> M Method Name: __init__(7)</div><div id='n_method'> N Method Name: __init__(7)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: torchcast/covariance/base.py</div><div id='n_file'> N File Name: torchcast/covariance/base.py</div><div id='m_start'> M Start Line: 154</div><div id='m_end'> M End Line: 160</div><div id='n_start'> N Start Line: 154</div><div id='n_end'> N End Line: 165</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        pad_size = [get_padding(filt_size, stride, dilation=1)] * 4
+        self.padding = nn.ReflectionPad2d(pad_size)
+        self._coeffs = torch.tensor((np.poly1d((0.5, 0.5)) ** (self.filt_size - 1)).coeffs)  &#47&#47 for torchscript compat
+        self.filt<a id="change"> = </a><a id="change">{}</a>  &#47&#47 lazy init by device for DataParallel compat
+
+    def _create_filter(self, like: torch.Tensor):
+        blur_filter = (self._coeffs[:, None] * self._coeffs[None, :]).to(dtype=like.dtype, device=like.device)</code></pre><h3>After Change</h3><pre><code class='java'>
+        self.stride = stride
+        self.padding = [get_padding(filt_size, stride, dilation=1)] * 4
+        coeffs = torch.tensor((np.poly1d((0.5, 0.5)) ** (self.filt_size - 1)).coeffs.astype(np.float32))
+        blur_filter<a id="change"> = </a>(coeffs[:, None] * coeffs[None, :])[None, None, :, :].repeat(self.channels, 1, 1, 1)
+        <a id="change">self.register_buffer(&quotfilt&quot</a>, blur_filter<a id="change">, persistent=False)</a>
+
+    def forward(self, x: torch.Tensor) -&gt; torch.Tensor:
+        x = F.pad(x, self.padding, &quotreflect&quot)
+        return F.conv2d(x, self.filt, stride=self.stride, groups=x.shape[1])</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/feng-lab/pytorch-image-models/commit/0d87650fea5ce607d07204806e8143a48917d96f#diff-55d3fd34927c9e350c1457e0226fc817b50e625b9548ea440ee5cd26756e8782L34' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 13244866</div><div id='project'> Project Name: feng-lab/pytorch-image-models</div><div id='commit'> Commit Name: 0d87650fea5ce607d07204806e8143a48917d96f</div><div id='time'> Time: 2021-05-04</div><div id='author'> Author: rwightman@gmail.com</div><div id='file'> File Name: timm/models/layers/blur_pool.py</div><div id='m_class'> M Class Name: BlurPool2d</div><div id='n_method'> N Class Name: BlurPool2d</div><div id='m_method'> M Method Name: __init__(4)</div><div id='n_method'> N Method Name: __init__(4)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: timm/models/layers/blur_pool.py</div><div id='n_file'> N File Name: timm/models/layers/blur_pool.py</div><div id='m_start'> M Start Line: 40</div><div id='m_end'> M End Line: 43</div><div id='n_start'> N Start Line: 32</div><div id='n_end'> N End Line: 38</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+        _js = sorted(list(_js))
+        
+        self._coeff<a id="change"> = </a><a id="change">{}</a>
+        self._js_restriction = {}
+        for _j in _js:
+            Y_size = _G.irrep(*_j).size
+            coeff = [</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        self._js_restriction = {}
+        self._dim_harmonics = {}
+        _coeffs<a id="change"> = </a>{}
+        dim = 0
+        for _j in _js:
+            Y_size = _G.irrep(*_j).size
+            coeff = [
+                torch.einsum(
+                    &#47&#47 &quotnmsM,kNM,NYt-&gt;nmkstY&quot,
+                    &quotnmsi,kji,jyt-&gt;nmksty&quot,
+                    torch.tensor(G._clebsh_gordan_coeff(self.n, self.m, j), dtype=torch.float32),
+                    torch.tensor(G.irrep(*j).endomorphism_basis(), dtype=torch.float32),
+                    torch.tensor(id_coeff, dtype=torch.float32),
+                ).reshape((out_irrep.size, in_irrep.size, -1, Y_size))
+                for j, id_coeff in _js_restriction[_j]
+            ]
+            
+            _coeffs[_j] = torch.cat(coeff, dim=2)
+            self._js_restriction[_j] = [(j, id_coeff.shape[2]) for j, id_coeff in _js_restriction[_j]]
+            self._dim_harmonics[_j] = _coeffs[_j].shape[2]
+            dim += self._dim_harmonics[_j] * self.basis.multiplicity(_j)
+
+        super(RestrictedWignerEckartBasis, self).__init__(basis, in_irrep, out_irrep, dim)
+
+        for b, _j in self.js:
+            <a id="change">self.register_buffer(f&quotcoeff_{b}&quot</a>, _coeffs[_j]<a id="change">)</a>
+
+    def coeff(self, idx: int) -&gt; torch.Tensor:
+        return getattr(self, f&quotcoeff_{idx}&quot)
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/quva-lab/escnn/commit/0f92512786f1d6658e6b9796043bedf457c0558b#diff-1012b190f95f2914b9970dd3e5f1398c9a4d1cce4c9a52379e29d08a0fc52ac6L256' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 13244865</div><div id='project'> Project Name: quva-lab/escnn</div><div id='commit'> Commit Name: 0f92512786f1d6658e6b9796043bedf457c0558b</div><div id='time'> Time: 2022-08-26</div><div id='author'> Author: gabriele.cesa@gmail.com</div><div id='file'> File Name: escnn/kernels/wignereckart_solver.py</div><div id='m_class'> M Class Name: RestrictedWignerEckartBasis</div><div id='n_method'> N Class Name: RestrictedWignerEckartBasis</div><div id='m_method'> M Method Name: __init__(5)</div><div id='n_method'> N Method Name: __init__(5)</div><div id='m_parent_class'> M Parent Class: IrrepBasis</div><div id='n_parent_class'> N Parent Class: IrrepBasis</div><div id='m_file'> M File Name: escnn/kernels/wignereckart_solver.py</div><div id='n_file'> N File Name: escnn/kernels/wignereckart_solver.py</div><div id='m_start'> M Start Line: 295</div><div id='m_end'> M End Line: 374</div><div id='n_start'> N Start Line: 266</div><div id='n_end'> N End Line: 352</div><BR>

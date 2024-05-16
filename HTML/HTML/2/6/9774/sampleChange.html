@@ -1,0 +1,20 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    w = generator.linear0.weight
+    eigen_vectors = torch.svd(w).V.to(z.device)[:, :num_semantic_axis]
+
+    zs_start = z.repeat(num_semantic_axis).view(-1, 1, <a id="change">len(</a>z<a id="change">)</a>)
+    zs_end = (z.unsqueeze(1) + maximum_variations*eigen_vectors).T.view(-1, 1, len(z))
+    zs_canvas = misc.interpolate(x0=zs_start, x1=zs_end, num_midpoints=num_cols-2).view(-1, len(z))
+    images_canvas = generator(zs_canvas, fake_label.repeat(len(zs_canvas)), eval=True)</code></pre><h3>After Change</h3><pre><code class='java'>
+    z_dim = len(z)
+    zs_start = z.repeat(num_semantic_axis).view(-1, 1, z_dim)
+    zs_end = (z.unsqueeze(1) + maximum_variations*eigen_vectors).T.view(-1, 1, z_dim)
+    <a id="change">if backbone == "big_resnet"</a>:
+        zs_shard = <a id="change">zs[z_dim:].expand([1, 1, -1]).repeat(</a>num_semantic_axis, 1, 1<a id="change">)</a>
+        zs_start<a id="change"> = </a>torch.cat([zs_start, zs_shard], axis=2)
+        zs_end = torch.cat([zs_end, zs_shard], axis=2)
+    zs_canvas = misc.interpolate(x0=zs_start, x1=zs_end, num_midpoints=num_cols-2).view(-1, zs_start.shape[-1])
+    images_canvas = generator(zs_canvas, fake_label.repeat(len(zs_canvas)), eval=True)</code></pre>

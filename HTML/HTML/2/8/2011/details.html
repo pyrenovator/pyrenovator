@@ -1,0 +1,132 @@
+<html><h3>Pattern ID :2011
+</h3><img src='8906759.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        Returns:
+
+        
+        results<a id="change"> = </a>AttrDict(<a id="change">{
+            </a>&quotepoch_losses&quot: [],
+            &quotepoch_regularizations&quot: []<a id="change">,
+        }</a>)
+        &#47&#47 metrics = AttrDict({})
+        &#47&#47 for metric in self.metrics:
+        &#47&#47     metrics[metric.name] = []
+
+        total_batches = 0
+        start = time.time()
+        <a id="change">for </a>e in range(self.train_config.epochs)<a id="change">:
+            </a>epoch_loss, epoch_reg, batches = self._train_epoch(e, loader)
+            <a id="change">results["epoch_losses"].append(</a>epoch_loss<a id="change">)</a>
+            results["epoch_regularizations"].append(epoch_reg)
+            total_batches += batches
+            if self.verbose:
+                print("{}. Epoch {} Loss: {:8.3f}; Regularization: {:8.3f}".format(
+                    e + 1, self.loss_func_name, epoch_loss, epoch_reg))
+                &#47&#47 print(e, ". Epoch", [str(metric) for metric in self.metrics])
+                    
+        results["time_train"] = time.time() - start
+        results["loss_train"]<a id="change"> = </a>results["epoch_losses"][-1]
+        if self.verbose:
+            print("Train Time: {:8.4f}".format(results["time_train"]))
+            print("Total Number of Batches: ", total_batches)</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        if self.verbose:
+            print("Train Time: {:8.4f}".format(time.time() - start))
+            <a id="change">print("Total Batches: "</a>, self.metrics[0].total_updates<a id="change">)</a>
+
+    def _train_epoch(self, e, loader):
+        Make one complete iteration over all samples in dataloader and update model after each batch.
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 6</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/ourownstory/neural_prophet/commit/ea05689f7ccca059223f80c7bd85f8b7943e69d0#diff-2f9d256a00b87e584a2550e159cce3c51e4c971b3b1d4b4beb928d598e1f43a0L274' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 8906759</div><div id='project'> Project Name: ourownstory/neural_prophet</div><div id='commit'> Commit Name: ea05689f7ccca059223f80c7bd85f8b7943e69d0</div><div id='time'> Time: 2020-06-16</div><div id='author'> Author: oskar.triebe@merantix.com</div><div id='file'> File Name: neuralprophet/neural_prophet.py</div><div id='m_class'> M Class Name: NeuralProphet</div><div id='n_method'> N Class Name: NeuralProphet</div><div id='m_method'> M Method Name: _train(2)</div><div id='n_method'> N Method Name: _train(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: neuralprophet/neural_prophet.py</div><div id='n_file'> N File Name: neuralprophet/neural_prophet.py</div><div id='m_start'> M Start Line: 277</div><div id='m_end'> M End Line: 302</div><div id='n_start'> N Start Line: 274</div><div id='n_end'> N End Line: 284</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+		reservoir.forward = self.eprop._decorate_hidden_forward(reservoir.forward, reservoir.name)
+		output_layer.forward = self.eprop._decorate_forward(output_layer.forward, output_layer.name)
+		for _ in progress_bar:
+			x_pred<a id="change"> = </a><a id="change">[]</a>
+			x_pred.append(self.true_time_series[:, 0, :].clone())
+			forward_tensor = self.true_time_series[:, 0, :].clone().to(reservoir.device)
+			hh = None
+			<a id="change">for t</a> in range(1, self.true_time_series.shape[-2])<a id="change">:
+				</a>forward_tensor, hh = unpack_out_hh(reservoir(forward_tensor, hh, t=t-1))
+				forward_tensor, _ = unpack_out_hh(output_layer(forward_tensor, None, t=t-1))
+				<a id="change">x_pred.append(</a>forward_tensor<a id="change">)</a>
+				&#47&#47 eligibility_traces = dy_dw_local(y=forward_tensor, params=self.params)
+				&#47&#47 self.eprop.eligibility_traces = eligibility_traces
+				&#47&#47 batch_loss = self.eprop.apply_criterion(forward_tensor, self.true_time_series[:, t].to(forward_tensor.device))
+				&#47&#47 learning_signals = self.compute_learning_signals(loss_at_t)
+				&#47&#47 errors = self.eprop.compute_errors(forward_tensor, self.true_time_series[:, t])
+				&#47&#47 learning_signals = self.eprop.compute_learning_signals(errors)
+				&#47&#47 self.eprop.update_grads(errors, batch_loss)
+				forward_tensor.detach_()
+				hh = recursive_detach(hh)
+				&#47&#47 if t % self.update_each == 0:
+				&#47&#47 	self.eprop._make_optim_step()
+			self.eprop._make_optim_step()
+			x_pred<a id="change"> = </a>torch.stack([t.cpu() for t in x_pred], dim=1)
+			pvar = PVarianceLoss()(x_pred, self.true_time_series.to(x_pred.device))
+			mse = torch.nn.MSELoss()(x_pred, self.true_time_series.to(x_pred.device))
+			progress_bar.set_postfix({"pvar": to_numpy(pvar).item(), "MSE": to_numpy(mse).item()})</code></pre><h3>After Change</h3><pre><code class='java'>
+			val_x_pred = self.model.get_prediction_trace(inputs)
+			pvar = PVarianceLoss()(val_x_pred, self.raw_time_series.to(val_x_pred.device))
+			val_pvars.append(to_numpy(pvar).item())
+		<a id="change">print(f"Validation PVariance: {np.mean(val_pvars):.3f}"</a><a id="change">)</a>
+		return x_pred, self.raw_time_series
+
+	def compute_learning_signals(self, error: torch.Tensor):
+		learning_signals = []</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/neurotorch/neurotorch/commit/da8d4065502c761ccf6e28e47dd189e3b5488140#diff-bfbe6bfd7f09fee9a898ae4ce6ce338f6bfc05e7db28469ba6540dfae09a766dL109' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 8906757</div><div id='project'> Project Name: neurotorch/neurotorch</div><div id='commit'> Commit Name: da8d4065502c761ccf6e28e47dd189e3b5488140</div><div id='time'> Time: 2023-01-31</div><div id='author'> Author: 50332514+JeremieGince@users.noreply.github.com</div><div id='file'> File Name: src/neurotorch/learning_algorithms/debug_e_prop_v5.py</div><div id='m_class'> M Class Name: SimplifiedEpropFinal</div><div id='n_method'> N Class Name: SimplifiedEpropFinal</div><div id='m_method'> M Method Name: train(4)</div><div id='n_method'> N Method Name: train(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/neurotorch/learning_algorithms/debug_e_prop_v5.py</div><div id='n_file'> N File Name: src/neurotorch/learning_algorithms/debug_e_prop_v5.py</div><div id='m_start'> M Start Line: 120</div><div id='m_end'> M End Line: 153</div><div id='n_start'> N Start Line: 115</div><div id='n_end'> N End Line: 144</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        Returns:
+
+        
+        results<a id="change"> = </a>AttrDict(<a id="change">{
+            </a>&quotepoch_losses&quot: [],
+            &quotepoch_regularizations&quot: []<a id="change">,
+        }</a>)
+        &#47&#47 metrics = AttrDict({})
+        &#47&#47 for metric in self.metrics:
+        &#47&#47     metrics[metric.name] = []
+
+        total_batches = 0
+        start = time.time()
+        <a id="change">for e</a> in range(self.train_config.epochs)<a id="change">:
+            </a>epoch_loss, epoch_reg, batches = self._train_epoch(e, loader)
+            results["epoch_losses"].append(epoch_loss)
+            <a id="change">results["epoch_regularizations"].append(</a>epoch_reg<a id="change">)</a>
+            total_batches += batches
+            if self.verbose:
+                print("{}. Epoch {} Loss: {:8.3f}; Regularization: {:8.3f}".format(
+                    e + 1, self.loss_func_name, epoch_loss, epoch_reg))
+                &#47&#47 print(e, ". Epoch", [str(metric) for metric in self.metrics])
+                    
+        results["time_train"] = time.time() - start
+        results["loss_train"]<a id="change"> = </a>results["epoch_losses"][-1]
+        if self.verbose:
+            print("Train Time: {:8.4f}".format(results["time_train"]))
+            print("Total Number of Batches: ", total_batches)</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        if self.verbose:
+            print("Train Time: {:8.4f}".format(time.time() - start))
+            <a id="change">print("Total Batches: "</a>, self.metrics[0].total_updates<a id="change">)</a>
+
+    def _train_epoch(self, e, loader):
+        Make one complete iteration over all samples in dataloader and update model after each batch.
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/ourownstory/neural_prophet/commit/ea05689f7ccca059223f80c7bd85f8b7943e69d0#diff-2f9d256a00b87e584a2550e159cce3c51e4c971b3b1d4b4beb928d598e1f43a0L268' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 8906766</div><div id='project'> Project Name: ourownstory/neural_prophet</div><div id='commit'> Commit Name: ea05689f7ccca059223f80c7bd85f8b7943e69d0</div><div id='time'> Time: 2020-06-16</div><div id='author'> Author: oskar.triebe@merantix.com</div><div id='file'> File Name: neuralprophet/neural_prophet.py</div><div id='m_class'> M Class Name: NeuralProphet</div><div id='n_method'> N Class Name: NeuralProphet</div><div id='m_method'> M Method Name: _train(2)</div><div id='n_method'> N Method Name: _train(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: neuralprophet/neural_prophet.py</div><div id='n_file'> N File Name: neuralprophet/neural_prophet.py</div><div id='m_start'> M Start Line: 277</div><div id='m_end'> M End Line: 302</div><div id='n_start'> N Start Line: 274</div><div id='n_end'> N End Line: 284</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    print("Ground truth pattern: ")
+    print(pattern)
+
+    input<a id="change"> = </a><a id="change">[]</a>
+    <a id="change">for </a>_target, <a id="change">_pattern</a> in zip(target, pattern)<a id="change">:
+        </a>_input = _target[_pattern] + 1e-1 * torch.randn(C, T)
+        <a id="change">input.append(</a>_input.unsqueeze(dim=0)<a id="change">)</a>
+    
+    input<a id="change"> = </a>torch.cat(input, dim=0)
+    
+    print(&quot-&quot*10, "Negative SI-SDR", &quot-&quot*10)
+    criterion = NegSISDR()</code></pre><h3>After Change</h3><pre><code class='java'>
+    input = torch.randint(2, (batch_size, C, T), dtype=torch.float)
+    target = torch.randint(2, (batch_size, C, T), dtype=torch.float)
+    
+    <a id="change">print(</a>&quot-&quot*10, <a id="change">"Negative SI-SDR (PIT)"</a>, &quot-&quot*10<a id="change">)</a>
+    criterion = NegSISDR()
+    pit_criterion = PIT(criterion, n_sources=C)
+    loss, pattern = pit_criterion(input, target)
+    </code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/tky823/dnn-based_source_separation/commit/a2c8fff0b948824663d007770528fa8eaecabcf6#diff-22aca1dcfba1cb607c12abfa769f86ec60cb0d8e7969b24efc450d5a0ffd0cf5L322' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 8906762</div><div id='project'> Project Name: tky823/dnn-based_source_separation</div><div id='commit'> Commit Name: a2c8fff0b948824663d007770528fa8eaecabcf6</div><div id='time'> Time: 2021-06-12</div><div id='author'> Author: 40362510+tky823@users.noreply.github.com</div><div id='file'> File Name: src/criterion/pit.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: _test_sink_pit(0)</div><div id='n_method'> N Method Name: _test_sink_pit(0)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/criterion/pit.py</div><div id='n_file'> N File Name: src/criterion/pit.py</div><div id='m_start'> M Start Line: 327</div><div id='m_end'> M End Line: 340</div><div id='n_start'> N Start Line: 327</div><div id='n_end'> N End Line: 337</div><BR>

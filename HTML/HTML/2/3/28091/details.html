@@ -1,0 +1,156 @@
+<html><h3>Pattern ID :28091
+</h3><img src='83039139.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        )
+        if sb.if_main_process():
+            download_file(self.hparams.lm_ckpt_file, save_model_path)
+        <a id="change">sb.ddp_barrier()</a>
+
+        &#47&#47 Load downloaded model, removing prefix
+        state_dict = torch.load(save_model_path, map_location=self.device)
+        self.hparams.lm_model.load_state_dict(state_dict, strict=True)</code></pre><h3>After Change</h3><pre><code class='java'>
+        save_model_path = os.path.join(
+            self.hparams.output_folder, "save", "lm_model.ckpt"
+        )
+        <a id="change">try:
+            </a>if sb.if_main_process():
+                download_file(self.hparams.lm_ckpt_file, save_model_path)
+        finally:
+            <a id="change">sb.ddp_barrier()</a>
+
+        &#47&#47 Load downloaded model, removing prefix
+        state_dict = torch.load(save_model_path, map_location=self.device)
+        self.hparams.lm_model.load_state_dict(state_dict, strict=True)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 5</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/speechbrain/speechbrain/commit/c4621e1673e58fcd0b724529ad30960d4711a6e0#diff-fcbd8b410b462a169a607e97b3582db832c0f0478aa62804e30c6bc1e92908d4L250' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 83039139</div><div id='project'> Project Name: speechbrain/speechbrain</div><div id='commit'> Commit Name: c4621e1673e58fcd0b724529ad30960d4711a6e0</div><div id='time'> Time: 2020-12-10</div><div id='author'> Author: aheba@linagora.com</div><div id='file'> File Name: recipes/LibriSpeech/ASR/seq2seq/train.py</div><div id='m_class'> M Class Name: ASR</div><div id='n_method'> N Class Name: ASR</div><div id='m_method'> M Method Name: load_lm(1)</div><div id='n_method'> N Method Name: load_lm(1)</div><div id='m_parent_class'> M Parent Class: sb.Brain</div><div id='n_parent_class'> N Parent Class: sb.Brain</div><div id='m_file'> M File Name: recipes/LibriSpeech/ASR/seq2seq/train.py</div><div id='n_file'> N File Name: recipes/LibriSpeech/ASR/seq2seq/train.py</div><div id='m_start'> M Start Line: 250</div><div id='m_end'> M End Line: 252</div><div id='n_start'> N Start Line: 255</div><div id='n_end'> N End Line: 262</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                self.checkpointer.save_and_keep_only(
+                    meta={"WER": stage_stats["WER"]}, min_keys=["WER"],
+                )
+            <a id="change">sb.ddp_barrier()</a>
+        elif stage == sb.Stage.TEST:
+            self.hparams.train_logger.log_stats(
+                stats_meta={"Epoch loaded": self.hparams.epoch_counter.current},
+                test_stats=stage_stats,</code></pre><h3>After Change</h3><pre><code class='java'>
+        if stage == sb.Stage.VALID:
+            old_lr, new_lr = self.hparams.lr_annealing(stage_stats["WER"])
+            sb.nnet.schedulers.update_learning_rate(self.optimizer, new_lr)
+            <a id="change">try:
+                </a>if sb.if_main_process():
+                    self.hparams.train_logger.log_stats(
+                        stats_meta={"epoch": epoch, "lr": old_lr},
+                        train_stats=self.train_stats,
+                        valid_stats=stage_stats,
+                    )
+                    self.checkpointer.save_and_keep_only(
+                        meta={"WER": stage_stats["WER"]}, min_keys=["WER"],
+                    )
+            finally:
+                <a id="change">sb.ddp_barrier()</a>
+        elif stage == sb.Stage.TEST:
+            self.hparams.train_logger.log_stats(
+                stats_meta={"Epoch loaded": self.hparams.epoch_counter.current},
+                test_stats=stage_stats,</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/speechbrain/speechbrain/commit/c4621e1673e58fcd0b724529ad30960d4711a6e0#diff-fcbd8b410b462a169a607e97b3582db832c0f0478aa62804e30c6bc1e92908d4L188' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 83039138</div><div id='project'> Project Name: speechbrain/speechbrain</div><div id='commit'> Commit Name: c4621e1673e58fcd0b724529ad30960d4711a6e0</div><div id='time'> Time: 2020-12-10</div><div id='author'> Author: aheba@linagora.com</div><div id='file'> File Name: recipes/LibriSpeech/ASR/seq2seq/train.py</div><div id='m_class'> M Class Name: ASR</div><div id='n_method'> N Class Name: ASR</div><div id='m_method'> M Method Name: on_stage_end(4)</div><div id='n_method'> N Method Name: on_stage_end(4)</div><div id='m_parent_class'> M Parent Class: sb.Brain</div><div id='n_parent_class'> N Parent Class: sb.Brain</div><div id='m_file'> M File Name: recipes/LibriSpeech/ASR/seq2seq/train.py</div><div id='n_file'> N File Name: recipes/LibriSpeech/ASR/seq2seq/train.py</div><div id='m_start'> M Start Line: 203</div><div id='m_end'> M End Line: 212</div><div id='n_start'> N Start Line: 202</div><div id='n_end'> N End Line: 214</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                    dest=save_vocab_path,
+                    replace_existing=True,
+                )
+            <a id="change">sb.ddp_barrier()</a>
+
+    def load_lm(self):
+        Loads the LM specified in the yaml file
+        save_model_path = os.path.join(</code></pre><h3>After Change</h3><pre><code class='java'>
+            self.hparams.tokenizer.sp.load(save_model_path)
+
+        if hasattr(self.hparams, "tok_voc_file"):
+            <a id="change">try:
+                </a>if sb.if_main_process():
+                    download_file(
+                        source=self.hparams.tok_voc_file,
+                        dest=save_vocab_path,
+                        replace_existing=True,
+                    )
+            finally:
+                <a id="change">sb.ddp_barrier()</a>
+
+    def load_lm(self):
+        Loads the LM specified in the yaml file
+        save_model_path = os.path.join(</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/speechbrain/speechbrain/commit/c4621e1673e58fcd0b724529ad30960d4711a6e0#diff-fcbd8b410b462a169a607e97b3582db832c0f0478aa62804e30c6bc1e92908d4L221' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 83039137</div><div id='project'> Project Name: speechbrain/speechbrain</div><div id='commit'> Commit Name: c4621e1673e58fcd0b724529ad30960d4711a6e0</div><div id='time'> Time: 2020-12-10</div><div id='author'> Author: aheba@linagora.com</div><div id='file'> File Name: recipes/LibriSpeech/ASR/seq2seq/train.py</div><div id='m_class'> M Class Name: ASR</div><div id='n_method'> N Class Name: ASR</div><div id='m_method'> M Method Name: load_tokenizer(1)</div><div id='n_method'> N Method Name: load_tokenizer(1)</div><div id='m_parent_class'> M Parent Class: sb.Brain</div><div id='n_parent_class'> N Parent Class: sb.Brain</div><div id='m_file'> M File Name: recipes/LibriSpeech/ASR/seq2seq/train.py</div><div id='n_file'> N File Name: recipes/LibriSpeech/ASR/seq2seq/train.py</div><div id='m_start'> M Start Line: 227</div><div id='m_end'> M End Line: 243</div><div id='n_start'> N Start Line: 228</div><div id='n_end'> N End Line: 250</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                self.checkpointer.save_and_keep_only(
+                    meta={"PER": per}, min_keys=["PER"]
+                )
+            <a id="change">sb.ddp_barrier()</a>
+
+        if stage == sb.Stage.TEST:
+            self.hparams.train_logger.log_stats(
+                stats_meta={"Epoch loaded": self.hparams.epoch_counter.current},</code></pre><h3>After Change</h3><pre><code class='java'>
+        if stage == sb.Stage.VALID:
+            old_lr, new_lr = self.hparams.lr_annealing(per)
+            sb.nnet.schedulers.update_learning_rate(self.optimizer, new_lr)
+            <a id="change">try:
+                </a>if sb.if_main_process():
+                    self.hparams.train_logger.log_stats(
+                        stats_meta={"epoch": epoch, "lr": old_lr},
+                        train_stats={"loss": self.train_loss},
+                        valid_stats={
+                            "loss": stage_loss,
+                            "ctc_loss": self.ctc_metrics.summarize("average"),
+                            "seq_loss": self.seq_metrics.summarize("average"),
+                            "PER": per,
+                        },
+                    )
+                    self.checkpointer.save_and_keep_only(
+                        meta={"PER": per}, min_keys=["PER"]
+                    )
+            finally:
+                <a id="change">sb.ddp_barrier()</a>
+
+        if stage == sb.Stage.TEST:
+            self.hparams.train_logger.log_stats(
+                stats_meta={"Epoch loaded": self.hparams.epoch_counter.current},</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/speechbrain/speechbrain/commit/c4621e1673e58fcd0b724529ad30960d4711a6e0#diff-ae5c5fe1a66b721b4b18ceb9ee40e2bc49a72aadd9e19545578944db1ece449cL127' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 83039140</div><div id='project'> Project Name: speechbrain/speechbrain</div><div id='commit'> Commit Name: c4621e1673e58fcd0b724529ad30960d4711a6e0</div><div id='time'> Time: 2020-12-10</div><div id='author'> Author: aheba@linagora.com</div><div id='file'> File Name: recipes/TIMIT/ASR/seq2seq/experiment.py</div><div id='m_class'> M Class Name: ASR</div><div id='n_method'> N Class Name: ASR</div><div id='m_method'> M Method Name: on_stage_end(4)</div><div id='n_method'> N Method Name: on_stage_end(4)</div><div id='m_parent_class'> M Parent Class: sb.Brain</div><div id='n_parent_class'> N Parent Class: sb.Brain</div><div id='m_file'> M File Name: recipes/TIMIT/ASR/seq2seq/experiment.py</div><div id='n_file'> N File Name: recipes/TIMIT/ASR/seq2seq/experiment.py</div><div id='m_start'> M Start Line: 136</div><div id='m_end'> M End Line: 150</div><div id='n_start'> N Start Line: 136</div><div id='n_end'> N End Line: 154</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+            &#47&#47 saving options
+            save_pkl(conf, save_opt)
+    <a id="change">sb.ddp_barrier()</a>
+
+
+def skip(save_folder, filename, conf):
+    </code></pre><h3>After Change</h3><pre><code class='java'>
+    &gt;&gt;&gt; save_folder = &quotlibrispeech_lm&quot
+    &gt;&gt;&gt; prepare_librispeech(data_folder, save_folder, &quotlm_corpus.h5&quot)
+    
+    <a id="change">try:
+        </a>if sb.if_main_process():
+            conf = {
+                "select_n_sentences": select_n_sentences,
+            }
+            if not os.path.exists(save_folder):
+                os.makedirs(save_folder)
+
+            save_opt = os.path.join(save_folder, OPT_FILE)
+
+            &#47&#47 Check if this phase is already done (if so, skip it)
+            if skip(save_folder, filename, conf):
+                logger.info("Skipping preparation, completed in previous run.")
+                return
+
+            data_path = os.path.join(data_folder, "librispeech-lm-norm.txt.gz")
+            src = (
+                "http://www.openslr.org/resources/11/librispeech-lm-norm.txt.gz"
+            )
+            download_file(src, data_path)
+
+            create_hdf5(
+                data_path,
+                save_folder,
+                filename,
+                select_n_sentences,
+                add_txt=None,
+            )
+
+            &#47&#47 saving options
+            save_pkl(conf, save_opt)
+    finally:
+        <a id="change">sb.ddp_barrier()</a>
+
+
+def skip(save_folder, filename, conf):
+    </code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/speechbrain/speechbrain/commit/e7894bd0a7ad7c57663bf54337865778764eee79#diff-4337ab4eb452d3bf669f89476cdd3ebe00df732cc3949a73af09402f83531ff7L24' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 83039135</div><div id='project'> Project Name: speechbrain/speechbrain</div><div id='commit'> Commit Name: e7894bd0a7ad7c57663bf54337865778764eee79</div><div id='time'> Time: 2020-12-10</div><div id='author'> Author: aheba@linagora.com</div><div id='file'> File Name: recipes/LibriSpeech/librispeech_lm_prepare.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: prepare_lm_corpus(5)</div><div id='n_method'> N Method Name: prepare_lm_corpus(5)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: recipes/LibriSpeech/librispeech_lm_prepare.py</div><div id='n_file'> N File Name: recipes/LibriSpeech/librispeech_lm_prepare.py</div><div id='m_start'> M Start Line: 51</div><div id='m_end'> M End Line: 80</div><div id='n_start'> N Start Line: 51</div><div id='n_end'> N End Line: 85</div><BR>

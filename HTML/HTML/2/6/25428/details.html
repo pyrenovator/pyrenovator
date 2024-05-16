@@ -1,0 +1,62 @@
+<html><h3>Pattern ID :25428
+</h3><img src='77644553.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        out = self.trans3(self.dense3(out))
+        out = self.dense4(out)
+        out = F.avg_pool2d(F.relu(self.bn(out)), 4)
+        e = <a id="change">out.view(</a>out.size(0), -1<a id="change">)</a>
+        out = self.linear(w)
+        if last:
+            return out, e
+        else:</code></pre><h3>After Change</h3><pre><code class='java'>
+
+
+    def forward(self, x, last=False, freeze=False):
+        <a id="change">if </a>freeze:
+            <a id="change">with torch</a><a id="change">.no_grad():
+                </a>features = self.features(x)
+                out = F.relu(features, inplace=True)
+                e<a id="change"> = </a>F.adaptive_avg_pool2d(out, (1, 1)).view(features.size(0), -1)
+        else:
+            features = self.features(x)
+            out = F.relu(features, inplace=True)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 6</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/decile-team/distil/commit/4108c7fe8b81f9f198410bb6b2598f6833329a5e#diff-e5225ab8b342831d17e107f666cc43ea082647e4929bae2e9a86579b97fcec3dL76' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 77644553</div><div id='project'> Project Name: decile-team/distil</div><div id='commit'> Commit Name: 4108c7fe8b81f9f198410bb6b2598f6833329a5e</div><div id='time'> Time: 2021-04-29</div><div id='author'> Author: you@example.com</div><div id='file'> File Name: distil/utils/models/densenet.py</div><div id='m_class'> M Class Name: DenseNet</div><div id='n_method'> N Class Name: DenseNet</div><div id='m_method'> M Method Name: forward(4)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: distil/utils/models/densenet.py</div><div id='n_file'> N File Name: distil/utils/models/densenet.py</div><div id='m_start'> M Start Line: 76</div><div id='m_end'> M End Line: 83</div><div id='n_start'> N Start Line: 121</div><div id='n_end'> N End Line: 131</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        with torch.no_grad():
+            means, buckets, dists = kmeans(x, means, training=self.training, init=not self.initted)
+            indices = distribution(dists, window_size)
+            indices = <a id="change">indices.contiguous().view(</a>*indices.size()[:2], -1<a id="change">)</a>
+
+        routed_means = batched_index_select(expand_dim(means, 0, b), buckets)
+        loss = F.mse_loss(x, routed_means) * self.commitment
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        with torch.no_grad():
+            dists, buckets = dists_and_buckets(x, means)
+
+        <a id="change">if </a>update_means:
+            <a id="change">with torch</a><a id="change">.no_grad():
+                </a>means<a id="change"> = </a>kmeans_iter(x, means, buckets)
+            self.new_means = means
+
+        routed_means = batched_index_select(expand_dim(means, 0, b), buckets)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lucidrains/routing-transformer/commit/2042adb06111339b86814500f0c389759b8f6cdf#diff-1a96ccaa437a86e24c768ea078dd19db87f8694dae807ecbb231a703aba4702dL394' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 77644555</div><div id='project'> Project Name: lucidrains/routing-transformer</div><div id='commit'> Commit Name: 2042adb06111339b86814500f0c389759b8f6cdf</div><div id='time'> Time: 2020-05-27</div><div id='author'> Author: lucidrains@gmail.com</div><div id='file'> File Name: routing_transformer/routing_transformer.py</div><div id='m_class'> M Class Name: Kmeans</div><div id='n_method'> N Class Name: Kmeans</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: routing_transformer/routing_transformer.py</div><div id='n_file'> N File Name: routing_transformer/routing_transformer.py</div><div id='m_start'> M Start Line: 396</div><div id='m_end'> M End Line: 410</div><div id='n_start'> N Start Line: 367</div><div id='n_end'> N End Line: 384</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        prediction_scores = softmax_output.view(bsz, tgt_len, -1) if labels is None else ()
+
+        if labels is not None:
+            losses = <a id="change">softmax_output.view(</a>bsz, tgt_len - 1<a id="change">)</a>
+            &#47&#47 Avoids from incorporating padding (-100) tokens into loss value
+            loss = losses[losses != 0].mean()
+        else:
+            losses, loss = None, None</code></pre><h3>After Change</h3><pre><code class='java'>
+        softmax_output = self.crit(pred_hid, labels)
+        &#47&#47 ========================== Begin of modified ==========================
+        &#47&#47 prediction_scores = softmax_output.view(bsz, tgt_len, -1) if labels is None else ()
+        <a id="change">if </a>labels is None:
+            prediction_scores = softmax_output.view(bsz, tgt_len, -1)
+        else:
+            &#47&#47 Run softmax again to get vocabulary logits
+            &#47&#47 Not most efficient but less error-prone
+            <a id="change">with torch</a><a id="change">.no_grad():
+                </a>sm_out<a id="change"> = </a>self.crit(pred_hid)
+            prediction_scores = sm_out.view(bsz, tgt_len, -1)
+        &#47&#47 ========================== End of modified ==========================
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/stefanheng/symbolic-music-generation/commit/c209d4eed66bda0ff0b0f5b537a8a5993e0b56b2#diff-7d29a856c5e9e30825be17ece8e6d7ff393f00e120f33efa6f690086e89d13b0L75' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 77644556</div><div id='project'> Project Name: stefanheng/symbolic-music-generation</div><div id='commit'> Commit Name: c209d4eed66bda0ff0b0f5b537a8a5993e0b56b2</div><div id='time'> Time: 2022-05-26</div><div id='author'> Author: stefan.hg@outlook.com</div><div id='file'> File Name: musicnlp/models/transformer_xl.py</div><div id='m_class'> M Class Name: MyTransfoXLLMHeadModel</div><div id='n_method'> N Class Name: MyTransfoXLLMHeadModel</div><div id='m_method'> M Method Name: forward(10)</div><div id='n_method'> N Method Name: forward(10)</div><div id='m_parent_class'> M Parent Class: TransfoXLLMHeadModel</div><div id='n_parent_class'> N Parent Class: TransfoXLLMHeadModel</div><div id='m_file'> M File Name: musicnlp/models/transformer_xl.py</div><div id='n_file'> N File Name: musicnlp/models/transformer_xl.py</div><div id='m_start'> M Start Line: 189</div><div id='m_end'> M End Line: 193</div><div id='n_start'> N Start Line: 139</div><div id='n_end'> N End Line: 165</div><BR>

@@ -1,0 +1,36 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        chars, char_lens = chars.to(params.device), char_lens.to(params.device)
+        loss = params.compute_cost(pout, chars, pout_lens, char_lens)
+
+        stats<a id="change"> = </a><a id="change">{}</a>
+        <a id="change">if stage != "train"</a>:
+            ind2lab = params.train_loader.label_dict["char"]["index2lab"]
+            sequence<a id="change"> = </a>ctc_greedy_decode(pout, pout_lens, blank_id=-1)
+            sequence = convert_index_to_lab(sequence, ind2lab)
+            chars = undo_padding(chars, char_lens)
+            chars<a id="change"> = </a>convert_index_to_lab(chars, ind2lab)
+            cer_stats<a id="change"> = </a><a id="change">edit_distance.wer_details_for_batch(
+                </a>ids, chars, sequence<a id="change">, compute_alignments=True
+            )</a>
+            <a id="change">stats["CER"] = </a>cer_stats
+
+        <a id="change">return </a>loss<a id="change">, stats</a>
+
+    def fit_batch(self, batch):
+        if len(batch) == 3:
+            (ids, clean, lens), (_, noisy, _), (_, chars, char_lens) = batch</code></pre><h3>After Change</h3><pre><code class='java'>
+        chars, char_lens = chars.to(self.device), char_lens.to(self.device)
+        loss = self.hparams.compute_cost(pout, chars, pout_lens, char_lens)
+
+        <a id="change">if stage != sb.Stage.TRAIN</a>:
+            pred_chars = sb.decoders.ctc_greedy_decode(pout, pout_lens)
+            <a id="change">self.cer_metrics.append(
+                </a>ids, pred_chars, chars, None, char_lens, self.hparams.ind2lab<a id="change">
+            )</a>
+
+        return loss
+
+    </code></pre>

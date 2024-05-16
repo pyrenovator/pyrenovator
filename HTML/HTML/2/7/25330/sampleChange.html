@@ -1,0 +1,22 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+  @staticmethod
+  def backward(ctx, grad_output):
+    x,y,prg = ctx.saved_tensors
+    gx<a id="change"> = </a><a id="change">buffer_like(</a>ctx, x<a id="change">)</a>
+    gy = buffer_like(ctx, y)
+    prg.mul(ctx.cl_queue, <a id="change">[</a>gx.size//4<a id="change"></a>], None, y, grad_output, gx)
+    prg.mul(ctx.cl_queue, [gy.size//4], None, x, grad_output, gy)
+    <a id="change">return </a>gx, gy
+register(&quotmul&quot, Mul, gpu=True)
+
+class Sum(Function):</code></pre><h3>After Change</h3><pre><code class='java'>
+  @staticmethod
+  def backward(ctx, grad_output):
+    x,y = ctx.saved_tensors
+    <a id="change">return </a><a id="change">in_place_op(</a>ctx, <a id="change">&quotres_g[gid] = a_g[gid] * b_g[gid];&quot</a>, y, grad_output<a id="change">)</a>,\
+           in_place_op(ctx, &quotres_g[gid] = a_g[gid] * b_g[gid];&quot, x, grad_output)
+register(&quotmul&quot, Mul, gpu=True)
+</code></pre>

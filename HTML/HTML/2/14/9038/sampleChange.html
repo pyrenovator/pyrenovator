@@ -1,0 +1,33 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        :return: (N, 2, L)
+        
+        &#47&#47 the source sentences, which are to be fed as the inputs to the encoder
+        <a id="change">input_ids_src</a><a id="change">, attention_mask_src</a> = self.encode([
+            self.tokenizer.bos_token + " " + sent + " " + self.tokenizer.eos_token  &#47&#47 noqa
+            for sent in srcs
+        ])
+        <a id="change">input_ids_tgt</a><a id="change">, attention_mask_tgt</a> = self.encode([
+            &#47&#47 just start with bos_token.
+            &#47&#47 why no eos token at the end?
+            &#47&#47 A: because the label for eos token, i.e. pad token, is ignored in computing the loss anyways
+            &#47&#47 also, this may lead to the model repeating characters
+            &#47&#47 refer to: https://discuss.pytorch.org/t/transformer-mask-doesnt-do-anything/79765
+            self.tokenizer.bos_token  &#47&#47 noqa
+            for _ in srcs
+        ])
+        inputs_src<a id="change"> = torch</a><a id="change">.stack([input_ids_src</a>, <a id="change">attention_mask_src</a>]<a id="change">, dim=1)</a>
+        inputs_tgt<a id="change"> = torch</a><a id="change">.stack([input_ids_tgt</a>, <a id="change">attention_mask_tgt</a>]<a id="change">, dim=1)</a>
+        inputs = torch.stack([inputs_src, inputs_tgt], dim=1)
+        return inputs
+
+</code></pre><h3>After Change</h3><pre><code class='java'>
+class InferInputsBuilder(InputsBuilder):
+
+    def __call__(self, srcs: List[str]) -&gt; torch.Tensor:
+        src_inputs = <a id="change">self.src_inputs(</a>srcs<a id="change">)</a>  &#47&#47 (N, 2, L)
+        tgt_inputs = self.tgt_inputs(len(srcs))  &#47&#47 (N, 2, L)
+        inputs = torch.stack([src_inputs, tgt_inputs], dim=1)  &#47&#47 (N, 2, 2, L)
+        return inputs</code></pre>

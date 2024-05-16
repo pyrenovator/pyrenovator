@@ -1,0 +1,35 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        blur_map = blur(blur_map).unsqueeze(0)
+        
+        loss = loss_func(blur_map, gt, fixations, args)
+        total_loss<a id="change"> += </a><a id="change">loss.item()</a>
+        
+    print(&quot[{:2d},   val] avg_loss : {:.5f}, time:{:3f} minutes&quot.format(epoch, total_loss/len(loader), (time.time()-tic)/60))
+    sys.stdout.flush()
+    </code></pre><h3>After Change</h3><pre><code class='java'>
+    cc_loss = AverageMeter()
+    kldiv_loss = AverageMeter()
+    nss_loss = AverageMeter()
+    sim_loss<a id="change"> = </a><a id="change">AverageMeter()</a>
+    
+    for (img, gt, fixations) in loader:
+        img = img.to(device)
+        gt = gt.to(device)
+        fixations = fixations.to(device)
+        
+        pred_map = model(img)
+
+        &#47&#47 Blurring
+        blur_map = pred_map.cpu().squeeze(0).clone().numpy()
+        blur_map = blur(blur_map).to(device)
+        
+        cc_loss.update(cc(blur_map, gt))    
+        kldiv_loss.update(kldiv(blur_map, gt))    
+        nss_loss.update(nss(blur_map, gt))    
+        <a id="change">sim_loss.update(</a>similarity(blur_map, gt)<a id="change">)</a>    
+
+    print(&quot[{:2d},   val] CC : {:.5f}, KLDIV : {:.5f}, NSS : {:.5f}, SIM : {:.5f}  time:{:3f} minutes&quot.format(epoch, cc_loss.avg, kldiv_loss.avg, nss_loss.avg, sim_loss.avg, (time.time()-tic)/60))
+    sys.stdout.flush()</code></pre>

@@ -1,0 +1,171 @@
+<html><h3>Pattern ID :35317
+</h3><img src='100413228.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            &#47&#47 These are the delayed state-value estimates we are looking for:
+            target_mod_val = [c(mod_augm_obs) for c in self.model_target.critics]
+            &#47&#47 print_debug(f"target_mod_val of all critics: {target_mod_val}")
+            target_mod_val = reduce(torch.min, <a id="change">torch.stack(</a>target_mod_val<a id="change">)</a>).squeeze()  &#47&#47 minimum target estimate
+            &#47&#47 print_debug(f"target_mod_val before removing terminal states: {target_mod_val}")
+            &#47&#47 print_debug(f"terminals.device:{terminals.device}")
+            &#47&#47 print_debug(f"target_mod_val.device:{target_mod_val.device}")
+            target_mod_val<a id="change"> = </a>target_mod_val * (1. - terminals)
+            &#47&#47 print_debug(f"target_mod_val after removing terminal states: {target_mod_val}")
+
+            &#47&#47 Now let us use this to compute the state-value targets of the batch of initial augmented states:
+
+            value_target = torch.zeros(batch_size, device=self.device)
+            backup_started = torch.zeros(batch_size, device=self.device)
+            &#47&#47 print_debug(f"self.discount: {self.discount}")
+            &#47&#47 print_debug(f"self.reward_scale: {self.reward_scale}")
+            &#47&#47 print_debug(f"self.entropy_scale: {self.entropy_scale}")
+            &#47&#47 print_debug(f"terminals: {terminals}")
+            for i in reversed(range(nstep_max_len + 1)):
+                start_backup_mask = nstep_one_hot[:, i]
+                backup_started += start_backup_mask
+                &#47&#47 print_debug(f"i: {i}")
+                &#47&#47 print_debug(f"start_backup_mask: {start_backup_mask}")
+                &#47&#47 print_debug(f"backup_started: {backup_started}")
+                value_target = self.reward_scale * rew_traj[i] - self.entropy_scale * self.traj_new_actions_log_prob_detach[i] + backup_started * self.discount * (value_target + start_backup_mask * target_mod_val)
+                &#47&#47 print_debug(f"rew_traj[i]: {rew_traj[i]}")
+                &#47&#47 print_debug(f"self.traj_new_actions_log_prob_detach[i]: {self.traj_new_actions_log_prob_detach[i]}")
+                &#47&#47 print_debug(f"new value_target: {value_target}")
+            &#47&#47 print_debug(f"state-value target: {value_target}")
+
+        &#47&#47 end of torch.no_grad()
+
+        assert values[0].shape == value_target.shape, f"values[0].shape : {values[0].shape} != value_target.shape : {value_target.shape}"
+        assert not value_target.requires_grad
+
+        &#47&#47 Now the critic loss is:
+
+        loss_critic = sum(mse_loss(v, value_target) for v in values)
+        &#47&#47 print_debug(f"loss_critic: {loss_critic}")
+
+        &#47&#47 actor loss:
+        &#47&#47 TODO: there is probably a way of merging this with the previous for loop
+
+        &#47&#47 print_debug(" --- ACTOR LOSS ---")
+
+        model_mod_val = [c(mod_augm_obs) for c in self.model_nograd.critics]
+        &#47&#47 print_debug(f"model_mod_val of all critics: {model_mod_val}")
+        model_mod_val = reduce(torch.min, <a id="change">torch.stack(</a>model_mod_val<a id="change">)</a>).squeeze()  &#47&#47 minimum model estimate
+        &#47&#47 print_debug(f"model_mod_val before removing terminal states: {model_mod_val}")
+        model_mod_val = model_mod_val * (1. - terminals)
+        &#47&#47 print_debug(f"model_mod_val after removing terminal states: {model_mod_val}")</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 model_mod_val = model_mod_val * (1. - terminals)
+        &#47&#47 print_debug(f"model_mod_val after removing terminal states: {model_mod_val}")
+
+        model_mod_vals = [reduce(torch.min, torch.stack([c(self.traj_new_augm_obs[i + 1]) for c in self.model_nograd.critics])).squeeze() * (1. - terminals) for i in <a id="change">range(</a>nstep_max_len + 1<a id="change">)</a>]
+
+        &#47&#47 target_mod_vals = [reduce(torch.min, torch.stack([c(self.traj_new_augm_obs[i + 1]) for c in self.model_target.critics])).squeeze() * (1. - terminals) for i in range(nstep_max_len + 1)]
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/trackmania-rl/tmrl/commit/09ac1e62c9aacee8298d4dba99886fc3d7cdef23#diff-f84a4b0bff360371bcf6b0bd5f505408752fe903005a3cc7160220528068ea51L171' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 100413228</div><div id='project'> Project Name: trackmania-rl/tmrl</div><div id='commit'> Commit Name: 09ac1e62c9aacee8298d4dba99886fc3d7cdef23</div><div id='time'> Time: 2020-12-04</div><div id='author'> Author: yann.bouteiller@hotmail.fr</div><div id='file'> File Name: agents-rt/agents/drtac.py</div><div id='m_class'> M Class Name: Agent</div><div id='n_method'> N Class Name: Agent</div><div id='m_method'> M Method Name: train(1)</div><div id='n_method'> N Method Name: train(1)</div><div id='m_parent_class'> M Parent Class: agents.sac.Agent</div><div id='n_parent_class'> N Parent Class: agents.sac.Agent</div><div id='m_file'> M File Name: agents-rt/agents/drtac.py</div><div id='n_file'> N File Name: agents-rt/agents/drtac.py</div><div id='m_start'> M Start Line: 171</div><div id='m_end'> M End Line: 306</div><div id='n_start'> N Start Line: 174</div><div id='n_end'> N End Line: 321</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            L_row = []
+            for i in range(M):
+                L_row.append(-F.log_softmax(cos_sim_matrix[j, i], 0)[j])
+            L_row<a id="change"> = </a><a id="change">torch.stack(</a>L_row<a id="change">)</a>
+            L.append(L_row)
+        return <a id="change">torch.stack(</a>L<a id="change">)</a>
+
+    def embed_loss_contrast(self, dvecs, cos_sim_matrix):
+        Calculate the loss on each embedding by contrast loss.
+        N, M, _ = dvecs.shape</code></pre><h3>After Change</h3><pre><code class='java'>
+                -F.log_softmax(cos_sim_matrix[j, i], 0)[j]
+                for i in range(dvecs.size(1))
+            ])
+            for j in <a id="change">range(</a>dvecs.size(0)<a id="change">)</a>
+        ])
+
+    def embed_loss_contrast(self, dvecs, cos_sim_matrix):
+        Calculate the loss on each embedding by contrast loss.</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/yistlin/dvector/commit/c1119a2a1b9e51439411cc73473bea64ed8ace6a#diff-95e5aa853bf89fbd2e1b49f0180d433e5de6fb2794ed5730dc6017da060af525L58' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 100413229</div><div id='project'> Project Name: yistlin/dvector</div><div id='commit'> Commit Name: c1119a2a1b9e51439411cc73473bea64ed8ace6a</div><div id='time'> Time: 2020-04-01</div><div id='author'> Author: yishen992@gmail.com</div><div id='file'> File Name: modules/ge2e.py</div><div id='m_class'> M Class Name: GE2ELoss</div><div id='n_method'> N Class Name: GE2ELoss</div><div id='m_method'> M Method Name: embed_loss_softmax(3)</div><div id='n_method'> N Method Name: embed_loss_softmax(3)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: modules/ge2e.py</div><div id='n_file'> N File Name: modules/ge2e.py</div><div id='m_start'> M Start Line: 60</div><div id='m_end'> M End Line: 68</div><div id='n_start'> N Start Line: 60</div><div id='n_end'> N End Line: 66</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            labels += [torch.as_tensor(label)]
+            pointer += server_payload[&quotdata&quot].classes
+            pointer = pointer % len(self.dataloader.dataset)
+        data<a id="change"> = </a><a id="change">torch.stack(</a>data<a id="change">)</a>.to(**self.setup)
+        labels = <a id="change">torch.stack(</a>labels<a id="change">)</a>.to(device=self.setup[&quotdevice&quot])
+
+        &#47&#47 Compute local updates
+        shared_grads = []</code></pre><h3>After Change</h3><pre><code class='java'>
+            optimizer = torch.optim.SGD(self.model.parameters(), lr=self.local_learning_rate)
+            seen_data_idx = 0
+
+            for step in <a id="change">range(</a>self.num_local_updates<a id="change">)</a>:
+
+                data = user_data[seen_data_idx: seen_data_idx + self.num_data_per_local_update_step]
+                labels = user_labels[seen_data_idx: seen_data_idx + self.num_data_per_local_update_step]</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/jonasgeiping/breaching/commit/1ab2867fea20551797c9aea8ae67099093ec7180#diff-222118a39af19077a8b428b60923841d31a00f445f3963533670a0eaa87a9924L147' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 100413224</div><div id='project'> Project Name: jonasgeiping/breaching</div><div id='commit'> Commit Name: 1ab2867fea20551797c9aea8ae67099093ec7180</div><div id='time'> Time: 2021-10-01</div><div id='author'> Author: jonas.geiping@googlemail.com</div><div id='file'> File Name: breaching/cases/users.py</div><div id='m_class'> M Class Name: UserMultiStep</div><div id='n_method'> N Class Name: UserMultiStep</div><div id='m_method'> M Method Name: compute_local_updates(2)</div><div id='n_method'> N Method Name: compute_local_updates(2)</div><div id='m_parent_class'> M Parent Class: UserSingleStep</div><div id='n_parent_class'> N Parent Class: UserSingleStep</div><div id='m_file'> M File Name: breaching/cases/users.py</div><div id='n_file'> N File Name: breaching/cases/users.py</div><div id='m_start'> M Start Line: 151</div><div id='m_end'> M End Line: 187</div><div id='n_start'> N Start Line: 158</div><div id='n_end'> N End Line: 200</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            &#47&#47 These are the delayed state-value estimates we are looking for:
+            target_mod_val = [c(mod_augm_obs) for c in self.model_target.critics]
+            &#47&#47 print_debug(f"target_mod_val of all critics: {target_mod_val}")
+            target_mod_val<a id="change"> = </a>reduce(torch.min, <a id="change">torch.stack(</a>target_mod_val<a id="change">)</a>).squeeze()  &#47&#47 minimum target estimate
+            &#47&#47 print_debug(f"target_mod_val before removing terminal states: {target_mod_val}")
+            &#47&#47 print_debug(f"terminals.device:{terminals.device}")
+            &#47&#47 print_debug(f"target_mod_val.device:{target_mod_val.device}")
+            target_mod_val = target_mod_val * (1. - terminals)
+            &#47&#47 print_debug(f"target_mod_val after removing terminal states: {target_mod_val}")
+
+            &#47&#47 Now let us use this to compute the state-value targets of the batch of initial augmented states:
+
+            value_target = torch.zeros(batch_size, device=self.device)
+            backup_started = torch.zeros(batch_size, device=self.device)
+            &#47&#47 print_debug(f"self.discount: {self.discount}")
+            &#47&#47 print_debug(f"self.reward_scale: {self.reward_scale}")
+            &#47&#47 print_debug(f"self.entropy_scale: {self.entropy_scale}")
+            &#47&#47 print_debug(f"terminals: {terminals}")
+            for i in reversed(range(nstep_max_len + 1)):
+                start_backup_mask = nstep_one_hot[:, i]
+                backup_started += start_backup_mask
+                &#47&#47 print_debug(f"i: {i}")
+                &#47&#47 print_debug(f"start_backup_mask: {start_backup_mask}")
+                &#47&#47 print_debug(f"backup_started: {backup_started}")
+                value_target = self.reward_scale * rew_traj[i] - self.entropy_scale * self.traj_new_actions_log_prob_detach[i] + backup_started * self.discount * (value_target + start_backup_mask * target_mod_val)
+                &#47&#47 print_debug(f"rew_traj[i]: {rew_traj[i]}")
+                &#47&#47 print_debug(f"self.traj_new_actions_log_prob_detach[i]: {self.traj_new_actions_log_prob_detach[i]}")
+                &#47&#47 print_debug(f"new value_target: {value_target}")
+            &#47&#47 print_debug(f"state-value target: {value_target}")
+
+        &#47&#47 end of torch.no_grad()
+
+        assert values[0].shape == value_target.shape, f"values[0].shape : {values[0].shape} != value_target.shape : {value_target.shape}"
+        assert not value_target.requires_grad
+
+        &#47&#47 Now the critic loss is:
+
+        loss_critic = sum(mse_loss(v, value_target) for v in values)
+        &#47&#47 print_debug(f"loss_critic: {loss_critic}")
+
+        &#47&#47 actor loss:
+        &#47&#47 TODO: there is probably a way of merging this with the previous for loop
+
+        &#47&#47 print_debug(" --- ACTOR LOSS ---")
+
+        model_mod_val = [c(mod_augm_obs) for c in self.model_nograd.critics]
+        &#47&#47 print_debug(f"model_mod_val of all critics: {model_mod_val}")
+        model_mod_val = reduce(torch.min, <a id="change">torch.stack(</a>model_mod_val<a id="change">)</a>).squeeze()  &#47&#47 minimum model estimate
+        &#47&#47 print_debug(f"model_mod_val before removing terminal states: {model_mod_val}")
+        model_mod_val = model_mod_val * (1. - terminals)
+        &#47&#47 print_debug(f"model_mod_val after removing terminal states: {model_mod_val}")</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 model_mod_val = model_mod_val * (1. - terminals)
+        &#47&#47 print_debug(f"model_mod_val after removing terminal states: {model_mod_val}")
+
+        model_mod_vals = [reduce(torch.min, torch.stack([c(self.traj_new_augm_obs[i + 1]) for c in self.model_nograd.critics])).squeeze() * (1. - terminals) for i in <a id="change">range(</a>nstep_max_len + 1<a id="change">)</a>]
+
+        &#47&#47 target_mod_vals = [reduce(torch.min, torch.stack([c(self.traj_new_augm_obs[i + 1]) for c in self.model_target.critics])).squeeze() * (1. - terminals) for i in range(nstep_max_len + 1)]
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/trackmania-rl/tmrl/commit/09ac1e62c9aacee8298d4dba99886fc3d7cdef23#diff-f84a4b0bff360371bcf6b0bd5f505408752fe903005a3cc7160220528068ea51L127' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 100413226</div><div id='project'> Project Name: trackmania-rl/tmrl</div><div id='commit'> Commit Name: 09ac1e62c9aacee8298d4dba99886fc3d7cdef23</div><div id='time'> Time: 2020-12-04</div><div id='author'> Author: yann.bouteiller@hotmail.fr</div><div id='file'> File Name: agents-rt/agents/drtac.py</div><div id='m_class'> M Class Name: Agent</div><div id='n_method'> N Class Name: Agent</div><div id='m_method'> M Method Name: train(1)</div><div id='n_method'> N Method Name: train(1)</div><div id='m_parent_class'> M Parent Class: agents.sac.Agent</div><div id='n_parent_class'> N Parent Class: agents.sac.Agent</div><div id='m_file'> M File Name: agents-rt/agents/drtac.py</div><div id='n_file'> N File Name: agents-rt/agents/drtac.py</div><div id='m_start'> M Start Line: 171</div><div id='m_end'> M End Line: 306</div><div id='n_start'> N Start Line: 174</div><div id='n_end'> N End Line: 321</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            for pattern_idx in range(len(pattern_features)):
+                &#47&#47 permutation is unique for every pattern hence cannot perform vector operations
+                &#47&#47 Padding is mixed up in the permutation, no need for additional processing
+                updated_feature<a id="change"> = </a><a id="change">torch.stack(</a>[pattern_features[pattern_idx][i] for i in permutation[pattern_idx]]<a id="change">)</a>
+                all_updated.append(updated_feature)
+        
+        return <a id="change">torch.stack(</a>all_updated<a id="change">)</a>.to(pattern_features.device)
+
+    @staticmethod
+    def _stitch_after_permute(stitches, stitches_num, permutation, max_panel_len):</code></pre><h3>After Change</h3><pre><code class='java'>
+            extended_permutation = permutation
+            &#47&#47 match indexing with feature size
+            if len(permutation.shape) &lt; len(pattern_features.shape):
+                for _ in <a id="change">range(</a>len(pattern_features.shape) - len(permutation.shape)<a id="change">)</a>:
+                    extended_permutation = extended_permutation.unsqueeze(-1)
+                &#47&#47 expand just creates a new view without extra copies
+                extended_permutation = extended_permutation.expand(pattern_features.shape)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/maria-korosteleva/garment-pattern-estimation/commit/66c717b0d59467277210e38e07f0d574af577038#diff-66aae7ec57f079963bb4847ebb79bfda4004ba832ee23e11911a14908193967cL898' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 100413227</div><div id='project'> Project Name: maria-korosteleva/garment-pattern-estimation</div><div id='commit'> Commit Name: 66c717b0d59467277210e38e07f0d574af577038</div><div id='time'> Time: 2021-06-14</div><div id='author'> Author: mariako@kaist.ac.kr</div><div id='file'> File Name: nn/metrics.py</div><div id='m_class'> M Class Name: ComposedPatternLoss</div><div id='n_method'> N Class Name: ComposedPatternLoss</div><div id='m_method'> M Method Name: _feature_permute(2)</div><div id='n_method'> N Method Name: _feature_permute(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: nn/metrics.py</div><div id='n_file'> N File Name: nn/metrics.py</div><div id='m_start'> M Start Line: 903</div><div id='m_end'> M End Line: 910</div><div id='n_start'> N Start Line: 903</div><div id='n_end'> N End Line: 914</div><BR>

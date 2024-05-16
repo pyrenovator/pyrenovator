@@ -1,0 +1,49 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                e_4 = model(x_4.to("cuda"), t_list[2].to("cuda")).to("cpu")
+                residual = (1 / 6) * (residual + 2 * e_2 + 2 * e_3 + e_4)
+            else:
+                <a id="change">ets.append(</a>residual<a id="change">)</a>
+                residual = (1 / 24) * (55 * ets[-1] - 59 * ets[-2] + 37 * ets[-3] - 9 * ets[-4])
+
+            img_next = self.noise_scheduler.transfer(image.to("cpu"), t, t_next, residual)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        ets = []
+        prev_noises = []
+        step_idx<a id="change"> = </a>len(seq) - 1
+        <a id="change">while step_idx &gt;= 0</a><a id="change">:
+            </a>i = seq[step_idx]
+            j<a id="change"> = </a>seq_next[step_idx]
+
+            t = (torch.ones(image.shape[0]) * i)
+            t_next = (torch.ones(image.shape[0]) * j)
+
+            residual = model(image.to("cuda"), t.to("cuda"))
+            residual = residual.to("cpu")
+
+            t_list = [t, (t+t_next)/2, t_next]
+
+            ets.append(residual)
+            if len(ets) &lt;= 3:
+                image = image.to("cpu")
+                x_2 = self.noise_scheduler.transfer(image.to("cpu"), t_list[0], t_list[1], residual)
+
+                e_2 = model(x_2.to("cuda"), t_list[1].to("cuda")).to("cpu")
+                x_3 = self.noise_scheduler.transfer(image, t_list[0], t_list[1], e_2)
+                e_3 = model(x_3.to("cuda"), t_list[1].to("cuda")).to("cpu")
+                x_4 = self.noise_scheduler.transfer(image, t_list[0], t_list[2], e_3)
+                e_4 = model(x_4.to("cuda"), t_list[2].to("cuda")).to("cpu")
+                residual = (1 / 6) * (residual + 2 * e_2 + 2 * e_3 + e_4)
+            else:
+                residual = (1 / 24) * (55 * ets[-1] - 59 * ets[-2] + 37 * ets[-3] - 9 * ets[-4])
+
+            img_next = self.noise_scheduler.transfer(image.to("cpu"), t, t_next, residual)
+            image = img_next
+
+            step_idx<a id="change"> = </a>step_idx - 1
+
+&#47&#47            if len(prev_noises) in [1, 2]:
+&#47&#47                t = (t + t_next) / 2</code></pre>

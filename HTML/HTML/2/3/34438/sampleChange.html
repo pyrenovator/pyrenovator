@@ -1,0 +1,29 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+  def processing_op(x,op,w,C):
+    assert op == ProcessingOps.CONV, f"{op} isn&quott supported"
+    x = x.movement_op(MovementOps.SLICE, ((0, x.shape[0]), (0, x.shape[1]), (-C.py, x.shape[2]+C.py_), (-C.px, x.shape[3]+C.px_)))
+    gx = <a id="change">x.ravel()</a>.reshape(C.bs,C.groups,C.cin,x.shape[2],x.shape[3])
+    tx = np.lib.stride_tricks.as_strided(gx,
+      shape=(C.bs, C.groups, C.cin, C.H, C.W, C.oy, C.ox),
+      strides=(*gx.strides[0:3], gx.strides[3]*C.dy, gx.strides[4]*C.dx, gx.strides[3]*C.sy, gx.strides[4]*C.sx))
+    tw = w.reshape(C.groups, C.rcout, C.cin, C.H, C.W)
+
+    &#47&#47 too bad this doesn&quott mix with stride_tricks, it can be very slow
+    &#47&#47out = np.einsum("nGCHWhw, GkCHW -&gt; nGkhw", tx, tw)
+
+    &#47&#47 3 lines is faster than 1
+    tmp = np.empty((C.groups,C.rcout,C.bs,C.oy,C.ox), dtype=x.dtype)
+    for g in range(C.groups): tmp[g]<a id="change"> = </a>np.tensordot(tw[g], tx[:,g], ((1,2,3),(1,2,3)))
+    out = np.einsum("Gknhw -&gt; nGkhw", tmp)
+
+    return out.reshape(C.bs, C.groups*C.rcout, C.oy, C.ox).view(CPUBuffer)</code></pre><h3>After Change</h3><pre><code class='java'>
+    x = x.movement_op(MovementOps.SLICE, ((0, x.shape[0]), (0, x.shape[1]), (-C.py, x.shape[2]+C.py_), (-C.px, x.shape[3]+C.px_)))
+    tx = x.movement_op(MovementOps.STRIDED, (
+      (C.bs, C.groups*C.cin*x.shape[2]*x.shape[3]), (C.groups, C.cin*x.shape[2]*x.shape[3]),
+      (C.oy, C.sy*x.shape[3]), (C.ox<a id="change">, C.sx</a>), (C.cin, x.shape[2]*x.shape[3]), (C.H, C.dy*x.shape[3]), (C.W, C.dx)))
+    tw = w.reshape(C.groups, C.rcout, C.cin, C.H, C.W)
+    out = np.einsum("nGhwCHW, GkCHW -&gt; nGkhw", tx.contiguous(), tw.contiguous())
+    return out.reshape(C.bs, C.groups*C.rcout, C.oy, C.ox).view(CPUBuffer)</code></pre>

@@ -1,0 +1,65 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        )[1]
+        self.las[ChannelNames.PredictedClassification.value][
+            assign_idx.cpu()
+        ] = <a id="change">self.updates_classification.cpu()</a>
+        log.info(f"Saving LAS updated with predicted classes to {self.output_path}")
+        self.las.write(self.output_path)
+
+        &#47&#47 Clean-up - get rid of current data to go easy on memory</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 Cat positions
+        self.updates_pos = torch.cat(self.updates_pos)
+        self.updates_pos_subsampled = torch.cat(self.updates_pos_subsampled)
+        self.updates_probas_subsampled<a id="change"> = </a>torch.cat(self.updates_probas_subsampled)
+
+        device = self.updates_pos.device
+
+        &#47&#47 Cat and remap predictions
+        self.updates_classification_subsampled = torch.cat(
+            self.updates_classification_subsampled
+        )
+        self.updates_classification_subsampled = np.vectorize(
+            self.reverse_classification_mapper.get
+        )(self.updates_classification_subsampled.cpu())
+        self.updates_classification_subsampled = torch.from_numpy(
+            self.updates_classification_subsampled
+        ).to(device)
+
+        &#47&#47 Accelerate KNN by moving to GPU if possible.
+        self.las_pos = self.las_pos.to(device)
+
+        &#47&#47 1/2 Interpolate locally to have dense classes in infered zones
+        assign_idx = knn(
+            self.updates_pos_subsampled,
+            self.updates_pos,
+            k=1,
+            num_workers=1,
+        )[1]
+        self.updates_classification = self.updates_classification_subsampled[
+            assign_idx
+        ].cpu()
+        <a id="change">self.updates_probas</a> = self.updates_probas_subsampled[assign_idx].cpu()
+
+        &#47&#47 2/2 Propagate dense classes to the full las
+        assign_idx = knn(
+            self.las_pos,
+            self.updates_pos,
+            k=1,
+            num_workers=1,
+        )[1]
+        assign_idx = assign_idx.cpu()
+        self.las[ChannelNames.PredictedClassification.value][
+            assign_idx
+        ] = self.updates_classification
+
+        <a id="change">for </a>class_idx_in_tensor, <a id="change">class_name</a> in <a id="change">enumerate(</a>self.names_of_probas_to_save<a id="change">):
+            </a>self.las[class_name][assign_idx]<a id="change"> = self.updates_probas[
+                :, class_idx_in_tensor
+            ]</a>
+
+        log.info(f"Saving LAS updated with predicted classes to {self.output_path}")
+        self.las.write(self.output_path)
+</code></pre>

@@ -1,0 +1,58 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        original_predictions = self._original_predictions
+
+        &#47&#47 handle only first image (batch=1)
+        predictions_in_xyxy_format<a id="change"> = </a><a id="change">original_predictions.xyxy[0].cpu().detach()</a>.numpy()
+
+        object_prediction_list = []
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            full_shape_list = [full_shape_list]
+
+        &#47&#47 handle all predictions
+        object_prediction_list_per_image<a id="change"> = </a><a id="change">[]</a>
+        for image_ind, image_predictions_in_xyxy_format in enumerate(original_predictions.xyxy):
+            shift_amount = shift_amount_list[image_ind]
+            full_shape = None if full_shape_list is None else full_shape_list[image_ind]
+            object_prediction_list = []
+
+            &#47&#47 process predictions
+            for prediction in image_predictions_in_xyxy_format.cpu().detach().numpy():
+                x1 = int(prediction[0])
+                y1 = int(prediction[1])
+                x2 = int(prediction[2])
+                y2 = int(prediction[3])
+                bbox = [x1, y1, x2, y2]
+                score = prediction[4]
+                category_id = int(prediction[5])
+                category_name = self.category_mapping[str(category_id)]
+
+                &#47&#47 ignore invalid predictions
+                if bbox[0] &gt; bbox[2] or bbox[1] &gt; bbox[3] or bbox[0] &lt; 0 or bbox[1] &lt; 0 or bbox[2] &lt; 0 or bbox[3] &lt; 0:
+                    logger.warning(f"ignoring invalid prediction with bbox: {bbox}")
+                    continue
+                if full_shape is not None and (
+                    bbox[1] &gt; full_shape[0]
+                    or bbox[3] &gt; full_shape[0]
+                    or bbox[0] &gt; full_shape[1]
+                    or bbox[2] &gt; full_shape[1]
+                ):
+                    logger.warning(f"ignoring invalid prediction with bbox: {bbox}")
+                    continue
+
+                object_prediction = ObjectPrediction(
+                    bbox=bbox,
+                    category_id=category_id,
+                    score=score,
+                    bool_mask=None,
+                    category_name=category_name,
+                    shift_amount=shift_amount,
+                    full_shape=full_shape,
+                )
+                object_prediction_list.append(object_prediction)
+            <a id="change">object_prediction_list_per_image.append(</a>object_prediction_list<a id="change">)</a>
+
+        self._object_prediction_list_per_image = object_prediction_list_per_image
+</code></pre>

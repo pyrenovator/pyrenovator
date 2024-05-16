@@ -1,0 +1,114 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                continue
+            result["j_place"] = j
+
+            <a id="change">break</a>
+        else:
+            world_saver.restore()
+            env.ri.attachments = []
+            continue</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    c = mercury.geometry.Coordinate(*env.PLACE_POSE)
+    c.translate([0, 0, 0.05], wrt="world")
+    LAST_PRE_PLACE_POSE<a id="change"> = </a>c.pose
+
+    for grasp_pose in target_grasp_poses:
+        world_saver = pp.WorldSaver()
+
+        ee_to_world = pp.multiply(obj_to_world, np.hsplit(grasp_pose, [3]))
+
+        &#47&#47 find self-collision-free j_grasp
+        for dg in np.linspace(-np.pi, np.pi, num=6, endpoint=False):
+            result = {}
+
+            c = mercury.geometry.Coordinate(*ee_to_world)
+            c.rotate([0, 0, dg])
+            j = env.ri.solve_ik(c.pose)
+            if j is None:
+                env.ri.setj(env.ri.homej)
+                j = env.ri.solve_ik(c.pose)
+                env.ri.setj(j_init)
+            if j is None or not env.ri.validatej(j, obstacles=env.bg_objects):
+                world_saver.restore()
+                env.ri.attachments = []
+                continue
+            result["j_grasp"] = j
+
+            env.ri.setj(result["j_grasp"])
+            ee_to_world = c.pose
+
+            c = mercury.geometry.Coordinate(*ee_to_world)
+            c.translate([0, 0, -0.1])
+            j = env.ri.solve_ik(c.pose)
+            if j is None or not env.ri.validatej(j, obstacles=env.bg_objects):
+                world_saver.restore()
+                env.ri.attachments = []
+                continue
+            result["j_pre_grasp"] = j
+
+            ee_to_obj = pp.multiply(pp.invert(obj_to_world), ee_to_world)
+            env.ri.attachments = [
+                pp.Attachment(
+                    env.ri.robot,
+                    env.ri.ee,
+                    pp.invert(ee_to_obj),
+                    env.fg_object_id,
+                )
+            ]
+
+            c = mercury.geometry.Coordinate(*ee_to_world)
+            c.translate([0, 0, 0.2], wrt="world")
+            j = env.ri.solve_ik(c.pose)
+            if j is None or not env.ri.validatej(j, obstacles=env.bg_objects):
+                world_saver.restore()
+                env.ri.attachments = []
+                continue
+            result["j_post_grasp"] = j
+
+            env.ri.setj(result["j_post_grasp"])
+
+            with env.ri.enabling_attachments():
+                j = env.ri.solve_ik(
+                    env.PRE_PLACE_POSE,
+                    move_target=env.ri.robot_model.attachment_link0,
+                    n_init=3,
+                )
+            if j is None or not env.ri.validatej(j, obstacles=env.bg_objects):
+                world_saver.restore()
+                env.ri.attachments = []
+                continue
+            result["j_pre_place"] = j
+
+            env.ri.setj(result["j_pre_place"])
+            &#47&#47 env.ri.attachments[0].assign()
+
+            with env.ri.enabling_attachments():
+                <a id="change">j</a><a id="change"> = </a>env.ri.solve_ik(
+                    LAST_PRE_PLACE_POSE,
+                    move_target=env.ri.robot_model.attachment_link0,
+                )
+            <a id="change">if j is None or not env.ri.validatej(j, obstacles=env.bg_objects)</a>:
+                <a id="change">world_saver.restore()</a>
+                env.ri.attachments<a id="change"> = []</a>
+                <a id="change">continue</a>
+            <a id="change">result["j_last_pre_place"] = j</a>
+
+            with env.ri.enabling_attachments():
+                j = env.ri.solve_ik(
+                    env.PLACE_POSE,
+                    move_target=env.ri.robot_model.attachment_link0,
+                )
+            if j is None or not env.ri.validatej(j, obstacles=env.bg_objects):
+                world_saver.restore()
+                env.ri.attachments = []
+                continue
+            result["j_place"] = j
+
+            <a id="change">break</a>
+        else:
+            world_saver.restore()
+            env.ri.attachments = []
+            continue</code></pre>

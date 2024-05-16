@@ -1,0 +1,81 @@
+<html><h3>Pattern ID :15836
+</h3><img src='53611586.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+        encoding_indices = soft_one_hot.argmax(dim=1)
+
+        return z_q<a id="change">, loss, (None, None, encoding_indices)</a>
+
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        loss = self.kl_weight * torch.sum(qy * torch.log(qy * self.num_tokens + 1e-10), dim=1).mean()
+
+        encoding_indices = soft_one_hot.argmax(dim=1)
+        encodings = <a id="change">F.one_hot(encoding_indices, self.num_tokens).type(</a>z.dtype<a id="change">)</a>
+        avg_probs = torch.mean(encodings, dim=0)
+        perplexity<a id="change"> = </a>torch.exp(-torch.sum(avg_probs * torch.log(avg_probs + 1e-10)))
+
+        return z_q, loss, (perplexity, encodings, encoding_indices)
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 5</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/tgisaturday/dalle-lightning/commit/39e8b24fa405a4320d7c683e7054ae18ef4563f4#diff-5cc0cb1395e7634e216d321d933d7868cc1ee34fa25763750d65126b9ad1ea15L127' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 53611586</div><div id='project'> Project Name: tgisaturday/dalle-lightning</div><div id='commit'> Commit Name: 39e8b24fa405a4320d7c683e7054ae18ef4563f4</div><div id='time'> Time: 2021-07-28</div><div id='author'> Author: jamesk1228@gmail.com</div><div id='file'> File Name: pl_dalle/modules/vqvae/quantize.py</div><div id='m_class'> M Class Name: GumbelQuantizer</div><div id='n_method'> N Class Name: GumbelQuantizer</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: pl_dalle/modules/vqvae/quantize.py</div><div id='n_file'> N File Name: pl_dalle/modules/vqvae/quantize.py</div><div id='m_start'> M Start Line: 127</div><div id='m_end'> M End Line: 135</div><div id='n_start'> N Start Line: 127</div><div id='n_end'> N End Line: 138</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    num_batches = int(math.ceil(float(num_generate) / float(batch_size)))
+    for i in tqdm(range(num_batches), disable=disable_tqdm):
+        real_images, real_labels = next(data_iter)
+        real_images<a id="change">, real_labels</a> = real_images.to(device), real_labels.to(device)
+        fake_images, _, _, _, _ = sample.generate_images(z_prior=z_prior,
+                                                         truncation_factor=truncation_factor,
+                                                         batch_size=batch_size,</code></pre><h3>After Change</h3><pre><code class='java'>
+                                                         style_mixing_p=0.0,
+                                                         cal_trsp_cost=False)
+        fake_images = (fake_images+1)*127.5
+        fake_images<a id="change"> = </a><a id="change">fake_images.detach().cpu().type(</a>torch.uint8<a id="change">)</a>
+
+        real_embeddings, _ = eval_model.get_outputs(real_images)
+        fake_embeddings, _ = eval_model.get_outputs(fake_images)
+        real_embeddings = real_embeddings.detach().cpu().numpy()</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/postech-cvlab/pytorch-studiogan/commit/0591c77840c0e25760f1173ed716fcce57a2a36c#diff-b978bde1eca9e08598f75af7ef43cb7490bfad88a38f98478d5926780e1b9f09L17' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 53611590</div><div id='project'> Project Name: postech-cvlab/pytorch-studiogan</div><div id='commit'> Commit Name: 0591c77840c0e25760f1173ed716fcce57a2a36c</div><div id='time'> Time: 2021-12-25</div><div id='author'> Author: first287@naver.com</div><div id='file'> File Name: src/metrics/prdc_trained.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: compute_real_fake_embeddings(17)</div><div id='n_method'> N Method Name: compute_real_fake_embeddings(17)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/metrics/prdc_trained.py</div><div id='n_file'> N File Name: src/metrics/prdc_trained.py</div><div id='m_start'> M Start Line: 24</div><div id='m_end'> M End Line: 24</div><div id='n_start'> N Start Line: 42</div><div id='n_end'> N End Line: 43</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    means_ = buckets_to_means(x, buckets, num_clusters)
+    means = torch.where(zero_mask.unsqueeze(-1), means, means_)
+    means = means.squeeze(0)
+    return means<a id="change">, buckets, dists</a>
+
+def kmeans(x, means, training=True, init=False):
+    b, h, t, d = x.shape
+    max_iters = 1 if training else 0</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    means_ = buckets.new_zeros(b, h, num_clusters, d, dtype=dtype)
+    means_.scatter_add_(-2, expand_dim(buckets, -1, d), x)
+    means_<a id="change"> = </a><a id="change">F.normalize(means_.sum(0, keepdim=True), dim=-1).type(</a>dtype<a id="change">)</a>
+
+    means = torch.where(zero_mask.unsqueeze(-1), means, means_)
+    means = means.squeeze(0)
+    return means</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lucidrains/routing-transformer/commit/2042adb06111339b86814500f0c389759b8f6cdf#diff-1a96ccaa437a86e24c768ea078dd19db87f8694dae807ecbb231a703aba4702dL336' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 53611595</div><div id='project'> Project Name: lucidrains/routing-transformer</div><div id='commit'> Commit Name: 2042adb06111339b86814500f0c389759b8f6cdf</div><div id='time'> Time: 2020-05-27</div><div id='author'> Author: lucidrains@gmail.com</div><div id='file'> File Name: routing_transformer/routing_transformer.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: kmeans_iter(3)</div><div id='n_method'> N Method Name: kmeans_iter(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: routing_transformer/routing_transformer.py</div><div id='n_file'> N File Name: routing_transformer/routing_transformer.py</div><div id='m_start'> M Start Line: 337</div><div id='m_end'> M End Line: 344</div><div id='n_start'> N Start Line: 306</div><div id='n_end'> N End Line: 321</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        P = K // 2
+        gap = K - (P + L % K) % K
+        if gap &gt; 0:
+            input = torch.cat((input<a id="change">, torch.zeros(B, N, gap)</a>), dim=2)
+
+        pad = torch.zeros(B, N, P)
+        input = torch.cat((pad, input, pad), dim=2)</code></pre><h3>After Change</h3><pre><code class='java'>
+        P = K // 2
+        gap = K - (P + L % K) % K
+        if gap &gt; 0:
+            pad = torch.Tensor(torch.zeros(B, N, gap)).type(<a id="change">input.type()</a>)
+            input<a id="change"> = </a>torch.cat((input, pad), dim=2)
+
+        pad = torch.Tensor(torch.zeros(B, N, P)).type(input.type())
+        input = torch.cat((pad, input, pad), dim=2)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/jusperlee/dual-path-rnn-pytorch/commit/0184b360691cbecd390a0e1d8f98c95ae29644b5#diff-63d7870c73412f2cc55179b742febe42b81455c6ba396d81c566cd22866d26beL316' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 53611576</div><div id='project'> Project Name: jusperlee/dual-path-rnn-pytorch</div><div id='commit'> Commit Name: 0184b360691cbecd390a0e1d8f98c95ae29644b5</div><div id='time'> Time: 2020-02-06</div><div id='author'> Author: Tsinghua.kaili@gmail.com</div><div id='file'> File Name: model/model_rnn.py</div><div id='m_class'> M Class Name: Dual_Path_RNN</div><div id='n_method'> N Class Name: Dual_Path_RNN</div><div id='m_method'> M Method Name: _padding(3)</div><div id='n_method'> N Method Name: _padding(3)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: model/model_rnn.py</div><div id='n_file'> N File Name: model/model_rnn.py</div><div id='m_start'> M Start Line: 324</div><div id='m_end'> M End Line: 329</div><div id='n_start'> N Start Line: 304</div><div id='n_end'> N End Line: 310</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        whole_bond_idxs = native_idxs
+
+    &#47&#47 2. ATTRS: encode bond -&gt; attrs
+    bond_norms = dist_mat[ whole_bond_idxs[0]<a id="change"> , whole_bond_idxs[1]</a> ]
+    bond_vecs  = x[ whole_bond_idxs[0] ] - x[ whole_bond_idxs[1] ]
+    bond_vecs /= (bond_norms + eps).unsqueeze(-1)
+    bond_norms_enc = encode_dist(bond_norms, scales=needed_info["bond_scales"]).squeeze()</code></pre><h3>After Change</h3><pre><code class='java'>
+        dist_mat = torch.cdist(x, x, p=2)
+
+    &#47&#47 normal buckets
+    bond_buckets<a id="change"> = </a><a id="change">torch.zeros(x.shape[:-1], x.shape[-2], device=device).type(</a>precise<a id="change">)</a>
+    if buckets:
+        &#47&#47 count from latest degree of adjacency given
+        bond_buckets = torch.bucketize(dist_mat, cutoffs)
+        bond_buckets[native_idxs[0], native_idxs[1]] = cutoffs.shape[0]</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lucidrains/geometric-vector-perceptron/commit/5a40792004e203e994ed7c0cf6dbf25d7312c8c5#diff-3c4d3e9b2d9cca8bf55129be87f3334c429ad0ab75a5329f0d84e34cb61d4021L365' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 53611583</div><div id='project'> Project Name: lucidrains/geometric-vector-perceptron</div><div id='commit'> Commit Name: 5a40792004e203e994ed7c0cf6dbf25d7312c8c5</div><div id='time'> Time: 2021-03-28</div><div id='author'> Author: ericalcaide1@gmail.com</div><div id='file'> File Name: examples/data_utils.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: encode_whole_bonds(6)</div><div id='n_method'> N Method Name: encode_whole_bonds(6)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples/data_utils.py</div><div id='n_file'> N File Name: examples/data_utils.py</div><div id='m_start'> M Start Line: 408</div><div id='m_end'> M End Line: 452</div><div id='n_start'> N Start Line: 390</div><div id='n_end'> N End Line: 456</div><BR>

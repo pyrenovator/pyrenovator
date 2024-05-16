@@ -1,0 +1,106 @@
+<html><h3>Pattern ID :8256
+</h3><img src='29064831.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    real_feat_indices = np.random.permutation(total_instance)[:num_feats]
+    real_feats = real_feats.detach().cpu().numpy()[real_feat_indices].astype(np.float64)
+    real_labels = real_labels.detach().cpu().numpy()[real_feat_indices]
+    <a id="change">return </a>real_feats<a id="change">, real_feat_indices, real_labels</a>
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            real_labels.append(labels)
+
+    real_feats = torch.cat(real_feats, dim=0)
+    real_probs<a id="change"> = </a>torch.cat(real_probs, dim=0)
+    real_labels = torch.cat(real_labels, dim=0)
+    if DDP:
+        real_feats = torch.cat(losses.GatherLayer.apply(real_feats), dim=0)
+        real_probs<a id="change"> = </a>torch.cat(losses.GatherLayer.apply(real_probs), dim=0)
+        real_labels = torch.cat(losses.GatherLayer.apply(real_labels), dim=0)
+
+    real_feat_indices = np.random.permutation(num_feats)
+    real_feats = real_feats.detach().cpu().numpy()[real_feat_indices].astype(np.float64)
+    real_probs<a id="change"> = </a><a id="change">real_probs.detach().cpu().numpy()</a>[real_feat_indices].astype(np.float64)
+    real_labels = real_labels.detach().cpu().numpy()[real_feat_indices]
+    <a id="change">return </a>real_feats<a id="change">, real_probs, real_feat_indices, real_labels</a>
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 9</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/postech-cvlab/pytorch-studiogan/commit/e9b9424ea383996bb391e5c68e5c50071b818637#diff-ff672cec8523da9b4005f8c911359d38c08229474bee3c149b152a5dc3d49c81L106' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 29064831</div><div id='project'> Project Name: postech-cvlab/pytorch-studiogan</div><div id='commit'> Commit Name: e9b9424ea383996bb391e5c68e5c50071b818637</div><div id='time'> Time: 2022-03-30</div><div id='author'> Author: first287@naver.com</div><div id='file'> File Name: src/metrics/features.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: stack_features(8)</div><div id='n_method'> N Method Name: stack_features(8)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/metrics/features.py</div><div id='n_file'> N File Name: src/metrics/features.py</div><div id='m_start'> M Start Line: 106</div><div id='m_end'> M End Line: 134</div><div id='n_start'> N Start Line: 110</div><div id='n_end'> N End Line: 138</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        wavs, lens = truncate(wavs, lens, params.max_length)
+        wavs, lens = wavs.to(params.device), lens.to(params.device)
+        loss = params.compute_cost(predictions, wavs, lens)
+        <a id="change">return </a>loss<a id="change">, {}</a>
+
+    def evaluate_batch(self, batch, stage="valid"):
+        inputs, targets = batch</code></pre><h3>After Change</h3><pre><code class='java'>
+    def compute_objectives(self, predictions, targets, stage="train"):
+        ids, target_wavs, lens = targets
+        target_wavs, lens = truncate(target_wavs, lens, params.max_length)
+        target_wavs<a id="change"> = </a>target_wavs.to(params.device)
+        lens = lens.to(params.device)
+        loss = params.compute_cost(predictions, target_wavs, lens)
+
+        stats = {}
+        if stage != "train":
+            lens<a id="change"> = </a>lens * target_wavs.shape[1]
+            pesq_scores = multiprocess_evaluation(
+                predictions.cpu().numpy(),
+                target_wavs.cpu().numpy(),
+                <a id="change">lens.cpu().numpy()</a>,
+                multiprocessing.cpu_count(),
+            )
+            stats["pesq"]<a id="change"> = </a>pesq_scores
+            stats["stoi"] = -stoi_loss(predictions, target_wavs, lens)
+
+            if stage == "test":
+                &#47&#47 Write wavs to file
+                for name, pred_wav, length in zip(ids, predictions, lens):
+                    name += ".wav"
+                    enhance_path = os.path.join(params.enhanced_folder, name)
+                    torchaudio.save(
+                        enhance_path, pred_wav[: int(length)].to("cpu"), 16000
+                    )
+
+        <a id="change">return </a>loss<a id="change">, stats</a>
+
+    def on_epoch_end(self, epoch, train_stats, valid_stats):
+        if params.use_tensorboard:</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/speechbrain/speechbrain/commit/3f3b92bc7eb78dacaae812693f782cb134ef4358#diff-16ccfd41957095302a3e648d64a50fff56c3f348df107dc5bdc53f1def7cea4cL82' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 29064830</div><div id='project'> Project Name: speechbrain/speechbrain</div><div id='commit'> Commit Name: 3f3b92bc7eb78dacaae812693f782cb134ef4358</div><div id='time'> Time: 2020-08-05</div><div id='author'> Author: plantinga.peter@protonmail.com</div><div id='file'> File Name: recipes/Voicebank/enhance_waveform_map/experiment.py</div><div id='m_class'> M Class Name: SEBrain</div><div id='n_method'> N Class Name: SEBrain</div><div id='m_method'> M Method Name: compute_objectives(4)</div><div id='n_method'> N Method Name: compute_objectives(4)</div><div id='m_parent_class'> M Parent Class: sb.core.Brain</div><div id='n_parent_class'> N Parent Class: sb.core.Brain</div><div id='m_file'> M File Name: recipes/Voicebank/enhance_waveform_map/experiment.py</div><div id='n_file'> N File Name: recipes/Voicebank/enhance_waveform_map/experiment.py</div><div id='m_start'> M Start Line: 85</div><div id='m_end'> M End Line: 87</div><div id='n_start'> N Start Line: 85</div><div id='n_end'> N End Line: 110</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+  buckets = torch.bucketize(sizes, size_bins)-1
+  stratified_risks = torch.tensor([losses[buckets == bucket].mean() for bucket in range(size_bins.shape[0])])
+  print(f"Model output shape: {x.shape}, label shape: {labels.shape}, Sets shape: {sets[2].shape}, sizes: {sizes}, size_bins:{size_bins}, stratified_risks: {stratified_risks}, mse: {mse}")
+  <a id="change">return </a>losses<a id="change">, sizes, spearman, stratified_risks, mse</a>
+
+def evaluate_from_loss_table(loss_table,n,alpha,delta):
+  with torch.no_grad():
+    perm = torch.randperm(loss_table.shape[0])</code></pre><h3>After Change</h3><pre><code class='java'>
+  losses = []
+  sizes = []
+  residuals = []
+  spatial_miscoverages<a id="change"> = </a>[]
+  dataloader = DataLoader(out_dataset, batch_size=64, shuffle=False, num_workers=0, pin_memory=True) 
+  model = model.to(device)
+  for batch in dataloader:
+    x, labels = batch
+    labels = labels.to(device)
+    sets = model.nested_sets_from_output(x.to(device)) 
+    losses = losses + [rcps_loss_fn(sets, labels),]
+    sets_full = (sets[2]-sets[0]).flatten(start_dim=1).detach().cpu().numpy()
+    size_random_idxs = np.random.choice(sets_full.shape[1],size=sets_full.shape[0])
+    size_samples = sets_full[range(sets_full.shape[0]),size_random_idxs]
+    residuals = residuals + [(labels - sets[1]).abs().flatten(start_dim=1)[range(sets_full.shape[0]),size_random_idxs]]
+    spatial_miscoverages<a id="change"> = </a>spatial_miscoverages + [(labels &gt; sets[2]).float() + (labels &lt; sets[0]).float()]
+    sizes = sizes + [torch.tensor(size_samples),]
+  losses = torch.cat(losses,dim=0)
+  sizes = torch.cat(sizes,dim=0)
+  sizes = sizes + torch.rand(size=sizes.shape).to(sizes.device)*1e-6
+  residuals = torch.cat(residuals,dim=0).detach().cpu().numpy() 
+  spearman = spearmanr(residuals, sizes)[0]
+  mse = (residuals*residuals).mean().item()
+  spatial_miscoverage<a id="change"> = </a><a id="change">torch.cat(spatial_miscoverages, dim=0).detach().cpu().numpy()</a>.mean(axis=0).mean(axis=0)
+  size_bins = torch.tensor([0, torch.quantile(sizes, 0.25), torch.quantile(sizes, 0.5), torch.quantile(sizes, 0.75)])
+  buckets = torch.bucketize(sizes, size_bins)-1
+  stratified_risks = torch.tensor([losses[buckets == bucket].mean() for bucket in range(size_bins.shape[0])])
+  print(f"Model output shape: {x.shape}, label shape: {labels.shape}, Sets shape: {sets[2].shape}, sizes: {sizes}, size_bins:{size_bins}, stratified_risks: {stratified_risks}, mse: {mse}")
+  <a id="change">return </a>losses<a id="change">, sizes, spearman, stratified_risks, mse, spatial_miscoverage</a>
+
+def evaluate_from_loss_table(loss_table,n,alpha,delta):
+  with torch.no_grad():
+    perm = torch.randperm(loss_table.shape[0])</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/aangelopoulos/im2im-uq/commit/eb08020dd8e3947a3c1f6d97819e247c0610dbab#diff-011a98acefcaf7c8c39c61d401546a49382baf5a3459d2ffbd563d9321c5f660L31' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 29064835</div><div id='project'> Project Name: aangelopoulos/im2im-uq</div><div id='commit'> Commit Name: eb08020dd8e3947a3c1f6d97819e247c0610dbab</div><div id='time'> Time: 2022-06-15</div><div id='author'> Author: angelopoulos@berkeley.edu</div><div id='file'> File Name: core/calibration/calibrate_model.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: get_rcps_metrics_from_outputs(4)</div><div id='n_method'> N Method Name: get_rcps_metrics_from_outputs(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: core/calibration/calibrate_model.py</div><div id='n_file'> N File Name: core/calibration/calibrate_model.py</div><div id='m_start'> M Start Line: 47</div><div id='m_end'> M End Line: 57</div><div id='n_start'> N Start Line: 35</div><div id='n_end'> N End Line: 60</div><BR>

@@ -1,0 +1,70 @@
+<html><h3>Pattern ID :9364
+</h3><img src='33523055.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    def forward(self, *dimensions):
+        device = self.device
+
+        if <a id="change">not exists(self.rel_pos) or not self.cache_rel_pos</a>:
+            positions = [torch.arange(d, device = device) for d in dimensions]
+            grid = torch.stack(torch.meshgrid(*positions, indexing = &quotij&quot))
+            grid = rearrange(grid, &quotc ... -&gt; (...) c&quot)</code></pre><h3>After Change</h3><pre><code class='java'>
+    def forward(self, *dimensions):
+        device = self.device
+
+        shape = <a id="change">torch.tensor(</a>dimensions<a id="change">, device = device)</a>
+        rel_pos_shape = 2 * shape - 1
+
+        &#47&#47 calculate strides
+
+        strides = torch.flip(rel_pos_shape, (0,)).cumprod(dim = -1)
+        strides<a id="change"> = </a>torch.flip(F.pad(strides, (1, -1), value = 1), (0,))
+
+        &#47&#47 get all positions and calculate all the relative distances
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/lucidrains/make-a-video-pytorch/commit/b6e0a17c5488b923d884272f7e46170352b0f0d5#diff-a7a81e9a1aa252916dd3f29e813ef72db53e9b9a100d00fdf0a022c1823ac77bL105' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 33523055</div><div id='project'> Project Name: lucidrains/make-a-video-pytorch</div><div id='commit'> Commit Name: b6e0a17c5488b923d884272f7e46170352b0f0d5</div><div id='time'> Time: 2023-03-18</div><div id='author'> Author: lucidrains@gmail.com</div><div id='file'> File Name: make_a_video_pytorch/make_a_video.py</div><div id='m_class'> M Class Name: ContinuousPositionBias</div><div id='n_method'> N Class Name: ContinuousPositionBias</div><div id='m_method'> M Method Name: forward(1)</div><div id='n_method'> N Method Name: forward(1)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: make_a_video_pytorch/make_a_video.py</div><div id='n_file'> N File Name: make_a_video_pytorch/make_a_video.py</div><div id='m_start'> M Start Line: 110</div><div id='m_end'> M End Line: 126</div><div id='n_start'> N Start Line: 105</div><div id='n_end'> N End Line: 142</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+def any_broadcast(data, root_rank, max_size=4096):
+    broadcast arbitrary data from root_rank to all nodes.
+    if <a id="change">not hasattr(any_broadcast, &quot_in_buffer&quot) or \
+            max_size != any_broadcast._in_buffer.size()</a>:
+        any_broadcast._buffer = torch.cuda.ByteTensor(max_size)
+    buffer_ = any_broadcast._buffer
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    broadcast arbitrary data from root_rank to all nodes.
+    enc = pickle.dumps(data)
+
+    max_size = hvd.allgather(<a id="change">torch.tensor(</a>[len(enc)]<a id="change">)</a>.cuda()).max().item()
+    buffer_<a id="change">, enc_byte = </a>_encode(enc, max_size)
+
+    hvd.broadcast_(buffer_, root_rank)
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/chenrocks/uniter/commit/bb8926528e3783f339e8f4ae58ba6ff35ae6bc26#diff-74a54520c6efe03926ad7245c4eed444b8ca1f1d1abcc5860c5d6b50d9188074L184' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 33523066</div><div id='project'> Project Name: chenrocks/uniter</div><div id='commit'> Commit Name: bb8926528e3783f339e8f4ae58ba6ff35ae6bc26</div><div id='time'> Time: 2020-08-06</div><div id='author'> Author: Yen-Chun.Chen@microsoft.com</div><div id='file'> File Name: utils/distributed.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: any_broadcast(2)</div><div id='n_method'> N Method Name: any_broadcast(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: utils/distributed.py</div><div id='n_file'> N File Name: utils/distributed.py</div><div id='m_start'> M Start Line: 184</div><div id='m_end'> M End Line: 205</div><div id='n_start'> N Start Line: 196</div><div id='n_end'> N End Line: 203</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                "Either beta or RC must be specified as an input argument."
+            )
+
+        elif self.beta and <a id="change">(self.R or self.C)</a>:
+            raise ValueError(
+                "Only either beta or RC must be specified as an input argument, not both."
+            )</code></pre><h3>After Change</h3><pre><code class='java'>
+            self.beta = torch.exp(torch.ones(1) * (-self.time_step / (self.R * self.C)))
+
+        elif self.beta and self.R and not self.C:
+            self.C<a id="change"> = </a>self.time_step / (self.R * torch.log(<a id="change">torch.tensor(</a>1 / self.beta<a id="change">)</a>))
+
+        elif self.beta and self.C and not self.R:
+            self.R = self.time_step / (self.C * torch.log(torch.tensor(1 / self.beta)))</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/jeshraghian/snntorch/commit/f28fe5efbd9ed24a137ddc05cf16e9e91377c381#diff-b64d9e01b9c35c33de3b8363a4595c32b501b22f358e4e53f6208d2a032b3305L396' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 33523065</div><div id='project'> Project Name: jeshraghian/snntorch</div><div id='commit'> Commit Name: f28fe5efbd9ed24a137ddc05cf16e9e91377c381</div><div id='time'> Time: 2021-03-13</div><div id='author'> Author: 40262130+jeshraghian@users.noreply.github.com</div><div id='file'> File Name: snntorch/__init__.py</div><div id='m_class'> M Class Name: Lapicque</div><div id='n_method'> N Class Name: Lapicque</div><div id='m_method'> M Method Name: __init__(12)</div><div id='n_method'> N Method Name: __init__(12)</div><div id='m_parent_class'> M Parent Class: LIF</div><div id='n_parent_class'> N Parent Class: LIF</div><div id='m_file'> M File Name: snntorch/__init__.py</div><div id='n_file'> N File Name: snntorch/__init__.py</div><div id='m_start'> M Start Line: 415</div><div id='m_end'> M End Line: 432</div><div id='n_start'> N Start Line: 420</div><div id='n_end'> N End Line: 445</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    label_ids = torch.tensor([f.label_id for f in features], dtype=torch.long)
+    datatensor = TensorDataset(input_ids, input_mask, segment_ids, label_ids)
+
+    if <a id="change">mode == &quottrain_labeled&quot or mode == &quottrain_unlabeled&quot</a>:  
+
+        sampler = RandomSampler(datatensor)
+        dataloader = DataLoader(datatensor, sampler=sampler, batch_size = args.train_batch_size)    </code></pre><h3>After Change</h3><pre><code class='java'>
+    segment_ids = torch.tensor([f.segment_ids for f in features], dtype=torch.long)
+
+    if mode == &quottrain_unlabeled&quot:
+        label_ids<a id="change"> = </a><a id="change">torch.tensor(</a>[-1 for f in features]<a id="change">, dtype=torch.long)</a>
+    else:
+        label_ids = torch.tensor([f.label_id for f in features], dtype=torch.long)
+
+    datatensor = TensorDataset(input_ids, input_mask, segment_ids, label_ids)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/thuiar/textoir/commit/3fa1a82369d3cae57c2d06642c1e286fc0276811#diff-00b676d80c922acaaf8c68f6dc14f3b57f01e3d732d8b7351487d2956ba1da8eL71' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 33523063</div><div id='project'> Project Name: thuiar/textoir</div><div id='commit'> Commit Name: 3fa1a82369d3cae57c2d06642c1e286fc0276811</div><div id='time'> Time: 2021-08-01</div><div id='author'> Author: zhang-hl20@mails.tsinghua.edu.cn</div><div id='file'> File Name: open_intent_discovery/dataloaders/bert_loader.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: get_loader(4)</div><div id='n_method'> N Method Name: get_loader(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: open_intent_discovery/dataloaders/bert_loader.py</div><div id='n_file'> N File Name: open_intent_discovery/dataloaders/bert_loader.py</div><div id='m_start'> M Start Line: 78</div><div id='m_end'> M End Line: 95</div><div id='n_start'> N Start Line: 74</div><div id='n_end'> N End Line: 103</div><BR>

@@ -1,0 +1,36 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    
+    if weights is None:
+        weights = torch.ones_like(pre_dist_mat)
+    N<a id="change"> = </a>pre_dist_mat.shape[-1]
+    his = []
+    &#47&#47 init random coords
+    best_stress = float("Inf") 
+    best_3d_coords = 2*torch.rand(3, N) - 1
+    &#47&#47 iterative updates:
+    for i in range(iters):
+        &#47&#47 compute distance matrix of coords and stress
+        dist_mat = torch.cdist(best_3d_coords.t(), best_3d_coords.t(), p=2)
+        stress   = ( weights * (dist_mat - pre_dist_mat)**2 ).sum() / 2
+        &#47&#47 perturb - update X using the Guttman transform - sklearn-like
+        dist_mat[dist_mat == 0] = 1e-5
+        ratio = weights * (pre_dist_mat / dist_mat)
+        B = ratio * (-1)
+        B[np.arange(N), np.arange(N)] += ratio.sum(dim=1)
+        &#47&#47 update - double transpose. TODO: consider fix
+        coords = (1. / N * torch.matmul(best_3d_coords, B))
+        dis = <a id="change">torch.sqrt(</a>(coords<a id="change"> ** 2</a>).sum(axis=1)<a id="change">)</a>.sum()
+        if verbose &gt;= 2:
+            print(&quotit: %d, stress %s&quot % (i, stress))
+        &#47&#47 update metrics if relative improvement above tolerance</code></pre><h3>After Change</h3><pre><code class='java'>
+                                                                   stress))
+            break
+
+    return torch.transpose(best_3d_coords, -1,-2), <a id="change">torch.cat(</a>his<a id="change">)</a>
+
+def mds_numpy(pre_dist_mat, weights=None, iters=10, tol=1e-5, verbose=2):
+     Gets distance matrix. Outputs 3d. See below for wrapper. 
+        Assumes (for now) distrogram is (N x N) and symmetric</code></pre>

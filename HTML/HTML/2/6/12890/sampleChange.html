@@ -1,0 +1,48 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            print(&quot----------------------------------------&quot)
+
+            &#47&#47 resample the data
+            <a id="change">if </a><a id="change">(n % self.resample.resample_every == 0) or (n == nepoch-1)</a>:
+                if self.resample.resample_from_last:
+                    pos = pos.clone().detach().to(self.device)
+                else:</code></pre><h3>After Change</h3><pre><code class='java'>
+            for data in self.dataloader:
+
+                lpos = data.to(self.device)
+                <a id="change">if </a>0:  &#47&#47 quick fix for SR
+                    &#47&#47 self.print_parameters()
+                    loss, eloc = self.loss(lpos)
+
+                    if self.wf.mo.weight.requires_grad and self.ortho_mo:
+                        loss += self.ortho_loss(self.wf.mo.weight)
+
+                    if torch.isnan(loss):
+                        raise ValueError("Nans detected in the loss")
+
+                    cumulative_loss += loss
+
+                    &#47&#47 compute local gradients
+                    self.opt.zero_grad()
+                    loss.backward()
+
+                    &#47&#47 optimize
+                    if self.opt.lpos_needed:
+                        self.opt.step(lpos)
+                    else:
+                        self.opt.step()
+
+                    if self.wf.fc.clip:
+                        self.wf.fc.apply(clipper)
+
+                else:  &#47&#47 only for SR
+
+                    self.opt.step(lpos)
+                    eloc = self.opt.eloc
+                    cumulative_loss<a id="change"> += </a><a id="change">torch.mean(</a>eloc<a id="change">)</a>
+
+            if cumulative_loss &lt; min_loss:
+                min_loss = self.save_checkpoint(
+                    n, cumulative_loss, self.save_model)</code></pre>

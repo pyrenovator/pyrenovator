@@ -1,0 +1,156 @@
+<html><h3>Pattern ID :15007
+</h3><img src='50446753.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        img = torch.randn(shape, device=device)
+
+        for i in tqdm(reversed(range(0, self.num_timesteps)), desc=&quotsampling loop time step&quot, total=self.num_timesteps):
+            img = self.p_sample(img, <a id="change">torch.full(</a>(b<a id="change"></a>,), i<a id="change">, device=device, dtype=torch.long)</a>)
+
+        img = unnormalize_to_zero_to_one(img)
+        return img</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    @torch.no_grad()
+    def p_sample_loop(self, shape):
+        batch<a id="change">, device</a> = shape[0], self.betas.device
+
+        img = torch.randn(shape, device=device)
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 8</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/lucidrains/denoising-diffusion-pytorch/commit/931a5af2c3271a7f12a951763cd9c68f9ea49a23#diff-1ef0846017d5c27bd277b66e5afcab8798667afd39675e6f9382fc7e87a1fe28L496' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 50446753</div><div id='project'> Project Name: lucidrains/denoising-diffusion-pytorch</div><div id='commit'> Commit Name: 931a5af2c3271a7f12a951763cd9c68f9ea49a23</div><div id='time'> Time: 2022-07-09</div><div id='author'> Author: lucidrains@gmail.com</div><div id='file'> File Name: denoising_diffusion_pytorch/denoising_diffusion_pytorch.py</div><div id='m_class'> M Class Name: GaussianDiffusion</div><div id='n_method'> N Class Name: GaussianDiffusion</div><div id='m_method'> M Method Name: p_sample_loop(2)</div><div id='n_method'> N Method Name: p_sample_loop(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: denoising_diffusion_pytorch/denoising_diffusion_pytorch.py</div><div id='n_file'> N File Name: denoising_diffusion_pytorch/denoising_diffusion_pytorch.py</div><div id='m_start'> M Start Line: 496</div><div id='m_end'> M End Line: 502</div><div id='n_start'> N Start Line: 525</div><div id='n_end'> N End Line: 530</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    @torch.no_grad()
+    def p_sample(self, x, t: int, x_self_cond = None, clip_denoised = True):
+        b, *_, device = *x.shape, x.device
+        batched_times = <a id="change">torch.full(</a>(x.shape[0]<a id="change"></a>,), t<a id="change">, device = x.device, dtype = torch.long)</a>
+        model_mean, _, model_log_variance, x_start = self.p_mean_variance(x = x, t = batched_times, x_self_cond = x_self_cond, clip_denoised = clip_denoised)
+        noise = torch.randn_like(x) if t &gt; 0 else 0. &#47&#47 no noise if t == 0
+        pred_img = model_mean + (0.5 * model_log_variance).exp() * noise
+        return pred_img, x_start</code></pre><h3>After Change</h3><pre><code class='java'>
+        noise = torch.randn_like(x)
+        &#47&#47 no noise when t == 0
+        is_last_sampling_timestep = t_next == 0
+        nonzero_mask = (1 - is_last_sampling_timestep.float()).reshape(b, *((1<a id="change"></a>,) * (len(x.shape) - 1)))
+        pred = model_mean + nonzero_mask * (0.5 * model_log_variance).exp() * noise
+        return pred, x_start
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lucidrains/bit-diffusion/commit/7b25c9d18c4aa4200c7df429ffa7815641f67021#diff-fa1704ed33520f9e00eadcb67b10c809ebe7cdd9d08435ae908b1c8126a28435L495' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 50446752</div><div id='project'> Project Name: lucidrains/bit-diffusion</div><div id='commit'> Commit Name: 7b25c9d18c4aa4200c7df429ffa7815641f67021</div><div id='time'> Time: 2022-08-17</div><div id='author'> Author: lucidrains@gmail.com</div><div id='file'> File Name: bit_diffusion/bit_diffusion.py</div><div id='m_class'> M Class Name: BitDiffusion</div><div id='n_method'> N Class Name: BitDiffusion</div><div id='m_method'> M Method Name: p_sample(6)</div><div id='n_method'> N Method Name: p_sample(5)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: bit_diffusion/bit_diffusion.py</div><div id='n_file'> N File Name: bit_diffusion/bit_diffusion.py</div><div id='m_start'> M Start Line: 497</div><div id='m_end'> M End Line: 501</div><div id='n_start'> N Start Line: 518</div><div id='n_end'> N End Line: 526</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            SqueezeExcitation(width, width // 4),
+            nn.Conv2d(width, width, 1)
+        )
+        self.layer_scale = nn.Parameter(<a id="change">torch.full(</a>(1<a id="change">,width,1,1</a>), layer_scale_init<a id="change">)</a>)
+
+    def forward(self, x: torch.Tensor):
+        &#47&#47 (N, C, H, W)</code></pre><h3>After Change</h3><pre><code class='java'>
+            SqueezeExcitation(embed_dim, embed_dim // 4),
+            nn.Conv2d(embed_dim, embed_dim, 1)
+        )
+        self.layer_scale = nn.Parameter(torch.ones((1<a id="change">,embed_dim,1,1</a>)) * layer_scale_init)
+
+    def forward(self, x: torch.Tensor):
+        &#47&#47 (N, C, H, W)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/gau-nernst/vision-toolbox/commit/67e7e48c91632649ba08fc5848425c45fcbb8649#diff-06aa870b4857860e20e31864ed75afe923611be3298c7662abf5065cbc7d651aL33' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 50446738</div><div id='project'> Project Name: gau-nernst/vision-toolbox</div><div id='commit'> Commit Name: 67e7e48c91632649ba08fc5848425c45fcbb8649</div><div id='time'> Time: 2022-02-20</div><div id='author'> Author: gau.nernst@yahoo.com.sg</div><div id='file'> File Name: vision_toolbox/backbones/patchconvnet.py</div><div id='m_class'> M Class Name: PatchConvBlock</div><div id='n_method'> N Class Name: PatchConvBlock</div><div id='m_method'> M Method Name: __init__(3)</div><div id='n_method'> N Method Name: __init__(3)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: vision_toolbox/backbones/patchconvnet.py</div><div id='n_file'> N File Name: vision_toolbox/backbones/patchconvnet.py</div><div id='m_start'> M Start Line: 44</div><div id='m_end'> M End Line: 44</div><div id='n_start'> N Start Line: 66</div><div id='n_end'> N End Line: 66</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+            &#47&#47 get times and noise levels
+
+            times = <a id="change">torch.full(</a>(batch<a id="change"></a>,), time<a id="change">, device = device, dtype = torch.long)</a>
+            log_snrs = self.get_condition(times)
+
+            x_start, pred_noise = self.model_predictions(img, log_snrs, x_start)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+            padded_log_snr, padded_log_snr_next = map(partial(right_pad_dims_to, img), (log_snr, log_snr_next))
+
+            _<a id="change">, alpha</a> = log_snr_to_alpha_sigma(padded_log_snr)
+            _, alpha_next = log_snr_to_alpha_sigma(padded_log_snr_next)
+
+            &#47&#47 add the time delay</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lucidrains/bit-diffusion/commit/f9bf8cd026646bda1a378ad35c9f0a91b124a433#diff-fa1704ed33520f9e00eadcb67b10c809ebe7cdd9d08435ae908b1c8126a28435L549' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 50446757</div><div id='project'> Project Name: lucidrains/bit-diffusion</div><div id='commit'> Commit Name: f9bf8cd026646bda1a378ad35c9f0a91b124a433</div><div id='time'> Time: 2022-08-17</div><div id='author'> Author: lucidrains@gmail.com</div><div id='file'> File Name: bit_diffusion/bit_diffusion.py</div><div id='m_class'> M Class Name: BitDiffusion</div><div id='n_method'> N Class Name: BitDiffusion</div><div id='m_method'> M Method Name: ddim_sample(2)</div><div id='n_method'> N Method Name: ddim_sample(3)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: bit_diffusion/bit_diffusion.py</div><div id='n_file'> N File Name: bit_diffusion/bit_diffusion.py</div><div id='m_start'> M Start Line: 549</div><div id='m_end'> M End Line: 579</div><div id='n_start'> N Start Line: 553</div><div id='n_end'> N End Line: 584</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    def get_loss(self, examples: Iterable[Example], loss) -&gt; Tuple[float, float]:
+        Find the loss and gradient of loss for the batch of documents and
+        their predicted scores.
+        return loss, <a id="change">np.full(()</a><a id="change">, fill_value=1)</a>
+
+    def initialize(
+        self,
+        get_examples: Callable[[], Iterable[Example]],</code></pre><h3>After Change</h3><pre><code class='java'>
+    def get_loss(self, examples: Iterable[Example], loss) -&gt; Tuple[float, float]:
+        Find the loss and gradient of loss for the batch of documents and
+        their predicted scores.
+        return float(loss.item())<a id="change">, self.model.ops.xp.array([1])</a>
+
+    def initialize(
+        self,
+        get_examples: Callable[[], Iterable[Example]],</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/aphp/edsnlp/commit/a391a3d6da829e092777cf3be45c1d215673ea16#diff-937744ff6d0b66aa8b991b4d0a77a4d70235e2c1933bd7819ee0d10249a98499L281' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 50446756</div><div id='project'> Project Name: aphp/edsnlp</div><div id='commit'> Commit Name: a391a3d6da829e092777cf3be45c1d215673ea16</div><div id='time'> Time: 2022-08-19</div><div id='author'> Author: “perceval.wajsburt@sorbonne-universite.fr”</div><div id='file'> File Name: edsnlp/pipelines/trainable/nested_ner.py</div><div id='m_class'> M Class Name: TrainableNer</div><div id='n_method'> N Class Name: TrainableNer</div><div id='m_method'> M Method Name: get_loss(3)</div><div id='n_method'> N Method Name: get_loss(3)</div><div id='m_parent_class'> M Parent Class: TrainablePipe</div><div id='n_parent_class'> N Parent Class: TrainablePipe</div><div id='m_file'> M File Name: edsnlp/pipelines/trainable/nested_ner.py</div><div id='n_file'> N File Name: edsnlp/pipelines/trainable/nested_ner.py</div><div id='m_start'> M Start Line: 284</div><div id='m_end'> M End Line: 284</div><div id='n_start'> N Start Line: 285</div><div id='n_end'> N End Line: 285</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            torch.empty(2, 3),
+            torch.empty_like(torch.empty(2, 3), dtype=torch.int64),
+            torch.empty_strided((2, 3), (1, 2)),
+            <a id="change">torch.full(</a>(2<a id="change">, 3</a>), 3.141592<a id="change">)</a>,
+            torch.full_like(torch.full((2, 3), 3.141592), 2.71828),
+            torch.quantize_per_tensor(
+                torch.tensor([-1.0, 0.0, 1.0, 2.0]), 0.1, 10, torch.quint8</code></pre><h3>After Change</h3><pre><code class='java'>
+            torch.quint8,
+        )
+        return (
+            torch.tensor([[0.1, 1.2], [2.2, 3.1], [4.9, 5.2]])<a id="change">,
+            &#47&#47 torch.sparse_coo_tensor(i, v, [2, 3]), &#47&#47 not work for iOS
+            torch.as_tensor([1, 2, 3]),
+            torch.as_strided(torch.randn(3, 3), (2, 2), (1, 2)),
+            torch.zeros(2, 3),
+            torch.zeros((2, 3)),
+            torch.zeros([2, 3], out=i),
+            torch.zeros(5),
+            torch.zeros_like(torch.empty(2, 3)),
+            torch.ones(2, 3),
+            torch.ones((2, 3)),
+            torch.ones([2, 3]),
+            torch.ones(5),
+            torch.ones_like(torch.empty(2, 3)),
+            torch.arange(5),
+            torch.arange(1, 4),
+            torch.arange(1, 2.5, 0.5),
+            torch.range(1, 4),
+            torch.range(1, 4, 0.5),
+            torch.linspace(3.0, 3.0, steps=1),
+            torch.logspace(start=2, end=2, steps=1, base=2.0),
+            torch.eye(3),
+            torch.empty(2, 3),
+            torch.empty_like(torch.empty(2, 3), dtype=torch.int64),
+            torch.empty_strided((2, 3), (1, 2)),
+            torch.full((2, 3), 3.141592),
+            torch.full_like(torch.full((2, 3), 3.141592), 2.71828),
+            torch.quantize_per_tensor(
+                torch.tensor([-1.0, 0.0, 1.0, 2.0]), 0.1, 10, torch.quint8
+            ),
+            torch.dequantize(quantized),
+            torch.complex(real, imag),
+            torch.polar(real, imag),
+            torch.heaviside(inp, values)</a>,
+        )
+
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/pytorch/pytorch/commit/33b9726e6b3b11902f62b85f1e34fe0599ae17f5#diff-e3be1567c2f9471a6a50192e6f189e0f7c68f77b93c1be47dfc7dd606464e05aL109' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 50446740</div><div id='project'> Project Name: pytorch/pytorch</div><div id='commit'> Commit Name: 33b9726e6b3b11902f62b85f1e34fe0599ae17f5</div><div id='time'> Time: 2022-03-29</div><div id='author'> Author: pytorchmergebot@users.noreply.github.com</div><div id='file'> File Name: test/mobile/model_test/tensor_ops.py</div><div id='m_class'> M Class Name: TensorCreationOpsModule</div><div id='n_method'> N Class Name: TensorCreationOpsModule</div><div id='m_method'> M Method Name: tensor_creation_ops(1)</div><div id='n_method'> N Method Name: tensor_creation_ops(1)</div><div id='m_parent_class'> M Parent Class: torch.nn.Module</div><div id='n_parent_class'> N Parent Class: torch.nn.Module</div><div id='m_file'> M File Name: test/mobile/model_test/tensor_ops.py</div><div id='n_file'> N File Name: test/mobile/model_test/tensor_ops.py</div><div id='m_start'> M Start Line: 112</div><div id='m_end'> M End Line: 158</div><div id='n_start'> N Start Line: 123</div><div id='n_end'> N End Line: 158</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        action_mean, _ = self.act(state, hidden)
+
+        cov_mat = torch.diag(
+            <a id="change">torch.full(</a>(self.action_dim<a id="change"></a>,),
+                       self.policy_noise*self.policy_noise<a id="change">)</a>).to(device)
+
+        dist = MultivariateNormal(action_mean, cov_mat)
+        _ = dist.sample()</code></pre><h3>After Change</h3><pre><code class='java'>
+        else:
+            action_logprob = action_logprob[..., None]
+
+        return values<a id="change">, action_logprob, entropy</a>
+
+
+class PPO(object):
+    def __init__(</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/antoinetheb/rnn-rl/commit/a188e9379a196d92c7faec22300148fe6c6ead89#diff-65ed63b1d5a2453dd7a01909599a53c8b34e5e4aeb47da236467cebb1223a1abL52' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 50446746</div><div id='project'> Project Name: antoinetheb/rnn-rl</div><div id='commit'> Commit Name: a188e9379a196d92c7faec22300148fe6c6ead89</div><div id='time'> Time: 2020-02-20</div><div id='author'> Author: antoine.theberge@usherbrooke.ca</div><div id='file'> File Name: algos/PPO.py</div><div id='m_class'> M Class Name: ActorCritic</div><div id='n_method'> N Class Name: ActorCritic</div><div id='m_method'> M Method Name: evaluate(4)</div><div id='n_method'> N Method Name: evaluate(4)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: algos/PPO.py</div><div id='n_file'> N File Name: algos/PPO.py</div><div id='m_start'> M Start Line: 56</div><div id='m_end'> M End Line: 66</div><div id='n_start'> N Start Line: 56</div><div id='n_end'> N End Line: 71</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+			&#47&#47正解ラベル、偽ラベルを作成
+			&#47&#47epochの最後のイテレーションはミニバッチの数が少なくなる
+			mini_batch_size = imgs.size()[0]
+			label_real = <a id="change">torch.full(</a>(mini_batch_size<a id="change"></a>,),1<a id="change">)</a>.to(device)
+			label_fake = torch.full((mini_batch_size,),0).to(device)
+			&#47&#47真の画像を判定
+			d_out_real = D(imgs)</code></pre><h3>After Change</h3><pre><code class='java'>
+			&#47&#47偽の画像を生成して判定
+			input_z = torch.randn(mini_batch_size,z_dim).to(device)
+			input_z = input_z.view(input_z.size(0),input_z.size(1),1,1)
+			fake_images<a id="change">,_,_</a> = G(input_z)
+			d_out_fake,_,_ = D(fake_images)
+			&#47&#47誤差の計算
+			&#47&#47 d_loss_real = criterion(d_out_real.view(-1),label_real)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/zassou65535/image_generator/commit/0d1f9d59248bbe59037827d4a2f017e6c6b20344#diff-0d870b2bcbd491080fbd232f7f785688a61c1c4123b664a61c87830ae9118f0aL30' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 50446732</div><div id='project'> Project Name: zassou65535/image_generator</div><div id='commit'> Commit Name: 0d1f9d59248bbe59037827d4a2f017e6c6b20344</div><div id='time'> Time: 2020-02-06</div><div id='author'> Author: nakamura.k.bv@m.titech.ac.jp</div><div id='file'> File Name: GAN.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train_model(4)</div><div id='n_method'> N Method Name: train_model(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: GAN.py</div><div id='n_file'> N File Name: GAN.py</div><div id='m_start'> M Start Line: 31</div><div id='m_end'> M End Line: 108</div><div id='n_start'> N Start Line: 83</div><div id='n_end'> N End Line: 111</div><BR>

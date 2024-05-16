@@ -1,0 +1,49 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        avg_last_hidden, avg_last_hidden_test, transformed_val = self._compute_hidden_vals()
+        super().compute_confidence(test_predictions)
+
+        <a id="change">if </a>self.args.dataset_type == "regression":
+            predictions = np.ndarray(
+                shape=(len(self.test_data.smiles()), self.args.num_tasks))
+            confidence = np.ndarray(
+                shape=(len(self.test_data.smiles()), self.args.num_tasks))
+
+            for task in range(self.args.num_tasks):
+                kernel = GPy.kern.Linear(input_dim=self.args.last_hidden_size)
+                gaussian = GPy.models.SparseGPRegression(
+                    avg_last_hidden,
+                    transformed_val[:, task:task + 1], kernel)
+                gaussian.optimize()
+
+                avg_test_preds, avg_test_var = gaussian.predict(
+                    avg_last_hidden_test)
+
+                &#47&#47 &#47&#47 Scale Data
+                &#47&#47 domain = np.max(avg_test_var) - np.min(avg_test_var)
+                &#47&#47 &#47&#47 Shift.
+                &#47&#47 avg_test_var = avg_test_var - np.min(avg_test_var)
+                &#47&#47 &#47&#47 Scale domain to 1.
+                &#47&#47 avg_test_var = avg_test_var / domain
+                &#47&#47 &#47&#47 Apply log scale and flip.
+                &#47&#47 avg_test_var = np.maximum(
+                &#47&#47     0, -np.log(avg_test_var + np.exp(-10)))
+
+                predictions[:, task:task + 1] = avg_test_preds
+                confidence[:, task:task + 1] = avg_test_var
+
+            predictions = self.scaler.inverse_transform(predictions)
+            confidence<a id="change"> = </a>(<a id="change">self.scaler.inverse_transform(</a>predictions +
+                                                        confidence<a id="change">)</a> -
+                          self.scaler.inverse_transform(predictions -
+                                                        confidence))/2
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            confidence[:, task:task + 1] = np.sqrt(avg_test_var)
+
+        predictions = self.scaler.inverse_transform(predictions)
+        <a id="change">return </a>predictions, self._scale_confidence(confidence)
+
+
+class RandomForestEstimator(DroppingEstimator):</code></pre>

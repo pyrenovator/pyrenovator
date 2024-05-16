@@ -1,0 +1,107 @@
+<html><h3>Pattern ID :14089
+</h3><img src='47041837.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        edge_index, edge_weight = from_scipy_sparse_matrix(sp.csr_matrix(adj_matrix))
+
+        data.V, data.U = V.to(device), U.to(device)
+        data.edge_index, data.edge_weight = <a id="change">edge_index.to(device</a><a id="change">)</a>, <a id="change">edge_weight.to(device</a><a id="change">)</a>
+        return data
+
+    def __repr__(self) -&gt; str:
+        return f&quot{self.__class__.__name__}(K={self.K})&quot</code></pre><h3>After Change</h3><pre><code class='java'>
+&#47&#47         edge_index, edge_weight = from_scipy_sparse_matrix(adj_matrix)
+&#47&#47         data.edge_index, data.edge_weight = edge_index.to(device), edge_weight.to(device)
+        data.adj_t = torch.as_tensor(adj_matrix, dtype=torch.float, device=device)
+        <a id="change">del data.edge_index, data.edge_weight</a>
+        return data
+
+    def __repr__(self) -&gt; str:
+        return f&quot{self.__class__.__name__}(K={self.K})&quot</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/edisonleeeee/graphwar/commit/9c4006bb8370bd7e5503fce8b583ae164354dd7a#diff-5fe11cad8ca08a578404fe0c3dc062f8e9a2ee791d639be60dc7f698ecdcbcc8L117' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 47041837</div><div id='project'> Project Name: edisonleeeee/graphwar</div><div id='commit'> Commit Name: 9c4006bb8370bd7e5503fce8b583ae164354dd7a</div><div id='time'> Time: 2022-05-31</div><div id='author'> Author: cnljt@outlook.com</div><div id='file'> File Name: graphwar/defense/purification.py</div><div id='m_class'> M Class Name: Eigendecomposition</div><div id='n_method'> N Class Name: Eigendecomposition</div><div id='m_method'> M Method Name: __call__(3)</div><div id='n_method'> N Method Name: __call__(3)</div><div id='m_parent_class'> M Parent Class: BaseTransform</div><div id='n_parent_class'> N Parent Class: BaseTransform</div><div id='m_file'> M File Name: graphwar/defense/purification.py</div><div id='n_file'> N File Name: graphwar/defense/purification.py</div><div id='m_start'> M Start Line: 117</div><div id='m_end'> M End Line: 136</div><div id='n_start'> N Start Line: 117</div><div id='n_end'> N End Line: 137</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        tf = ArticulatoryCombinedTextFrontend(language=lang)
+        _, sr = sf.read(path_list[0])
+        if speaker_embedding:
+            wav2mel = <a id="change">torch.jit.load("Models/SpeakerEmbedding/wav2mel.pt").to(</a>device<a id="change">)</a>
+            dvector = torch.jit.load("Models/SpeakerEmbedding/dvector-step250000.pt").eval().to(device)
+        ap = AudioPreprocessor(input_sr=sr,
+                               output_sr=16000,
+                               melspec_buckets=80,
+                               hop_length=256,
+                               n_fft=1024,
+                               cut_silence=cut_silence)
+        acoustic_model = acoustic_model.to(device)
+        dc = DurationCalculator(reduction_factor=reduction_factor)
+        dio = Dio(reduction_factor=reduction_factor)
+        energy_calc = EnergyCalculator(reduction_factor=reduction_factor)
+        for path in tqdm(path_list):
+            transcript = self.path_to_transcript_dict[path]
+            wave, sr = sf.read(path)
+            if min_len &lt;= len(wave) / sr &lt;= max_len:
+                norm_wave = ap.audio_to_wave_tensor(audio=wave, normalize=True, mulaw=False)
+                norm_wave_length = torch.LongTensor([len(norm_wave)])
+                melspec = ap.audio_to_mel_spec_tensor(norm_wave, normalize=False).transpose(0, 1)
+                melspec_length = torch.LongTensor([len(melspec)])
+                text = tf.string_to_tensor(transcript)
+                cached_text = tf.string_to_tensor(transcript).squeeze(0).cpu().numpy()
+                cached_text_len = torch.LongTensor([len(cached_text)]).numpy()
+                cached_speech = ap.audio_to_mel_spec_tensor(wave).transpose(0, 1).cpu().numpy()
+                cached_speech_len = torch.LongTensor([len(cached_speech)]).numpy()
+                if not speaker_embedding:
+                    os.path.join(cache_dir, "durations_visualization")
+                    attention_map = acoustic_model.inference(text_tensor=text.squeeze(0).to(device),
+                                                             speech_tensor=melspec.to(device),
+                                                             use_teacher_forcing=True,
+                                                             speaker_embeddings=None,
+                                                             use_att_constraint=True)[2]
+                    cached_duration = dc(attention_map, vis=os.path.join(cache_dir, "durations_visualization",
+                                                                         path.split("/")[-1].rstrip(".wav") + ".png"))[0].cpu()
+                    if np.count_nonzero(cached_duration.numpy() == 0) &gt; 4:
+                        continue
+                else:
+                    wav_tensor, sample_rate = torchaudio.load(path)
+                    mel_tensor = wav2mel(<a id="change">wav_tensor.to(</a>device<a id="change">)</a>, sample_rate)
+                    cached_speaker_embedding = dvector.embed_utterance(mel_tensor)
+                    attention_map = acoustic_model.inference(text_tensor=text.squeeze(0).to(device),
+                                                             speech_tensor=melspec.to(device),</code></pre><h3>After Change</h3><pre><code class='java'>
+                    wav_tensor, sample_rate = torchaudio.load(path)
+                    mel_tensor = wav2mel(wav_tensor, sample_rate).to(device)
+                    cached_speaker_embedding = dvector.embed_utterance(mel_tensor)
+                    <a id="change">del mel_tensor</a>
+                    attention_map = acoustic_model.inference(text_tensor=text.squeeze(0).to(device),
+                                                             speech_tensor=melspec.to(device),
+                                                             use_teacher_forcing=True,
+                                                             speaker_embeddings=cached_speaker_embedding,</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/digitalphonetics/ims-toucan/commit/051c991e28bbeb51de2bd845ec95133a9540a1b0#diff-528f1d1f9b65f826c6eec25f3934452fe1a81965d76a0070a71db9ef9ef36aa0L97' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 47041836</div><div id='project'> Project Name: digitalphonetics/ims-toucan</div><div id='commit'> Commit Name: 051c991e28bbeb51de2bd845ec95133a9540a1b0</div><div id='time'> Time: 2021-09-12</div><div id='author'> Author: florian.lux@ims.uni-stuttgart.de</div><div id='file'> File Name: TrainingInterfaces/Text_to_Spectrogram/FastSpeech2/FastSpeechDataset.py</div><div id='m_class'> M Class Name: FastSpeechDataset</div><div id='n_method'> N Class Name: FastSpeechDataset</div><div id='m_method'> M Method Name: cache_builder_process(11)</div><div id='n_method'> N Method Name: cache_builder_process(11)</div><div id='m_parent_class'> M Parent Class: Dataset</div><div id='n_parent_class'> N Parent Class: Dataset</div><div id='m_file'> M File Name: TrainingInterfaces/Text_to_Spectrogram/FastSpeech2/FastSpeechDataset.py</div><div id='n_file'> N File Name: TrainingInterfaces/Text_to_Spectrogram/FastSpeech2/FastSpeechDataset.py</div><div id='m_start'> M Start Line: 109</div><div id='m_end'> M End Line: 150</div><div id='n_start'> N Start Line: 112</div><div id='n_end'> N End Line: 159</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        if not inplace:
+            data = copy(data)
+
+        <a id="change">device</a> = data.edge_index.device
+        adj_matrix = to_scipy_sparse_matrix(data.edge_index, data.edge_weight,
+                                            num_nodes=data.num_nodes).tocsr()
+
+        if self.normalize:
+            adj_matrix = scipy_normalize(adj_matrix)
+
+        V, U = sp.linalg.eigsh(adj_matrix, k=self.K)
+        adj_matrix = (U * V) @ U.T
+        adj_matrix[adj_matrix &lt; 0] = 0.
+
+        V = torch.as_tensor(V, dtype=torch.float)
+        U = torch.as_tensor(U, dtype=torch.float)
+        
+        edge_index, edge_weight = from_scipy_sparse_matrix(sp.csr_matrix(adj_matrix))
+
+        data.V, data.U = V.to(device), U.to(device)
+        data.edge_index, data.edge_weight = <a id="change">edge_index.to(</a>device<a id="change">)</a>, <a id="change">edge_weight.to(</a>device<a id="change">)</a>
+        return data
+
+    def __repr__(self) -&gt; str:
+        return f&quot{self.__class__.__name__}(K={self.K})&quot</code></pre><h3>After Change</h3><pre><code class='java'>
+&#47&#47         edge_index, edge_weight = from_scipy_sparse_matrix(adj_matrix)
+&#47&#47         data.edge_index, data.edge_weight = edge_index.to(device), edge_weight.to(device)
+        data.adj_t = torch.as_tensor(adj_matrix, dtype=torch.float, device=device)
+        <a id="change">del data.edge_index, data.edge_weight</a>
+        return data
+
+    def __repr__(self) -&gt; str:
+        return f&quot{self.__class__.__name__}(K={self.K})&quot</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/edisonleeeee/greatx/commit/9c4006bb8370bd7e5503fce8b583ae164354dd7a#diff-5fe11cad8ca08a578404fe0c3dc062f8e9a2ee791d639be60dc7f698ecdcbcc8L115' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 47041834</div><div id='project'> Project Name: edisonleeeee/greatx</div><div id='commit'> Commit Name: 9c4006bb8370bd7e5503fce8b583ae164354dd7a</div><div id='time'> Time: 2022-05-31</div><div id='author'> Author: cnljt@outlook.com</div><div id='file'> File Name: graphwar/defense/purification.py</div><div id='m_class'> M Class Name: Eigendecomposition</div><div id='n_method'> N Class Name: Eigendecomposition</div><div id='m_method'> M Method Name: __call__(3)</div><div id='n_method'> N Method Name: __call__(3)</div><div id='m_parent_class'> M Parent Class: BaseTransform</div><div id='n_parent_class'> N Parent Class: BaseTransform</div><div id='m_file'> M File Name: graphwar/defense/purification.py</div><div id='n_file'> N File Name: graphwar/defense/purification.py</div><div id='m_start'> M Start Line: 117</div><div id='m_end'> M End Line: 136</div><div id='n_start'> N Start Line: 117</div><div id='n_end'> N End Line: 137</div><BR>

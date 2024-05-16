@@ -1,0 +1,55 @@
+<html><h3>Pattern ID :35486
+</h3><img src='101385242.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 cache hot data 
+        partition_book[idx[:cached_nodes]] = 0
+
+        distribution = <a id="change">[((partition_book == partition).nonzero()).shape[0] for partition in range(partition_num)]</a>
+
+        print(f"partition distribution: {distribution}")
+
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        &#47&#47 cache hot data 
+        local_partition_books = []
+        <a id="change">for </a>partition in range(partition_num)<a id="change">:
+            </a>local_partition_book = <a id="change">global_partition_book.clone()</a>
+            local_partition_book[idx[:cached_nodes]] = partition
+            local_partition_books.append(local_partition_book)
+
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/quiver-team/torch-quiver/commit/b7796f73cddad702e932561acffe3245eed4ab3d#diff-65c7bd1bcf74cefcc271f5d7dc0f711949e8a4822a725e7af289a9ae99cefe1cL391' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 101385242</div><div id='project'> Project Name: quiver-team/torch-quiver</div><div id='commit'> Commit Name: b7796f73cddad702e932561acffe3245eed4ab3d</div><div id='time'> Time: 2022-03-14</div><div id='author'> Author: 47676525+AustinCheang@users.noreply.github.com</div><div id='file'> File Name: tests/python/cuda/test_partition_feature.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: test_random_partition_with_hot_replicate(0)</div><div id='n_method'> N Method Name: test_random_partition_with_hot_replicate(0)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: tests/python/cuda/test_partition_feature.py</div><div id='n_file'> N File Name: tests/python/cuda/test_partition_feature.py</div><div id='m_start'> M Start Line: 391</div><div id='m_end'> M End Line: 423</div><div id='n_start'> N Start Line: 391</div><div id='n_end'> N End Line: 443</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+			single_psi = [psi_i[idx] for psi_i in psi]
+			&#47&#47 self._update_k_p_on_datum(psi=single_psi, error=error[idx])
+			self.K = [self.P[i] @ single_psi[i] for i in range(len(self.params))]
+			psiPpsi = <a id="change">[single_psi[i].T @ self.K[i] for i in range(len(self.params))]</a>
+			c = [1 / (1 + psiPpsi[i]) for i in range(len(self.params))]
+			self.P = [
+				self.P[i] - c[i] * (self.K[i] @ self.K[i].T)
+				for i in range(len(self.params))</code></pre><h3>After Change</h3><pre><code class='java'>
+				for i in range(len(self.params))
+			]
+			lr = 0.1 * error_i
+			<a id="change">for </a>param, <a id="change">k</a> in zip(self.params, self.K)<a id="change">:
+				</a>param.grad = <a id="change">(
+						k.T @ lr.reshape(-1, 1)
+				).to(param.device, non_blocking=True).reshape(param.data.shape).clone()</a>  &#47&#47 .T?
+			&#47&#47 self.K = [self.P[i] @ single_psi[i] for i in range(len(self.params))]
+			&#47&#47 psiPpsi = [single_psi[i].T @ K[i] for i in range(len(self.params))]
+			&#47&#47 c = [1 / (1 + psiPpsi[i]) for i in range(len(self.params))]</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/neurotorch/neurotorch/commit/f4b744e063e807020b35b5c1d88640c3ec9ab93e#diff-1f40139a1b0ed1ef510287b509d1409a4fc9d946d85bdc91ef3706e3934355a3L291' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 101385240</div><div id='project'> Project Name: neurotorch/neurotorch</div><div id='commit'> Commit Name: f4b744e063e807020b35b5c1d88640c3ec9ab93e</div><div id='time'> Time: 2022-10-31</div><div id='author'> Author: 50332514+JeremieGince@users.noreply.github.com</div><div id='file'> File Name: src/neurotorch/learning_algorithms/weak_rls.py</div><div id='m_class'> M Class Name: WeakRLS</div><div id='n_method'> N Class Name: WeakRLS</div><div id='m_method'> M Method Name: _batch_step(3)</div><div id='n_method'> N Method Name: _batch_step(3)</div><div id='m_parent_class'> M Parent Class: TBPTT</div><div id='n_parent_class'> N Parent Class: TBPTT</div><div id='m_file'> M File Name: src/neurotorch/learning_algorithms/weak_rls.py</div><div id='n_file'> N File Name: src/neurotorch/learning_algorithms/weak_rls.py</div><div id='m_start'> M Start Line: 308</div><div id='m_end'> M End Line: 338</div><div id='n_start'> N Start Line: 323</div><div id='n_end'> N End Line: 350</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    if record_states:
+        for state_name in state_names:
+            record_dict[state_name] = torch.stack(
+                <a id="change">[item[state_name].detach() for item in recordings]</a>, 1
+            )
+    return torch.stack(output_spikes, 1), state, record_dict
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        )
+        output_spikes.append(spikes)
+        if record_states:
+            <a id="change">for name</a> in state_names<a id="change">:
+                </a>recordings[name].append(<a id="change">state[name].detach().clone()</a>)
+
+    if record_states:
+        record_dict = {name: torch.stack(vals, 1) for name, vals in recordings.items()}</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/synsense/sinabs/commit/3cf7eff84e6558ff777fe67274ce386aa09bb516#diff-5777e6e5d9f16b158afb230c5da44bd6d35955d9f3de0b4d708c39f9d713c242L45' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 101385244</div><div id='project'> Project Name: synsense/sinabs</div><div id='commit'> Commit Name: 3cf7eff84e6558ff777fe67274ce386aa09bb516</div><div id='time'> Time: 2022-06-10</div><div id='author'> Author: felix.bauer@aictx.ai</div><div id='file'> File Name: sinabs/layers/functional/lif.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: lif_forward(11)</div><div id='n_method'> N Method Name: lif_forward(11)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: sinabs/layers/functional/lif.py</div><div id='n_file'> N File Name: sinabs/layers/functional/lif.py</div><div id='m_start'> M Start Line: 59</div><div id='m_end'> M End Line: 86</div><div id='n_start'> N Start Line: 59</div><div id='n_end'> N End Line: 86</div><BR>

@@ -1,0 +1,239 @@
+<html><h3>Pattern ID :5869
+</h3><img src='20726872.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+
+def main():
+    <a id="change">try:
+        </a>master = mp.Process(target=run_master, daemon=True)
+        agent = mp.Process(target=run_agent, daemon=True)
+        master.start()
+        wait_for_master()
+        agent.start()
+
+        &#47&#47 Join the agent first so we can exit if the agent fails to connect to
+        &#47&#47 the master.
+        agent.join()
+        if agent.exitcode != 0:
+            master.terminate()
+            sys.exit(agent.exitcode)
+
+        master.join()
+    <a id="change">except </a>(KeyboardInterrupt, SystemExit):
+        pass
+
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+def main():
+    db, master, agent, db_logs = False, None, None, None
+    <a id="change"></a>try:
+        master = run_master()
+        agent = run_agent()
+        db_logs = tail_db_logs()
+        if not is_db_running():
+            db = True
+            subprocess.check_call(["docker-compose", "up", "-d"])
+
+        wait_for_server(5432)
+        wait_for_server(8081)
+        db_logs.start()
+        master.start()
+        wait_for_server(8080)
+        agent.start()
+
+        &#47&#47 Join the agent first so we can exit if the agent fails to connect to
+        &#47&#47 the master.
+        agent.join()
+        if agent.exitcode != 0:
+            raise Exception(f"agent failed with non-zero exit code {agent.exitcode}")
+
+        master.join()
+        db_logs.join()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        kill_process("master", master)
+        kill_process("agent", agent)
+        kill_process("db-logs", db_logs)
+        <a id="change">if </a>db:
+            subprocess.check_call(["docker-compose", "down"])
+
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/determined-ai/determined/commit/f6b8847d9b545d7d975de52b7919fd600bc91a7e#diff-21fa56f5d70c52d427c1e68ed30346fad67a9681aa99c15e3c5fe1e0443161beL63' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 20726872</div><div id='project'> Project Name: determined-ai/determined</div><div id='commit'> Commit Name: f6b8847d9b545d7d975de52b7919fd600bc91a7e</div><div id='time'> Time: 2020-05-11</div><div id='author'> Author: yoni@determined.ai</div><div id='file'> File Name: tools/run-server.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(0)</div><div id='n_method'> N Method Name: main(0)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: tools/run-server.py</div><div id='n_file'> N File Name: tools/run-server.py</div><div id='m_start'> M Start Line: 63</div><div id='m_end'> M End Line: 81</div><div id='n_start'> N Start Line: 83</div><div id='n_end'> N End Line: 116</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+def test_read_write_files():
+    &#47&#47 test round trip for example file
+    cwd = os.getcwd()
+    <a id="change">try:
+        </a>tmpdir = tempfile.mkdtemp()
+        os.chdir(tmpdir)
+        with make_simple(&quotsimple.nc&quot, &quotw&quot) as f:
+            pass
+        &#47&#47 read the file we just created in &quota&quot mode
+        with netcdf_file(&quotsimple.nc&quot, &quota&quot) as f:
+            check_simple(f)
+            &#47&#47 add something
+            f._attributes[&quotappendRan&quot] = 1
+
+        &#47&#47 To read the NetCDF file we just created::
+        with netcdf_file(&quotsimple.nc&quot) as f:
+            &#47&#47 Using mmap is the default (but not on pypy)
+            assert_equal(f.use_mmap, not IS_PYPY)
+            check_simple(f)
+            assert_equal(f._attributes[&quotappendRan&quot], 1)
+
+        &#47&#47 Read it in append (and check mmap is off)
+        with netcdf_file(&quotsimple.nc&quot, &quota&quot) as f:
+            assert_(not f.use_mmap)
+            check_simple(f)
+            assert_equal(f._attributes[&quotappendRan&quot], 1)
+
+        &#47&#47 Now without mmap
+        with netcdf_file(&quotsimple.nc&quot, mmap=False) as f:
+            &#47&#47 Using mmap is the default
+            assert_(not f.use_mmap)
+            check_simple(f)
+
+        &#47&#47 To read the NetCDF file we just created, as file object, no
+        &#47&#47 mmap.  When n * n_bytes(var_type) is not divisible by 4, this
+        &#47&#47 raised an error in pupynere 1.0.12 and scipy rev 5893, because
+        &#47&#47 calculated vsize was rounding up in units of 4 - see
+        &#47&#47 https://www.unidata.ucar.edu/software/netcdf/guide_toc.html
+        with open(&quotsimple.nc&quot, &quotrb&quot) as fobj:
+            with netcdf_file(fobj) as f:
+                &#47&#47 by default, don&quott use mmap for file-like
+                assert_(not f.use_mmap)
+                check_simple(f)
+
+        &#47&#47 Read file from fileobj, with mmap
+        with suppress_warnings() as sup:
+            if IS_PYPY:
+                sup.filter(RuntimeWarning,
+                           "Cannot close a netcdf_file opened with mmap=True.*")
+            with open(&quotsimple.nc&quot, &quotrb&quot) as fobj:
+                with netcdf_file(fobj, mmap=True) as f:
+                    assert_(f.use_mmap)
+                    check_simple(f)
+
+        &#47&#47 Again read it in append mode (adding another att)
+        with open(&quotsimple.nc&quot, &quotr+b&quot) as fobj:
+            with netcdf_file(fobj, &quota&quot) as f:
+                assert_(not f.use_mmap)
+                check_simple(f)
+                f.createDimension(&quotapp_dim&quot, 1)
+                var = f.createVariable(&quotapp_var&quot, &quoti&quot, (&quotapp_dim&quot,))
+                var[:] = 42
+
+        &#47&#47 And... check that app_var made it in...
+        with netcdf_file(&quotsimple.nc&quot) as f:
+            check_simple(f)
+            assert_equal(f.variables[&quotapp_var&quot][:], 42)
+
+    <a id="change">except</a>:  &#47&#47 noqa: E722
+        os.chdir(cwd)
+        shutil.rmtree(tmpdir)
+        raise</code></pre><h3>After Change</h3><pre><code class='java'>
+def test_read_write_files():
+    &#47&#47 test round trip for example file
+    cwd = os.getcwd()
+    <a id="change">try:
+        </a>tmpdir = tempfile.mkdtemp()
+        os.chdir(tmpdir)
+        with make_simple(&quotsimple.nc&quot, &quotw&quot) as f:
+            pass
+        &#47&#47 read the file we just created in &quota&quot mode
+        with netcdf_file(&quotsimple.nc&quot, &quota&quot) as f:
+            check_simple(f)
+            &#47&#47 add something
+            f._attributes[&quotappendRan&quot] = 1
+
+        &#47&#47 To read the NetCDF file we just created::
+        with netcdf_file(&quotsimple.nc&quot) as f:
+            &#47&#47 Using mmap is the default (but not on pypy)
+            assert_equal(f.use_mmap, not IS_PYPY)
+            check_simple(f)
+            assert_equal(f._attributes[&quotappendRan&quot], 1)
+
+        &#47&#47 Read it in append (and check mmap is off)
+        with netcdf_file(&quotsimple.nc&quot, &quota&quot) as f:
+            assert_(not f.use_mmap)
+            check_simple(f)
+            assert_equal(f._attributes[&quotappendRan&quot], 1)
+
+        &#47&#47 Now without mmap
+        with netcdf_file(&quotsimple.nc&quot, mmap=False) as f:
+            &#47&#47 Using mmap is the default
+            assert_(not f.use_mmap)
+            check_simple(f)
+
+        &#47&#47 To read the NetCDF file we just created, as file object, no
+        &#47&#47 mmap.  When n * n_bytes(var_type) is not divisible by 4, this
+        &#47&#47 raised an error in pupynere 1.0.12 and scipy rev 5893, because
+        &#47&#47 calculated vsize was rounding up in units of 4 - see
+        &#47&#47 https://www.unidata.ucar.edu/software/netcdf/guide_toc.html
+        with open(&quotsimple.nc&quot, &quotrb&quot) as fobj:
+            with netcdf_file(fobj) as f:
+                &#47&#47 by default, don&quott use mmap for file-like
+                assert_(not f.use_mmap)
+                check_simple(f)
+
+        &#47&#47 Read file from fileobj, with mmap
+        with suppress_warnings() as sup:
+            if IS_PYPY:
+                sup.filter(RuntimeWarning,
+                           "Cannot close a netcdf_file opened with mmap=True.*")
+            with open(&quotsimple.nc&quot, &quotrb&quot) as fobj:
+                with netcdf_file(fobj, mmap=True) as f:
+                    assert_(f.use_mmap)
+                    check_simple(f)
+
+        &#47&#47 Again read it in append mode (adding another att)
+        with open(&quotsimple.nc&quot, &quotr+b&quot) as fobj:
+            with netcdf_file(fobj, &quota&quot) as f:
+                assert_(not f.use_mmap)
+                check_simple(f)
+                f.createDimension(&quotapp_dim&quot, 1)
+                var = f.createVariable(&quotapp_var&quot, &quoti&quot, (&quotapp_dim&quot,))
+                var[:] = 42
+
+        &#47&#47 And... check that app_var made it in...
+        with netcdf_file(&quotsimple.nc&quot) as f:
+            check_simple(f)
+            assert_equal(f.variables[&quotapp_var&quot][:], 42)
+
+    finally:
+        <a id="change">if </a>IS_PYPY:
+            &#47&#47 windows cannot remove a dead file held by a mmap but not collected in PyPy
+            break_cycles()
+            break_cycles()</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/scipy/scipy/commit/b5b07f4f273e905c4d7306f25520e6986277455c#diff-f77d5c8e86532ec1227e66163bc03bc96f7e8afb63e82d47f5e2dfac641d9fa7L66' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 20726873</div><div id='project'> Project Name: scipy/scipy</div><div id='commit'> Commit Name: b5b07f4f273e905c4d7306f25520e6986277455c</div><div id='time'> Time: 2021-08-05</div><div id='author'> Author: h.vetinari@gmx.com</div><div id='file'> File Name: scipy/io/tests/test_netcdf.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: test_read_write_files(0)</div><div id='n_method'> N Method Name: test_read_write_files(0)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: scipy/io/tests/test_netcdf.py</div><div id='n_file'> N File Name: scipy/io/tests/test_netcdf.py</div><div id='m_start'> M Start Line: 69</div><div id='m_end'> M End Line: 139</div><div id='n_start'> N Start Line: 69</div><div id='n_end'> N End Line: 142</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    &#47&#47 messages, so we keep track of the max ID seen so far.
+    if args.follow:
+        change_time = time.time()
+        <a id="change">try:
+            </a>while True:
+                &#47&#47 Poll for new logs at most every 100 ms.
+                time.sleep(0.1)
+
+                &#47&#47 The `tail` parameter only makes sense the first time we fetch logs.
+                resp = logs_query(greater_than_id=latest_log_id).send()
+                latest_log_id, changes = process_response(resp.trial_logs, latest_log_id)
+
+                &#47&#47 Exit once the trial has, for 1 second, been in a terminal state and sent no logs.
+                if changes or resp.trials_by_pk.state not in constants.TERMINAL_STATES:
+                    change_time = time.time()
+                elif time.time() - change_time &gt; 1:
+                    raise KeyboardInterrupt()
+        <a id="change">except </a>KeyboardInterrupt:
+            state_query = api.GraphQLQuery(args.master)
+            state_query.op.trials_by_pk(id=args.trial_id).state()
+            resp = state_query.send()</code></pre><h3>After Change</h3><pre><code class='java'>
+    if not args.follow:
+        return
+
+    <a id="change"></a>try:
+        while True:
+            print_logs()
+            <a id="change">if </a>state in constants.TERMINAL_STATES:
+                break
+            time.sleep(0.2)
+    except KeyboardInterrupt:</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/determined-ai/determined/commit/3da2ccbfa9a48a61c87488858d89fe84f1997978#diff-b549d9d2981432c1a4e328824134439d732b4d601165d2eb7c26da1d582bda4aL99' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 20726875</div><div id='project'> Project Name: determined-ai/determined</div><div id='commit'> Commit Name: 3da2ccbfa9a48a61c87488858d89fe84f1997978</div><div id='time'> Time: 2020-04-30</div><div id='author'> Author: yoni@determined.ai</div><div id='file'> File Name: cli/determined_cli/trial.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: logs(1)</div><div id='n_method'> N Method Name: logs(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: cli/determined_cli/trial.py</div><div id='n_file'> N File Name: cli/determined_cli/trial.py</div><div id='m_start'> M Start Line: 128</div><div id='m_end'> M End Line: 168</div><div id='n_start'> N Start Line: 99</div><div id='n_end'> N End Line: 131</div><BR>

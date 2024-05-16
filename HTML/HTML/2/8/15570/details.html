@@ -1,0 +1,119 @@
+<html><h3>Pattern ID :15570
+</h3><img src='52614210.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    def load_state_dict_pre_hook(module, state_dict, *args, **kwargs):
+        Redirect input state_dict to model for OTE model compatibility
+        
+        <a id="change">logger.info(&quot----------------- SAMImageClassifier.load_state_dict_pre_hook() called&quot</a><a id="change">)</a>
+        if type(module.backbone).__name__ == &quotOTEMobileNetV3&quot:
+            for k in list(state_dict.keys()):
+                v = state_dict.pop(k)
+                if k.startswith(&quotclassifier.&quot) or k.startswith(&quothead.classifier&quot):</code></pre><h3>After Change</h3><pre><code class='java'>
+    def load_state_dict_pre_hook(module, state_dict, *args, **kwargs):
+        Redirect input state_dict to model for OTE model compatibility
+        
+        backbone_type<a id="change"> = </a>type(module.backbone).__name__
+        <a id="change">if backbone_type not in [&quotOTEMobileNetV3&quot, &quotOTEEfficientNet&quot, &quotOTEEfficientNetV2&quot]</a>:
+            <a id="change">return</a>
+
+        if backbone_type == &quotOTEMobileNetV3&quot:
+            for k in list(state_dict.keys()):
+                v = state_dict.pop(k)
+                if k.startswith(&quotclassifier.&quot):
+                    k = &quothead.&quot+k.replace(&quot4&quot, &quot3&quot) if &quot4&quot in k else &quothead.&quot+k
+                elif not k.startswith(&quotbackbone.&quot):
+                    k = &quotbackbone.&quot+k
+                state_dict[k] = v
+
+        elif backbone_type == &quotOTEEfficientNet&quot:
+            for k in list(state_dict.keys()):
+                v = state_dict.pop(k)
+                if k.startswith(&quotfeatures.&quot) and &quotactiv&quot not in k:
+                    k = &quotbackbone.&quot+k
+                elif <a id="change"></a>k.startswith(&quotoutput.&quot):
+                    k = k.replace(&quotoutput&quot, &quothead&quot)
+                state_dict[k] = v
+
+        elif backbone_type == &quotOTEEfficientNetV2&quot:
+            for k in list(state_dict.keys()):
+                v = state_dict.pop(k)
+                if k.startswith(&quotmodel.classifier&quot):
+                    k = k.replace(&quotmodel.classifier&quot, &quothead.fc&quot)
+                    v = v.t()
+                elif <a id="change"></a>k.startswith(&quotmodel&quot):
+                    k = &quotbackbone.&quot+k
+                state_dict[k] = v
+        else:</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 7</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/openvinotoolkit/model_preparation_algorithm/commit/645893988f346dd87d1b1868bf6c58f4b9784cb4#diff-b42ff02ffef42e9ec4f5e721c5585e8fc50ad9c86d48308a1a7e3b1fc20cbeefL87' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 52614210</div><div id='project'> Project Name: openvinotoolkit/model_preparation_algorithm</div><div id='commit'> Commit Name: 645893988f346dd87d1b1868bf6c58f4b9784cb4</div><div id='time'> Time: 2022-04-06</div><div id='author'> Author: songki.choi@intel.com</div><div id='file'> File Name: mpa/modules/models/classifiers/sam_classifier.py</div><div id='m_class'> M Class Name: SAMImageClassifier</div><div id='n_method'> N Class Name: SAMImageClassifier</div><div id='m_method'> M Method Name: load_state_dict_pre_hook(2)</div><div id='n_method'> N Method Name: load_state_dict_pre_hook(2)</div><div id='m_parent_class'> M Parent Class: ImageClassifier</div><div id='n_parent_class'> N Parent Class: ImageClassifier</div><div id='m_file'> M File Name: mpa/modules/models/classifiers/sam_classifier.py</div><div id='n_file'> N File Name: mpa/modules/models/classifiers/sam_classifier.py</div><div id='m_start'> M Start Line: 87</div><div id='m_end'> M End Line: 113</div><div id='n_start'> N Start Line: 97</div><div id='n_end'> N End Line: 128</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+        self.record.save_objects(**{"pred.pkl": cb_pred})
+
+        <a id="change">get_module_logger(self.__class__.__name__).info(
+            f"Finish updating new {new_pred.shape[0]} predictions in {self.record.info[&quotid&quot]}."</a><a id="change">
+        )</a>
+
+
+class ModelUpdater:
+    </code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 The model dumped on GPU instances can not be loaded on CPU instance. Follow exception will raised
+        &#47&#47 RuntimeError: Attempting to deserialize object on a CUDA device but torch.cuda.is_available() is False. If you are running on a CPU-only machine, please use torch.load with map_location=torch.device(&quotcpu&quot) to map your storages to the CPU.
+
+        start_time<a id="change"> = </a>get_date_by_shift(self.last_end, 1, freq=self.freq)
+        <a id="change">if start_time &gt;= self.to_date</a>:
+            <a id="change">if </a>self.need_log:
+                self.logger.info(f"The prediction in {self.record.info[&quotid&quot]} are latest. No need to update.")
+            <a id="change">return</a>
+
+        &#47&#47 load dataset
+        if dataset is None:
+            &#47&#47 For reusing the dataset
+            dataset = self.prepare_data()
+
+        &#47&#47 Load model
+        model = self.rmdl.get_model()
+
+        new_pred = model.predict(dataset)
+
+        cb_pred = pd.concat([self.old_pred, new_pred.to_frame("score")], axis=0)
+        cb_pred = cb_pred.sort_index()
+
+        self.record.save_objects(**{"pred.pkl": cb_pred})
+
+        <a id="change">if </a>self.need_log:
+            self.logger.info(f"Finish updating new {new_pred.shape[0]} predictions in {self.record.info[&quotid&quot]}.")
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/microsoft/qlib/commit/5095b2a4707657de5edf935a3107a7628f9dde74#diff-78740833334b67d1019c5fec91732c719a5d3922ab94dc8b840e5cfc5d75563eL114' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 52614211</div><div id='project'> Project Name: microsoft/qlib</div><div id='commit'> Commit Name: 5095b2a4707657de5edf935a3107a7628f9dde74</div><div id='time'> Time: 2021-04-13</div><div id='author'> Author: lzh222333@163.com</div><div id='file'> File Name: qlib/workflow/online/update.py</div><div id='m_class'> M Class Name: PredUpdater</div><div id='n_method'> N Class Name: PredUpdater</div><div id='m_method'> M Method Name: update(2)</div><div id='n_method'> N Method Name: update(2)</div><div id='m_parent_class'> M Parent Class: RecordUpdater</div><div id='n_parent_class'> N Parent Class: RecordUpdater</div><div id='m_file'> M File Name: qlib/workflow/online/update.py</div><div id='n_file'> N File Name: qlib/workflow/online/update.py</div><div id='m_start'> M Start Line: 137</div><div id='m_end'> M End Line: 139</div><div id='n_start'> N Start Line: 125</div><div id='n_end'> N End Line: 147</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    def state_dict_hook(module, state_dict, *args, **kwargs):
+        Redirect model as output state_dict for OTE model compatibility
+        
+        <a id="change">logger.info(&quot----------------- SAMImageClassifier.state_dict_hook() called&quot</a><a id="change">)</a>
+        if type(module.backbone).__name__ == &quotOTEMobileNetV3&quot:
+            output = OrderedDict()
+            for k, v in state_dict.items():
+                if k.startswith(&quothead.classifier&quot):</code></pre><h3>After Change</h3><pre><code class='java'>
+    def state_dict_hook(module, state_dict, *args, **kwargs):
+        Redirect model as output state_dict for OTE model compatibility
+        
+        backbone_type<a id="change"> = </a>type(module.backbone).__name__
+        <a id="change">if backbone_type not in [&quotOTEMobileNetV3&quot, &quotOTEEfficientNet&quot, &quotOTEEfficientNetV2&quot]</a>:
+            <a id="change">return</a>
+
+        output = OrderedDict()
+        if backbone_type == &quotOTEMobileNetV3&quot:
+            for k, v in state_dict.items():
+                if k.startswith(&quotbackbone&quot):
+                    k = k.replace(&quotbackbone.&quot, &quot&quot)
+                elif k.startswith(&quothead&quot):
+                    k = k.replace(&quothead.&quot, &quot&quot)
+                    <a id="change">if </a>&quot3&quot in k:  &#47&#47 MPA uses "classifier.3", while OTE uses "classifier.4". Convert for OTE compatibility.
+                        k = k.replace(&quot3&quot, &quot4&quot)
+                output[k] = v
+
+        elif backbone_type == &quotOTEEfficientNet&quot:
+            for k, v in state_dict.items():
+                if k.startswith(&quotbackbone&quot):
+                    k = k.replace(&quotbackbone.&quot, &quot&quot)
+                elif <a id="change"></a>k.startswith(&quothead&quot):
+                    k = k.replace(&quothead&quot, &quotoutput&quot)
+                output[k] = v
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/openvinotoolkit/model_preparation_algorithm/commit/645893988f346dd87d1b1868bf6c58f4b9784cb4#diff-b42ff02ffef42e9ec4f5e721c5585e8fc50ad9c86d48308a1a7e3b1fc20cbeefL55' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 52614199</div><div id='project'> Project Name: openvinotoolkit/model_preparation_algorithm</div><div id='commit'> Commit Name: 645893988f346dd87d1b1868bf6c58f4b9784cb4</div><div id='time'> Time: 2022-04-06</div><div id='author'> Author: songki.choi@intel.com</div><div id='file'> File Name: mpa/modules/models/classifiers/sam_classifier.py</div><div id='m_class'> M Class Name: SAMImageClassifier</div><div id='n_method'> N Class Name: SAMImageClassifier</div><div id='m_method'> M Method Name: state_dict_hook(2)</div><div id='n_method'> N Method Name: state_dict_hook(2)</div><div id='m_parent_class'> M Parent Class: ImageClassifier</div><div id='n_parent_class'> N Parent Class: ImageClassifier</div><div id='m_file'> M File Name: mpa/modules/models/classifiers/sam_classifier.py</div><div id='n_file'> N File Name: mpa/modules/models/classifiers/sam_classifier.py</div><div id='m_start'> M Start Line: 58</div><div id='m_end'> M End Line: 83</div><div id='n_start'> N Start Line: 58</div><div id='n_end'> N End Line: 91</div><BR>

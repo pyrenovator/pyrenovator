@@ -1,0 +1,86 @@
+<html><h3>Pattern ID :6646
+</h3><img src='22972030.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+&#47&#47 TODO: merge Slice and Flip into Stride with the 3 arguments
+class Slice(Function):
+  def forward(ctx, x, arg=None):
+    ctx.narg = <a id="change">[(0-p[0], x.shape[i]-p[0]) for i,p in enumerate(arg)]</a>
+    return x.movement_op(MovementOps.SLICE, arg)
+
+  def backward(ctx, grad_output):
+    return grad_output.movement_op(MovementOps.SLICE, ctx.narg)</code></pre><h3>After Change</h3><pre><code class='java'>
+&#47&#47 TODO: merge Slice and Flip into Stride with the 3 arguments
+class Slice(Function):
+  def forward(ctx, x, arg=None):
+    ctx.narg = <a id="change">tuple((</a><a id="change">0-p[0], x.shape[i]-p[0]) for i,p in enumerate(arg))</a>
+    return x.movement_op(MovementOps.SLICE, tuple(arg))
+
+  def backward(ctx, grad_output):
+    return grad_output.movement_op(MovementOps.SLICE, ctx.narg)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 5</div><BR><div id='size'>Non-data size: 7</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/geohot/tinygrad/commit/2720ef49ca892d99bae381505bb7fc808bf664c5#diff-2160099cd6a4d64858c555c33546afb784d0dfdc80731362c7170e01ba362a97L142' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 22972030</div><div id='project'> Project Name: geohot/tinygrad</div><div id='commit'> Commit Name: 2720ef49ca892d99bae381505bb7fc808bf664c5</div><div id='time'> Time: 2022-07-07</div><div id='author'> Author: geohot@gmail.com</div><div id='file'> File Name: tinygrad/mlops.py</div><div id='m_class'> M Class Name: Slice</div><div id='n_method'> N Class Name: Slice</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: Function</div><div id='n_parent_class'> N Parent Class: Function</div><div id='m_file'> M File Name: tinygrad/mlops.py</div><div id='n_file'> N File Name: tinygrad/mlops.py</div><div id='m_start'> M Start Line: 142</div><div id='m_end'> M End Line: 143</div><div id='n_start'> N Start Line: 142</div><div id='n_end'> N End Line: 143</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+  &#47&#47 TODO: take this functionality out of slice
+  def pad(self, *arg):
+    assert all((b&gt;=0 and e&gt;=0) for b,e in arg) and len(arg) == len(self.shape)
+    return self.shrink(*<a id="change">[(-b,s+e) for s,(b,e) in zip(self.shape, arg)]</a>)
+
+  &#47&#47 TODO: take the pad functionality out of shrink
+  def shrink(self, *arg):</code></pre><h3>After Change</h3><pre><code class='java'>
+  def pad(self, arg : Tuple[Tuple[int, int], ...]) -&gt; ShapeTracker:
+    assert isinstance(arg, tuple)
+    assert all((b&gt;=0 and e&gt;=0) for b,e in arg) and len(arg) == len(self.shape)
+    return self.shrink(<a id="change">tuple((-b</a><a id="change">,s+e) for s,(b,e) in zip(self.shape, arg))</a>)
+
+  &#47&#47 TODO: take the pad functionality out of shrink
+  def shrink(self, arg : Tuple[Tuple[int, int], ...]) -&gt; ShapeTracker:</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/geohot/tinygrad/commit/aebe75d9a29fa12a55ee2022ed7b21f7956016f8#diff-cc5e15efb221798e710a795ffab858ea5e70befb4dbc1d46d472b1cdc7192019L205' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 22972031</div><div id='project'> Project Name: geohot/tinygrad</div><div id='commit'> Commit Name: aebe75d9a29fa12a55ee2022ed7b21f7956016f8</div><div id='time'> Time: 2023-02-07</div><div id='author'> Author: 72895+geohot@users.noreply.github.com</div><div id='file'> File Name: tinygrad/shape/__init__.py</div><div id='m_class'> M Class Name: ShapeTracker</div><div id='n_method'> N Class Name: ShapeTracker</div><div id='m_method'> M Method Name: pad(2)</div><div id='n_method'> N Method Name: pad(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: tinygrad/shape/__init__.py</div><div id='n_file'> N File Name: tinygrad/shape/__init__.py</div><div id='m_start'> M Start Line: 205</div><div id='m_end'> M End Line: 207</div><div id='n_start'> N Start Line: 214</div><div id='n_end'> N End Line: 217</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+  def stride(self, *mul):
+    assert all(isinstance(x, int) for x in mul)
+    strides = [z*m for z,m in zip(self.strides, mul)]
+    new_shape = <a id="change">[(s+(abs(m)-1))//abs(m) for s,m in zip(self.shape, mul)]</a>
+    offset = sum([(s-1)*z for s,z,m in zip(self.shape, self.strides, mul) if m &lt; 0])
+    self.views[-1] = View(new_shape, strides, self.offset + offset)
+    return self
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    assert isinstance(mul, tuple)
+    assert all(isinstance(x, int) for x in mul)
+    strides = tuple(z*m for z,m in zip(self.strides, mul))
+    new_shape = <a id="change">tuple((</a><a id="change">s+(abs(m)-1))//abs(m) for s,m in zip(self.shape, mul))</a>
+    offset = sum([(s-1)*z for s,z,m in zip(self.shape, self.strides, mul) if m &lt; 0])
+    self.views[-1] = View(new_shape, strides, self.offset + offset)
+    return self
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/geohot/tinygrad/commit/aebe75d9a29fa12a55ee2022ed7b21f7956016f8#diff-cc5e15efb221798e710a795ffab858ea5e70befb4dbc1d46d472b1cdc7192019L228' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 22972024</div><div id='project'> Project Name: geohot/tinygrad</div><div id='commit'> Commit Name: aebe75d9a29fa12a55ee2022ed7b21f7956016f8</div><div id='time'> Time: 2023-02-07</div><div id='author'> Author: 72895+geohot@users.noreply.github.com</div><div id='file'> File Name: tinygrad/shape/__init__.py</div><div id='m_class'> M Class Name: ShapeTracker</div><div id='n_method'> N Class Name: ShapeTracker</div><div id='m_method'> M Method Name: stride(2)</div><div id='n_method'> N Method Name: stride(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: tinygrad/shape/__init__.py</div><div id='n_file'> N File Name: tinygrad/shape/__init__.py</div><div id='m_start'> M Start Line: 230</div><div id='m_end'> M End Line: 231</div><div id='n_start'> N Start Line: 240</div><div id='n_end'> N End Line: 244</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    columns = [[0, 2], [1]]
+    to_move_mask = torch.zeros(1, dtype=torch.bool)
+    if max_ids is None:
+        max_ids = <a id="change">[
+            max(training[:, col].max().item(), testing[:, col].max().item()) + 1
+            for col in columns
+        ]</a>
+    for col, max_id in zip(columns, max_ids):
+        &#47&#47 IDs not in training
+        not_in_training_mask = torch.ones(max_id, dtype=torch.bool)
+        not_in_training_mask[training[:, col].view(-1)] = False</code></pre><h3>After Change</h3><pre><code class='java'>
+    columns = [[0, 2], [1]]
+    to_move_mask = torch.zeros(1, dtype=torch.bool)
+    if max_ids is None:
+        max_ids = typing.cast(Tuple[int, int], <a id="change">tuple(
+            max</a><a id="change">(training[:, col].max().item(), testing[:, col].max().item()) + 1
+            for col in columns
+        )</a>)
+    for col, max_id in zip(columns, max_ids):
+        &#47&#47 IDs not in training
+        not_in_training_mask = torch.ones(max_id, dtype=torch.bool)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/pykeen/pykeen/commit/4d4de71f70a938db3e8473c1b5b746b30e11538f#diff-76b40e05fb8a98a8bc9e4a5d88c450e5022366b591b626023f9e82a38f6cd2b3L222' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 22972025</div><div id='project'> Project Name: pykeen/pykeen</div><div id='commit'> Commit Name: 4d4de71f70a938db3e8473c1b5b746b30e11538f</div><div id='time'> Time: 2020-12-16</div><div id='author'> Author: cthoyt@gmail.com</div><div id='file'> File Name: src/pykeen/triples/splitting.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: _prepare_cleanup(3)</div><div id='n_method'> N Method Name: _prepare_cleanup(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/pykeen/triples/splitting.py</div><div id='n_file'> N File Name: src/pykeen/triples/splitting.py</div><div id='m_start'> M Start Line: 248</div><div id='m_end'> M End Line: 250</div><div id='n_start'> N Start Line: 248</div><div id='n_end'> N End Line: 251</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    assert len(arg) == len(self.shape)
+    offset = sum([self.strides[i]*x for i,(x,_) in enumerate(arg)])
+    zeroview = ZeroView(self.shape, arg)
+    self.views[-1] = View(<a id="change">[y-x for x,y in arg]</a>, self.strides, self.offset+offset)
+    if zeroview.expr != "valid=valid":
+      &#47&#47 if we add a ZeroView, we add another (stock) view also for modding
+      self.views += [zeroview, View(self.shape, strides_for_shape(self.shape))]</code></pre><h3>After Change</h3><pre><code class='java'>
+    assert len(arg) == len(self.shape)
+    offset = sum([self.strides[i]*x for i,(x,_) in enumerate(arg)])
+    zeroview = ZeroView(self.shape, arg)
+    self.views[-1] = View(<a id="change">tuple(y-</a><a id="change">x for x,y in arg)</a>, self.strides, self.offset+offset)
+    if zeroview.expr != "valid=valid":
+      &#47&#47 if we add a ZeroView, we add another (stock) view also for modding
+      self.views += [zeroview, View(self.shape, strides_for_shape(self.shape))]</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/geohot/tinygrad/commit/aebe75d9a29fa12a55ee2022ed7b21f7956016f8#diff-cc5e15efb221798e710a795ffab858ea5e70befb4dbc1d46d472b1cdc7192019L210' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 22972037</div><div id='project'> Project Name: geohot/tinygrad</div><div id='commit'> Commit Name: aebe75d9a29fa12a55ee2022ed7b21f7956016f8</div><div id='time'> Time: 2023-02-07</div><div id='author'> Author: 72895+geohot@users.noreply.github.com</div><div id='file'> File Name: tinygrad/shape/__init__.py</div><div id='m_class'> M Class Name: ShapeTracker</div><div id='n_method'> N Class Name: ShapeTracker</div><div id='m_method'> M Method Name: shrink(2)</div><div id='n_method'> N Method Name: shrink(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: tinygrad/shape/__init__.py</div><div id='n_file'> N File Name: tinygrad/shape/__init__.py</div><div id='m_start'> M Start Line: 210</div><div id='m_end'> M End Line: 214</div><div id='n_start'> N Start Line: 220</div><div id='n_end'> N End Line: 225</div><BR>

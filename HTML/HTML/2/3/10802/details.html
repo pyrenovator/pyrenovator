@@ -1,0 +1,80 @@
+<html><h3>Pattern ID :10802
+</h3><img src='37164590.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            preds = F.interpolate(preds, size=labels.shape[1:], mode=&quotbilinear&quot, align_corners=False)
+
+        n_min = labels[labels != self.ignore_label].numel() // 16
+        loss = <a id="change">self.criterion(</a>preds, labels<a id="change">)</a>.view(-1)
+        loss_hard = loss[loss &gt; self.thresh]
+
+        if loss_hard.numel() &lt; n_min:</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    def forward(self, preds, labels: Tensor) -&gt; Tensor:
+        if isinstance(preds, list):
+            return sum(<a id="change">[w * self._forward(pred, labels) for (pred, w) in zip(preds, self.aux_weights)]</a>)
+        return self._forward(preds, labels)
+
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/sithu31296/semantic-segmentation/commit/b68900992fb24dd5166b2b34e3d35d19493d747d#diff-398000df2b6d6378b8d9a548745ebe3aaececba8113d07b75eaa56c45c371cbcL25' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 37164590</div><div id='project'> Project Name: sithu31296/semantic-segmentation</div><div id='commit'> Commit Name: b68900992fb24dd5166b2b34e3d35d19493d747d</div><div id='time'> Time: 2021-08-21</div><div id='author'> Author: sithu31296@gmail.com</div><div id='file'> File Name: utils/losses.py</div><div id='m_class'> M Class Name: OhemCrossEntropy</div><div id='n_method'> N Class Name: OhemCrossEntropy</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: utils/losses.py</div><div id='n_file'> N File Name: utils/losses.py</div><div id='m_start'> M Start Line: 25</div><div id='m_end'> M End Line: 37</div><div id='n_start'> N Start Line: 46</div><div id='n_end'> N End Line: 49</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        (view_global, view_local, grid_global, grid_local), _, _ = batch
+        z_global, z_global_local_features = self.forward(view_global)
+        z_local, z_local_local_features = self.forward(view_local)
+        loss = <a id="change">self.criterion(
+            z_global=z_global,
+            z_local=z_local,
+            z_global_local_features=z_global_local_features,
+            z_local_local_features=z_local_local_features,
+            grid_global=grid_global,
+            grid_local=grid_local,
+        )</a>
+        return loss
+
+    def configure_optimizers(self):
+        optim = torch.optim.SGD(model.parameters(), momentum=0.9, lr=0.06)</code></pre><h3>After Change</h3><pre><code class='java'>
+        views_and_grids = batch[0]
+        views = views_and_grids[: len(views_and_grids) // 2]
+        grids = views_and_grids[len(views_and_grids) // 2 :]
+        features = <a id="change">[self.forward(view) for view in views]</a>
+        loss = self.criterion(
+            global_view_features=features[:2],
+            global_view_grids=grids[:2],
+            local_view_features=features[2:],</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lightly-ai/lightly/commit/d9289cdee9de1d8fb56b07719ea6485b966079d3#diff-f1670eef757d29e18d08bba36498387a95ded5bde2c0bfc63c2f0d1a1990a9d0L38' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 37164589</div><div id='project'> Project Name: lightly-ai/lightly</div><div id='commit'> Commit Name: d9289cdee9de1d8fb56b07719ea6485b966079d3</div><div id='time'> Time: 2023-04-03</div><div id='author'> Author: 43336610+guarin@users.noreply.github.com</div><div id='file'> File Name: examples/pytorch_lightning_distributed/vicregl.py</div><div id='m_class'> M Class Name: VICRegL</div><div id='n_method'> N Class Name: VICRegL</div><div id='m_method'> M Method Name: training_step(3)</div><div id='n_method'> N Method Name: training_step(3)</div><div id='m_parent_class'> M Parent Class: pl.LightningModule</div><div id='n_parent_class'> N Parent Class: pl.LightningModule</div><div id='m_file'> M File Name: examples/pytorch_lightning_distributed/vicregl.py</div><div id='n_file'> N File Name: examples/pytorch_lightning_distributed/vicregl.py</div><div id='m_start'> M Start Line: 39</div><div id='m_end'> M End Line: 49</div><div id='n_start'> N Start Line: 39</div><div id='n_end'> N End Line: 48</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            score = F.upsample(
+                    input=score, size=(h, w), mode=&quotbilinear&quot)
+
+        loss = <a id="change">self.criterion(</a>score, target<a id="change">)</a>
+
+        return loss
+
+class OhemCrossEntropy(nn.Module): </code></pre><h3>After Change</h3><pre><code class='java'>
+        weights = config.LOSS.BALANCE_WEIGHTS
+        assert len(weights) == len(score)
+
+        return sum(<a id="change">[w * self._forward(x, target) for (w, x) in zip(weights, score)]</a>)
+
+
+class OhemCrossEntropy(nn.Module):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/chenjun2hao/ddrnet.pytorch/commit/3ce340bc520946fb220e83075f6e015bbe87cfe5#diff-87de9e9894a51d531879f3422570eeeb987506cd19d44cd28cf06d1dc4537642L19' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 37164588</div><div id='project'> Project Name: chenjun2hao/ddrnet.pytorch</div><div id='commit'> Commit Name: 3ce340bc520946fb220e83075f6e015bbe87cfe5</div><div id='time'> Time: 2019-12-12</div><div id='author'> Author: hsfzxjy@gmail.com</div><div id='file'> File Name: lib/core/criterion.py</div><div id='m_class'> M Class Name: CrossEntropy</div><div id='n_method'> N Class Name: CrossEntropy</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: lib/core/criterion.py</div><div id='n_file'> N File Name: lib/core/criterion.py</div><div id='m_start'> M Start Line: 20</div><div id='m_end'> M End Line: 28</div><div id='n_start'> N Start Line: 36</div><div id='n_end'> N End Line: 42</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        (view_global, view_local, grid_global, grid_local), _, _ = batch
+        z_global, z_global_local_features = self.forward(view_global)
+        z_local, z_local_local_features = self.forward(view_local)
+        loss = <a id="change">self.criterion(
+            z_global=z_global,
+            z_local=z_local,
+            z_global_local_features=z_global_local_features,
+            z_local_local_features=z_local_local_features,
+            grid_global=grid_global,
+            grid_local=grid_local,
+        )</a>
+        return loss
+
+    def configure_optimizers(self):
+        optim = torch.optim.SGD(model.parameters(), momentum=0.9, lr=0.06)</code></pre><h3>After Change</h3><pre><code class='java'>
+        views_and_grids = batch[0]
+        views = views_and_grids[: len(views_and_grids) // 2]
+        grids = views_and_grids[len(views_and_grids) // 2 :]
+        features = <a id="change">[self.forward(view) for view in views]</a>
+        loss = self.criterion(
+            global_view_features=features[:2],
+            global_view_grids=grids[:2],
+            local_view_features=features[2:],</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lightly-ai/lightly/commit/d9289cdee9de1d8fb56b07719ea6485b966079d3#diff-98c1bfc6ce854e26d3a17860e97d3c3c925402208529af74874a91a8975490a4L38' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 37164587</div><div id='project'> Project Name: lightly-ai/lightly</div><div id='commit'> Commit Name: d9289cdee9de1d8fb56b07719ea6485b966079d3</div><div id='time'> Time: 2023-04-03</div><div id='author'> Author: 43336610+guarin@users.noreply.github.com</div><div id='file'> File Name: examples/pytorch_lightning/vicregl.py</div><div id='m_class'> M Class Name: VICRegL</div><div id='n_method'> N Class Name: VICRegL</div><div id='m_method'> M Method Name: training_step(3)</div><div id='n_method'> N Method Name: training_step(3)</div><div id='m_parent_class'> M Parent Class: pl.LightningModule</div><div id='n_parent_class'> N Parent Class: pl.LightningModule</div><div id='m_file'> M File Name: examples/pytorch_lightning/vicregl.py</div><div id='n_file'> N File Name: examples/pytorch_lightning/vicregl.py</div><div id='m_start'> M Start Line: 39</div><div id='m_end'> M End Line: 49</div><div id='n_start'> N Start Line: 39</div><div id='n_end'> N End Line: 48</div><BR>

@@ -1,0 +1,80 @@
+<html><h3>Pattern ID :34688
+</h3><img src='99579183.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 TODO abstract weight into a class
+        weight = 1. - D(f_s)
+        weight = weight / weight.mean()
+        weight = <a id="change">weight.detach()</a>
+
+        &#47&#47 domain adversarial loss for D_0
+        adv_loss_D_0 = domain_adv_D_0(f_s, f_t, w_s=weight)
+
+        &#47&#47 entropy loss
+        y_t = F.softmax(y_t, dim=1)
+        entropy_loss = entropy(y_t, reduction=&quotmean&quot)
+
+        loss = cls_loss + 1.5 * args.trade_off * adv_loss_D + \
+               args.trade_off * adv_loss_D_0 + args.gamma * entropy_loss
+        &#47&#47 compute gradient and do SGD step
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+        lr_scheduler.step()
+
+        cls_acc = accuracy(y_s, labels_s)[0]
+        tgt_acc = accuracy(y_t, labels_t)[0]
+
+        losses.update(loss.item(), x_s.size(0))
+        cls_accs.update(cls_acc.item(), x_s.size(0))
+        tgt_accs.update(tgt_acc.item(), x_s.size(0))
+        domain_accs_D.update(domain_adv_D.domain_discriminator_accuracy, x_s.size(0))
+        domain_accs_D_0.update(domain_adv_D_0.domain_discriminator_accuracy, x_s.size(0))
+
+        labels_in_target = torch.FloatTensor([c in target_idxes for c in labels_s]).to(device)
+        labels_in_target_num = labels_in_target.sum()
+        if labels_in_target_num != 0:
+            avg_importance<a id="change"> = </a>(weight.squeeze() * labels_in_target / labels_in_target_num).sum()
+            importance_weights.update(avg_importance.item(), int(labels_in_target_num.item()))
+
+        batch_time.update(time.time() - end)</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 debug: output class weight averaged on the partial classes and non-partial classes respectively
+        partial_class_weight, non_partial_classes_weight = \
+            importance_weight_module.get_partial_classes_weight(w_s, labels_s)
+        <a id="change">partial_classes_weights.update(</a>partial_class_weight.item(), x_s.size(0)<a id="change">)</a>
+        non_partial_classes_weights.update(non_partial_classes_weight.item(), x_s.size(0))
+
+        batch_time.update(time.time() - end)
+        end = time.time()</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/thuml/transfer-learning-library/commit/b572f553f392040359d3e98ded8c73f97fd042a0#diff-bc4c4224e8f4ce11737c88d1b8b54741cacdfbd43a1de238909e563537532edbL171' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 99579183</div><div id='project'> Project Name: thuml/transfer-learning-library</div><div id='commit'> Commit Name: b572f553f392040359d3e98ded8c73f97fd042a0</div><div id='time'> Time: 2021-02-08</div><div id='author'> Author: 13126830206@163.com</div><div id='file'> File Name: examples-da/partial/iwan.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train(10)</div><div id='n_method'> N Method Name: train(11)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples-da/partial/iwan.py</div><div id='n_file'> N File Name: examples-da/partial/iwan.py</div><div id='m_start'> M Start Line: 171</div><div id='m_end'> M End Line: 254</div><div id='n_start'> N Start Line: 173</div><div id='n_end'> N End Line: 251</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        tb_exp_averager.register("Loss_average", init_average)
+        update_list_avg = [tb_exp_averager.forward("Loss_average", _) for _ in update_list]
+        &#47&#47 Computing gradients for fnet and updating weights
+        fnet_loss<a id="change"> = </a>args.warp_scaling * warp_loss + <a id="change">fnet_loss.detach()</a>
+        &#47&#47fnet_loss = fnet_loss.cuda()
+        &#47&#47fnet_optimizer.zero_grad()
+        &#47&#47fnet_loss.backward()
+        &#47&#47fnet_optimizer.step()</code></pre><h3>After Change</h3><pre><code class='java'>
+        optimizer_d.zero_grad()
+        scaler.scale(discrim_loss).backward()
+        scaler.step(optimizer_d)
+        <a id="change">scaler.update()</a>
+        &#47&#47fnet_loss = fnet_loss.cuda()
+        &#47&#47fnet_optimizer.zero_grad()
+        &#47&#47fnet_loss.backward()
+        &#47&#47fnet_optimizer.step()</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/dwightfoster/pytorch-tecogan/commit/025e19b3ae985186b2d39607436eda9a3579b8c1#diff-f5a7fdedd2c0ddebef9c8da0be135c2dfddb9e5339087d894cdd812cea93a47eL47' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 99579182</div><div id='project'> Project Name: dwightfoster/pytorch-tecogan</div><div id='commit'> Commit Name: 025e19b3ae985186b2d39607436eda9a3579b8c1</div><div id='time'> Time: 2021-03-17</div><div id='author'> Author: dwightfoster03@gmail.com</div><div id='file'> File Name: code/train.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: TecoGAN(11)</div><div id='n_method'> N Method Name: TecoGAN(11)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: code/train.py</div><div id='n_file'> N File Name: code/train.py</div><div id='m_start'> M Start Line: 68</div><div id='m_end'> M End Line: 352</div><div id='n_start'> N Start Line: 68</div><div id='n_end'> N End Line: 357</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+                predicted_probs, predicted = self.get_predicted(outputs)
+
+                y_pred_probs<a id="change"> += </a>list(<a id="change">predicted_probs.cpu().detach()</a>.numpy())
+                y_pred += list(predicted.cpu().detach().numpy())
+                y_true += list(labels.cpu().detach().numpy())
+</code></pre><h3>After Change</h3><pre><code class='java'>
+                predicted_probs, predicted = self.get_predicted(outputs)
+                y_pred = list(predicted.cpu().detach().numpy())
+                y_true = list(labels.cpu().detach().numpy())
+                <a id="change">self.running_metrics.update(</a>y_true, y_pred<a id="change">)</a>
+
+        if criterion:
+            total_loss = total_loss / len(dataloader.dataset)
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/biasvariancelabs/aitlas/commit/20fa9fcb308eaf8f8d4d8f8e197f761588d8a051#diff-8c90d9e0305520faf5687b35e4d44d83709cb7e5160a7973610665e9a7133487L178' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 99579181</div><div id='project'> Project Name: biasvariancelabs/aitlas</div><div id='commit'> Commit Name: 20fa9fcb308eaf8f8d4d8f8e197f761588d8a051</div><div id='time'> Time: 2021-01-29</div><div id='author'> Author: ivica.dimitrovski@gmail.com</div><div id='file'> File Name: aitlas/base/models.py</div><div id='m_class'> M Class Name: BaseModel</div><div id='n_method'> N Class Name: BaseModel</div><div id='m_method'> M Method Name: evaluate_model(5)</div><div id='n_method'> N Method Name: evaluate_model(5)</div><div id='m_parent_class'> M Parent Class: nn.Module,Configurable</div><div id='n_parent_class'> N Parent Class: nn.Module,Configurable</div><div id='m_file'> M File Name: aitlas/base/models.py</div><div id='n_file'> N File Name: aitlas/base/models.py</div><div id='m_start'> M Start Line: 196</div><div id='m_end'> M End Line: 235</div><div id='n_start'> N Start Line: 198</div><div id='n_end'> N End Line: 225</div><BR>

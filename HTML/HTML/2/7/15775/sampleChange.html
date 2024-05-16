@@ -1,0 +1,53 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            continue
+
+        &#47&#47 If the current layer is a subclassed layer, extract the layers from the subclassed layer
+        <a id="change">if </a>current_layer.submodules and "tensorflow.python.keras" not in current_layer.__module__:
+            logger.debug("Subclass layer \&quot%s\&quot found. Extracting layers.", current_layer.name)
+            &#47&#47 Converts CamelCase to snake_case of subclassed layers class name
+            class_names.append(
+                regex_for_camel_case_to_snake_case.sub("_", current_layer.__class__.__name__).lower())
+
+            &#47&#47 First, get the input shape of the subclassed layer and create an input layer with that shape
+            &#47&#47 This is used to great a model based on the subclassed layer
+            temp_input_shape<a id="change"> = </a>prev_layer.shape[1:]
+            temp_input = tf.keras.Input(shape=temp_input_shape)
+
+            &#47&#47 Create a model based on the subclassed layer.
+            &#47&#47 This is done with the input layer created above being used for two reasons:
+            &#47&#47 1) The input layer is used to create the temporary functional model
+            &#47&#47 2) The input layer is used in the subclass layers call function as a symbolic tensor to get internal layers
+            temp_model = tf.keras.Model(inputs=[temp_input], outputs=current_layer.call(temp_input, training=False))
+            <a id="change">logger.debug("Model created for layer %s"</a>, current_layer.name<a id="change">)</a>
+            temp_model.summary(print_fn=logger.debug)
+
+            prev_layer = _prepare_model_helper(temp_model, prev_layer, class_names=class_names)
+
+        &#47&#47 If the current layer is a functional layer, call the layer with the previous layer
+        elif isinstance(current_layer, Functional):
+            prev_layer = current_layer.call(prev_layer)
+
+        &#47&#47 If a normal Keras defined layer
+        elif <a id="change"></a>not isinstance(current_layer, TFOpLambda) and not isinstance(current_layer, tf.keras.layers.MultiHeadAttention):
+            prev_layer = current_layer(prev_layer)
+
+        &#47&#47 Call entire model if the current model doesn&quott have any Functional or Subclassed layers</code></pre><h3>After Change</h3><pre><code class='java'>
+        layer_input = _get_layer_input(current_layer, network_dict)
+
+        &#47&#47 If the current layer is a subclassed layer, extract the layers from the subclassed layer
+        <a id="change">if </a>_is_subclass_layer(current_layer):
+            new_output_tensor = _handle_subclassed_layer(current_layer, layer_input, network_dict, class_names, model_outputs)
+
+        &#47&#47 If a functional model is found, then we unwrap the model and recursively call the prepare model helper
+        elif _is_functional_model(current_layer):
+            new_output_tensor = _handle_functional_model(current_layer, layer_input, network_dict)
+
+        &#47&#47 If a normally defined layer is found, add it to the functional model
+        else:
+            new_output_tensor<a id="change"> = </a>_handle_normal_keras_layer(current_layer, layer_input)
+
+        _update_output_tensors_in_network_dict(current_layer, new_output_tensor, model, network_dict, model_outputs)
+</code></pre>

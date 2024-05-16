@@ -1,0 +1,82 @@
+<html><h3>Pattern ID :23792
+</h3><img src='74264143.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                output = model(data_batch)
+                loss = loss_func(output, target_batch)
+                loss_ = loss.detach().clone()
+                loss.div_(math.ceil(float(<a id="change">len(</a>data<a id="change">)</a>)<a id="change"> / </a>args.batch_size))
+                loss.backward()
+            
+                with torch.no_grad():</code></pre><h3>After Change</h3><pre><code class='java'>
+                output = model(data_batch)
+                loss = loss_func(output, target_batch)
+                loss_ = loss.detach().clone() 
+                loss<a id="change"> = </a>loss<a id="change"> / </a>args.batches_per_allreduce
+                if args.horovod:
+                    loss.backward()
+                else:
+                    if i &lt; args.batches_per_allreduce:
+                        with model.no_sync():
+                            loss.backward()
+                    else:
+                        <a id="change">loss.backward()</a>
+
+                with torch.no_grad():            
+                    train_loss.update(loss_)
+                    train_accuracy.update(accuracy(output, target_batch))</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 5</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/gpauloski/kfac-pytorch/commit/c3fcd61225f75c5c0e412d60183be6c62599bfae#diff-921ec75f8ca15d3d54be394e907c34938d5a1a7a8f29de98be9e97f32bc1ead5L21' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 74264143</div><div id='project'> Project Name: gpauloski/kfac-pytorch</div><div id='commit'> Commit Name: c3fcd61225f75c5c0e412d60183be6c62599bfae</div><div id='time'> Time: 2020-06-28</div><div id='author'> Author: gpauloski@yahoo.com</div><div id='file'> File Name: examples/cnn_utils/engine.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train(9)</div><div id='n_method'> N Method Name: train(9)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples/cnn_utils/engine.py</div><div id='n_file'> N File Name: examples/cnn_utils/engine.py</div><div id='m_start'> M Start Line: 21</div><div id='m_end'> M End Line: 57</div><div id='n_start'> N Start Line: 21</div><div id='n_end'> N End Line: 65</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            data += [datum]
+            labels += [torch.as_tensor(label)]
+            pointer += server_payload[&quotdata&quot].classes
+            pointer = pointer<a id="change"> % </a><a id="change">len(</a>self.dataloader.dataset<a id="change">)</a>
+        data = torch.stack(data).to(**self.setup)
+        labels = torch.stack(labels).to(device=self.setup[&quotdevice&quot])
+
+        &#47&#47 Compute local updates</code></pre><h3>After Change</h3><pre><code class='java'>
+            optimizer = torch.optim.SGD(self.model.parameters(), lr=self.local_learning_rate)
+            seen_data_idx = 0
+
+            for <a id="change">step</a> in range(self.num_local_updates):
+
+                data = user_data[seen_data_idx: seen_data_idx + self.num_data_per_local_update_step]
+                labels<a id="change"> = </a>user_labels[seen_data_idx: seen_data_idx<a id="change"> + </a>self.num_data_per_local_update_step]
+                seen_data_idx += self.num_data_per_local_update_step
+                seen_data_idx = seen_data_idx % self.num_data_points
+
+                optimizer.zero_grad()
+                &#47&#47 Compute the forward pass
+                outputs = self.model(data)
+                loss = self.loss(outputs, labels)
+                <a id="change">loss.backward()</a>
+                optimizer.step()
+
+            &#47&#47 Share differential to server version:
+            &#47&#47 This is equivalent to sending the new stuff and letting the server do it, but in line</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/jonasgeiping/breaching/commit/1ab2867fea20551797c9aea8ae67099093ec7180#diff-222118a39af19077a8b428b60923841d31a00f445f3963533670a0eaa87a9924L147' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 74264136</div><div id='project'> Project Name: jonasgeiping/breaching</div><div id='commit'> Commit Name: 1ab2867fea20551797c9aea8ae67099093ec7180</div><div id='time'> Time: 2021-10-01</div><div id='author'> Author: jonas.geiping@googlemail.com</div><div id='file'> File Name: breaching/cases/users.py</div><div id='m_class'> M Class Name: UserMultiStep</div><div id='n_method'> N Class Name: UserMultiStep</div><div id='m_method'> M Method Name: compute_local_updates(2)</div><div id='n_method'> N Method Name: compute_local_updates(2)</div><div id='m_parent_class'> M Parent Class: UserSingleStep</div><div id='n_parent_class'> N Parent Class: UserSingleStep</div><div id='m_file'> M File Name: breaching/cases/users.py</div><div id='n_file'> N File Name: breaching/cases/users.py</div><div id='m_start'> M Start Line: 151</div><div id='m_end'> M End Line: 187</div><div id='n_start'> N Start Line: 158</div><div id='n_end'> N End Line: 200</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                output = model(data_batch)
+                loss = loss_func(output, target_batch)
+                loss_ = loss.detach().clone()
+                loss.div_(math.ceil(float(<a id="change">len(</a>data<a id="change">)</a>)<a id="change"> / </a>args.batch_size))
+                loss.backward()
+            
+                with torch.no_grad():</code></pre><h3>After Change</h3><pre><code class='java'>
+                data, target = data.cuda(), target.cuda()
+            optimizer.zero_grad()
+
+            for <a id="change">i</a> in range(0, len(data), args.batch_size):
+                data_batch = data[i:i + args.batch_size]
+                target_batch = target[i:i + args.batch_size]
+                output = model(data_batch)
+                loss = loss_func(output, target_batch)
+                loss_ = loss.detach().clone() 
+                loss<a id="change"> = </a>loss<a id="change"> / </a>args.batches_per_allreduce
+                if args.horovod:
+                    loss.backward()
+                else:
+                    if i &lt; args.batches_per_allreduce:
+                        with model.no_sync():
+                            <a id="change">loss.backward()</a>
+                    else:
+                        loss.backward()
+
+                with torch.no_grad():            </code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/gpauloski/kfac-pytorch/commit/c3fcd61225f75c5c0e412d60183be6c62599bfae#diff-921ec75f8ca15d3d54be394e907c34938d5a1a7a8f29de98be9e97f32bc1ead5L9' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 74264135</div><div id='project'> Project Name: gpauloski/kfac-pytorch</div><div id='commit'> Commit Name: c3fcd61225f75c5c0e412d60183be6c62599bfae</div><div id='time'> Time: 2020-06-28</div><div id='author'> Author: gpauloski@yahoo.com</div><div id='file'> File Name: examples/cnn_utils/engine.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train(9)</div><div id='n_method'> N Method Name: train(9)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples/cnn_utils/engine.py</div><div id='n_file'> N File Name: examples/cnn_utils/engine.py</div><div id='m_start'> M Start Line: 21</div><div id='m_end'> M End Line: 57</div><div id='n_start'> N Start Line: 21</div><div id='n_end'> N End Line: 65</div><BR>

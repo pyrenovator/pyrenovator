@@ -1,0 +1,37 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            if IS_CUDA:
+                if cuda_event:
+                    cuda_event.wait()
+            for stage, banks in <a id="change">self.memory_bank_per_stage.items()</a>:
+                args.insert(0, batch_indices)
+                for bank in banks:
+                    if bank is not None:</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        code, outputs = self.loader.code
+        
+        <a id="change">with </a>ctx<a id="change">:
+            </a>if IS_CUDA:
+                if cuda_event:
+                    cuda_event.wait()
+
+            args = {
+                &quotbatch_indices&quot: batch_indices,
+                &quotstorage_state&quot: self.storage_state,
+                &quotmetadata&quot: self.metadata,
+                **{
+                    f&quotmemory_{k}&quot: None if v is None else v[b_ix][:len(batch_indices)]
+                    for (k, v) in self.memory_allocations[&quotoperation&quot].items()
+                },
+                **{
+                    f&quotshared_memory_{k}&quot: None if v is None else v[b_ix] for (k, v) in self.memory_allocations[&quotshared&quot].items()
+                }
+            }
+
+            for stage_code, define_outputs in code:
+                results<a id="change"> = </a>stage_code(**args)
+                for node_id, result in zip(define_outputs, results):
+                    args[f&quotresult_{node_id}&quot] = result
+                pass</code></pre>

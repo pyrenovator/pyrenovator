@@ -1,0 +1,159 @@
+<html><h3>Pattern ID :12983
+</h3><img src='43762922.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            x = F.relu(fc(x))
+            x = self.dropout(x)
+        x = self.fc[-1](x) &#47&#47 (B*N, 1)
+        x<a id="change"> = </a><a id="change">torch.reshape(</a>x, (B, N)<a id="change">)</a> &#47&#47 (B, N)
+        return x
+
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        B, N, C = x.shape
+
+        if self.context &gt; 1:
+            z<a id="change"> = </a><a id="change">[</a>x<a id="change"></a>]
+            for d in range(1, self.context // 2 + 1):
+                z_u = torch.zeros_like(x)
+                z_u[:, d:, :] = x[:, :-d, :] &#47&#47 i-d
+                z.append(z_u)
+                z_d = torch.zeros_like(x)
+                z_d[:, :-d, :] = x[:, d:, :] &#47&#47 i+d
+                <a id="change">z.append(</a>z_d<a id="change">)</a>
+            x<a id="change"> = </a>torch.cat(z, dim=2) &#47&#47 (B, N, C*width)
+
+        x = x.view(B*N, -1) &#47&#47 (B*N, C*width)
+        for fc in self.fc[:-1]:</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 5</div><BR><div id='size'>Non-data size: 6</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/keio-bioinformatics/mxfold2/commit/c37c09d1ad2940a13dd4c82253c8607c8175115a#diff-c9a664b6ab969299efeb624a60d9f43a2f26d097fa73e50c22da2a6220cbabfaL117' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 43762922</div><div id='project'> Project Name: keio-bioinformatics/mxfold2</div><div id='commit'> Commit Name: c37c09d1ad2940a13dd4c82253c8607c8175115a</div><div id='time'> Time: 2019-11-06</div><div id='author'> Author: satoken@bio.keio.ac.jp</div><div id='file'> File Name: dnnfold/fold/layers.py</div><div id='m_class'> M Class Name: FCUnpairedLayer</div><div id='n_method'> N Class Name: FCUnpairedLayer</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: dnnfold/fold/layers.py</div><div id='n_file'> N File Name: dnnfold/fold/layers.py</div><div id='m_start'> M Start Line: 117</div><div id='m_end'> M End Line: 123</div><div id='n_start'> N Start Line: 121</div><div id='n_end'> N End Line: 137</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                            print("player build order:", player_bo) if debug else None
+
+                            &#47&#47 calculate the unit counts of bag
+                            player_ucb<a id="change"> = </a><a id="change">U.calculate_unit_counts_bow(prev_obs).reshape(</a>-1<a id="change">)</a>.numpy().tolist()
+                            print("player unit count of bow:", sum(player_ucb)) if debug else None
+
+                        try:</code></pre><h3>After Change</h3><pre><code class='java'>
+                &#47&#47 initial build order
+                player_bo = []
+                player_ucb = []
+                bo_list<a id="change"> = </a><a id="change">[]</a>
+
+                while True:
+                    o = controller.observe()
+                    try:
+                        obs = feat.transform_obs(o)
+
+                        try:
+                            func_call = None
+                            no_op = False
+                            if o.actions:
+                                func_call = getFuncCall(o, feat, obs)
+                                if func_call.function.value == 0:
+                                    no_op = True
+                                    func_call = None
+                                elif func_call.function.value == RAW_FUNCTIONS.raw_move_camera.id.value:  &#47&#47 raw_move_camera
+                                    if random.uniform(0, 1) &gt; FLAGS.move_camera_threshold:
+                                        func_call = None
+                                elif func_call.function.value == RAW_FUNCTIONS.Smart_pt.id.value:  &#47&#47 Smart_pt
+                                    if random.uniform(0, 1) &gt; FLAGS.Smart_pt_threshold:
+                                        func_call = None
+                                elif func_call.function.value == RAW_FUNCTIONS.Smart_unit.id.value:  &#47&#47 Smart_unit
+                                    if random.uniform(0, 1) &gt; FLAGS.Smart_unit_threshold:
+                                        func_call = None
+                            else:
+                                no_op = True
+
+                            if no_op:
+                                print(&quotexpert func: no op&quot) if debug else None
+                                if random.uniform(0, 1) &lt; FLAGS.no_op_threshold:
+                                    print(&quotget no op !&quot) if debug else None
+                                    noop_count += 1
+                                    func_call = A.FunctionCall.init_with_validation("no_op", [], raw=True)
+
+                            if func_call is not None:
+                                save_steps += 1
+                                &#47&#47z = [player_bo, player_ucb]
+
+                                delay = i - record_i
+                                print(&quottwo action dealy:&quot, delay, &quotsteps!&quot) if debug else None
+                                record_i = i
+
+                                obs_list.append(obs)
+                                func_call_list.append(func_call)
+
+                                delay_list.append(delay)
+
+                                if prev_obs is not None:
+                                    &#47&#47 calculate the build order
+                                    player_bo = U.calculate_build_order(player_bo, prev_obs, obs)
+                                    print("player build order:", player_bo) if debug else None
+
+                                <a id="change">bo_list.append(</a>copy.deepcopy(player_bo)<a id="change">)</a>
+                                prev_obs = obs
+
+                        except Exception as e:
+                            traceback.print_exc()
+
+                        if i &gt;= max_steps_of_replay:  &#47&#47 test the first n frames
+                            print("max frames test, break out!")
+                            break
+
+                        if o.player_result:  &#47&#47 end of game
+                            print(o.player_result)
+                            break
+
+                    except Exception as inst:
+                        traceback.print_exc() 
+
+                    controller.step()
+
+                    i += 1
+
+                print(&quotbegin save!&quot)
+
+                &#47&#47 the last delay is 0
+                delay_list.append(0)
+                func_call_list.append(A.FunctionCall.init_with_validation("no_op", [], raw=True))
+
+                if SAVE_TYPE == SaveType.torch_tensor:
+                    length = len(obs_list)
+                    for i in range(length):
+                        obs = obs_list[i]
+                        func_call = func_call_list[i]
+                        bo<a id="change"> = </a>bo_list[i]
+
+                        &#47&#47 delay should be the next,
+                        &#47&#47 means when should we issue the next command from the time we give this command</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/liuruoze/mini-alphastar/commit/a115d8c35ded3fa3d608df5576d72a17cf941787#diff-ae0cadf7f492b88e3c60cd0813e524cfa9597602f2d1a3cae3e2741c8aac9b20L331' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 43762914</div><div id='project'> Project Name: liuruoze/mini-alphastar</div><div id='commit'> Commit Name: a115d8c35ded3fa3d608df5576d72a17cf941787</div><div id='time'> Time: 2021-12-10</div><div id='author'> Author: liuruoze@163.com</div><div id='file'> File Name: alphastarmini/core/sl/transform_replay_data.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: test(1)</div><div id='n_method'> N Method Name: test(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: alphastarmini/core/sl/transform_replay_data.py</div><div id='n_file'> N File Name: alphastarmini/core/sl/transform_replay_data.py</div><div id='m_start'> M Start Line: 507</div><div id='m_end'> M End Line: 591</div><div id='n_start'> N Start Line: 475</div><div id='n_end'> N End Line: 602</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    final_gt_keypoints = np.reshape(final_gt_keypoints, newshape = (len(test_dl), model.num_targets))
+    final_preds = np.reshape(final_preds, newshape = (len(test_dl), model.num_targets))
+    dpk_final_preds<a id="change"> = </a><a id="change">np.reshape(</a>dpk_final_preds<a id="change">, newshape = (len(test_dl), model.num_targets))</a>
+
+    np.savetxt(&quot../preds/fish_label.csv&quot, final_gt_keypoints, delimiter = &quot,&quot, newline = &quot\n&quot)
+    np.savetxt(&quot../preds/fish_predictions.csv&quot, final_preds, delimiter = &quot,&quot, newline = &quot\n&quot)
+    np.savetxt(&quot../preds/dpk_fish_predictions.csv&quot, dpk_final_preds, delimiter = &quot,&quot, newline = &quot\n&quot)</code></pre><h3>After Change</h3><pre><code class='java'>
+
+def saveNumericalPredictions(threshold):
+    i = 0
+    rev_augmenter<a id="change"> = </a><a id="change">[]</a>
+    <a id="change">rev_augmenter.append(</a>iaa.Resize({"height": 406, "width": 396})<a id="change">)</a> &#47&#47get rid of this for the fish
+    rev_augmenter<a id="change"> = </a>iaa.Sequential(rev_augmenter)
+    model.eval()
+    full_dl = datamod.full_dataloader()
+    test_dl = datamod.test_dataloader()</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/danbider/lightning-pose/commit/ba23499c9c4dde85d400a77880a38b6dc42ccddb#diff-4026929ad0c3a0a8221c1444a4fde735603d1066656483236b509e29307e7f1fL71' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 43762918</div><div id='project'> Project Name: danbider/lightning-pose</div><div id='commit'> Commit Name: ba23499c9c4dde85d400a77880a38b6dc42ccddb</div><div id='time'> Time: 2021-07-28</div><div id='author'> Author: nicholasg101@gmail.com</div><div id='file'> File Name: scripts/train_dlc_lightning.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: saveNumericalPredictions(1)</div><div id='n_method'> N Method Name: saveNumericalPredictions(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: scripts/train_dlc_lightning.py</div><div id='n_file'> N File Name: scripts/train_dlc_lightning.py</div><div id='m_start'> M Start Line: 80</div><div id='m_end'> M End Line: 110</div><div id='n_start'> N Start Line: 72</div><div id='n_end'> N End Line: 99</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    final_gt_keypoints = np.reshape(final_gt_keypoints, newshape = (len(test_dl), model.num_targets))
+    final_preds = np.reshape(final_preds, newshape = (len(test_dl), model.num_targets))
+    dpk_final_preds<a id="change"> = </a><a id="change">np.reshape(</a>dpk_final_preds<a id="change">, newshape = (len(test_dl), model.num_targets))</a>
+
+    np.savetxt(&quot../preds/fish_label.csv&quot, final_gt_keypoints, delimiter = &quot,&quot, newline = &quot\n&quot)
+    np.savetxt(&quot../preds/fish_predictions.csv&quot, final_preds, delimiter = &quot,&quot, newline = &quot\n&quot)
+    np.savetxt(&quot../preds/dpk_fish_predictions.csv&quot, dpk_final_preds, delimiter = &quot,&quot, newline = &quot\n&quot)</code></pre><h3>After Change</h3><pre><code class='java'>
+
+def saveNumericalPredictions(threshold):
+    i = 0
+    rev_augmenter<a id="change"> = </a><a id="change">[]</a>
+    <a id="change">rev_augmenter.append(</a>iaa.Resize({"height": 406, "width": 396})<a id="change">)</a> &#47&#47get rid of this for the fish
+    rev_augmenter<a id="change"> = </a>iaa.Sequential(rev_augmenter)
+    model.eval()
+    full_dl = datamod.full_dataloader()
+    test_dl = datamod.test_dataloader()</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/danbider/lightning-pose/commit/fa6a9f867f46dbabb2f1aff9e26d0266ad2b9374#diff-4026929ad0c3a0a8221c1444a4fde735603d1066656483236b509e29307e7f1fL71' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 43762917</div><div id='project'> Project Name: danbider/lightning-pose</div><div id='commit'> Commit Name: fa6a9f867f46dbabb2f1aff9e26d0266ad2b9374</div><div id='time'> Time: 2021-07-28</div><div id='author'> Author: nicholasg101@gmail.com</div><div id='file'> File Name: scripts/train_dlc_lightning.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: saveNumericalPredictions(1)</div><div id='n_method'> N Method Name: saveNumericalPredictions(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: scripts/train_dlc_lightning.py</div><div id='n_file'> N File Name: scripts/train_dlc_lightning.py</div><div id='m_start'> M Start Line: 80</div><div id='m_end'> M End Line: 110</div><div id='n_start'> N Start Line: 72</div><div id='n_end'> N End Line: 99</div><BR>

@@ -1,0 +1,49 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        sequence_output = outputs[0] if use_cache else outputs
+
+        logits = self.lm_head(sequence_output, masked_positions)
+        <a id="change">if use_cache</a>:
+            cache<a id="change"> = outputs</a><a id="change">[1]</a>
+            <a id="change">return logits</a><a id="change">, cache</a>
+        else:
+            return logits
+
+    def prepare_faster_entry(self, kwargs):</code></pre><h3>After Change</h3><pre><code class='java'>
+            return_dict=return_dict,
+        )
+
+        sequence_output = outputs if <a id="change">isinstance(outputs</a>,
+                                                <a id="change">type(input_ids</a><a id="change">))</a> else outputs[0]
+
+        <a id="change">logits</a> = self.lm_head(sequence_output, masked_positions)
+
+        <a id="change">lm_loss</a><a id="change"> = None</a>
+        <a id="change">if labels is not None</a>:
+            loss_fct<a id="change"> = </a><a id="change">nn.CrossEntropyLoss()</a>
+            <a id="change">lm_loss</a><a id="change"> = loss_fct(
+                logits.reshape(</a>(<a id="change">-1</a><a id="change">, self.unimo.config["vocab_size"]</a>)<a id="change">)</a>,
+                <a id="change">labels.reshape(</a>(-1, )<a id="change">)</a><a id="change">)</a>
+
+        <a id="change">if not return_dict</a>:
+            <a id="change">if isinstance(outputs</a>, <a id="change">type(input_ids</a><a id="change">))</a>:
+                <a id="change">return </a>(<a id="change">lm_loss</a><a id="change">, logits</a>)<a id="change"> if lm_loss</a><a id="change"> is not None else </a>logits
+            else:
+                outputs<a id="change"> = </a>(<a id="change">logits</a>, )<a id="change"> + outputs[1:]</a>
+                <a id="change">return </a>((<a id="change">lm_loss</a>, )<a id="change"> +
+                        </a>outputs)<a id="change"> if lm_loss</a><a id="change"> is not None else </a>outputs
+
+        return <a id="change">CausalLMOutputWithCrossAttentions(
+            loss=lm_loss,
+            logits=logits,
+            past_key_values=outputs.past_key_values,
+            hidden_states=outputs.hidden_states,
+            attentions=outputs.attentions,
+            cross_attentions=outputs.cross_attentions,
+        )</a>
+
+    def prepare_faster_entry(self, kwargs):
+        from paddlenlp.ops import FasterUNIMOText
+        use_fp16_decoding = kwargs.get(&quotuse_fp16_decoding&quot, False)</code></pre>

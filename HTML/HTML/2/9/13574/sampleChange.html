@@ -1,0 +1,37 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            return tf.cast(alpha &gt; 0, dtype=alpha.dtype)
+
+        &#47&#47 Scale the tensor
+        tensor<a id="change"> = </a><a id="change">tf.floor(</a>weight_tensor<a id="change"> / </a>encoding.delta<a id="change">)</a>
+
+        &#47&#47 Compute h_alpha depending on soft or hard rounding
+        h_alpha = tf.cond(use_soft_rounding, compute_soft_rounding, compute_hard_rounding)
+
+        &#47&#47 Adaround the tensor
+        tensor = tf.add(tensor, h_alpha)
+
+        &#47&#47 Quantize and de-quantize the tensor
+        tensor_quant = tf.clip_by_value(tensor - encoding.offset, 0, 2 ** encoding.bw - 1)
+        tensor_dequant = (tensor_quant<a id="change"> + </a>encoding.offset)<a id="change"> * </a>encoding.delta
+
+        return tensor_dequant
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        def compute_hard_rounding():
+            return tf.cast(alpha &gt; 0, dtype=alpha.dtype)
+
+        <a id="change">if </a>enable_per_channel:
+            assert isinstance(encoding, list), "Per-channel expects encoding to be a list"
+
+            delta = AdaroundWrapper._broadcast_to_tensor(weight_tensor, <a id="change">[enc.delta for enc in encoding]</a>,
+                                                         ch_axis)
+            offset = AdaroundWrapper._broadcast_to_tensor(weight_tensor, [enc.offset for enc in encoding],
+                                                          ch_axis)
+            bw = encoding[0].bw
+        else:
+            delta<a id="change"> = </a>encoding.delta
+            offset = encoding.offset
+            bw = encoding.bw
+</code></pre>

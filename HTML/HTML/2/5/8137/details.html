@@ -1,0 +1,62 @@
+<html><h3>Pattern ID :8137
+</h3><img src='28758096.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        else:
+            &#47&#47 Here, we&quotll use torch.distributed.
+            &#47&#47 Initializes the distributed backend which will take care of sychronizing nodes/GPUs
+            <a id="change">torch.distributed.init_process_group(backend="nccl")</a>
+            device = torch.device("cuda", self.local_rank)
+            n_gpu = 1
+
+        if device.type == "cuda":</code></pre><h3>After Change</h3><pre><code class='java'>
+        else:
+            &#47&#47 Here, we&quotll use torch.distributed.
+            &#47&#47 Initializes the distributed backend which will take care of sychronizing nodes/GPUs
+            <a id="change">if not torch.distributed.is_initialized()</a>:
+                <a id="change">torch.distributed.init_process_group(backend="nccl", timeout=self.ddp_timeout_delta)</a>
+            device = torch.device("cuda", self.local_rank)
+            self._n_gpu = 1
+
+        if device.type == "cuda":</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 5</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/georgianpartners/multimodal-toolkit/commit/129c44138e53b3d576e16e588e6fd0d9ceec243a#diff-07e5aa2b057e489c25b45ecd2f60b62808183eacd5d0ac837f964708b64bcb65L194' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 28758096</div><div id='project'> Project Name: georgianpartners/multimodal-toolkit</div><div id='commit'> Commit Name: 129c44138e53b3d576e16e588e6fd0d9ceec243a</div><div id='time'> Time: 2023-03-01</div><div id='author'> Author: akash.saravanan@georgian.io</div><div id='file'> File Name: multimodal_exp_args.py</div><div id='m_class'> M Class Name: OurTrainingArguments</div><div id='n_method'> N Class Name: OurTrainingArguments</div><div id='m_method'> M Method Name: _setup_devices(1)</div><div id='n_method'> N Method Name: _setup_devices(1)</div><div id='m_parent_class'> M Parent Class: TrainingArguments</div><div id='n_parent_class'> N Parent Class: TrainingArguments</div><div id='m_file'> M File Name: multimodal_exp_args.py</div><div id='n_file'> N File Name: multimodal_exp_args.py</div><div id='m_start'> M Start Line: 194</div><div id='m_end'> M End Line: 214</div><div id='n_start'> N Start Line: 194</div><div id='n_end'> N End Line: 219</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        self.init_process_group(backend, timeout, init_method)
+
+    def init_process_group(self, backend, timeout, init_method):
+        return <a id="change">torch.distributed.init_process_group(</a>backend<a id="change">,
+                                                    timeout=timeout,
+                                                    init_method=init_method)</a>
+
+    def all_reduce(self,
+                   tensor,
+                   op=torch.distributed.ReduceOp.SUM,</code></pre><h3>After Change</h3><pre><code class='java'>
+        self.init_process_group(backend, timeout, init_method)
+
+    def init_process_group(self, backend, timeout, init_method):
+        <a id="change">if not torch.distributed.is_initialized()</a>:
+            <a id="change">torch.distributed.init_process_group(</a>backend<a id="change">,
+                                                 timeout=timeout,
+                                                 init_method=init_method)</a>
+
+    def all_reduce(self,
+                   tensor,
+                   op=torch.distributed.ReduceOp.SUM,</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/microsoft/deepspeed/commit/9f5895cb7a7db8248295038543d75a4334ee5c44#diff-61a3502a7d70db892b330310b7b6eaaad245f9700d342de0f24b3a84696bfdefL37' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 28758095</div><div id='project'> Project Name: microsoft/deepspeed</div><div id='commit'> Commit Name: 9f5895cb7a7db8248295038543d75a4334ee5c44</div><div id='time'> Time: 2022-07-21</div><div id='author'> Author: qganthony@yahoo.com</div><div id='file'> File Name: deepspeed/comm/torch.py</div><div id='m_class'> M Class Name: TorchBackend</div><div id='n_method'> N Class Name: TorchBackend</div><div id='m_method'> M Method Name: init_process_group(4)</div><div id='n_method'> N Method Name: init_process_group(4)</div><div id='m_parent_class'> M Parent Class: Backend</div><div id='n_parent_class'> N Parent Class: Backend</div><div id='m_file'> M File Name: deepspeed/comm/torch.py</div><div id='n_file'> N File Name: deepspeed/comm/torch.py</div><div id='m_start'> M Start Line: 38</div><div id='m_end'> M End Line: 40</div><div id='n_start'> N Start Line: 38</div><div id='n_end'> N End Line: 43</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        self.warn_unscaled_loss = True
+
+        if dist_init_required:
+            <a id="change">dist.init_process_group(backend="nccl")</a>
+
+        self._do_args_sanity_check(args)
+        self._configure_with_arguments(args, mpu)
+        self._do_sanity_check()</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        self.dist_backend = "nccl"
+        if dist_init_required:
+            <a id="change">if not dist.is_initialized()</a>:
+                logging.info("Initializing torch distributed with backend: {}".format(
+                    self.dist_backend))
+                <a id="change">dist.init_process_group(backend=self.dist_backend)</a>
+            else:
+                logging.warning(
+                    "Was given dist_init_required=True but detected that torch"
+                    "distributed was already initialized, cannot initialize twice.")</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/microsoft/deepspeed/commit/5aa58b3878789332856af9107bef5768dd3e1c9c#diff-76270fb395316d963c7efb2779c08d1005bad070da854f1ab101cb13ee18de92L92' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 28758093</div><div id='project'> Project Name: microsoft/deepspeed</div><div id='commit'> Commit Name: 5aa58b3878789332856af9107bef5768dd3e1c9c</div><div id='time'> Time: 2020-02-26</div><div id='author'> Author: jerasley@microsoft.com</div><div id='file'> File Name: deepspeed/pt/deepspeed_light.py</div><div id='m_class'> M Class Name: DeepSpeedLight</div><div id='n_method'> N Class Name: DeepSpeedLight</div><div id='m_method'> M Method Name: __init__(10)</div><div id='n_method'> N Method Name: __init__(10)</div><div id='m_parent_class'> M Parent Class: Module</div><div id='n_parent_class'> N Parent Class: Module</div><div id='m_file'> M File Name: deepspeed/pt/deepspeed_light.py</div><div id='n_file'> N File Name: deepspeed/pt/deepspeed_light.py</div><div id='m_start'> M Start Line: 123</div><div id='m_end'> M End Line: 123</div><div id='n_start'> N Start Line: 122</div><div id='n_end'> N End Line: 136</div><BR>

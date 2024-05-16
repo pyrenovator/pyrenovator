@@ -1,0 +1,41 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+    sz = 50
+    for patch_size in POSSIBLE_PATCH_SIZE:
+        <a id="change">if image_size[1] % patch_size == 0</a>:
+            sz<a id="change"> = </a>patch_size
+            patch_num = (image_size[0] // sz, image_size[1] // sz)
+            break
+
+    is_ref_model = type(network) == RefNeRF
+    for k in range(patch_num[0]):
+        for j in range(patch_num[1]):
+            camera_rays = torch.cat((render_pose[:, -1].expand(sz, sz, -1), ray_raw[(sz * k):(sz * (k + 1)), (sz * j):(sz * (j + 1))]), dim = -1).reshape(-1, 6)        &#47&#47 shape (2500, 6)
+            sampled_lengths = (all_lengths + torch.rand((sz, sz, 64)).cuda() * resolution).view(-1, 64)        &#47&#47 shape (2500, sample_num)
+            pts = render_pose[:, -1].unsqueeze(0) + sampled_lengths[..., None] * camera_rays[:, None, 3:]
+            density = prop_net.forward(pts)
+            prop_weights_raw = ProposalNetwork.get_weights(density, sampled_lengths, camera_rays[:, 3:])      &#47&#47 (ray_num, num of proposal interval)
+            prop_weights = maxBlurFilter(prop_weights_raw, 0.01)
+            fine_lengths, _ = inverseSample(prop_weights, sampled_lengths, sample_num + 1, sort = True)
+            fine_samples, fine_lengths = NeRF.coarseFineMerge(camera_rays, sampled_lengths, fine_lengths)
+            &#47&#47 fine_samples = NeRF.length2pts(camera_rays, fine_lengths)
+            output_rgbo<a id="change"> = </a>network.forward(fine_samples)
+            if is_ref_model == True:
+                output_rgbo, normal = output_rgbo
+                output_rgbo[..., -1] = softplus(output_rgbo[..., -1] + 0.5)</code></pre><h3>After Change</h3><pre><code class='java'>
+            prop_weights_raw = ProposalNetwork.get_weights(density, sampled_lengths, camera_rays[:, 3:])      &#47&#47 (ray_num, num of proposal interval)
+            prop_weights = maxBlurFilter(prop_weights_raw, 0.01)
+            fine_lengths, _ = inverseSample(prop_weights, sampled_lengths, sample_num + 1, sort = True)
+            <a id="change">if </a><a id="change">is_ref_model</a>:
+                fine_samples, fine_lengths = NeRF.coarseFineMerge(camera_rays, sampled_lengths, fine_lengths)
+                output_rgbo, normal = <a id="change">network.forward(</a>fine_samples<a id="change">)</a>
+                output_rgbo[..., -1] = softplus(output_rgbo[..., -1] + 0.5)
+            else:
+                fine_samples = NeRF.length2pts(camera_rays, fine_lengths)
+                output_rgbo<a id="change"> = </a>network.forward(fine_samples)
+
+            part_image, _, extras = NeRF.render(
+                output_rgbo, fine_lengths, camera_rays[..., 3:], </code></pre>

@@ -1,0 +1,104 @@
+<html><h3>Pattern ID :37455
+</h3><img src='107966494.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        width = img_shape[2]
+        
+        mark_height = int(height * np.sqrt(self.mark_area_ratio))
+        mark_width = int(width * <a id="change">np.sqrt(</a>self.mark_area_ratio<a id="change">)</a>)
+
+        &#47&#47 we only have 1 mark (trigger) and 1 mask
+        self.mark = torch.rand(img_shape)
+        self.mask = torch.zeros(img_shape)
+
+        &#47&#47 trigger locates in right bottom corner, change corresponding mask values
+        self.mask[height-mark_height:][:, width-mark_width:] = 1
+
+
+        &#47&#47 get average feature map from yt&quots subset images
+        print("...extracting target feature map")
+
+        self.model.cuda()
+        _yt_inputs = self.yt_imgs[self.yt_sub_inds].cuda()
+        yt_featmaps = self.model.get_fm_before_outlayer(_yt_inputs)   &#47&#47 on cuda
+        assert yt_featmaps.shape[0]==len(self.yt_sub_inds), \
+               "yt image num mismatch, check &quotlatent_backdoor&quot attack--&gt;&quotgenerate_trigger&quot function"
+        yt_avg_featmap = yt_featmaps.sum(0) / len(self.yt_sub_inds)
+
+
+        &#47&#47------------------------- below is trigger generation process -------------------------&#47&#47
+        print("...generating trigger")
+
+        &#47&#47 self.model.cuda()
+        self.mark = self.mark.cuda()
+        self.mask = self.mask.cuda()
+        yt_avg_featmap = yt_avg_featmap.cuda()
+        self.mark.requires_grad = True
+
+        if not self.poison_lr:
+            self.poison_lr = 0.01
+
+        optimizer = optim.Adam([self.mark], lr=self.poison_lr)
+        criterion = nn.MSELoss()
+        self.model.eval()
+        for epoch in range(self.poison_iteration):
+            optimizer.zero_grad()
+            l2_loss = 0.0
+            for ind in self.ynt_sub_inds:
+                ynt_img = self.ynt_imgs[ind].cuda()
+                ynt_img = ynt_img * (1-self.mask) + self.mask * torch.sigmoid(self.mark)
+                ynt_img = ynt_img.unsqueeze(0)
+                ynt_featmap = self.model.get_fm_before_outlayer(ynt_img)
+                l2_loss += criterion(ynt_featmap, yt_avg_featmap)
+
+            l2_loss = torch.div(l2_loss, len(self.ynt_sub_inds))
+            print("Epoch {} | MSE Loss {}".format(epoch, l2_loss))
+            l2_loss.backward(retain_graph=True)
+            optimizer.step()
+
+        self.model.cpu()
+        self.mark = self.mark.cpu()
+        self.mask<a id="change"> = </a>self.mask.cpu()
+
+        &#47&#47 now we generate an universal trigger (self.mark)
+        print("trigger generation done!\n")</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        &#47&#47 now we generate an universal trigger (self.mark)
+        print("trigger generation done!\n")
+        return <a id="change">yt_avg_featmap.cpu()</a>
+
+
+    def student_fine_tuning(self, optimizer: torch.optim.Optimizer, lr_scheduler: torch.optim.lr_scheduler._LRScheduler, iteration: int = None, **kwargs):
+        </code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/ain-soph/trojanzoo/commit/f5575998452f70acd978e0f2297718a34a432e91#diff-1e9f08cdcf107dac703ba6ade89c7699ee84615bf2b5cdd4e776168a691df4dfL177' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 107966494</div><div id='project'> Project Name: ain-soph/trojanzoo</div><div id='commit'> Commit Name: f5575998452f70acd978e0f2297718a34a432e91</div><div id='time'> Time: 2020-06-28</div><div id='author'> Author: zxx5113@lrs-twang01.ist.psu.edu</div><div id='file'> File Name: trojanzoo/attack/backdoor/latent_backdoor.py</div><div id='m_class'> M Class Name: Latent_Backdoor</div><div id='n_method'> N Class Name: Latent_Backdoor</div><div id='m_method'> M Method Name: generate_trigger(1)</div><div id='n_method'> N Method Name: generate_trigger(1)</div><div id='m_parent_class'> M Parent Class: BadNet</div><div id='n_parent_class'> N Parent Class: BadNet</div><div id='m_file'> M File Name: trojanzoo/attack/backdoor/latent_backdoor.py</div><div id='n_file'> N File Name: trojanzoo/attack/backdoor/latent_backdoor.py</div><div id='m_start'> M Start Line: 177</div><div id='m_end'> M End Line: 231</div><div id='n_start'> N Start Line: 199</div><div id='n_end'> N End Line: 256</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    R_tgt_src = out[&quotR&quot][0, -1, :2, :2]
+    t_st_in_t = out[&quott&quot][0, -1, :2, :]
+    error = tgt_p - (R_tgt_src @ src_p + t_st_in_t)
+    mah<a id="change"> = </a><a id="change">torch.sqrt(</a>torch.sum(error * error * torch.exp(out[&quotmatch_weights&quot][-1]), dim=0).squeeze()<a id="change">)</a>
+    error2_sqrt = torch.sqrt(torch.sum(error * error, dim=0).squeeze())
+
+    plt.imshow(radar, cmap=&quotgray&quot)
+    plt.scatter(src[ids_cpu, 0], src[ids_cpu, 1], c=error2_sqrt[ids_cpu].detach().cpu().numpy(), s=5, zorder=2, cmap=&quotrainbow&quot)</code></pre><h3>After Change</h3><pre><code class='java'>
+    scores = out[&quotscores&quot][-1]
+    if scores.size(0) == 3:
+        scores = scores[1] + scores[2]
+    scores = <a id="change">scores.squeeze().detach().cpu()</a>.numpy()
+    plt.imshow(scores, cmap=&quotinferno&quot)
+    plt.colorbar()
+    plt.title(&quotlog det weight (weight score vis)&quot)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/utiasasrl/hero_radar_odometry/commit/c1043c84c77f1a20b667d981d4cd286cb378c71a#diff-d445cffc7a7e6422cec555fe4a091bb87cc73f427f46eb1b3ff25e837132aeb0L52' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 107966491</div><div id='project'> Project Name: utiasasrl/hero_radar_odometry</div><div id='commit'> Commit Name: c1043c84c77f1a20b667d981d4cd286cb378c71a</div><div id='time'> Time: 2021-01-25</div><div id='author'> Author: david.yoon@robotics.utias.utoronto.ca</div><div id='file'> File Name: utils/vis.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: draw_batch_steam(3)</div><div id='n_method'> N Method Name: draw_batch_steam(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: utils/vis.py</div><div id='n_file'> N File Name: utils/vis.py</div><div id='m_start'> M Start Line: 55</div><div id='m_end'> M End Line: 134</div><div id='n_start'> N Start Line: 95</div><div id='n_end'> N End Line: 122</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        
+        if self.obs_normalizer is not None:
+            mean, var = self.obs_normalizer.mean, self.obs_normalizer.var
+            observations = (observations - mean) / <a id="change">np.sqrt(</a>var + 1e-8<a id="change">)</a>
+        with torch.no_grad():
+            policy<a id="change">, _ = </a>self.nn(torch.tensor(observations, dtype=torch.float32, device=self.device))
+        action, log_prob = self.distribution.sample(policy, deterministic)
+        if return_pi:
+            return action, policy</code></pre><h3>After Change</h3><pre><code class='java'>
+            observations = [[observations]]
+        action, log_prob = self._act(observations, return_pi, deterministic)
+        if self.testing:
+            return <a id="change">action.cpu()</a>.numpy()[0, 0]
+        return action, log_prob
+
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/cherrypiesexy/imitation_learning/commit/60964599d67129e5dea6a4de74157227cae02efe#diff-957ff34d52a4096efc9ae2838dc5039aa81f24829469f98fa70bb67ab2be28a2L50' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 107966490</div><div id='project'> Project Name: cherrypiesexy/imitation_learning</div><div id='commit'> Commit Name: 60964599d67129e5dea6a4de74157227cae02efe</div><div id='time'> Time: 2020-09-06</div><div id='author'> Author: dmitry.akimov@giant.ai</div><div id='file'> File Name: algorithms/policy_gradient.py</div><div id='m_class'> M Class Name: AgentInference</div><div id='n_method'> N Class Name: AgentInference</div><div id='m_method'> M Method Name: act(4)</div><div id='n_method'> N Method Name: act(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: algorithms/policy_gradient.py</div><div id='n_file'> N File Name: algorithms/policy_gradient.py</div><div id='m_start'> M Start Line: 57</div><div id='m_end'> M End Line: 68</div><div id='n_start'> N Start Line: 62</div><div id='n_end'> N End Line: 67</div><BR>

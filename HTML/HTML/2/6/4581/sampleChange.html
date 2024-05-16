@@ -1,0 +1,19 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    lengths = all_lengths + torch.rand((ray_num, point_num)).to(target_device) * resolution
+    &#47&#47 sampled coords is (col_id, col_id)
+    if output_samples:
+        ray_raw<a id="change"> = </a>torch.sum(torch.cat([sampled_coords / focal, <a id="change">-torch.ones(sampled_coords.shape[0], 1, dtype = torch.float32).to(target_device)</a>], dim = -1).unsqueeze(-2) * cam_tf[:, :-1], dim = -1)
+        pts = cam_tf[:, -1] + ray_raw[:, None, :] * lengths[:, :, None]
+        return torch.cat((pts, ray_raw.unsqueeze(-2).repeat(1, point_num, 1)), dim = -1), lengths, output_rgb, torch.cat((cam_tf[:, -1].unsqueeze(0).repeat(ray_raw.shape[0], 1), ray_raw), dim = -1)
+    ray_raw = torch.sum(torch.cat([(sampled_coords) / focal, -torch.ones(sampled_coords.shape[0], 1, dtype = torch.float32).to(target_device)], dim = -1).unsqueeze(-2) * cam_tf[:, :-1], dim = -1)</code></pre><h3>After Change</h3><pre><code class='java'>
+    sampled_coords = coords[indices].to(torch.float32) + 0.5                    &#47&#47 shift half pixel
+    if isinstance(focal, Iterable):
+        sampled_coords[..., 0] /= focal[1]
+        sampled_coords[..., 1] /= <a id="change">focal[0]</a>
+    else:
+        sampled_coords /= focal
+    &#47&#47 sampled coords is (col_id, col_id)
+    ray_raw = torch.sum(torch.cat([sampled_coords, -torch.ones(sampled_coords.shape[0], 1, dtype = torch.float32).to(target_device)], dim = -1).unsqueeze(-2) * cam_tf[:, :-1], dim = -1)</code></pre>

@@ -1,0 +1,44 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        self.std = nn.Linear(500, self.latent_dim)
+
+    def forward(self, x):
+        out = <a id="change">self.layers(</a>x.reshape(-1, np.prod(self.input_dim))<a id="change">)</a>
+
+        output = ModelOutput(embedding=self.mu(out), log_covariance=self.std(out))
+
+        return output</code></pre><h3>After Change</h3><pre><code class='java'>
+        self.log_var = nn.Linear(512, self.latent_dim)
+
+    def forward(self, x, output_layer_levels:List[int]=None):
+        <a id="change">output = </a><a id="change">ModelOutput()</a>
+
+        max_depth = self.depth
+
+        <a id="change">if output_layer_levels is not None</a>:
+
+            <a id="change">assert </a>all(self.depth &gt;= levels &gt; 0 or levels==-1 for levels in output_layer_levels), (
+                f&quotCannot output layer deeper than depth ({self.depth}). &quot\
+                f&quotGot ({output_layer_levels}).&quot
+                )
+
+            <a id="change">if -1 in output_layer_levels</a>:
+                max_depth<a id="change"> = </a>self.depth
+            else:
+                max_depth<a id="change"> = </a><a id="change">max(output_layer_levels</a><a id="change">)</a>
+
+        out = x.reshape(-1, np.prod(self.input_dim))
+
+        <a id="change">for i</a> in <a id="change">range(</a>max_depth<a id="change">):
+            </a>out = <a id="change">self.layers[i](</a>out<a id="change">)</a>
+
+            <a id="change">if output_layer_levels is not None</a>:
+                <a id="change">if i+1 in output_layer_levels</a>:
+                    <a id="change">output[f&quotembedding_layer_{i+1}&quot] = </a>out
+            <a id="change">if i+1 == self.depth</a>:
+                output[&quotembedding&quot]<a id="change"> = </a>self.embedding(out)
+                output[&quotlog_covariance&quot] = self.log_var(out)
+
+        return output</code></pre>

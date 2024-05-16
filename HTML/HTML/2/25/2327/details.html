@@ -1,0 +1,622 @@
+<html><h3>Pattern ID :2327
+</h3><img src='9879924.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                &#47&#47 we use new save ways, only save the state_dict, and the extension changes to pt
+                torch.save(net.state_dict(), SAVE_PATH + "" + ".pth")
+
+            <a id="change">write(writer</a>, loss_value, loss_list, action_accuracy, 
+                  move_camera_accuracy, non_camera_accuracy, short_important_accuracy,
+                  <a id="change">batch_iter</a><a id="change">)</a>
+
+            gc.collect()
+
+        if True:</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    now = datetime.datetime.now()
+    summary_path = "./log/" + now.strftime("%Y%m%d-%H%M%S") + "/"
+    <a id="change">writer</a> = SummaryWriter(summary_path)
+
+    &#47&#47 model path
+    SAVE_PATH = os.path.join(MODEL_PATH, MODEL + "_" + time.strftime("%y-%m-%d_%H-%M-%S", time.localtime()))
+
+    epoch_start = time.time()
+    <a id="change">batch_iter</a> = 0
+
+    for epoch in range(NUM_EPOCHS):
+
+        loss_sum = 0
+
+        for batch_idx, (features, labels) in enumerate(train_loader):
+            &#47&#47 put model in train mode
+            net.train()
+            start = time.time()
+
+            feature_tensor = features.to(device).float()
+            labels_tensor = labels.to(device).float()
+            del features, labels
+
+            loss, loss_list, \
+                acc_num_list = Loss.get_sl_loss_for_tensor(feature_tensor, 
+                                                           labels_tensor, net, 
+                                                           decrease_smart_opertaion=True,
+                                                           return_important=True,
+                                                           only_consider_small=True,
+                                                           include_location_accuracy=True)
+            del feature_tensor, labels_tensor
+
+            optimizer.zero_grad()
+            loss.backward() 
+            optimizer.step()
+
+            &#47&#47 add a grad clip
+            parameters = [p for p in net.parameters() if p is not None and p.requires_grad]
+            torch.nn.utils.clip_grad_norm_(parameters, CLIP)
+
+            loss_value = float(loss.item())
+
+            loss_sum += loss_value
+            del loss
+
+            action_accuracy = acc_num_list[0] / (acc_num_list[1] + 1e-9)
+            move_camera_accuracy = acc_num_list[2] / (acc_num_list[3] + 1e-9)
+            non_camera_accuracy = acc_num_list[4] / (acc_num_list[5] + 1e-9)
+            short_important_accuracy = acc_num_list[6] / (acc_num_list[7] + 1e-9)
+
+            location_accuracy<a id="change"> = acc_num_list</a><a id="change">[8]</a><a id="change"> / </a>(<a id="change">acc_num_list[9]</a><a id="change"> + 1e-9</a>)
+            location_distance = acc_num_list[11] / (acc_num_list[9] + 1e-9)
+
+            batch_time = time.time() - start
+
+            batch_iter += 1
+            print(&quotbatch_iter&quot, batch_iter)
+
+            if batch_iter % EVAL_INTERFEVL == 0:
+                print(&quotEpoch: [{}/{}]| loss: {:.3f} | acc: {:.3f} | batch time: {:.3f}s &quot.format(
+                    batch_iter, epoch, loss_sum / (batch_iter + 1), action_accuracy, batch_time))
+
+                &#47&#47 torch.save(net, SAVE_PATH + "" + ".pkl")
+                &#47&#47 we use new save ways, only save the state_dict, and the extension changes to pt
+                torch.save(net.state_dict(), SAVE_PATH + "" + ".pth")
+
+            <a id="change">write(writer</a>, loss_value, loss_list, action_accuracy, 
+                  move_camera_accuracy, non_camera_accuracy, short_important_accuracy,
+                  location_accuracy, location_distance,
+                  <a id="change">batch_iter</a><a id="change">)</a>
+
+            gc.collect()
+
+        if True:
+            print(&quoteval begin&quot)
+            val_loss, val_acc = eval(net, val_set, val_loader, device)
+            print(&quoteval end&quot)
+
+            print("Val loss: {:.6f}.".format(val_loss))
+            writer.add_scalar(&quotVal/Loss&quot, val_loss, batch_iter)
+
+            &#47&#47 for accuracy of actions in val
+            print("Val action acc: {:.6f}.".format(val_acc[0]))
+            writer.add_scalar(&quotVal/action Acc&quot, val_acc[0], batch_iter)
+            print("Val move_camera acc: {:.6f}.".format(val_acc[1]))
+            writer.add_scalar(&quotVal/move_camera Acc&quot, val_acc[1], batch_iter)
+            print("Val non_camera acc: {:.6f}.".format(val_acc[2]))
+            writer.add_scalar(&quotVal/non_camera Acc&quot, val_acc[2], batch_iter)
+            print("Val short_important acc: {:.6f}.".format(val_acc[3]))
+            writer.add_scalar(&quotVal/short_important Acc&quot, val_acc[3], batch_iter)
+            <a id="change">print("Val location_accuracy acc: {:.6f}."</a><a id="change">.format(val_acc</a><a id="change">[4]))</a>
+            writer.add_scalar(&quotVal/location_accuracy Acc&quot, val_acc[4], batch_iter)
+            print("Val location_distance acc: {:.6f}.".format(val_acc[5]))
+            <a id="change">writer.add_scalar(&quotVal/location_distance Acc&quot</a>, <a id="change">val_acc[5]</a>, <a id="change">batch_iter</a><a id="change">)</a>
+
+            del val_loss, val_acc
+
+            gc.collect()</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 12</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/liuruoze/mini-alphastar/commit/7e2121bdd2cb29e590f88dee2bc9bf523e3cf77c#diff-d455886c4a02de3a363a2bf489a2c17960ecc9652780b13a57c16e4babfbe663L172' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 9879924</div><div id='project'> Project Name: liuruoze/mini-alphastar</div><div id='commit'> Commit Name: 7e2121bdd2cb29e590f88dee2bc9bf523e3cf77c</div><div id='time'> Time: 2021-11-22</div><div id='author'> Author: liuruoze@163.com</div><div id='file'> File Name: alphastarmini/core/sl/sl_train_by_tensor.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train(7)</div><div id='n_method'> N Method Name: train(7)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: alphastarmini/core/sl/sl_train_by_tensor.py</div><div id='n_file'> N File Name: alphastarmini/core/sl/sl_train_by_tensor.py</div><div id='m_start'> M Start Line: 172</div><div id='m_end'> M End Line: 234</div><div id='n_start'> N Start Line: 172</div><div id='n_end'> N End Line: 263</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    now = datetime.datetime.now()
+    summary_path = "./log/" + now.strftime("%Y%m%d-%H%M%S") + "/"
+    <a id="change">writer</a> = SummaryWriter(summary_path)
+
+    &#47&#47 model path
+    SAVE_PATH = os.path.join(MODEL_PATH, MODEL + "_" + time.strftime("%y-%m-%d_%H-%M-%S", time.localtime()))
+
+    epoch_start = time.time()
+    <a id="change">batch_iter</a> = 0
+
+    for epoch in range(NUM_EPOCHS):
+
+        loss_sum = 0
+
+        for batch_idx, (features, labels) in enumerate(train_loader):
+            &#47&#47 put model in train mode
+            net.train()
+            start = time.time()
+
+            feature_tensor = features.to(device).float()
+            labels_tensor = labels.to(device).float()
+            del features, labels
+
+            loss, loss_list, acc_num_list = Loss.get_sl_loss_for_tensor(feature_tensor, labels_tensor, net, decrease_smart_opertaion=True)
+            del feature_tensor, labels_tensor
+
+            optimizer.zero_grad()
+            loss.backward() 
+            optimizer.step()
+
+            &#47&#47 add a grad clip
+            parameters = [p for p in net.parameters() if p is not None and p.requires_grad]
+            torch.nn.utils.clip_grad_norm_(parameters, CLIP)
+
+            loss_value = float(loss.item())
+
+            loss_sum += loss_value
+            del loss
+
+            action_accuracy = acc_num_list[0] / (acc_num_list[1] + 1e-9)
+            move_camera_accuracy = acc_num_list[2] / (acc_num_list[3] + 1e-9)
+            non_camera_accuracy = acc_num_list[4] / (acc_num_list[5] + 1e-9)
+
+            batch_time = time.time() - start
+
+            batch_iter += 1
+            print(&quotbatch_iter&quot, batch_iter)
+
+            if batch_iter % EVAL_INTERFEVL == 0:
+                print(&quotEpoch: [{}/{}]| loss: {:.3f} | acc: {:.3f} | batch time: {:.3f}s &quot.format(
+                    batch_iter, epoch, loss_sum / (batch_iter + 1), action_accuracy, batch_time))
+
+                &#47&#47 torch.save(net, SAVE_PATH + "" + ".pkl")
+                &#47&#47 we use new save ways, only save the state_dict, and the extension changes to pt
+                torch.save(net.state_dict(), SAVE_PATH + "" + ".pth")
+
+            <a id="change">write(</a>writer, loss_value, loss_list, action_accuracy, move_camera_accuracy, non_camera_accuracy, batch_iter<a id="change">)</a>
+
+            gc.collect()
+
+        if True:</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    now = datetime.datetime.now()
+    summary_path = "./log/" + now.strftime("%Y%m%d-%H%M%S") + "/"
+    <a id="change">writer</a> = SummaryWriter(summary_path)
+
+    &#47&#47 model path
+    SAVE_PATH = os.path.join(MODEL_PATH, MODEL + "_" + time.strftime("%y-%m-%d_%H-%M-%S", time.localtime()))
+
+    epoch_start = time.time()
+    <a id="change">batch_iter</a> = 0
+
+    for epoch in range(NUM_EPOCHS):
+
+        loss_sum = 0
+
+        for batch_idx, (features, labels) in enumerate(train_loader):
+            &#47&#47 put model in train mode
+            net.train()
+            start = time.time()
+
+            feature_tensor = features.to(device).float()
+            labels_tensor = labels.to(device).float()
+            del features, labels
+
+            loss, loss_list, \
+                acc_num_list = Loss.get_sl_loss_for_tensor(feature_tensor, 
+                                                           labels_tensor, net, 
+                                                           decrease_smart_opertaion=True,
+                                                           return_important=True)
+            del feature_tensor, labels_tensor
+
+            optimizer.zero_grad()
+            loss.backward() 
+            optimizer.step()
+
+            &#47&#47 add a grad clip
+            parameters = [p for p in net.parameters() if p is not None and p.requires_grad]
+            torch.nn.utils.clip_grad_norm_(parameters, CLIP)
+
+            loss_value = float(loss.item())
+
+            loss_sum += loss_value
+            del loss
+
+            action_accuracy = acc_num_list[0] / (acc_num_list[1] + 1e-9)
+            move_camera_accuracy = acc_num_list[2] / (acc_num_list[3] + 1e-9)
+            non_camera_accuracy = acc_num_list[4] / (acc_num_list[5] + 1e-9)
+            short_important_accuracy<a id="change"> = </a><a id="change">acc_num_list[6]</a><a id="change"> / </a>(<a id="change">acc_num_list[7]</a><a id="change"> + 1e-9</a>)
+
+            batch_time = time.time() - start
+
+            batch_iter += 1
+            print(&quotbatch_iter&quot, batch_iter)
+
+            if batch_iter % EVAL_INTERFEVL == 0:
+                print(&quotEpoch: [{}/{}]| loss: {:.3f} | acc: {:.3f} | batch time: {:.3f}s &quot.format(
+                    batch_iter, epoch, loss_sum / (batch_iter + 1), action_accuracy, batch_time))
+
+                &#47&#47 torch.save(net, SAVE_PATH + "" + ".pkl")
+                &#47&#47 we use new save ways, only save the state_dict, and the extension changes to pt
+                torch.save(net.state_dict(), SAVE_PATH + "" + ".pth")
+
+            <a id="change">write(</a>writer, loss_value, loss_list, action_accuracy, 
+                  move_camera_accuracy, non_camera_accuracy, short_important_accuracy,
+                  batch_iter<a id="change">)</a>
+
+            gc.collect()
+
+        if True:
+            print(&quoteval begin&quot)
+            val_loss, val_acc = eval(net, val_set, val_loader, device)
+            print(&quoteval end&quot)
+
+            print("Val loss: {:.6f}.".format(val_loss))
+            writer.add_scalar(&quotVal/Loss&quot, val_loss, batch_iter)
+
+            &#47&#47 for accuracy of actions in val
+            print("Val action acc: {:.6f}.".format(val_acc[0]))
+            writer.add_scalar(&quotVal/action Acc&quot, val_acc[0], batch_iter)
+            print("Val move_camera acc: {:.6f}.".format(val_acc[1]))
+            writer.add_scalar(&quotVal/move_camera Acc&quot, val_acc[1], batch_iter)
+            print("Val non_camera acc: {:.6f}.".format(val_acc[2]))
+            writer.add_scalar(&quotVal/non_camera Acc&quot, val_acc[2], batch_iter)
+            <a id="change">print("Val short_important acc: {:.6f}."</a><a id="change">.format(</a><a id="change">val_acc[3]))</a>
+            <a id="change">writer.add_scalar(&quotVal/short_important Acc&quot</a>, <a id="change">val_acc[3]</a>, batch_iter<a id="change">)</a>
+
+            del val_loss, val_acc
+
+            gc.collect()</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/liuruoze/mini-alphastar/commit/a1606f96ed2e25679c2f552a02e094cdede4b49f#diff-d455886c4a02de3a363a2bf489a2c17960ecc9652780b13a57c16e4babfbe663L162' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 9879910</div><div id='project'> Project Name: liuruoze/mini-alphastar</div><div id='commit'> Commit Name: a1606f96ed2e25679c2f552a02e094cdede4b49f</div><div id='time'> Time: 2021-11-20</div><div id='author'> Author: liuruoze@163.com</div><div id='file'> File Name: alphastarmini/core/sl/sl_train_by_tensor.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train(7)</div><div id='n_method'> N Method Name: train(7)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: alphastarmini/core/sl/sl_train_by_tensor.py</div><div id='n_file'> N File Name: alphastarmini/core/sl/sl_train_by_tensor.py</div><div id='m_start'> M Start Line: 166</div><div id='m_end'> M End Line: 220</div><div id='n_start'> N Start Line: 172</div><div id='n_end'> N End Line: 253</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    now = datetime.datetime.now()
+    summary_path = "./log/" + now.strftime("%Y%m%d-%H%M%S") + "/"
+    <a id="change">writer</a> = SummaryWriter(summary_path)
+
+    &#47&#47 model path
+    SAVE_PATH = os.path.join(MODEL_PATH, MODEL + "_" + time.strftime("%y-%m-%d_%H-%M-%S", time.localtime()))
+
+    epoch_start = time.time()
+    <a id="change">batch_iter</a> = 0
+
+    for epoch in range(NUM_EPOCHS):
+
+        loss_sum = 0
+
+        for batch_idx, (features, labels) in enumerate(train_loader):
+            &#47&#47 put model in train mode
+            net.train()
+            start = time.time()
+
+            feature_tensor = features.to(device).float()
+            labels_tensor = labels.to(device).float()
+            del features, labels
+
+            loss, loss_list, \
+                acc_num_list = Loss.get_sl_loss_for_tensor(feature_tensor, 
+                                                           labels_tensor, net, 
+                                                           decrease_smart_opertaion=True,
+                                                           return_important=True,
+                                                           only_consider_small=True)
+            del feature_tensor, labels_tensor
+
+            optimizer.zero_grad()
+            loss.backward() 
+            optimizer.step()
+
+            &#47&#47 add a grad clip
+            parameters = [p for p in net.parameters() if p is not None and p.requires_grad]
+            torch.nn.utils.clip_grad_norm_(parameters, CLIP)
+
+            loss_value = float(loss.item())
+
+            loss_sum += loss_value
+            del loss
+
+            action_accuracy = acc_num_list[0] / (acc_num_list[1] + 1e-9)
+            move_camera_accuracy = acc_num_list[2] / (acc_num_list[3] + 1e-9)
+            non_camera_accuracy = acc_num_list[4] / (acc_num_list[5] + 1e-9)
+            short_important_accuracy = acc_num_list[6] / (acc_num_list[7] + 1e-9)
+
+            batch_time = time.time() - start
+
+            batch_iter += 1
+            print(&quotbatch_iter&quot, batch_iter)
+
+            if batch_iter % EVAL_INTERFEVL == 0:
+                print(&quotEpoch: [{}/{}]| loss: {:.3f} | acc: {:.3f} | batch time: {:.3f}s &quot.format(
+                    batch_iter, epoch, loss_sum / (batch_iter + 1), action_accuracy, batch_time))
+
+                &#47&#47 torch.save(net, SAVE_PATH + "" + ".pkl")
+                &#47&#47 we use new save ways, only save the state_dict, and the extension changes to pt
+                torch.save(net.state_dict(), SAVE_PATH + "" + ".pth")
+
+            <a id="change">write(</a>writer, loss_value, loss_list, action_accuracy, 
+                  move_camera_accuracy, non_camera_accuracy, short_important_accuracy,
+                  batch_iter<a id="change">)</a>
+
+            gc.collect()
+
+        if True:</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    now = datetime.datetime.now()
+    summary_path = "./log/" + now.strftime("%Y%m%d-%H%M%S") + "/"
+    <a id="change">writer</a> = SummaryWriter(summary_path)
+
+    &#47&#47 model path
+    SAVE_PATH = os.path.join(MODEL_PATH, MODEL + "_" + time.strftime("%y-%m-%d_%H-%M-%S", time.localtime()))
+
+    epoch_start = time.time()
+    <a id="change">batch_iter</a> = 0
+
+    for epoch in range(NUM_EPOCHS):
+
+        loss_sum = 0
+
+        for batch_idx, (features, labels) in enumerate(train_loader):
+            &#47&#47 put model in train mode
+            net.train()
+            start = time.time()
+
+            feature_tensor = features.to(device).float()
+            labels_tensor = labels.to(device).float()
+            del features, labels
+
+            loss, loss_list, \
+                acc_num_list = Loss.get_sl_loss_for_tensor(feature_tensor, 
+                                                           labels_tensor, net, 
+                                                           decrease_smart_opertaion=True,
+                                                           return_important=True,
+                                                           only_consider_small=True,
+                                                           include_location_accuracy=True)
+            del feature_tensor, labels_tensor
+
+            optimizer.zero_grad()
+            loss.backward() 
+            optimizer.step()
+
+            &#47&#47 add a grad clip
+            parameters = [p for p in net.parameters() if p is not None and p.requires_grad]
+            torch.nn.utils.clip_grad_norm_(parameters, CLIP)
+
+            loss_value = float(loss.item())
+
+            loss_sum += loss_value
+            del loss
+
+            action_accuracy = acc_num_list[0] / (acc_num_list[1] + 1e-9)
+            move_camera_accuracy = acc_num_list[2] / (acc_num_list[3] + 1e-9)
+            non_camera_accuracy = acc_num_list[4] / (acc_num_list[5] + 1e-9)
+            short_important_accuracy = acc_num_list[6] / (acc_num_list[7] + 1e-9)
+
+            location_accuracy = acc_num_list[8] / (acc_num_list[9] + 1e-9)
+            location_distance<a id="change"> = </a><a id="change">acc_num_list[11]</a><a id="change"> / </a>(<a id="change">acc_num_list[9]</a><a id="change"> + 1e-9</a>)
+
+            batch_time = time.time() - start
+
+            batch_iter += 1
+            print(&quotbatch_iter&quot, batch_iter)
+
+            if batch_iter % EVAL_INTERFEVL == 0:
+                print(&quotEpoch: [{}/{}]| loss: {:.3f} | acc: {:.3f} | batch time: {:.3f}s &quot.format(
+                    batch_iter, epoch, loss_sum / (batch_iter + 1), action_accuracy, batch_time))
+
+                &#47&#47 torch.save(net, SAVE_PATH + "" + ".pkl")
+                &#47&#47 we use new save ways, only save the state_dict, and the extension changes to pt
+                torch.save(net.state_dict(), SAVE_PATH + "" + ".pth")
+
+            <a id="change">write(</a>writer, loss_value, loss_list, action_accuracy, 
+                  move_camera_accuracy, non_camera_accuracy, short_important_accuracy,
+                  location_accuracy, location_distance,
+                  batch_iter<a id="change">)</a>
+
+            gc.collect()
+
+        if True:
+            print(&quoteval begin&quot)
+            val_loss, val_acc = eval(net, val_set, val_loader, device)
+            print(&quoteval end&quot)
+
+            print("Val loss: {:.6f}.".format(val_loss))
+            writer.add_scalar(&quotVal/Loss&quot, val_loss, batch_iter)
+
+            &#47&#47 for accuracy of actions in val
+            print("Val action acc: {:.6f}.".format(val_acc[0]))
+            writer.add_scalar(&quotVal/action Acc&quot, val_acc[0], batch_iter)
+            print("Val move_camera acc: {:.6f}.".format(val_acc[1]))
+            writer.add_scalar(&quotVal/move_camera Acc&quot, val_acc[1], batch_iter)
+            print("Val non_camera acc: {:.6f}.".format(val_acc[2]))
+            writer.add_scalar(&quotVal/non_camera Acc&quot, val_acc[2], batch_iter)
+            print("Val short_important acc: {:.6f}.".format(val_acc[3]))
+            writer.add_scalar(&quotVal/short_important Acc&quot, val_acc[3], batch_iter)
+            <a id="change">print("Val location_accuracy acc: {:.6f}."</a><a id="change">.format(</a><a id="change">val_acc[4]))</a>
+            <a id="change">writer.add_scalar(&quotVal/location_accuracy Acc&quot</a>, <a id="change">val_acc[4]</a>, batch_iter<a id="change">)</a>
+            print("Val location_distance acc: {:.6f}.".format(val_acc[5]))
+            writer.add_scalar(&quotVal/location_distance Acc&quot, val_acc[5], batch_iter)
+
+            del val_loss, val_acc</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/liuruoze/mini-alphastar/commit/7e2121bdd2cb29e590f88dee2bc9bf523e3cf77c#diff-d455886c4a02de3a363a2bf489a2c17960ecc9652780b13a57c16e4babfbe663L168' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 9879922</div><div id='project'> Project Name: liuruoze/mini-alphastar</div><div id='commit'> Commit Name: 7e2121bdd2cb29e590f88dee2bc9bf523e3cf77c</div><div id='time'> Time: 2021-11-22</div><div id='author'> Author: liuruoze@163.com</div><div id='file'> File Name: alphastarmini/core/sl/sl_train_by_tensor.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train(7)</div><div id='n_method'> N Method Name: train(7)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: alphastarmini/core/sl/sl_train_by_tensor.py</div><div id='n_file'> N File Name: alphastarmini/core/sl/sl_train_by_tensor.py</div><div id='m_start'> M Start Line: 172</div><div id='m_end'> M End Line: 234</div><div id='n_start'> N Start Line: 172</div><div id='n_end'> N End Line: 263</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    now = datetime.datetime.now()
+    summary_path = "./log/" + now.strftime("%Y%m%d-%H%M%S") + "/"
+    <a id="change">writer</a> = SummaryWriter(summary_path)
+
+    &#47&#47 model path
+    SAVE_PATH = os.path.join(MODEL_PATH, MODEL + "_" + time.strftime("%y-%m-%d_%H-%M-%S", time.localtime()))
+
+    epoch_start = time.time()
+    <a id="change">batch_iter</a> = 0
+
+    for epoch in range(NUM_EPOCHS):
+
+        loss_sum = 0
+
+        for batch_idx, (features, labels) in enumerate(train_loader):
+            &#47&#47 put model in train mode
+            net.train()
+            start = time.time()
+
+            feature_tensor = features.to(device).float()
+            labels_tensor = labels.to(device).float()
+            del features, labels
+
+            loss, loss_list, \
+                acc_num_list = Loss.get_sl_loss_for_tensor(feature_tensor, 
+                                                           labels_tensor, net, 
+                                                           decrease_smart_opertaion=True,
+                                                           return_important=True,
+                                                           only_consider_small=False,
+                                                           include_location_accuracy=True,
+                                                           include_selected_units_accuracy=True)
+            del feature_tensor, labels_tensor
+
+            optimizer.zero_grad()
+            loss.backward() 
+            optimizer.step()
+
+            &#47&#47 add a grad clip
+            parameters = [p for p in net.parameters() if p is not None and p.requires_grad]
+            torch.nn.utils.clip_grad_norm_(parameters, CLIP)
+
+            loss_value = float(loss.item())
+
+            loss_sum += loss_value
+            del loss
+
+            action_accuracy = acc_num_list[0] / (acc_num_list[1] + 1e-9)
+            move_camera_accuracy = acc_num_list[2] / (acc_num_list[3] + 1e-9)
+            non_camera_accuracy = acc_num_list[4] / (acc_num_list[5] + 1e-9)
+            short_important_accuracy = acc_num_list[6] / (acc_num_list[7] + 1e-9)
+
+            location_accuracy = acc_num_list[8] / (acc_num_list[9] + 1e-9)
+            location_distance = acc_num_list[11] / (acc_num_list[9] + 1e-9)
+
+            selected_units_accuracy = acc_num_list[12] / (acc_num_list[13] + 1e-9)
+            selected_units_coverage = acc_num_list[14] / (acc_num_list[13] + 1e-9)
+
+            batch_time = time.time() - start
+
+            batch_iter += 1
+            print(&quotbatch_iter&quot, batch_iter)
+
+            if batch_iter % EVAL_INTERFEVL == 0:
+                print(&quotEpoch: [{}/{}]| loss: {:.3f} | acc: {:.3f} | batch time: {:.3f}s &quot.format(
+                    batch_iter, epoch, loss_sum / (batch_iter + 1), action_accuracy, batch_time))
+
+                &#47&#47 torch.save(net, SAVE_PATH + "" + ".pkl")
+                &#47&#47 we use new save ways, only save the state_dict, and the extension changes to pt
+                torch.save(net.state_dict(), SAVE_PATH + "" + ".pth")
+
+            <a id="change">write(</a>writer, loss_value, loss_list, action_accuracy, 
+                  move_camera_accuracy, non_camera_accuracy, short_important_accuracy,
+                  location_accuracy, location_distance, selected_units_accuracy,
+                  selected_units_coverage,
+                  batch_iter<a id="change">)</a>
+
+            gc.collect()
+
+        if True:</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    now = datetime.datetime.now()
+    summary_path = "./log/" + now.strftime("%Y%m%d-%H%M%S") + "/"
+    <a id="change">writer</a> = SummaryWriter(summary_path)
+
+    &#47&#47 model path
+    SAVE_PATH = os.path.join(MODEL_PATH, MODEL + "_" + time.strftime("%y-%m-%d_%H-%M-%S", time.localtime()))
+
+    epoch_start = time.time()
+    <a id="change">batch_iter</a> = 0
+
+    for epoch in range(NUM_EPOCHS):
+
+        loss_sum = 0
+
+        for batch_idx, (features, labels) in enumerate(train_loader):
+            &#47&#47 put model in train mode
+            net.train()
+            start = time.time()
+
+            feature_tensor = features.to(device).float()
+            labels_tensor = labels.to(device).float()
+            del features, labels
+
+            loss, loss_list, \
+                acc_num_list = Loss.get_sl_loss_for_tensor(feature_tensor, 
+                                                           labels_tensor, net, 
+                                                           decrease_smart_opertaion=True,
+                                                           return_important=True,
+                                                           only_consider_small=False
+                                                           )
+            del feature_tensor, labels_tensor
+
+            optimizer.zero_grad()
+            loss.backward() 
+            optimizer.step()
+
+            &#47&#47 add a grad clip
+            parameters = [p for p in net.parameters() if p is not None and p.requires_grad]
+            torch.nn.utils.clip_grad_norm_(parameters, CLIP)
+
+            loss_value = float(loss.item())
+
+            loss_sum += loss_value
+            del loss
+
+            action_accuracy = acc_num_list[0] / (acc_num_list[1] + 1e-9)
+            move_camera_accuracy = acc_num_list[2] / (acc_num_list[3] + 1e-9)
+            non_camera_accuracy = acc_num_list[4] / (acc_num_list[5] + 1e-9)
+            short_important_accuracy = acc_num_list[6] / (acc_num_list[7] + 1e-9)
+
+            location_accuracy = acc_num_list[8] / (acc_num_list[9] + 1e-9)
+            location_distance = acc_num_list[11] / (acc_num_list[9] + 1e-9)
+
+            selected_units_accuracy = acc_num_list[12] / (acc_num_list[13] + 1e-9)
+            selected_units_coverage = acc_num_list[14] / (acc_num_list[13] + 1e-9)
+
+            target_unit_accuracy<a id="change"> = </a><a id="change">acc_num_list[16]</a><a id="change"> / </a>(<a id="change">acc_num_list[17]</a><a id="change"> + 1e-9</a>)
+
+            batch_time = time.time() - start
+
+            batch_iter += 1
+            print(&quotbatch_iter&quot, batch_iter)
+
+            if batch_iter % EVAL_INTERFEVL == 0:
+                print(&quotEpoch: [{}/{}]| loss: {:.3f} | acc: {:.3f} | batch time: {:.3f}s &quot.format(
+                    batch_iter, epoch, loss_sum / (batch_iter + 1), action_accuracy, batch_time))
+
+                &#47&#47 torch.save(net, SAVE_PATH + "" + ".pkl")
+                &#47&#47 we use new save ways, only save the state_dict, and the extension changes to pt
+                torch.save(net.state_dict(), SAVE_PATH + "" + ".pth")
+
+            <a id="change">write(</a>writer, loss_value, loss_list, action_accuracy, 
+                  move_camera_accuracy, non_camera_accuracy, short_important_accuracy,
+                  location_accuracy, location_distance, selected_units_accuracy,
+                  selected_units_coverage, target_unit_accuracy,
+                  batch_iter<a id="change">)</a>
+
+            gc.collect()
+
+        if True:
+            print(&quoteval begin&quot)
+            val_loss, val_acc = eval(net, val_set, val_loader, device)
+            print(&quoteval end&quot)
+
+            print("Val loss: {:.6f}.".format(val_loss))
+            writer.add_scalar(&quotVal/Loss&quot, val_loss, batch_iter)
+
+            &#47&#47 for accuracy of actions in val
+            print("Val action acc: {:.6f}.".format(val_acc[0]))
+            writer.add_scalar(&quotVal/action Acc&quot, val_acc[0], batch_iter)
+            print("Val move_camera acc: {:.6f}.".format(val_acc[1]))
+            writer.add_scalar(&quotVal/move_camera Acc&quot, val_acc[1], batch_iter)
+            print("Val non_camera acc: {:.6f}.".format(val_acc[2]))
+            writer.add_scalar(&quotVal/non_camera Acc&quot, val_acc[2], batch_iter)
+            print("Val short_important acc: {:.6f}.".format(val_acc[3]))
+            writer.add_scalar(&quotVal/short_important Acc&quot, val_acc[3], batch_iter)
+            print("Val location_accuracy acc: {:.6f}.".format(val_acc[4]))
+            writer.add_scalar(&quotVal/location_accuracy Acc&quot, val_acc[4], batch_iter)
+            print("Val location_distance acc: {:.6f}.".format(val_acc[5]))
+            writer.add_scalar(&quotVal/location_distance Acc&quot, val_acc[5], batch_iter)
+            print("Val selected_units_accuracy acc: {:.6f}.".format(val_acc[6]))
+            writer.add_scalar(&quotVal/selected_units_accuracy Acc&quot, val_acc[6], batch_iter)
+            print("Val selected_units_coverage acc: {:.6f}.".format(val_acc[7]))
+            writer.add_scalar(&quotVal/selected_units_coverage Acc&quot, val_acc[7], batch_iter)
+            <a id="change">print("Val target_unit_accuracy acc: {:.6f}."</a><a id="change">.format(</a><a id="change">val_acc[8]))</a>
+            <a id="change">writer.add_scalar(&quotVal/target_unit_accuracy Acc&quot</a>, <a id="change">val_acc[8]</a>, batch_iter<a id="change">)</a>            
+
+            del val_loss, val_acc
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/liuruoze/mini-alphastar/commit/8c18233cf6e68abb581292c36f4059d7d950fc69#diff-d455886c4a02de3a363a2bf489a2c17960ecc9652780b13a57c16e4babfbe663L179' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 9879914</div><div id='project'> Project Name: liuruoze/mini-alphastar</div><div id='commit'> Commit Name: 8c18233cf6e68abb581292c36f4059d7d950fc69</div><div id='time'> Time: 2021-11-30</div><div id='author'> Author: liuruoze@163.com</div><div id='file'> File Name: alphastarmini/core/sl/sl_train_by_tensor.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train(7)</div><div id='n_method'> N Method Name: train(7)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: alphastarmini/core/sl/sl_train_by_tensor.py</div><div id='n_file'> N File Name: alphastarmini/core/sl/sl_train_by_tensor.py</div><div id='m_start'> M Start Line: 183</div><div id='m_end'> M End Line: 255</div><div id='n_start'> N Start Line: 183</div><div id='n_end'> N End Line: 286</div><BR>

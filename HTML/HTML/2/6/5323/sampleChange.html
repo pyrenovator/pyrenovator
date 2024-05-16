@@ -1,0 +1,43 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+    env = env_fn(1)[0]
+    print("env generated at process ID: {}".format(os.getpid()))
+    <a id="change">try:
+        </a>while True:
+            cmd, data = remote.recv()
+            if cmd == &quotstep&quot:
+                if env.done:
+                    env.reset()
+                elif data is not None:
+                    env.step(data)  &#47&#47 do action
+            elif cmd == &quotreset&quot:
+                env.reset()
+            elif cmd == &quotget_state_reward_done&quot:
+                remote.send((env.state<a id="change">, env.reward, env.done</a>))
+            elif cmd == &quotclose&quot:
+                remote.close()
+                break</code></pre><h3>After Change</h3><pre><code class='java'>
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+
+    env<a id="change"> = </a>make_env()
+    env.seed(seed)
+    lazy_agent = lazy_agent_class(shared_models)
+    print("env generated at process ID: {}".format(os.getpid()))
+
+    while not done_event.is_set():
+        env.reset()
+        returns<a id="change"> = </a>0
+        action = lazy_agent.act(env.state, env.reward)
+
+        <a id="change">while </a>not env.done<a id="change">:
+            </a>with shared_frames.get_lock():
+                shared_frames.value += 1
+            env.step(action)
+            returns<a id="change"> += </a>env.reward
+            action = lazy_agent.act(env.state, env.reward)
+        with shared_episodes.get_lock():
+            shared_episodes.value += 1</code></pre>

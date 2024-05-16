@@ -1,0 +1,28 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+def shift_tokens(x, amt):
+    *x, x_pass = x.chunk(amt + 1, dim = -1)
+    x = <a id="change">tuple(</a>map(lambda args: shift(*args), zip(x, range(0, amt + 1)))<a id="change">)</a>
+    return torch.cat((*x, x_pass), dim = -1)
+
+&#47&#47 helper classes
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    amts = 2 ** torch.arange(amt)
+    amts = amts.tolist()
+
+    shifts<a id="change"> = </a><a id="change">[]</a>
+    denom<a id="change"> = </a>torch.arange(n, device = device)
+
+    <a id="change">for </a>x_chunk, x_cumsum_chunk, amt in zip(x, x_cumsum, amts)<a id="change">:
+        </a>shifted_chunk = shift(x_cumsum_chunk, amt, dim = -2) - shift(x_cumsum_chunk, 2 * amt, dim = -2)
+        shifted_denom = shift(denom, amt, dim = -1) - shift(denom, 2 * amt, dim = -1)
+        shifted_denom = rearrange(shifted_denom, &quotn -&gt; () n ()&quot)
+        normed_shifted_x<a id="change"> = </a>shifted_chunk /  (shifted_denom + eps)
+        <a id="change">shifts.append(</a>normed_shifted_x<a id="change">)</a>
+
+    return torch.cat((*shifts, x_pass), dim = -1)
+
+&#47&#47 helper classes</code></pre>

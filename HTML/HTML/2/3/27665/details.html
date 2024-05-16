@@ -1,0 +1,65 @@
+<html><h3>Pattern ID :27665
+</h3><img src='82100260.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+    def forward(self, user, item):
+        user = torch.from_numpy(self.interaction_matrix[user.cpu()].todense()).to(self.device)
+        item = torch.from_numpy(self.interaction_matrix[:, <a id="change">item.cpu()</a>].todense()).to(self.device).t()
+        user = self.user_linear(user)
+        item = self.item_linear(item)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 Following lines construct tensor of shape [B,n_users] using the tensor of shape [B,H]
+        col_indices = self.history_user_id[item].flatten()
+        row_indices = torch.arange(item.shape[0]).to(self.device).repeat_interleave(self.history_user_id.shape[1], dim=0)
+        matrix_01 = <a id="change">torch.zeros(1).to(self.device).repeat(</a>item.shape[0], self.n_users<a id="change">)</a>
+        matrix_01.index_put_((row_indices, col_indices), self.history_user_value[item].flatten())
+        item = self.item_linear(matrix_01)
+
+        user = self.user_fc_layers(user)
+        item = self.item_fc_layers(item)
+
+        user = F.normalize(user, p=2, dim=1)   &#47&#47 after normalize the vector, cosine distance reduced to dot product.
+        item<a id="change"> = </a>F.normalize(item, p=2, dim=1)
+        vector = torch.mul(user, item).sum(dim=1)
+
+        vector = torch.max(vector, self.min_y_hat)  &#47&#47 restrict the result to [0, 1].</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/rucaibox/recbole/commit/a63051c31f6cacc489710809995b2610a52b96d6#diff-c0fe1d45c47ca036a8c10b653717b9e13ef033a28d761ee73169dd2741cf1ae5L73' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 82100260</div><div id='project'> Project Name: rucaibox/recbole</div><div id='commit'> Commit Name: a63051c31f6cacc489710809995b2610a52b96d6</div><div id='time'> Time: 2020-09-17</div><div id='author'> Author: 893833413@qq.com</div><div id='file'> File Name: recbox/model/general_recommender/dmf.py</div><div id='m_class'> M Class Name: DMF</div><div id='n_method'> N Class Name: DMF</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: GeneralRecommender</div><div id='n_parent_class'> N Parent Class: GeneralRecommender</div><div id='m_file'> M File Name: recbox/model/general_recommender/dmf.py</div><div id='n_file'> N File Name: recbox/model/general_recommender/dmf.py</div><div id='m_start'> M Start Line: 73</div><div id='m_end'> M End Line: 82</div><div id='n_start'> N Start Line: 90</div><div id='n_end'> N End Line: 106</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    
+    batch_size, seq_len, vocab_size = logits.size()
+    mask_positions_after_reshaped = []
+    for batch, mask_pos in enumerate(<a id="change">mask_positions.detach().cpu()</a>.numpy().tolist()):
+        for pos in mask_pos:
+            mask_positions_after_reshaped.append(batch * seq_len + pos)
+    </code></pre><h3>After Change</h3><pre><code class='java'>
+    loss = None
+    for single_logits, single_sub_mask_labels, single_mask_positions in zip(logits, sub_mask_labels, mask_positions):
+        single_mask_logits = single_logits[single_mask_positions]                           &#47&#47 (mask_label_num, vocab_size)
+        single_mask_logits = <a id="change">single_mask_logits.repeat(</a>len(single_sub_mask_labels), 1, 1<a id="change">)</a>   &#47&#47 (sub_label_num, mask_label_num, vocab_size)
+        single_mask_logits = single_mask_logits.reshape(-1, vocab_size)                     &#47&#47 (sub_label_num * mask_label_num, vocab_size)
+        single_sub_mask_labels = torch.LongTensor(single_sub_mask_labels).to(device)        &#47&#47 (sub_label_num, mask_label_num)
+        single_sub_mask_labels = single_sub_mask_labels.reshape(-1, 1).squeeze()            &#47&#47 (sub_label_num * mask_label_num)
+        cur_loss = cross_entropy_criterion(single_mask_logits, single_sub_mask_labels)
+        cur_loss = cur_loss / len(single_sub_mask_labels)
+        if not loss:
+            loss = cur_loss
+        else:
+            loss<a id="change"> += </a>cur_loss
+    loss = loss / batch_size                                                                &#47&#47 (1,)
+    return loss / masked_lm_scale
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/harderthenharder/transformers_tasks/commit/bf825bb22c43795f1e3a08cf8969ddc613051e76#diff-8c36ce9e3ab2da910c520055f7c89509da251069c3ed661eb343bdade6fe30edL181' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 82100246</div><div id='project'> Project Name: harderthenharder/transformers_tasks</div><div id='commit'> Commit Name: bf825bb22c43795f1e3a08cf8969ddc613051e76</div><div id='time'> Time: 2022-11-30</div><div id='author'> Author: pankeyu@pankeyus-MacBook-Pro.local</div><div id='file'> File Name: prompt_tasks/p-tuning/utils.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: mlm_loss(6)</div><div id='n_method'> N Method Name: mlm_loss(6)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: prompt_tasks/p-tuning/utils.py</div><div id='n_file'> N File Name: prompt_tasks/p-tuning/utils.py</div><div id='m_start'> M Start Line: 204</div><div id='m_end'> M End Line: 212</div><div id='n_start'> N Start Line: 190</div><div id='n_end'> N End Line: 203</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        return self.forward(user, item)
+
+    def get_user_embedding(self, user):
+        user = torch.from_numpy(self.interaction_matrix[<a id="change">user.cpu()</a>].todense()).to(self.device)
+        user = self.user_linear(user)
+        user = self.user_fc_layers(user)
+        return user</code></pre><h3>After Change</h3><pre><code class='java'>
+        col_indices = self.history_item_id[user].flatten()
+        row_indices = torch.arange(user.shape[0]).to(self.device).repeat_interleave(self.history_item_id.shape[1],
+                                                                                    dim=0)
+        matrix_01<a id="change"> = </a><a id="change">torch.zeros(1).to(self.device).repeat(</a>user.shape[0], self.n_items<a id="change">)</a>
+        matrix_01.index_put_((row_indices, col_indices), self.history_item_value[user].flatten())
+        user = self.user_linear(matrix_01)
+
+        return user</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/rucaibox/recbole/commit/a63051c31f6cacc489710809995b2610a52b96d6#diff-c0fe1d45c47ca036a8c10b653717b9e13ef033a28d761ee73169dd2741cf1ae5L106' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 82100254</div><div id='project'> Project Name: rucaibox/recbole</div><div id='commit'> Commit Name: a63051c31f6cacc489710809995b2610a52b96d6</div><div id='time'> Time: 2020-09-17</div><div id='author'> Author: 893833413@qq.com</div><div id='file'> File Name: recbox/model/general_recommender/dmf.py</div><div id='m_class'> M Class Name: DMF</div><div id='n_method'> N Class Name: DMF</div><div id='m_method'> M Method Name: get_user_embedding(2)</div><div id='n_method'> N Method Name: get_user_embedding(2)</div><div id='m_parent_class'> M Parent Class: GeneralRecommender</div><div id='n_parent_class'> N Parent Class: GeneralRecommender</div><div id='m_file'> M File Name: recbox/model/general_recommender/dmf.py</div><div id='n_file'> N File Name: recbox/model/general_recommender/dmf.py</div><div id='m_start'> M Start Line: 107</div><div id='m_end'> M End Line: 109</div><div id='n_start'> N Start Line: 141</div><div id='n_end'> N End Line: 146</div><BR>

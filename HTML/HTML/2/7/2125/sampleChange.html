@@ -1,0 +1,24 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+        real_loss = F.cross_entropy(real_y, real_label) &#47&#47 mean loss
+        fake_loss = F.cross_entropy(fake_y, fake_label) &#47&#47 mean loss
+        loss = (real_loss + fake_loss) / 2 + self.l2_reg_lambda * (<a id="change">self.W_O.weight.norm()</a> + self.W_O.bias.norm())
+
+        return loss
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        real_label = torch.ones_like(real_y, dtype=torch.int64)[:, 0].long() &#47&#47 [1,1,1]
+        fake_label = torch.zeros_like(fake_y, dtype=torch.int64)[:, 0].long() &#47&#47 [0,0,0]
+        label<a id="change"> = torch</a><a id="change">.cat(</a>[real_label, fake_label]<a id="change">, dim=-1)</a>
+        loss = F.cross_entropy(pre_logits, label)
+
+        loss = loss + self.l2_reg_lambda * (torch.norm(self.W_O.weight, 2) + torch.norm(self.W_O.bias, 2))
+
+        pred = torch.cat([real_y, fake_y], dim=0) &#47&#47 bs*2
+        target<a id="change"> = torch</a><a id="change">.cat([</a>real_label, fake_label<a id="change"></a>]<a id="change">,dim=0)</a> &#47&#47 bs
+        acc = torch.sum((pred.argmax(dim=-1) == target)).item()
+        acc = acc / pred.size()[0]
+        return loss, acc</code></pre>

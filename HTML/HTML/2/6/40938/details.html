@@ -1,0 +1,181 @@
+<html><h3>Pattern ID :40938
+</h3><img src='115376064.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    if global_normalization:
+        log.debug(
+            "Global Normalization Data Parameters (shift, scale): {}".format(
+                [(k<a id="change">, v</a>) for k, v in global_data_params.items()]
+            )
+        )
+    &#47&#47 Compute individual  data params</code></pre><h3>After Change</h3><pre><code class='java'>
+        df_merged, normalize, config_covariates, config_regressor, config_events
+    )
+    if global_normalization:
+        <a id="change">log.debug(
+            f"Global Normalization Data Parameters (shift, scale): {[(k, v) for k, v in global_data_params.items()]}"</a><a id="change">
+        )</a>
+    &#47&#47 Compute individual  data params
+    local_data_params = OrderedDict()
+    for df_name, df_i in df.groupby("ID"):
+        df_i.drop("ID", axis=1, inplace=True)
+        local_data_params[df_name] = data_params_definition(
+            df_i, normalize, config_covariates, config_regressor, config_events
+        )
+        if global_time_normalization:
+            &#47&#47 Overwrite local time normalization data_params with global values (pointer)
+            local_data_params[df_name]["ds"] = global_data_params["ds"]
+        if not global_normalization:
+            <a id="change">log.debug(
+                f"Local Normalization Data Parameters (shift, scale): {[(k, v) for k, v in local_data_params[df_name].items()]}"</a><a id="change">
+            )</a>
+    return local_data_params, global_data_params
+
+
+def auto_normalization_setting(array):</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/ourownstory/neural_prophet/commit/bfdc5efcdea28fc7cf82710feda29a0824abb5ea#diff-cb8ae2d50e5d5d245ed6fcc8cadf2baf7294fa9ac5c63e819fbfe34f0e4c2552L293' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 115376064</div><div id='project'> Project Name: ourownstory/neural_prophet</div><div id='commit'> Commit Name: bfdc5efcdea28fc7cf82710feda29a0824abb5ea</div><div id='time'> Time: 2022-09-21</div><div id='author'> Author: kevinrchen0@gmail.com</div><div id='file'> File Name: neuralprophet/df_utils.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: init_data_params(7)</div><div id='n_method'> N Method Name: init_data_params(7)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: neuralprophet/df_utils.py</div><div id='n_file'> N File Name: neuralprophet/df_utils.py</div><div id='m_start'> M Start Line: 293</div><div id='m_end'> M End Line: 317</div><div id='n_start'> N Start Line: 297</div><div id='n_end'> N End Line: 313</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    with torch.no_grad():
+        for i, (data, target) in enumerate(tqdm(data_loader)):
+            data, target = data.to(device)<a id="change">, target.to(device)</a>
+            output = model(data)
+
+            &#47&#47
+            &#47&#47 save sample images, or do something with output here</code></pre><h3>After Change</h3><pre><code class='java'>
+
+def main(args):
+    config = ConfigParser(args, resume=args.model_path)
+    <a id="change">logger</a> = config.get_logger(&quottest&quot)
+
+    &#47&#47 testset
+    testset = config.init_obj(&quotdataset&quot, module_data, mode=&quottest&quot)
+    &#47&#47 dataloader
+    testloader = config.init_obj(&quotdata_loader&quot, module_data, testset)
+
+    &#47&#47 build model architecture
+    model = config.init_obj(&quotmodel&quot, module_model)
+    logger.debug(model)
+
+    &#47&#47 get function handles of loss and metrics
+    loss_fn = getattr(module_loss, config[&quotloss&quot])
+    metric_fns = [getattr(module_metric, met) for met in config[&quotmetrics&quot]]
+
+    logger.debug(&quotLoading model: {} ...&quot.format(config.resume))
+    checkpoint = torch.load(config.resume)
+    state_dict = checkpoint[&quotstate_dict&quot]
+    if config[&quotn_gpu&quot] &gt; 1:
+        model = torch.nn.DataParallel(model)
+    model.load_state_dict(state_dict)
+
+    &#47&#47 prepare model for testing
+    device = torch.device(&quotcuda&quot if torch.cuda.is_available() else &quotcpu&quot)
+    model = model.to(device)
+    model.eval()
+
+    total_loss = 0.0
+    total_metrics = torch.zeros(len(metric_fns))
+
+    image_id = []
+    label = []
+    with torch.no_grad():
+        <a id="change">logger.debug(&quottesting...&quot</a><a id="change">)</a>
+        for i, (data, target) in enumerate(testloader):
+            data = data.to(device)
+            output = model(data)
+            pred = output.max(1, keepdim=True)[1].squeeze()
+            &#47&#47
+            &#47&#47 save sample images, or do something with output here
+            &#47&#47
+            image_id.extend(target)
+            label.extend(pred.data.cpu().tolist())
+            output_path = os.path.join(args.output_dir, target)
+
+            &#47&#47&#47&#47 computing loss, metrics on test set
+            &#47&#47loss = loss_fn(output, target)
+            &#47&#47batch_size = data.shape[0]
+            &#47&#47total_loss += loss.item() * batch_size
+            &#47&#47for i, metric in enumerate(metric_fns):
+            &#47&#47    total_metrics[i] += metric(output, target) * batch_size
+
+    df = pd.DataFrame({&quotimage_id&quot: image_id, &quotlabel&quot: label})
+    out_csv = os.path.join(args.out_dir, &quottest_pred.csv&quot)
+    df.to_csv(out_csv, index=False)
+    <a id="change">logger.debug(&quotdone.&quot</a><a id="change">)</a>
+
+
+if __name__ == &quot__main__&quot:
+    args = argparse.ArgumentParser(description=&quottesting&quot)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/deeperlearner/pytorch-template/commit/49ac2e7c4e18177db31ae741c8dfd7cdbf5ca0f0#diff-3665d65394f4f58a56a256ad6dd8621c68118d90fe56a19387e251c19cec2d2eL13' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 115376065</div><div id='project'> Project Name: deeperlearner/pytorch-template</div><div id='commit'> Commit Name: 49ac2e7c4e18177db31ae741c8dfd7cdbf5ca0f0</div><div id='time'> Time: 2020-11-11</div><div id='author'> Author: b04202035@g.ntu.edu.tw</div><div id='file'> File Name: test.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(1)</div><div id='n_method'> N Method Name: main(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: test.py</div><div id='n_file'> N File Name: test.py</div><div id='m_start'> M Start Line: 15</div><div id='m_end'> M End Line: 62</div><div id='n_start'> N Start Line: 20</div><div id='n_end'> N End Line: 76</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        if not global_normalization:
+            log.debug(
+                "Local Normalization Data Parameters (shift, scale): {}".format(
+                    [(k<a id="change">, v</a>) for k, v in local_data_params[df_name].items()]
+                )
+            )
+    return local_data_params, global_data_params</code></pre><h3>After Change</h3><pre><code class='java'>
+        df_merged, normalize, config_covariates, config_regressor, config_events
+    )
+    if global_normalization:
+        <a id="change">log.debug(
+            f"Global Normalization Data Parameters (shift, scale): {[(k, v) for k, v in global_data_params.items()]}"</a><a id="change">
+        )</a>
+    &#47&#47 Compute individual  data params
+    local_data_params = OrderedDict()
+    for df_name, df_i in df.groupby("ID"):
+        df_i.drop("ID", axis=1, inplace=True)
+        local_data_params[df_name] = data_params_definition(
+            df_i, normalize, config_covariates, config_regressor, config_events
+        )
+        if global_time_normalization:
+            &#47&#47 Overwrite local time normalization data_params with global values (pointer)
+            local_data_params[df_name]["ds"] = global_data_params["ds"]
+        if not global_normalization:
+            <a id="change">log.debug(
+                f"Local Normalization Data Parameters (shift, scale): {[(k, v) for k, v in local_data_params[df_name].items()]}"</a><a id="change">
+            )</a>
+    return local_data_params, global_data_params
+
+
+def auto_normalization_setting(array):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/ourownstory/neural_prophet/commit/bfdc5efcdea28fc7cf82710feda29a0824abb5ea#diff-cb8ae2d50e5d5d245ed6fcc8cadf2baf7294fa9ac5c63e819fbfe34f0e4c2552L229' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 115376067</div><div id='project'> Project Name: ourownstory/neural_prophet</div><div id='commit'> Commit Name: bfdc5efcdea28fc7cf82710feda29a0824abb5ea</div><div id='time'> Time: 2022-09-21</div><div id='author'> Author: kevinrchen0@gmail.com</div><div id='file'> File Name: neuralprophet/df_utils.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: init_data_params(7)</div><div id='n_method'> N Method Name: init_data_params(7)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: neuralprophet/df_utils.py</div><div id='n_file'> N File Name: neuralprophet/df_utils.py</div><div id='m_start'> M Start Line: 293</div><div id='m_end'> M End Line: 317</div><div id='n_start'> N Start Line: 297</div><div id='n_end'> N End Line: 313</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            assert inputs.shape[-1] == self.latent_dim + self.label_features
+        else:
+            assert inputs.shape[-1] == self.latent_dim
+        batch_size<a id="change">, _</a> = inputs.shape
+        logging.debug(f"- Decoder inputs are of shape {inputs.shape}")
+
+        h = self.linear(inputs)</code></pre><h3>After Change</h3><pre><code class='java'>
+            assert inputs.shape[-1] == self.latent_dim
+        
+        logging.debug(f"- Decoder inputs are of shape {inputs.shape}")
+        <a id="change">logging.debug(&quotSHAPE OF inputs&quot</a><a id="change">)</a>
+        logging.debug(inputs.shape)
+        h = self.linear(inputs)
+        h = self.leakyrelu(h)
+        <a id="change">logging.debug("SHAPE OF h"</a><a id="change">)</a>
+        logging.debug(h.shape)
+        &#47&#47 assert h.shape == (self.batch_size, self.h_features_loop)
+        h = h.reshape((h.shape[0], 1, h.shape[-1]))
+        h = h.repeat(1, self.seq_len, 1)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/bioshape-lab/pirounet/commit/149d8ab584d8a5bd20c5f508a727bb53b470cc0f#diff-531ef4b8af75e292e1c74dd856ab771e6420f1590fa253bc755c012f5b5ce82eL160' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 115376059</div><div id='project'> Project Name: bioshape-lab/pirounet</div><div id='commit'> Commit Name: 149d8ab584d8a5bd20c5f508a727bb53b470cc0f</div><div id='time'> Time: 2022-05-17</div><div id='author'> Author: papillon@umail.ucsb.edu</div><div id='file'> File Name: move/nn.py</div><div id='m_class'> M Class Name: LstmDecoder</div><div id='n_method'> N Class Name: LstmDecoder</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: torch.nn.Module</div><div id='n_parent_class'> N Parent Class: torch.nn.Module</div><div id='m_file'> M File Name: move/nn.py</div><div id='n_file'> N File Name: move/nn.py</div><div id='m_start'> M Start Line: 176</div><div id='m_end'> M End Line: 201</div><div id='n_start'> N Start Line: 180</div><div id='n_end'> N End Line: 185</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    if optimizer is not None and resume_optimizer:
+        return model, optimizer, start_epoch, start_loss
+    else:
+        return model<a id="change">, None, start_epoch, start_loss</a>
+
+
+def save_model(path, epoch, train_loss, model, optimizer=None):
+    from apex.parallel import DistributedDataParallel</code></pre><h3>After Change</h3><pre><code class='java'>
+    &#47&#47 resume optimizer parameters
+    if optimizer is not None and resume_optimizer:
+        if &quotoptimizer_state_dict&quot in checkpoint:
+            <a id="change">LOG.debug(&quotResume the optimizer.&quot</a><a id="change">)</a>
+            optimizer.load_state_dict(checkpoint[&quotoptimizer_state_dict&quot])
+
+            &#47&#47 Here, we must convert the resumed state data of optimizer to gpu.
+            &#47&#47 In this project, we use map_location to map the state tensors to cpu.
+            &#47&#47 In the training process, we need cuda version of state tensors,
+            &#47&#47 so we have to convert them to gpu.
+            if torch.cuda.is_available() and optimizer2cuda:
+                <a id="change">LOG.debug(&quotRemove the optimizer states into GPU.&quot</a><a id="change">)</a>
+                for state in optimizer.state.values():
+                    for k, v in state.items():
+                        if torch.is_tensor(v):
+                            state[k] = v.cuda()</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/hellojialee/offsetguided/commit/9a383f058b1949286bf02501cd96f2ab6be3f1ac#diff-0b12045fcd8e12d17d1ed4983b2388873388d6b68c85aaca0218fa502d736c26L11' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 115376061</div><div id='project'> Project Name: hellojialee/offsetguided</div><div id='commit'> Commit Name: 9a383f058b1949286bf02501cd96f2ab6be3f1ac</div><div id='time'> Time: 2020-07-09</div><div id='author'> Author: ustclijia@gmail.com</div><div id='file'> File Name: models/networks.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: load_model(6)</div><div id='n_method'> N Method Name: load_model(6)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: models/networks.py</div><div id='n_file'> N File Name: models/networks.py</div><div id='m_start'> M Start Line: 32</div><div id='m_end'> M End Line: 105</div><div id='n_start'> N Start Line: 33</div><div id='n_end'> N End Line: 107</div><BR>

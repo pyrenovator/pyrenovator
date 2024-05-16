@@ -1,0 +1,20 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    def forward(self, user_ids, item_seqs, pos_items, ): &#47&#47 for training
+        &#47&#47 TODO: (more proper?) Positional Encoding
+  
+        seqs = <a id="change">self.item_emb[item_seqs]</a>
+        positions = np.tile(np.array(range(item_seqs.shape[1])), [item_seqs.shape[0], 1])
+        seqs += self.pos_emb[positions] &#47&#47 seems wrong/useless &quotpositional embedding&quot
+        seqs = self.emb_dropout(seqs)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        seqs *= ~timeline_mask.unsqueeze(-1) &#47&#47 broadcast in last dim
+
+        tl = seqs.shape[1] &#47&#47 time dim len for enforce causality
+        attention_mask<a id="change"> = </a><a id="change">torch.tril(</a>torch.ones((tl, tl))<a id="change">)</a>
+
+        for i in range(len(self.attention_layers)):
+            &#47&#47 Self-attention, Q=layernorm(seqs), K=V=seqs
+            seqs = torch.transpose(seqs, 0, 1) &#47&#47 (N, T, C) -&gt; (T, N, C)</code></pre>

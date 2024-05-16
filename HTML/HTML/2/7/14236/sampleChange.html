@@ -1,0 +1,38 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+def attempt_download(weights):
+    if not Path(weights).exists():
+        &#47&#47 Attempt to download pretrained weights if not found locally
+        weights = <a id="change">str(</a>weights<a id="change">)</a>.strip().replace("&quot", &quot&quot)
+        file = Path(weights).name.lower()
+
+        msg<a id="change"> = </a>weights<a id="change"> + &quot missing, try downloading from https://github.com/ultralytics/yolov5/releases/&quot</a>
+        response = requests.get(&quothttps://api.github.com/repos/ultralytics/yolov5/releases/latest&quot).json()  &#47&#47 github api
+        assets = [x[&quotname&quot] for x in response[&quotassets&quot]]  &#47&#47 release assets, i.e. [&quotyolov5s.pt&quot, &quotyolov5m.pt&quot, ...]
+        redundant = False  &#47&#47 second download option
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    &#47&#47 Attempt file download if does not exist
+    file = Path(str(file).strip().replace("&quot", &quot&quot).lower())
+
+    <a id="change">if </a>not file.exists():
+        try:
+            response = requests.get(f&quothttps://api.github.com/repos/{repo}/releases/latest&quot).json()  &#47&#47 github api
+            assets = [x[&quotname&quot] for x in response[&quotassets&quot]]  &#47&#47 release assets, i.e. [&quotyolov5s.pt&quot, &quotyolov5m.pt&quot, ...]
+            tag = response[&quottag_name&quot]  &#47&#47 i.e. &quotv1.0&quot
+        except:  &#47&#47 fallback plan
+            assets = [&quotyolov5s.pt&quot, &quotyolov5m.pt&quot, &quotyolov5l.pt&quot, &quotyolov5x.pt&quot]
+            tag = subprocess.check_output(&quotgit tag&quot, shell=True).decode().split()[-1]
+
+        name = file.name
+        if name in assets:
+            msg = f&quot{file} missing, try downloading from https://github.com/{repo}/releases/&quot
+            redundant = False  &#47&#47 second download option
+            try:  &#47&#47 GitHub
+                url = f&quothttps://github.com/{repo}/releases/download/{tag}/{name}&quot
+                <a id="change">print(f&quotDownloading {url} to {file}...&quot</a><a id="change">)</a>
+                torch.hub.download_url_to_file(url, file)
+                assert file.exists() and file.stat().st_size &gt; 1E6  &#47&#47 check
+            except Exception as e:  &#47&#47 GCP
+                print(f&quotDownload error: {e}&quot)</code></pre>

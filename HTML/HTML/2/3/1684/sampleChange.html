@@ -1,0 +1,61 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            feature = df[event]
+            lw = configs.lower_window
+            uw = configs.upper_window
+            <a id="change">all_events_list.append(</a>event<a id="change">)</a>
+            &#47&#47 create lower and upper window features
+            for offset in range(lw, uw + 1):
+                key = utils.create_event_names_for_offsets(event, offset)
+                offset_feature = feature.shift(periods=offset, fill_value=0)</code></pre><h3>After Change</h3><pre><code class='java'>
+    
+
+    additive_events = pd.DataFrame()
+    multiplicative_events = <a id="change">pd.DataFrame()</a>
+
+    &#47&#47 create all user specified events
+    if events_config is not None:
+        for event, configs in events_config.items():
+            if event not in df.columns:
+                df[event] = 0.
+            feature = df[event]
+            lw = configs.lower_window
+            uw = configs.upper_window
+            mode = configs["mode"]
+            &#47&#47 create lower and upper window features
+            for offset in range(lw, uw + 1):
+                key = utils.create_event_names_for_offsets(event, offset)
+                offset_feature = feature.shift(periods=offset, fill_value=0)
+                if mode == "additive":
+                    additive_events[key] = offset_feature
+                else:
+                    multiplicative_events[key] = offset_feature
+
+    &#47&#47 create all country specific holidays
+    if country_holidays_config is not None:
+        lw = country_holidays_config["lower_window"]
+        uw = country_holidays_config["upper_window"]
+        mode = country_holidays_config["mode"]
+        year_list = list({x.year for x in df.ds})
+        country_holidays_dict = make_country_specific_holidays_df(year_list, country_holidays_config["country"])
+        for holiday in country_holidays_config["holiday_names"]:
+            feature = pd.Series([0.] * df.shape[0])
+            if holiday in country_holidays_dict.keys():
+                dates = country_holidays_dict[holiday]
+                feature[df.ds.isin(dates)] = 1.
+            for offset in range(lw, uw + 1):
+                key = utils.create_event_names_for_offsets(holiday, offset)
+                offset_feature = feature.shift(periods=offset, fill_value=0)
+                if mode == "additive":
+                    additive_events[key] = offset_feature
+                else:
+                    multiplicative_events[key] = offset_feature
+
+    &#47&#47 Make sure column order is consistent
+    additive_events = additive_events[sorted(additive_events.columns.tolist())]
+    multiplicative_events<a id="change"> = </a>multiplicative_events[sorted(multiplicative_events.columns.tolist())]
+
+    &#47&#47 convert to numpy array
+    additive_events = additive_events.values</code></pre>

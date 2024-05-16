@@ -1,0 +1,74 @@
+<html><h3>Pattern ID :39816
+</h3><img src='113355760.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    def forward(self, *dimensions):
+        device = self.device
+
+        <a id="change">if not exists(self.rel_pos)</a> or not self.cache_rel_pos:
+            positions = [torch.arange(d, device = device) for d in dimensions]
+            grid = torch.stack(torch.meshgrid(*positions, indexing = &quotij&quot))
+            grid = rearrange(grid, &quotc ... -&gt; (...) c&quot)
+            rel_pos = rearrange(grid, &quoti c -&gt; i 1 c&quot) - rearrange(grid, &quotj c -&gt; 1 j c&quot)
+
+            if self.log_dist:
+                rel_pos = torch.sign(rel_pos) * torch.log(rel_pos.abs() + 1)
+
+            <a id="change">self.register_buffer(&quotrel_pos&quot</a>, rel_pos<a id="change">, persistent = False)</a>
+
+        rel_pos = self.rel_pos.float()
+
+        for layer in self.net:</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 calculate strides
+
+        strides = torch.flip(rel_pos_shape, (0,)).cumprod(dim = -1)
+        strides = torch.flip(F.pad(strides, (1, -1), value = 1), (0<a id="change"></a>,))
+
+        &#47&#47 get all positions and calculate all the relative distances
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/lucidrains/make-a-video-pytorch/commit/b6e0a17c5488b923d884272f7e46170352b0f0d5#diff-a7a81e9a1aa252916dd3f29e813ef72db53e9b9a100d00fdf0a022c1823ac77bL105' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 113355760</div><div id='project'> Project Name: lucidrains/make-a-video-pytorch</div><div id='commit'> Commit Name: b6e0a17c5488b923d884272f7e46170352b0f0d5</div><div id='time'> Time: 2023-03-18</div><div id='author'> Author: lucidrains@gmail.com</div><div id='file'> File Name: make_a_video_pytorch/make_a_video.py</div><div id='m_class'> M Class Name: ContinuousPositionBias</div><div id='n_method'> N Class Name: ContinuousPositionBias</div><div id='m_method'> M Method Name: forward(1)</div><div id='n_method'> N Method Name: forward(1)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: make_a_video_pytorch/make_a_video.py</div><div id='n_file'> N File Name: make_a_video_pytorch/make_a_video.py</div><div id='m_start'> M Start Line: 110</div><div id='m_end'> M End Line: 126</div><div id='n_start'> N Start Line: 105</div><div id='n_end'> N End Line: 142</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        stride_index = torch.tensor(
+            self.stride[0] - len(state_buffer) - 1 + self.padding[0]
+        )
+        <a id="change">if not hasattr(self, "state_buffer")</a>:
+            <a id="change">self.register_buffer("state_buffer"</a>, state_buffer<a id="change">, persistent=False)</a>
+        return state_buffer, state_index, stride_index
+
+    def clean_state(self):
+        if hasattr(self, "state_buffer"):</code></pre><h3>After Change</h3><pre><code class='java'>
+    ) -&gt; State:
+        padding = self.make_padding(first_output)
+        repeat_shape = [self.kernel_size[0] - 1]
+        repeat_shape.extend((1<a id="change"></a>,) * len(self.input_shape_desciption))
+        state_buffer = padding.repeat(repeat_shape)
+        state_index = 0
+        stride_index = self.stride[0] - len(state_buffer) - 1 + self.padding[0]</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lukashedegaard/continual-inference/commit/1e6964a31874287527720453b1c9216ddedd5a01#diff-ab814d08cd5938d9e352f174455f25b1305df726961b0498790f040766492ca8L121' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 113355767</div><div id='project'> Project Name: lukashedegaard/continual-inference</div><div id='commit'> Commit Name: 1e6964a31874287527720453b1c9216ddedd5a01</div><div id='time'> Time: 2022-11-29</div><div id='author'> Author: lh@eng.au.dk</div><div id='file'> File Name: continual/conv.py</div><div id='m_class'> M Class Name: _ConvCoNd</div><div id='n_method'> N Class Name: _ConvCoNd</div><div id='m_method'> M Method Name: init_state(2)</div><div id='n_method'> N Method Name: init_state(2)</div><div id='m_parent_class'> M Parent Class: _ConvNd,CoModule</div><div id='n_parent_class'> N Parent Class: _ConvNd,CoModule</div><div id='m_file'> M File Name: continual/conv.py</div><div id='n_file'> N File Name: continual/conv.py</div><div id='m_start'> M Start Line: 125</div><div id='m_end'> M End Line: 135</div><div id='n_start'> N Start Line: 133</div><div id='n_end'> N End Line: 138</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        super(FixedRevRNN, self).__init__()
+        if input_count &lt;= 0:
+            raise UserWarning("No input count given")
+        <a id="change">if </a>hidden_features<a id="change"> % </a>2:
+            raise UserWarning(f"Ignoring uneven hidden feature and proceeding as if equal {hidden_features // 2 * 2}")
+
+        self.return_sequences = return_sequences
+        self.delay = delay
+        self.input_count = input_count
+
+        hidden_features = hidden_features // 2
+        self.hidden_features = hidden_features
+
+        self.linear_param0 = torch.nn.Parameter(torch.zeros((depth, 3 * hidden_features, hidden_features)))
+        self.linear_param1 = torch.nn.Parameter(torch.zeros((depth, 3 * hidden_features, hidden_features)))
+        self.out_linear = torch.nn.Parameter(torch.randn((1, 2 * hidden_features ** 2, out_features)))
+
+        <a id="change">self.register_buffer(&quothidden_state&quot</a>, torch.zeros(1, 2 * hidden_features, hidden_features)<a id="change">)</a>
+        self.register_buffer(&quotembedding&quot, torch.ones((input_cases, hidden_features, hidden_features)))
+
+        for idx in range(depth):
+            for sub_idx in range(3):</code></pre><h3>After Change</h3><pre><code class='java'>
+        self.linear_param0 = torch.nn.Parameter(torch.zeros((depth, 3 * hidden_features, hidden_features)))
+        self.linear_param1 = torch.nn.Parameter(torch.zeros((depth, 3 * hidden_features, hidden_features)))
+        self.out_linear = torch.nn.Parameter(torch.randn((1, 2 * hidden_features, out_features)))
+        self.embedding = torch.nn.Parameter(torch.randn((input_cases<a id="change">, hidden_features</a>)).mul(0.004))
+
+        for idx in range(depth):
+            for sub_idx in range(3):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/homebrewnlp/homebrewnlp/commit/e6bfdfa67ff9b5477696711d7d570685448ee141#diff-c98bba8dbdd18eb4e9fa8ae11c28e350c08ee816fce50f9fb86d61cbcd345276L87' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 113355754</div><div id='project'> Project Name: homebrewnlp/homebrewnlp</div><div id='commit'> Commit Name: e6bfdfa67ff9b5477696711d7d570685448ee141</div><div id='time'> Time: 2021-06-20</div><div id='author'> Author: 39779310+ClashLuke@users.noreply.github.com</div><div id='file'> File Name: module.py</div><div id='m_class'> M Class Name: FixedRevRNN</div><div id='n_method'> N Class Name: FixedRevRNN</div><div id='m_method'> M Method Name: __init__(8)</div><div id='n_method'> N Method Name: __init__(8)</div><div id='m_parent_class'> M Parent Class: torch.nn.Module</div><div id='n_parent_class'> N Parent Class: torch.nn.Module</div><div id='m_file'> M File Name: module.py</div><div id='n_file'> N File Name: module.py</div><div id='m_start'> M Start Line: 101</div><div id='m_end'> M End Line: 127</div><div id='n_start'> N Start Line: 109</div><div id='n_end'> N End Line: 132</div><BR>

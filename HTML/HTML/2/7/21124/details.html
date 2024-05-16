@@ -1,0 +1,189 @@
+<html><h3>Pattern ID :21124
+</h3><img src='67777242.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                    token_list = [token for token in token_list if token != 0]
+                    if not token_list:
+                        continue
+                    <a id="change">if mode == &quotpredict&quot</a>:
+                        predict_results.setdefault(reverse_categories[predicate1], set()).add(tokenizer.decode(token_list))
+                    else:
+                        predict_results.setdefault(predicate1, set()).add(<a id="change">str(</a>token_list<a id="change">)</a>)
+                    break
+    return predict_results
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        for _start, predicate1 in zip(*start):
+            for _end, predicate2 in zip(*end):
+                if _start &lt;= _end and predicate1 == predicate2:
+                    if <a id="change">len(mapping[_start]</a><a id="change">)</a> &gt; 0 and <a id="change">len(mapping[_end]</a><a id="change">)</a> &gt; 0:
+                        start_in_text = mapping[_start][0]
+                        end_in_text = mapping[_end][-1]
+                        entity_text = text[start_in_text: end_in_text + 1]</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 7</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/stanleylsx/entity_extractor_by_pointer/commit/1c416e467a4fe62bbb0c8e086ef29dc6ece9b207#diff-37057fd6c2d2a9dd7d0167af43022d320464f2295904468cba54a58d1f90f3b4L7' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 67777242</div><div id='project'> Project Name: stanleylsx/entity_extractor_by_pointer</div><div id='commit'> Commit Name: 1c416e467a4fe62bbb0c8e086ef29dc6ece9b207</div><div id='time'> Time: 2020-09-01</div><div id='author'> Author: lishouxian@lishouxiandeMacBook-Pro.local</div><div id='file'> File Name: engines/predict.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: extract_entities(6)</div><div id='n_method'> N Method Name: extract_entities(7)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: engines/predict.py</div><div id='n_file'> N File Name: engines/predict.py</div><div id='m_start'> M Start Line: 7</div><div id='m_end'> M End Line: 35</div><div id='n_start'> N Start Line: 14</div><div id='n_end'> N End Line: 33</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                if prev_index &lt; 0:
+                    prev_index = 0
+                &#47&#47  if str is empty, then continue, will move it later
+                <a id="change">if str(log_lines[index]) == &quot&quot</a> or str(log_lines[index]) == &quot\n&quot:
+                    index += 1
+                    continue
+                &#47&#47  if the str has prefix but contains nothing,
+                &#47&#47  then signed it as &quot\n&quot, will move it later
+                cur_line_list = <a id="change">str(</a>log_lines[index]<a id="change">)</a>.split(&quot]&quot)
+                if str(log_lines[index]).startswith(&quot[FedML-&quot) and \
+                    len(cur_line_list) == 5 and (cur_line_list[4] == &quot \n&quot):
+                    log_lines[index] = &quot\n&quot</code></pre><h3>After Change</h3><pre><code class='java'>
+                index += 1
+
+            &#47&#47 remove the &quot\n&quot and &quot&quot str
+            <a id="change">upload_lines</a> = []
+            for line in log_lines[line_start_req:line_end_req]:
+                if line != &quot&quot and line != &quot\n&quot:
+                    upload_lines.append(line)
+
+            err_list = list()
+            for log_index in range(<a id="change">len(</a>upload_lines<a id="change">)</a>):
+                log_line = str(upload_lines[log_index])
+                if log_line.find(&quot [ERROR] &quot) != -1:
+                    err_line_dict = {"errLine": self.log_uploaded_line_index + log_index, "errMsg": log_line}
+                    err_list.append(err_line_dict)
+
+            log_upload_request = {
+                "run_id": run_id,
+                "edge_id": device_id,
+                "logs": upload_lines,
+                "create_time": time.time(),
+                "update_time": time.time(),
+                "created_by": str(device_id),
+                "updated_by": str(device_id)
+            }
+
+            if len(err_list) &gt; 0:
+                log_upload_request["errors"] = err_list
+
+            if self.log_source is not None and self.log_source != "":
+                log_upload_request["source"] = self.log_source
+
+            log_headers = {&quotContent-Type&quot: &quotapplication/json&quot, &quotConnection&quot: &quotclose&quot}
+
+            &#47&#47 send log data to the log server
+            _, cert_path = MLOpsConfigs.get_instance(self.args).get_request_params()
+            if cert_path is not None:
+                try:
+                    requests.session().verify = cert_path
+                    response = requests.post(
+                        self.log_server_url, json=log_upload_request, verify=True, headers=log_headers
+                    )
+                except requests.exceptions.SSLError as err:
+                    MLOpsConfigs.install_root_ca_file()
+                    response = requests.post(
+                        self.log_server_url, json=log_upload_request, verify=True, headers=log_headers
+                    )
+            else:
+                response = requests.post(self.log_server_url, headers=log_headers, json=log_upload_request)
+            if response.status_code != 200:
+                pass
+            else:
+                self.log_line_index += (line_end_req - line_start_req)
+                self.log_uploaded_line_index += <a id="change">len(</a>upload_lines<a id="change">)</a>
+                line_count += (line_end_req - line_start_req)
+                line_start_req = line_end_req
+                self.save_log_config()
+                resp_data = response.json()</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/fedml-ai/fedml/commit/718e10f56302c4eff12eb9f7c399354dea40139d#diff-2aeb97bd4b2e475018e6bb433fdf106b5e124d7e3e2a0b888f441b9048d75ef2L97' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 67777240</div><div id='project'> Project Name: fedml-ai/fedml</div><div id='commit'> Commit Name: 718e10f56302c4eff12eb9f7c399354dea40139d</div><div id='time'> Time: 2023-03-24</div><div id='author'> Author: alexliang.kh@gmail.com</div><div id='file'> File Name: python/fedml/core/mlops/mlops_runtime_log_daemon.py</div><div id='m_class'> M Class Name: MLOpsRuntimeLogProcessor</div><div id='n_method'> N Class Name: MLOpsRuntimeLogProcessor</div><div id='m_method'> M Method Name: log_upload(3)</div><div id='n_method'> N Method Name: log_upload(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: python/fedml/core/mlops/mlops_runtime_log_daemon.py</div><div id='n_file'> N File Name: python/fedml/core/mlops/mlops_runtime_log_daemon.py</div><div id='m_start'> M Start Line: 99</div><div id='m_end'> M End Line: 158</div><div id='n_start'> N Start Line: 100</div><div id='n_end'> N End Line: 190</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                    token_list = [token for token in token_list if token != 0]
+                    if not token_list:
+                        continue
+                    <a id="change">if mode == &quotpredict&quot</a>:
+                        predict_results.setdefault(reverse_categories[predicate1], set()).add(tokenizer.decode(token_list))
+                    else:
+                        predict_results.setdefault(predicate1, set()).add(<a id="change">str(</a>token_list<a id="change">)</a>)
+                    break
+    return predict_results
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    encode_results = tokenizer(text, padding=&quotmax_length&quot)
+    input_ids = encode_results.get(&quotinput_ids&quot)
+    token = tokenizer.convert_ids_to_tokens(input_ids)
+    <a id="change">mapping</a> = rematch(text, token)
+    token_ids = torch.unsqueeze(torch.LongTensor(input_ids), 0).to(device)
+    attention_mask = torch.unsqueeze(torch.LongTensor(encode_results.get(&quotattention_mask&quot)), 0).to(device)
+    bert_hidden_states = bert_model(token_ids, attention_mask=attention_mask)[0].to(device)
+    model_outputs = model(bert_hidden_states).detach().to(&quotcpu&quot)
+    decision_threshold = float(configs.decision_threshold)
+    for model_output in model_outputs:
+        start = np.where(model_output[:, :, 0] &gt; decision_threshold)
+        end = np.where(model_output[:, :, 1] &gt; decision_threshold)
+        for _start, predicate1 in zip(*start):
+            for _end, predicate2 in zip(*end):
+                if _start &lt;= _end and predicate1 == predicate2:
+                    if <a id="change">len(</a>mapping[_start]<a id="change">)</a> &gt; 0 and <a id="change">len(</a>mapping[_end]<a id="change">)</a> &gt; 0:
+                        start_in_text = mapping[_start][0]
+                        end_in_text = mapping[_end][-1]
+                        entity_text = text[start_in_text: end_in_text + 1]</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/stanleylsx/entity_extractor_by_binary_tagging/commit/1c416e467a4fe62bbb0c8e086ef29dc6ece9b207#diff-37057fd6c2d2a9dd7d0167af43022d320464f2295904468cba54a58d1f90f3b4L7' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 67777241</div><div id='project'> Project Name: stanleylsx/entity_extractor_by_binary_tagging</div><div id='commit'> Commit Name: 1c416e467a4fe62bbb0c8e086ef29dc6ece9b207</div><div id='time'> Time: 2020-09-01</div><div id='author'> Author: lishouxian@lishouxiandeMacBook-Pro.local</div><div id='file'> File Name: engines/predict.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: extract_entities(6)</div><div id='n_method'> N Method Name: extract_entities(7)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: engines/predict.py</div><div id='n_file'> N File Name: engines/predict.py</div><div id='m_start'> M Start Line: 7</div><div id='m_end'> M End Line: 35</div><div id='n_start'> N Start Line: 14</div><div id='n_end'> N End Line: 33</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                if prev_index &lt; 0:
+                    prev_index = 0
+                &#47&#47  if str is empty, then continue, will move it later
+                <a id="change">if </a>str(log_lines[index]) == &quot&quot or <a id="change">str(log_lines[index]) == &quot\n&quot</a>:
+                    index += 1
+                    continue
+                &#47&#47  if the str has prefix but contains nothing,
+                &#47&#47  then signed it as &quot\n&quot, will move it later
+                cur_line_list = <a id="change">str(</a>log_lines[index]<a id="change">)</a>.split(&quot]&quot)
+                if str(log_lines[index]).startswith(&quot[FedML-&quot) and \
+                    len(cur_line_list) == 5 and (cur_line_list[4] == &quot \n&quot):
+                    log_lines[index] = &quot\n&quot</code></pre><h3>After Change</h3><pre><code class='java'>
+                index += 1
+
+            &#47&#47 remove the &quot\n&quot and &quot&quot str
+            <a id="change">upload_lines</a> = []
+            for line in log_lines[line_start_req:line_end_req]:
+                if line != &quot&quot and line != &quot\n&quot:
+                    upload_lines.append(line)
+
+            err_list = list()
+            for log_index in range(<a id="change">len(</a>upload_lines<a id="change">)</a>):
+                log_line = str(upload_lines[log_index])
+                if log_line.find(&quot [ERROR] &quot) != -1:
+                    err_line_dict = {"errLine": self.log_uploaded_line_index + log_index, "errMsg": log_line}
+                    err_list.append(err_line_dict)
+
+            log_upload_request = {
+                "run_id": run_id,
+                "edge_id": device_id,
+                "logs": upload_lines,
+                "create_time": time.time(),
+                "update_time": time.time(),
+                "created_by": str(device_id),
+                "updated_by": str(device_id)
+            }
+
+            if len(err_list) &gt; 0:
+                log_upload_request["errors"] = err_list
+
+            if self.log_source is not None and self.log_source != "":
+                log_upload_request["source"] = self.log_source
+
+            log_headers = {&quotContent-Type&quot: &quotapplication/json&quot, &quotConnection&quot: &quotclose&quot}
+
+            &#47&#47 send log data to the log server
+            _, cert_path = MLOpsConfigs.get_instance(self.args).get_request_params()
+            if cert_path is not None:
+                try:
+                    requests.session().verify = cert_path
+                    response = requests.post(
+                        self.log_server_url, json=log_upload_request, verify=True, headers=log_headers
+                    )
+                except requests.exceptions.SSLError as err:
+                    MLOpsConfigs.install_root_ca_file()
+                    response = requests.post(
+                        self.log_server_url, json=log_upload_request, verify=True, headers=log_headers
+                    )
+            else:
+                response = requests.post(self.log_server_url, headers=log_headers, json=log_upload_request)
+            if response.status_code != 200:
+                pass
+            else:
+                self.log_line_index += (line_end_req - line_start_req)
+                self.log_uploaded_line_index += <a id="change">len(</a>upload_lines<a id="change">)</a>
+                line_count += (line_end_req - line_start_req)
+                line_start_req = line_end_req
+                self.save_log_config()
+                resp_data = response.json()</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/fedml-ai/fedml/commit/493d40a182594dd18623ee493cf6a2c1997289f5#diff-2aeb97bd4b2e475018e6bb433fdf106b5e124d7e3e2a0b888f441b9048d75ef2L97' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 67777228</div><div id='project'> Project Name: fedml-ai/fedml</div><div id='commit'> Commit Name: 493d40a182594dd18623ee493cf6a2c1997289f5</div><div id='time'> Time: 2023-03-24</div><div id='author'> Author: alex.gpt.llm@gmail.com</div><div id='file'> File Name: python/fedml/core/mlops/mlops_runtime_log_daemon.py</div><div id='m_class'> M Class Name: MLOpsRuntimeLogProcessor</div><div id='n_method'> N Class Name: MLOpsRuntimeLogProcessor</div><div id='m_method'> M Method Name: log_upload(3)</div><div id='n_method'> N Method Name: log_upload(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: python/fedml/core/mlops/mlops_runtime_log_daemon.py</div><div id='n_file'> N File Name: python/fedml/core/mlops/mlops_runtime_log_daemon.py</div><div id='m_start'> M Start Line: 99</div><div id='m_end'> M End Line: 158</div><div id='n_start'> N Start Line: 100</div><div id='n_end'> N End Line: 190</div><BR>

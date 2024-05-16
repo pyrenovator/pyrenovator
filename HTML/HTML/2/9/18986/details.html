@@ -1,0 +1,132 @@
+<html><h3>Pattern ID :18986
+</h3><img src='61783340.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    ) -&gt; AsyncIterator[runtime_pb2.ExpertRequest]:
+        &#47&#47 Parse requests and prepare backends
+        uid_str, flat_inputs, metadata = await self._gather_inputs(requests, context)
+        requested_uids<a id="change"> = </a>self._check_uids(uid_str)
+        <a id="change">self._log_request(</a>"rpc_forward_stream", requested_uids, context<a id="change">)</a>
+
+        requested_backends<a id="change"> = </a>tuple(self.module_backends[uid] for uid in requested_uids)
+        points = metadata.get("points", 0)
+        assert isinstance(
+            points, (float, int)</code></pre><h3>After Change</h3><pre><code class='java'>
+    async def rpc_forward_stream(
+        self, requests: AsyncIterator[runtime_pb2.ExpertRequest], context: P2PContext
+    ) -&gt; AsyncIterator[runtime_pb2.ExpertRequest]:
+        <a id="change">async with </a><a id="change">timeout(self.request_timeout):
+            &#47&#47 Parse requests and prepare backends
+            </a>uid_str, flat_inputs, metadata = await self._gather_inputs(requests, context)
+            requested_uids<a id="change"> = </a>self._check_uids(uid_str)
+            <a id="change">self._log_request(</a>"rpc_forward_stream", requested_uids, context<a id="change">)</a>
+
+            requested_backends<a id="change"> = </a>tuple(self.module_backends[uid] for uid in requested_uids)
+            points = metadata.get("points", 0)
+            assert isinstance(
+                points, (float, int)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 9</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/bigscience-workshop/distributed-bloom/commit/c6e1b5a8e5bc8d081b95756f84e9325bdd544596#diff-65ada620fb21ff82c2b88abea8bc2cf7fdd27241f03553f7e7d076339dbaab55L203' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 61783340</div><div id='project'> Project Name: bigscience-workshop/distributed-bloom</div><div id='commit'> Commit Name: c6e1b5a8e5bc8d081b95756f84e9325bdd544596</div><div id='time'> Time: 2022-11-28</div><div id='author'> Author: borzunov.alexander@gmail.com</div><div id='file'> File Name: src/server/handler.py</div><div id='m_class'> M Class Name: TransformerConnectionHandler</div><div id='n_method'> N Class Name: TransformerConnectionHandler</div><div id='m_method'> M Method Name: rpc_forward_stream(3)</div><div id='n_method'> N Method Name: rpc_forward_stream(3)</div><div id='m_parent_class'> M Parent Class: ConnectionHandler</div><div id='n_parent_class'> N Parent Class: ConnectionHandler</div><div id='m_file'> M File Name: src/server/handler.py</div><div id='n_file'> N File Name: src/server/handler.py</div><div id='m_start'> M Start Line: 203</div><div id='m_end'> M End Line: 231</div><div id='n_start'> N Start Line: 218</div><div id='n_end'> N End Line: 250</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        self, requests: AsyncIterator[runtime_pb2.ExpertRequest], context: P2PContext
+    ) -&gt; AsyncIterator[runtime_pb2.ExpertResponse]:
+        uids_header, flat_tensors, metadata = await self._gather_inputs(requests, context)
+        requested_uids<a id="change"> = </a>self._check_uids(uids_header)
+        <a id="change">self._log_request(</a>"rpc_backward_stream", requested_uids, context<a id="change">)</a>
+
+        requested_backends = tuple(self.module_backends[uid] for uid in requested_uids)
+        points = metadata.get("points", 0)
+        assert isinstance(
+            points, (float, int)
+        ), f"rpc_backward_stream should have number of points as number or None, got {points}"
+
+        grads = await _rpc_backward(
+            *flat_tensors, requested_backends=requested_backends, prioritizer=self._prioritizer, points=points
+        )
+
+        &#47&#47 Modify grad_inputs_schema to support grad_prompts
+        assert len(requested_backends[0].args_schema) == 1 and len(grads) in (1, 2)  &#47&#47 TODO generalize
+        grad_inputs_schema_with_prompts = (
+            requested_backends[0].args_schema * len(grads),
+            requested_backends[0].kwargs_schema,
+        )  &#47&#47 TODO generalize
+
+        &#47&#47 Serialize the overall grad_inputs
+        serialized_grad_inputs<a id="change"> = </a>[
+            serialize_torch_tensor(result.to(proto.dtype), proto.compression, allow_inplace=True)
+            for result, proto in zip(grads, nested_flatten(grad_inputs_schema_with_prompts))
+        ]</code></pre><h3>After Change</h3><pre><code class='java'>
+    async def rpc_backward_stream(
+        self, requests: AsyncIterator[runtime_pb2.ExpertRequest], context: P2PContext
+    ) -&gt; AsyncIterator[runtime_pb2.ExpertResponse]:
+        <a id="change">async with </a><a id="change">timeout(self.request_timeout):
+            </a>uids_header, flat_tensors, metadata = await self._gather_inputs(requests, context)
+            requested_uids<a id="change"> = </a>self._check_uids(uids_header)
+            <a id="change">self._log_request(</a>"rpc_backward_stream", requested_uids, context<a id="change">)</a>
+
+            requested_backends = tuple(self.module_backends[uid] for uid in requested_uids)
+            points = metadata.get("points", 0)
+            assert isinstance(
+                points, (float, int)
+            ), f"rpc_backward_stream should have number of points as number or None, got {points}"
+
+            grads = await _rpc_backward(
+                *flat_tensors, requested_backends=requested_backends, prioritizer=self._prioritizer, points=points
+            )
+
+            &#47&#47 Modify grad_inputs_schema to support grad_prompts
+            assert len(requested_backends[0].args_schema) == 1 and len(grads) in (1, 2)  &#47&#47 TODO generalize
+            grad_inputs_schema_with_prompts = (
+                requested_backends[0].args_schema * len(grads),
+                requested_backends[0].kwargs_schema,
+            )  &#47&#47 TODO generalize
+
+            &#47&#47 Serialize the overall grad_inputs
+            serialized_grad_inputs<a id="change"> = </a>[
+                serialize_torch_tensor(result.to(proto.dtype), proto.compression, allow_inplace=True)
+                for result, proto in zip(grads, nested_flatten(grad_inputs_schema_with_prompts))
+            ]</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/bigscience-workshop/distributed-bloom/commit/c6e1b5a8e5bc8d081b95756f84e9325bdd544596#diff-65ada620fb21ff82c2b88abea8bc2cf7fdd27241f03553f7e7d076339dbaab55L264' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 61783336</div><div id='project'> Project Name: bigscience-workshop/distributed-bloom</div><div id='commit'> Commit Name: c6e1b5a8e5bc8d081b95756f84e9325bdd544596</div><div id='time'> Time: 2022-11-28</div><div id='author'> Author: borzunov.alexander@gmail.com</div><div id='file'> File Name: src/server/handler.py</div><div id='m_class'> M Class Name: TransformerConnectionHandler</div><div id='n_method'> N Class Name: TransformerConnectionHandler</div><div id='m_method'> M Method Name: rpc_backward_stream(3)</div><div id='n_method'> N Method Name: rpc_backward_stream(3)</div><div id='m_parent_class'> M Parent Class: ConnectionHandler</div><div id='n_parent_class'> N Parent Class: ConnectionHandler</div><div id='m_file'> M File Name: src/server/handler.py</div><div id='n_file'> N File Name: src/server/handler.py</div><div id='m_start'> M Start Line: 267</div><div id='m_end'> M End Line: 301</div><div id='n_start'> N Start Line: 287</div><div id='n_end'> N End Line: 322</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    async def rpc_backward(self, request: runtime_pb2.ExpertRequest, context: P2PContext) -&gt; runtime_pb2.ExpertResponse:
+        &#47&#47 Parse requests and prepare backends
+        flat_tensors = [deserialize_torch_tensor(tensor) for tensor in request.tensors]
+        requested_uids<a id="change"> = </a>self._check_uids(request.uid)
+        <a id="change">self._log_request(</a>"rpc_backward", requested_uids, context<a id="change">)</a>
+
+        requested_backends<a id="change"> = </a>tuple(self.module_backends[uid] for uid in requested_uids)
+        metadata = MSGPackSerializer.loads(request.metadata) if request.metadata else {}
+        points = metadata.get("points", 0)
+        assert isinstance(</code></pre><h3>After Change</h3><pre><code class='java'>
+                yield runtime_pb2.ExpertResponse(tensors=[part])
+
+    async def rpc_backward(self, request: runtime_pb2.ExpertRequest, context: P2PContext) -&gt; runtime_pb2.ExpertResponse:
+        <a id="change">async with </a><a id="change">timeout(self.request_timeout):
+            &#47&#47 Parse requests and prepare backends
+            </a>flat_tensors = [deserialize_torch_tensor(tensor) for tensor in request.tensors]
+            requested_uids<a id="change"> = </a>self._check_uids(request.uid)
+            <a id="change">self._log_request(</a>"rpc_backward", requested_uids, context<a id="change">)</a>
+
+            requested_backends<a id="change"> = </a>tuple(self.module_backends[uid] for uid in requested_uids)
+            metadata = MSGPackSerializer.loads(request.metadata) if request.metadata else {}
+            points = metadata.get("points", 0)
+            assert isinstance(</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/bigscience-workshop/distributed-bloom/commit/c6e1b5a8e5bc8d081b95756f84e9325bdd544596#diff-65ada620fb21ff82c2b88abea8bc2cf7fdd27241f03553f7e7d076339dbaab55L231' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 61783332</div><div id='project'> Project Name: bigscience-workshop/distributed-bloom</div><div id='commit'> Commit Name: c6e1b5a8e5bc8d081b95756f84e9325bdd544596</div><div id='time'> Time: 2022-11-28</div><div id='author'> Author: borzunov.alexander@gmail.com</div><div id='file'> File Name: src/server/handler.py</div><div id='m_class'> M Class Name: TransformerConnectionHandler</div><div id='n_method'> N Class Name: TransformerConnectionHandler</div><div id='m_method'> M Method Name: rpc_backward(3)</div><div id='n_method'> N Method Name: rpc_backward(3)</div><div id='m_parent_class'> M Parent Class: ConnectionHandler</div><div id='n_parent_class'> N Parent Class: ConnectionHandler</div><div id='m_file'> M File Name: src/server/handler.py</div><div id='n_file'> N File Name: src/server/handler.py</div><div id='m_start'> M Start Line: 233</div><div id='m_end'> M End Line: 262</div><div id='n_start'> N Start Line: 251</div><div id='n_end'> N End Line: 284</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    async def rpc_forward(self, request: runtime_pb2.ExpertRequest, context: P2PContext) -&gt; runtime_pb2.ExpertResponse:
+        &#47&#47 Parse request and prepare backends
+        flat_inputs = [deserialize_torch_tensor(tensor) for tensor in request.tensors]
+        requested_uids<a id="change"> = </a>self._check_uids(request.uid)
+        <a id="change">self._log_request(</a>"rpc_forward", requested_uids, context<a id="change">)</a>
+
+        requested_backends<a id="change"> = </a>tuple(self.module_backends[uid] for uid in requested_uids)
+        metadata = MSGPackSerializer.loads(request.metadata) if request.metadata else {}
+        points = metadata.get("points", 0)
+        assert isinstance(</code></pre><h3>After Change</h3><pre><code class='java'>
+                self._log_request("rpc_inference.close", requested_uids, context)
+
+    async def rpc_forward(self, request: runtime_pb2.ExpertRequest, context: P2PContext) -&gt; runtime_pb2.ExpertResponse:
+        <a id="change">async with </a><a id="change">timeout(self.request_timeout):
+            &#47&#47 Parse request and prepare backends
+            </a>flat_inputs = [deserialize_torch_tensor(tensor) for tensor in request.tensors]
+            requested_uids<a id="change"> = </a>self._check_uids(request.uid)
+            <a id="change">self._log_request(</a>"rpc_forward", requested_uids, context<a id="change">)</a>
+
+            requested_backends<a id="change"> = </a>tuple(self.module_backends[uid] for uid in requested_uids)
+            metadata = MSGPackSerializer.loads(request.metadata) if request.metadata else {}
+            points = metadata.get("points", 0)
+            assert isinstance(</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/bigscience-workshop/distributed-bloom/commit/c6e1b5a8e5bc8d081b95756f84e9325bdd544596#diff-65ada620fb21ff82c2b88abea8bc2cf7fdd27241f03553f7e7d076339dbaab55L173' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 61783347</div><div id='project'> Project Name: bigscience-workshop/distributed-bloom</div><div id='commit'> Commit Name: c6e1b5a8e5bc8d081b95756f84e9325bdd544596</div><div id='time'> Time: 2022-11-28</div><div id='author'> Author: borzunov.alexander@gmail.com</div><div id='file'> File Name: src/server/handler.py</div><div id='m_class'> M Class Name: TransformerConnectionHandler</div><div id='n_method'> N Class Name: TransformerConnectionHandler</div><div id='m_method'> M Method Name: rpc_forward(3)</div><div id='n_method'> N Method Name: rpc_forward(3)</div><div id='m_parent_class'> M Parent Class: ConnectionHandler</div><div id='n_parent_class'> N Parent Class: ConnectionHandler</div><div id='m_file'> M File Name: src/server/handler.py</div><div id='n_file'> N File Name: src/server/handler.py</div><div id='m_start'> M Start Line: 175</div><div id='m_end'> M End Line: 197</div><div id='n_start'> N Start Line: 189</div><div id='n_end'> N End Line: 215</div><BR>

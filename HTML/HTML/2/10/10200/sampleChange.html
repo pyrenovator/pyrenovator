@@ -1,0 +1,25 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    
+    index = edge_index[dim]
+    if edge_weights is None:
+        <a id="change">if </a>isinstance(edge_index, Tensor):
+            edge_weights<a id="change"> = </a>torch.ones(<a id="change">edge_index.size(</a>1<a id="change">)</a>, dtype=torch.int,
+                                      device=edge_index.device)
+        else:
+            edge_weights<a id="change"> = </a>np.ones(edge_index.shape[1], dtype=np.int)
+    degree = weighted_degree(index, edge_weights, num_nodes=num_nodes)
+    return edge_index, edge_weights / degree[index]
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    if backend is torch_sparse:
+        assert edge_weights is None
+        deg = edge_index.sum(dim=dim).to(torch.float)
+        deg_inv<a id="change"> = </a><a id="change">deg.pow(-1.0</a><a id="change">)</a>
+        deg_inv[deg_inv == float(&quotinf&quot)] = 0
+        edge_index<a id="change"> = </a>deg_inv.view(-1, 1)<a id="change"> * </a>edge_index
+        <a id="change">return </a>edge_index, None
+
+    index = edge_index[dim]
+    degree = weighted_degree(index, edge_weights, num_nodes=num_nodes)</code></pre>

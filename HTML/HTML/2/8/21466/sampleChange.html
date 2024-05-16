@@ -1,0 +1,127 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                    )
+
+                    loss.backward(retain_graph=True)
+                    <a id="change">opt_discriminator.step()</a>
+
+                    if opt_attribute_discriminator is not None:
+                        opt_attribute_discriminator.zero_grad()
+                        &#47&#47 Exclude features (last element of batches) for</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        &#47&#47 Set torch modules to training mode
+        self._set_mode(True)
+        <a id="change">scaler = </a><a id="change">torch.cuda.amp.GradScaler(enabled=self.config.mixed_precision_training)</a>
+
+        for epoch in range(self.config.epochs):
+            logger.info(f"epoch: {epoch}")
+
+            for real_batch in loader:
+                global_step += 1
+                with torch.cuda.amp.autocast(
+                    enabled=self.config.mixed_precision_training
+                ):
+                    attribute_noise = self.attribute_noise_func(
+                        real_batch[0].shape[0]
+                    ).to(self.device, non_blocking=True)
+                    feature_noise = self.feature_noise_func(real_batch[0].shape[0]).to(
+                        self.device, non_blocking=True
+                    )
+
+                    &#47&#47 Both real and generated batch are always three element tuple of
+                    &#47&#47 tensors. The tuple is structured as follows: (attribute_output,
+                    &#47&#47 additional_attribute_output, feature_output). If self.attribute_output
+                    &#47&#47 and/or self.additional_attribute_output is empty, the respective
+                    &#47&#47 tuple index will be filled with a placeholder nan-filled tensor.
+                    &#47&#47 These nan-filled tensors get filtered out in the _discriminate,
+                    &#47&#47 _get_gradient_penalty, and _discriminate_attributes functions.
+
+                    generated_batch = self.generator(attribute_noise, feature_noise)
+                    real_batch = [
+                        x.to(self.device, non_blocking=True) for x in real_batch
+                    ]
+
+                for _ in range(self.config.discriminator_rounds):
+                    opt_discriminator.zero_grad(
+                        set_to_none=self.config.mixed_precision_training
+                    )
+                    with torch.cuda.amp.autocast(enabled=True):
+                        generated_output = self._discriminate(generated_batch)
+                        real_output = self._discriminate(real_batch)
+
+                        loss_generated = torch.mean(generated_output)
+                        loss_real = -torch.mean(real_output)
+                        loss_gradient_penalty = self._get_gradient_penalty(
+                            generated_batch, real_batch, self._discriminate
+                        )
+
+                        loss = (
+                            loss_generated
+                            + loss_real
+                            + self.config.gradient_penalty_coef * loss_gradient_penalty
+                        )
+
+                    scaler.scale(loss).backward(retain_graph=True)
+                    scaler.step(opt_discriminator)
+                    <a id="change">scaler.update()</a>
+
+                    if opt_attribute_discriminator is not None:
+                        opt_attribute_discriminator.zero_grad(set_to_none=False)
+                        &#47&#47 Exclude features (last element of batches) for
+                        &#47&#47 attribute discriminator
+                        with torch.cuda.amp.autocast(
+                            enabled=self.config.mixed_precision_training
+                        ):
+                            generated_output = self._discriminate_attributes(
+                                generated_batch[:-1]
+                            )
+                            real_output = self._discriminate_attributes(real_batch[:-1])
+
+                            loss_generated = torch.mean(generated_output)
+                            loss_real = -torch.mean(real_output)
+                            loss_gradient_penalty = self._get_gradient_penalty(
+                                generated_batch[:-1],
+                                real_batch[:-1],
+                                self._discriminate_attributes,
+                            )
+
+                            attribute_loss = (
+                                loss_generated
+                                + loss_real
+                                + self.config.attribute_gradient_penalty_coef
+                                * loss_gradient_penalty
+                            )
+
+                        scaler.scale(attribute_loss).backward(retain_graph=True)
+                        <a id="change">scaler.step(</a>opt_attribute_discriminator<a id="change">)</a>
+                        scaler.update()
+
+                for _ in range(self.config.generator_rounds):
+                    opt_generator.zero_grad(set_to_none=False)
+                    with torch.cuda.amp.autocast(
+                        enabled=self.config.mixed_precision_training
+                    ):
+                        generated_output = self._discriminate(generated_batch)
+
+                        if self.attribute_discriminator:
+                            &#47&#47 Exclude features (last element of batch) before
+                            &#47&#47 calling attribute discriminator
+                            attribute_generated_output = self._discriminate_attributes(
+                                generated_batch[:-1]
+                            )
+
+                            loss = -torch.mean(
+                                generated_output
+                            ) + self.config.attribute_loss_coef * -torch.mean(
+                                attribute_generated_output
+                            )
+                        else:
+                            loss = -torch.mean(generated_output)
+
+                    <a id="change">scaler.scale(loss).backward()</a>
+                    scaler.step(opt_generator)
+                    scaler.update()
+
+    def _generate(</code></pre>

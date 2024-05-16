@@ -1,0 +1,39 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        self.converter = MusicConverter()
+
+    def __call__(self, mode: str, to_score: bool = False):
+        modes<a id="change"> = </a><a id="change">[</a>&quotconditional&quot, &quotunconditional-greedy&quot, &quotunconditional-topk&quot<a id="change"></a>]
+        assert mode in modes, f&quotInvalid mode: expect one of {logi(modes)}, got ({logi(mode)})&quot
+
+        &#47&#47 ic(tokenizer, tokenizer.pad_token_id, tokenizer.eos_token_id)</code></pre><h3>After Change</h3><pre><code class='java'>
+        assert mode in modes, f&quotInvalid mode: expect one of {logi(modes)}, got ({logi(mode)})&quot
+
+        outputs = None
+        <a id="change">if </a>&quotunconditional&quot in mode:
+            ts, tp = self.vocab.uncompact(VocabType.time_sig, (4, 4)), self.vocab.uncompact(VocabType.tempo, 120)
+            &#47&#47 prompt = &quot &quot.join([ts, tp])
+            &#47&#47 prompt = &quot &quot.join([ts])
+            prompt = &quot &quot.join([ts, tp, self.vocab.start_of_bar])
+            inputs = self.tokenizer(prompt, return_tensors=&quotpt&quot)
+            args<a id="change"> = </a><a id="change">dict(max_length=self.max_len)</a>
+            ic(inputs)
+            if &quotgreedy&quot in mode:
+                if &quotdo_sample&quot in generate_args:
+                    assert not generate_args[&quotdo_sample&quot], f&quot{logi("do_sample")} must be False for greedy generation&quot
+            elif &quotsample&quot in mode:
+                if &quotdo_sample&quot in generate_args:
+                    assert generate_args[&quotdo_sample&quot], f&quot{logi("do_sample")} must be True for sample generation&quot
+            args |= generate_args
+            outputs = self.model.generate(**inputs, **args)
+        elif &quotconditional&quot in mode:
+            prompt, path = generate_args.get(&quotprompt&quot, None), generate_args.get(&quotpath&quot, None)
+            assert prompt is not None or path is not None, f&quotExpect either {logi("prompt")} or {logi("path")}&quot
+            if prompt is None:
+                prompt = self.converter.mxl2str(path)
+            inputs<a id="change"> = </a>self.tokenizer(prompt, return_tensors=&quotpt&quot)
+            outputs = self.model.generate(
+                **inputs, max_length=self.max_len
+            )</code></pre>

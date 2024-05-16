@@ -1,0 +1,55 @@
+<html><h3>Pattern ID :32448
+</h3><img src='94611287.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+    def get_weight(self):
+        if self.use_layernorm:
+            weight = self.scale<a id="change"> * </a><a id="change">F.layer_norm(</a>self.weight, self.weight.shape[1:]<a id="change">, eps=self.eps)</a>
+        else:
+            std, mean = torch.std_mean(self.weight, dim=[1, 2, 3], keepdim=True, unbiased=False)
+            weight = self.scale * (self.weight - mean) / (std + self.eps)
+        return self.gain * weight</code></pre><h3>After Change</h3><pre><code class='java'>
+    def get_weight(self):
+        if self.use_layernorm:
+            &#47&#47 NOTE F.layer_norm is being used to compute (self.weight - mean) / (sqrt(var) + self.eps) in one op
+            weight = <a id="change">F.layer_norm(</a>self.weight, self.weight.shape[1:]<a id="change">, eps=self.eps)</a>
+        else:
+            std, mean = torch.std_mean(self.weight, dim=[1, 2, 3], keepdim=True, unbiased=False)
+            weight = (self.weight - mean) / (std + self.eps)
+        return weight.mul_(self.gain * self.scale)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/feng-lab/pytorch-image-models/commit/8e4ac3549f65eefa6b094cd04876b19ed3ca7506#diff-c98c5e3448e0eba607024155046d6323b7a7c16ed9cd2d21fd68d07df72b0e6eL92' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 94611287</div><div id='project'> Project Name: feng-lab/pytorch-image-models</div><div id='commit'> Commit Name: 8e4ac3549f65eefa6b094cd04876b19ed3ca7506</div><div id='time'> Time: 2021-06-07</div><div id='author'> Author: rwightman@gmail.com</div><div id='file'> File Name: timm/models/layers/std_conv.py</div><div id='m_class'> M Class Name: ScaledStdConv2d</div><div id='n_method'> N Class Name: ScaledStdConv2d</div><div id='m_method'> M Method Name: get_weight(1)</div><div id='n_method'> N Method Name: get_weight(1)</div><div id='m_parent_class'> M Parent Class: nn.Conv2d</div><div id='n_parent_class'> N Parent Class: nn.Conv2d</div><div id='m_file'> M File Name: timm/models/layers/std_conv.py</div><div id='n_file'> N File Name: timm/models/layers/std_conv.py</div><div id='m_start'> M Start Line: 92</div><div id='m_end'> M End Line: 96</div><div id='n_start'> N Start Line: 103</div><div id='n_end'> N End Line: 107</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    def forward(self, inp):
+        if self.pre_lnorm:
+            inp = <a id="change">self.layer_norm(</a>inp<a id="change">)</a>
+
+        &#47&#47 positionwise feed-forward
+        if self.relu_squared:
+            core_out = self.CoreNet2(self.CoreNet1(inp)<a id="change"> ** </a>2)
+        else:
+            core_out = self.CoreNet2(self.CoreNet1(inp))
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    def forward(self, inp):
+        if self.pre_lnorm:
+            &#47&#47 layer normalization + positionwise feed-forward
+            core_out = self.CoreNet(<a id="change">self.layer_norm(</a>inp<a id="change">)</a>)
+
+            &#47&#47 residual connection
+            output = core_out + inp</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/microsoft/archai/commit/a0bfd9c3239c420fdf785469f249f4d2c4ccc51a#diff-050cd32cdc5ef01f0962158d891eb5f2b2098b473b7f57381044d636d5ad5a6dL94' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 94611289</div><div id='project'> Project Name: microsoft/archai</div><div id='commit'> Commit Name: a0bfd9c3239c420fdf785469f249f4d2c4ccc51a</div><div id='time'> Time: 2022-12-16</div><div id='author'> Author: caioctmendes@gmail.com</div><div id='file'> File Name: archai/nlp/nvidia_transformer_xl/mem_transformer.py</div><div id='m_class'> M Class Name: PositionwiseFF</div><div id='n_method'> N Class Name: PositionwiseFF</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: archai/nlp/nvidia_transformer_xl/mem_transformer.py</div><div id='n_file'> N File Name: archai/nlp/nvidia_transformer_xl/mem_transformer.py</div><div id='m_start'> M Start Line: 96</div><div id='m_end'> M End Line: 110</div><div id='n_start'> N Start Line: 71</div><div id='n_end'> N End Line: 80</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    def get_weight(self):
+        if self.use_layernorm:
+            weight = self.scale<a id="change"> * </a><a id="change">F.layer_norm(</a>self.weight, self.weight.shape[1:]<a id="change">, eps=self.eps)</a>
+        else:
+            std, mean = torch.std_mean(self.weight, dim=[1, 2, 3], keepdim=True, unbiased=False)
+            weight = self.scale * (self.weight - mean) / (std + self.eps)
+        return self.gain * weight</code></pre><h3>After Change</h3><pre><code class='java'>
+    def get_weight(self):
+        if self.use_layernorm:
+            &#47&#47 NOTE F.layer_norm is being used to compute (self.weight - mean) / (sqrt(var) + self.eps) in one op
+            weight = <a id="change">F.layer_norm(</a>self.weight, self.weight.shape[1:]<a id="change">, eps=self.eps)</a>
+        else:
+            std, mean = torch.std_mean(self.weight, dim=[1, 2, 3], keepdim=True, unbiased=False)
+            weight = (self.weight - mean) / (std + self.eps)
+        return weight.mul_(self.gain * self.scale)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/feng-lab/pytorch-image-models/commit/8e4ac3549f65eefa6b094cd04876b19ed3ca7506#diff-c98c5e3448e0eba607024155046d6323b7a7c16ed9cd2d21fd68d07df72b0e6eL132' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 94611288</div><div id='project'> Project Name: feng-lab/pytorch-image-models</div><div id='commit'> Commit Name: 8e4ac3549f65eefa6b094cd04876b19ed3ca7506</div><div id='time'> Time: 2021-06-07</div><div id='author'> Author: rwightman@gmail.com</div><div id='file'> File Name: timm/models/layers/std_conv.py</div><div id='m_class'> M Class Name: ScaledStdConv2dSame</div><div id='n_method'> N Class Name: ScaledStdConv2dSame</div><div id='m_method'> M Method Name: get_weight(1)</div><div id='n_method'> N Method Name: get_weight(1)</div><div id='m_parent_class'> M Parent Class: nn.Conv2d</div><div id='n_parent_class'> N Parent Class: nn.Conv2d</div><div id='m_file'> M File Name: timm/models/layers/std_conv.py</div><div id='n_file'> N File Name: timm/models/layers/std_conv.py</div><div id='m_start'> M Start Line: 134</div><div id='m_end'> M End Line: 138</div><div id='n_start'> N Start Line: 138</div><div id='n_end'> N End Line: 142</div><BR>

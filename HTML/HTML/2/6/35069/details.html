@@ -1,0 +1,63 @@
+<html><h3>Pattern ID :35069
+</h3><img src='100132661.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        out = self.fc3(x)
+        mu, log_std = out.chunk(2, dim=-1)
+        if self.dist_impl == "pyd":
+            log_std<a id="change"> = </a><a id="change">torch.tanh(</a>log_std<a id="change">)</a>
+            log_std = self.log_std_low<a id="change"> + 0.5 * (
+                self.log_std_high - self.log_std_low
+            ) </a>* (log_std + 1)
+            std<a id="change"> = </a>log_std.exp()
+            dist = distributions.SquashedNormal(mu, std)
+        elif self.dist_impl == "beta":
+            out = 1.0 + F.softplus(out)</code></pre><h3>After Change</h3><pre><code class='java'>
+            return distributions.create_tanh_normal(
+                out, self.log_std_low, self.log_std_high
+            )
+        elif <a id="change"></a>self.dist_impl == "beta":
+            return distributions.create_beta(out)
+
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 6</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/jakegrigsby/super_sac/commit/b4650419bf361d2ce588d7b2ad7247b4289952cc#diff-3de504a2d9ba13ee1d8f725bb639e01536abd604fd5ae9a8890ace4c99ccc4eeL35' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 100132661</div><div id='project'> Project Name: jakegrigsby/super_sac</div><div id='commit'> Commit Name: b4650419bf361d2ce588d7b2ad7247b4289952cc</div><div id='time'> Time: 2022-01-02</div><div id='author'> Author: jcg6dn@virginia.edu</div><div id='file'> File Name: super_sac/nets/mlps.py</div><div id='m_class'> M Class Name: ContinuousStochasticActor</div><div id='n_method'> N Class Name: ContinuousStochasticActor</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: super_sac/nets/mlps.py</div><div id='n_file'> N File Name: super_sac/nets/mlps.py</div><div id='m_start'> M Start Line: 35</div><div id='m_end'> M End Line: 48</div><div id='n_start'> N Start Line: 35</div><div id='n_end'> N End Line: 43</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    def abs_loss(self, _input: torch.Tensor, atanh_mark: torch.Tensor, atanh_mask: torch.Tensor,
+                 layer: str, neuron: int, next_neuron: int):
+        mark<a id="change"> = </a><a id="change">atanh_mark.tanh()</a>.mul(0.5).add(0.5)
+        mask = atanh_mask.tanh().mul(0.5).add(0.5)<a id="change"> * </a>self.nc_mask
+
+        X = _input + mask * (mark - _input)
+        _dict: Dict[str, torch.Tensor] = self.model.get_all_layer(X)
+        tinners = _dict[layer]
+        logits = _dict[&quotlogits&quot]
+
+        vloss1 = tinners[:, neuron].sum()
+        vloss2<a id="change"> = </a>tinners.sum()<a id="change"> - </a>vloss1
+        tvloss = total_variation(mark)
+
+        mask_loss = mask.sum()</code></pre><h3>After Change</h3><pre><code class='java'>
+            if (self.count_mask and mask_nz &gt; (math.sqrt(self.max_troj_size) + 2)**2) \
+                    or (not self.count_mask and mask_loss &gt; 100):
+                mask_loss *= 2 * self.remask_weight
+            elif <a id="change"></a>(self.count_mask and mask_nz &gt; self.max_troj_size) \
+                    or (not self.count_mask and mask_loss &gt; self.max_troj_size):
+                mask_loss *= self.remask_weight
+            else:</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/ain-soph/trojanzoo/commit/1684c28ef38502abb83d37beb845b69007e33274#diff-7af6064ea7ec79a26e3db236e9cf91c2f5bb481beb04de7a8aadbb1986e10026L229' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 100132721</div><div id='project'> Project Name: ain-soph/trojanzoo</div><div id='commit'> Commit Name: 1684c28ef38502abb83d37beb845b69007e33274</div><div id='time'> Time: 2020-07-07</div><div id='author'> Author: ain-soph@live.com</div><div id='file'> File Name: trojanzoo/defense/backdoor/abs.py</div><div id='m_class'> M Class Name: ABS</div><div id='n_method'> N Class Name: ABS</div><div id='m_method'> M Method Name: abs_loss(7)</div><div id='n_method'> N Method Name: abs_loss(7)</div><div id='m_parent_class'> M Parent Class: Defense_Backdoor</div><div id='n_parent_class'> N Parent Class: Defense_Backdoor</div><div id='m_file'> M File Name: trojanzoo/defense/backdoor/abs.py</div><div id='n_file'> N File Name: trojanzoo/defense/backdoor/abs.py</div><div id='m_start'> M Start Line: 231</div><div id='m_end'> M End Line: 252</div><div id='n_start'> N Start Line: 260</div><div id='n_end'> N End Line: 283</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            &#47&#47 1.0 / derivative of tanh contraction
+            x = (x - aabb_min) / (aabb_max - aabb_min)
+            x = x - 0.5
+            scaling<a id="change"> = </a>1.0 / (
+                torch.clamp(1.0 - <a id="change">torch.tanh(</a>x<a id="change">)</a> ** 2, min=1e6) * 0.5
+            )
+            scaling<a id="change"> = </a>scaling<a id="change"> * </a>(aabb_max<a id="change"> - </a>aabb_min)
+        else:
+            scaling = aabb_max - aabb_min
+        step_size = step_size * scaling.norm(dim=-1, keepdim=True)</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    def query_opacity(self, x, step_size):
+        density = self.query_density(x)
+        <a id="change">if </a>self.unbounded:
+            &#47&#47 NOTE: In principle, we should use the following formula to scale
+            &#47&#47 up the step size, but in practice, it is somehow not helpful.
+            &#47&#47 derivitive = contract_to_unisphere(x, self.aabb, derivative=True)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/kair-bair/nerfacc/commit/b969818e263af6cc67f4d4de76791a5a812b6378#diff-deffcc211cc27dfdb1d97af8ca3d88357ed7f504985aaf63a08d4a6c14d0b89fL115' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 100132714</div><div id='project'> Project Name: kair-bair/nerfacc</div><div id='commit'> Commit Name: b969818e263af6cc67f4d4de76791a5a812b6378</div><div id='time'> Time: 2022-09-28</div><div id='author'> Author: ruilongli94@gmail.com</div><div id='file'> File Name: examples/radiance_fields/ngp.py</div><div id='m_class'> M Class Name: NGPradianceField</div><div id='n_method'> N Class Name: NGPradianceField</div><div id='m_method'> M Method Name: query_opacity(3)</div><div id='n_method'> N Method Name: query_opacity(3)</div><div id='m_parent_class'> M Parent Class: torch.nn.Module</div><div id='n_parent_class'> N Parent Class: torch.nn.Module</div><div id='m_file'> M File Name: examples/radiance_fields/ngp.py</div><div id='n_file'> N File Name: examples/radiance_fields/ngp.py</div><div id='m_start'> M Start Line: 117</div><div id='m_end'> M End Line: 129</div><div id='n_start'> N Start Line: 142</div><div id='n_end'> N End Line: 148</div><BR>

@@ -1,0 +1,19 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+    def forward(self, sparse_features):
+        x = reshape_sparse_features(sparse_features)
+        output_<a id="change"> = </a><a id="change">self.embed(</a>x + self.offsets<a id="change">)</a>
+        if self.output_device_type == "cuda" and self.offsets.device.type == "cpu":
+            output_ = output_.cuda()
+            output_.spec.dist_spec.process_group = self.process_group
+        output = output_.convert_to_dist_spec(distspec.shard(self.process_group, [0], [self.world_size]))</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        sparse_dict = sparse_features.to_dict()
+        flattened_sparse_features = torch.cat(
+            [<a id="change">sparse_dict[key]</a>.values() + offset for key, offset in zip(keys, self.offsets)])
+        batch_offsets = sparse_features.offsets()
+
+        batch_size = len(sparse_features.lengths()) // len(keys)</code></pre>

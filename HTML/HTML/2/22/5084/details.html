@@ -1,0 +1,154 @@
+<html><h3>Pattern ID :5084
+</h3><img src='17917971.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    cont_names = ["x", "y"]
+
+    columns = mycols_pq if engine == "parquet" else mycols_csv
+    <a id="change">columns_ctx</a> = <a id="change">{}</a>
+    <a id="change">columns_ctx["all"]</a> = <a id="change">{}</a>
+    <a id="change">columns_ctx["all"]["base"]</a> = columns
+
+    filter_op<a id="change"> = </a>ops.Filter(f=lambda df: df[df["y"] &gt; 0.5])
+    new_gdf<a id="change"> = </a><a id="change">filter_op.apply_op(</a>df, <a id="change">columns_ctx</a>, <a id="change">"all"</a><a id="change">, target_cols=columns)</a>
+    assert new_gdf.columns.all() == df.columns.all()
+
+    &#47&#47 return isnull() rows
+    columns_ctx["continuous"] = {}</code></pre><h3>After Change</h3><pre><code class='java'>
+@pytest.mark.parametrize("engine", ["parquet"])
+def test_filter(tmpdir, df, dataset, gpu_memory_frac, engine):
+    cont_names = ["x", "y"]
+    filtered<a id="change"> = </a>cont_names<a id="change"> &gt;&gt; </a>ops.Filter(f=lambda df: df[df["y"] &gt; 0.5])
+    processor = <a id="change">nvtabular.Workflow(</a>filtered<a id="change">)</a>
+    processor.fit(dataset)
+    new_gdf = processor.transform(dataset).to_ddf().compute().reset_index()
+    filter_df = df[df["y"] &gt; 0.5].reset_index()
+    for col in cont_names:
+        assert np.all((new_gdf[col] - filter_df[col]).abs().values &lt;= 1e-2)
+
+    &#47&#47 return isnull() rows
+    for col in cont_names:
+        idx = np.random.choice(df.shape[0] - 1, int(df.shape[0] * 0.2))
+        df[col].iloc[idx] = None
+
+    <a id="change">dataset</a> = <a id="change">nvt.Dataset(</a>df<a id="change">)</a>
+    filtered = cont_names &gt;&gt; ops.Filter(f=lambda df: df[df.x.isnull()])
+    processor = nvtabular.Workflow(filtered)
+    processor.fit(dataset)
+    new_gdf = <a id="change">processor.transform(dataset).to_ddf().compute()</a>
+    assert new_gdf.shape[0] &lt; df.shape[0], "null values do not exist"
+
+    &#47&#47 again testing filtering by returning a series rather than a df
+    filtered = cont_names &gt;&gt; ops.Filter(f=lambda df: df.x.isnull())
+    processor = nvtabular.Workflow(filtered)
+    <a id="change">processor.fit(dataset</a><a id="change">)</a>
+    new_gdf = processor.transform(dataset).to_ddf().compute()
+    assert new_gdf.shape[0] &lt; df.shape[0], "null values do not exist"
+
+    &#47&#47 if the filter returns an invalid type we should get an exception immediately</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 17</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/nvidia/nvtabular/commit/4c92dffac4354d816178264bcfcdec722db2ec1c#diff-e4d18001a1d407273320606db51ffe8ef20709522220cdc6e3cde2070f06b246L596' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 17917971</div><div id='project'> Project Name: nvidia/nvtabular</div><div id='commit'> Commit Name: 4c92dffac4354d816178264bcfcdec722db2ec1c</div><div id='time'> Time: 2021-01-05</div><div id='author'> Author: github@benfrederickson.com</div><div id='file'> File Name: tests/unit/test_ops.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: test_filter(5)</div><div id='n_method'> N Method Name: test_filter(6)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: tests/unit/test_ops.py</div><div id='n_file'> N File Name: tests/unit/test_ops.py</div><div id='m_start'> M Start Line: 991</div><div id='m_end'> M End Line: 1027</div><div id='n_start'> N Start Line: 596</div><div id='n_end'> N End Line: 629</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    cont_names = ["x", "y"]
+
+    columns = mycols_pq if engine == "parquet" else mycols_csv
+    <a id="change">columns_ctx</a> = <a id="change">{}</a>
+    <a id="change">columns_ctx["all"]</a> = <a id="change">{}</a>
+    <a id="change">columns_ctx["all"]["base"]</a> = columns
+
+    filter_op<a id="change"> = </a>ops.Filter(f=lambda df: df[df["y"] &gt; 0.5])
+    new_gdf<a id="change"> = </a><a id="change">filter_op.apply_op(</a>df, columns_ctx, <a id="change">"all"</a><a id="change">, target_cols=columns)</a>
+    assert new_gdf.columns.all() == df.columns.all()
+
+    &#47&#47 return isnull() rows
+    columns_ctx["continuous"] = {}</code></pre><h3>After Change</h3><pre><code class='java'>
+@pytest.mark.parametrize("engine", ["parquet"])
+def test_filter(tmpdir, df, dataset, gpu_memory_frac, engine):
+    cont_names = ["x", "y"]
+    filtered<a id="change"> = </a>cont_names<a id="change"> &gt;&gt; </a>ops.Filter(f=lambda df: df[df["y"] &gt; 0.5])
+    processor = nvtabular.Workflow(filtered)
+    processor.fit(dataset)
+    new_gdf = processor.transform(dataset).to_ddf().compute().reset_index()
+    filter_df = df[df["y"] &gt; 0.5].reset_index()
+    for col in cont_names:
+        assert np.all((new_gdf[col] - filter_df[col]).abs().values &lt;= 1e-2)
+
+    &#47&#47 return isnull() rows
+    for col in cont_names:
+        idx = np.random.choice(df.shape[0] - 1, int(df.shape[0] * 0.2))
+        df[col].iloc[idx] = None
+
+    <a id="change">dataset</a> = <a id="change">nvt.Dataset(</a>df<a id="change">)</a>
+    filtered = cont_names &gt;&gt; ops.Filter(f=lambda df: df[df.x.isnull()])
+    processor = nvtabular.Workflow(filtered)
+    processor.fit(dataset)
+    new_gdf = processor.transform(dataset).to_ddf().compute()
+    assert new_gdf.shape[0] &lt; df.shape[0], "null values do not exist"
+
+    &#47&#47 again testing filtering by returning a series rather than a df
+    filtered = cont_names &gt;&gt; ops.Filter(f=lambda df: df.x.isnull())
+    processor = <a id="change">nvtabular.Workflow(</a>filtered<a id="change">)</a>
+    <a id="change">processor.fit(</a>dataset<a id="change">)</a>
+    new_gdf = processor.transform(dataset).to_ddf().compute()
+    assert new_gdf.shape[0] &lt; df.shape[0], "null values do not exist"
+
+    &#47&#47 if the filter returns an invalid type we should get an exception immediately
+    &#47&#47 (rather than causing problems downstream in the workflow)
+    filtered = cont_names &gt;&gt; ops.Filter(f=lambda df: "some invalid value")
+    processor = nvtabular.Workflow(filtered)
+    with pytest.raises(ValueError):
+        new_gdf = <a id="change">processor.transform(dataset).to_ddf().compute()</a>
+
+
+def test_difference_lag():
+    df = cudf.DataFrame(</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/nvidia/nvtabular/commit/4c92dffac4354d816178264bcfcdec722db2ec1c#diff-e4d18001a1d407273320606db51ffe8ef20709522220cdc6e3cde2070f06b246L991' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 17918003</div><div id='project'> Project Name: nvidia/nvtabular</div><div id='commit'> Commit Name: 4c92dffac4354d816178264bcfcdec722db2ec1c</div><div id='time'> Time: 2021-01-05</div><div id='author'> Author: github@benfrederickson.com</div><div id='file'> File Name: tests/unit/test_ops.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: test_filter(5)</div><div id='n_method'> N Method Name: test_filter(6)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: tests/unit/test_ops.py</div><div id='n_file'> N File Name: tests/unit/test_ops.py</div><div id='m_start'> M Start Line: 991</div><div id='m_end'> M End Line: 1027</div><div id='n_start'> N Start Line: 596</div><div id='n_end'> N End Line: 629</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    processor.update_stats(dataset)
+
+    op<a id="change"> = </a>ops.Normalize()
+
+    <a id="change">columns_ctx</a> = <a id="change">{}</a>
+    <a id="change">columns_ctx["continuous"]</a> = <a id="change">{}</a>
+    <a id="change">columns_ctx["continuous"]["base"]</a> = op_columns or cont_names
+
+    new_gdf<a id="change"> = </a><a id="change">op.apply_op(</a>df, columns_ctx, <a id="change">"continuous"</a><a id="change">, stats_context=processor.stats)</a>
+    df["x"] = (df["x"] - processor.stats["means"]["x"]) / processor.stats["stds"]["x"]
+    assert new_gdf["x"].equals(df["x"])
+
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        {"x": [1.9e10, 2.3e16, 3.4e18, 1.6e19], "label": [1, 0, 1, 0]}, dtype="float32"
+    )
+
+    cont_features<a id="change"> = </a>op_columns<a id="change"> &gt;&gt; </a>ops.Normalize()
+    processor = <a id="change">nvtabular.Workflow(</a>cont_features<a id="change">)</a>
+    <a id="change">dataset</a> = <a id="change">nvt.Dataset(</a>df<a id="change">)</a>
+    <a id="change">processor.fit(</a>dataset<a id="change">)</a>
+
+    new_gdf = <a id="change">processor.transform(dataset).to_ddf().compute()</a>
+
+    for col in op_columns:
+        assert math.isclose(df[col].mean(), processor.column_group.op.means[col], rel_tol=1e-4)
+        assert math.isclose(df[col].std(), processor.column_group.op.stds[col], rel_tol=1e-4)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/nvidia/nvtabular/commit/4c92dffac4354d816178264bcfcdec722db2ec1c#diff-e4d18001a1d407273320606db51ffe8ef20709522220cdc6e3cde2070f06b246L445' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 17918002</div><div id='project'> Project Name: nvidia/nvtabular</div><div id='commit'> Commit Name: 4c92dffac4354d816178264bcfcdec722db2ec1c</div><div id='time'> Time: 2021-01-05</div><div id='author'> Author: github@benfrederickson.com</div><div id='file'> File Name: tests/unit/test_ops.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: test_normalize_upcastfloat64(5)</div><div id='n_method'> N Method Name: test_normalize_upcastfloat64(5)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: tests/unit/test_ops.py</div><div id='n_file'> N File Name: tests/unit/test_ops.py</div><div id='m_start'> M Start Line: 446</div><div id='m_end'> M End Line: 471</div><div id='n_start'> N Start Line: 258</div><div id='n_end'> N End Line: 277</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    )
+
+    columns = ["userid", "timestamp"]
+    <a id="change">columns_ctx</a> = <a id="change">{}</a>
+    <a id="change">columns_ctx["all"]</a> = <a id="change">{}</a>
+    <a id="change">columns_ctx["all"]["base"]</a> = columns
+
+    op<a id="change"> = </a>ops.DifferenceLag("userid", shift=[1, -1], columns=["timestamp"])
+    new_gdf<a id="change"> = </a><a id="change">op.apply_op(</a>df, columns_ctx, <a id="change">"all"</a><a id="change">, target_cols=["timestamp"])</a>
+
+    assert new_gdf["timestamp_DifferenceLag_1"][0] is None
+    assert new_gdf["timestamp_DifferenceLag_1"][1] == 5
+    assert new_gdf["timestamp_DifferenceLag_1"][2] == 95</code></pre><h3>After Change</h3><pre><code class='java'>
+        {"userid": [0, 0, 0, 1, 1, 2], "timestamp": [1000, 1005, 1100, 2000, 2001, 3000]}
+    )
+
+    diff_features<a id="change"> = </a>["timestamp"]<a id="change"> &gt;&gt; </a>ops.DifferenceLag(partition_cols=["userid"], shift=[1, -1])
+    <a id="change">dataset</a> = <a id="change">nvt.Dataset(</a>df<a id="change">)</a>
+    processor = <a id="change">nvtabular.Workflow(</a>diff_features<a id="change">)</a>
+    <a id="change">processor.fit(</a>dataset<a id="change">)</a>
+    new_gdf = <a id="change">processor.transform(dataset).to_ddf().compute()</a>
+
+    assert new_gdf["timestamp_difference_lag_1"][0] is None
+    assert new_gdf["timestamp_difference_lag_1"][1] == 5
+    assert new_gdf["timestamp_difference_lag_1"][2] == 95</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/nvidia/nvtabular/commit/4c92dffac4354d816178264bcfcdec722db2ec1c#diff-e4d18001a1d407273320606db51ffe8ef20709522220cdc6e3cde2070f06b246L1030' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 17917981</div><div id='project'> Project Name: nvidia/nvtabular</div><div id='commit'> Commit Name: 4c92dffac4354d816178264bcfcdec722db2ec1c</div><div id='time'> Time: 2021-01-05</div><div id='author'> Author: github@benfrederickson.com</div><div id='file'> File Name: tests/unit/test_ops.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: test_difference_lag(0)</div><div id='n_method'> N Method Name: test_difference_lag(0)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: tests/unit/test_ops.py</div><div id='n_file'> N File Name: tests/unit/test_ops.py</div><div id='m_start'> M Start Line: 1031</div><div id='m_end'> M End Line: 1041</div><div id='n_start'> N Start Line: 633</div><div id='n_end'> N End Line: 641</div><BR>

@@ -1,0 +1,30 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+    if config[&quotmask_type&quot] == &quothole&quot:
+        result = x * (1. - mask)
+    elif <a id="change"></a>config[&quotmask_type&quot] == &quotmosaic&quot:
+        &#47&#47 TODO: Matching the mosaic patch size and the mask size
+        mosaic_unit_size = config[&quotmosaic_unit_size&quot]
+        downsampled_image = F.interpolate(x, scale_factor=1. / mosaic_unit_size, mode=&quotnearest&quot)
+        upsampled_image = F.interpolate(downsampled_image, size=(height, width), mode=&quotnearest&quot)
+        result = upsampled_image * mask + x * (1. - mask)
+    else:
+        <a id="change">raise NotImplementedError(&quotNot implemented mask type.&quot</a><a id="change">)</a>
+
+    return result, mask</code></pre><h3>After Change</h3><pre><code class='java'>
+    height, width, _ = config[&quotimage_shape&quot]
+    max_mask = x.shape[0]
+    result = torch.ones_like(x)
+    mask = <a id="change">torch.ones(size=[x.shape[0], 1, x.shape[2], x.shape[3]])</a>
+    for i in range(max_mask):
+        mask_temp = random_mask(height=height, width=width)
+        mask_temp = torch.tensor(mask_temp, dtype=torch.float32)
+        if x.is_cuda:
+            mask_temp.cuda()
+        result[i, :, :, :] = x[i, :, :, :] * (1. - mask_temp)
+        mask[i, :, :, :]<a id="change"> = </a>mask[i, :, :, :] * mask_temp
+    return result, mask
+</code></pre>

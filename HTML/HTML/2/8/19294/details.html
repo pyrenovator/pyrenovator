@@ -1,0 +1,165 @@
+<html><h3>Pattern ID :19294
+</h3><img src='62785470.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    if env.experiment_config.debug_enabled():
+        faulthandler.dump_traceback_later(30, repeat=True)
+
+    <a id="change">with det</a><a id="change">._catch_sys_exit():
+        </a>try:
+            &#47&#47 TODO: reorder object lifetimes so that the DistributedContext and the GenericContext
+            &#47&#47 are created here.  Nothing else in the TrialController or Trial code needs the
+            &#47&#47 rendezvous info.  Then we can remove the rendezvous info as an arg from the whole rest
+            &#47&#47 of the harness.
+            rendezvous_info = info._rendezvous_info
+            assert rendezvous_info is not None
+            controller<a id="change"> = </a>load.prepare_controller(
+                env,
+                rendezvous_info,
+                hvd_config,</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    config_logging(env.debug)
+
+    <a id="change">with </a><a id="change">maybe_periodic_stacktraces(env.debug):
+        &#47&#47 Step 1: Load user code.
+        &#47&#47 We can&quott build a generic.Context until we have a RankInfo, and we can&quott build a RankInfo
+        &#47&#47 without horovod, and we can&quott load the right horovod until we know which Trial class the
+        &#47&#47 user implemented.
+        </a>trial_class<a id="change">, controller_class = </a>load.get_trial_and_controller_class(env.experiment_config)
+
+        &#47&#47 Step 2: Initialize framework-specific details (horovod, random seeds, etc).
+        controller_class.pre_execute_hook(env, hvd_config)
+
+        &#47&#47 Step 3: Now that horovod is initialized, we can build a RankInfo object.
+        &#47&#47 It is always expected that the training code can figure this out based on how the
+        &#47&#47 launch layer launched the code.
+        if hvd_config.use:
+            distributed = _generic.DistributedContext(
+                rank=horovod.hvd.rank(),
+                size=horovod.hvd.size(),
+                local_rank=horovod.hvd.local_rank(),
+                local_size=horovod.hvd.local_size(),
+                cross_rank=horovod.hvd.cross_rank(),
+                cross_size=horovod.hvd.cross_size(),
+                chief_ip=chief_ip,
+                port_offset=info.task_type == "TRIAL" and info.trial._unique_port_offset or 0,
+            )
+        else:
+            distributed = _generic.DummyDistributed()
+
+        &#47&#47 Step 4: Let generic.init() create the generic.Context.
+        with _generic.init(distributed=distributed) as generic_context:
+            trial_context<a id="change"> = </a>trial_class.trial_context_class(generic_context, env, hvd_config)
+
+            &#47&#47 Step 5: Instantiate the user&quots Trial.
+            trial_inst = trial_class(trial_context)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 8</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/determined-ai/determined/commit/97abf3e4bb62287c5b6e7c00a8aa2a8e0a952492#diff-e6e62283a80f48561c839b02d7fdc3631f92a851fe9b0e3acb1a74bf8af16f75L21' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 62785470</div><div id='project'> Project Name: determined-ai/determined</div><div id='commit'> Commit Name: 97abf3e4bb62287c5b6e7c00a8aa2a8e0a952492</div><div id='time'> Time: 2021-10-28</div><div id='author'> Author: rb@determined.ai</div><div id='file'> File Name: harness/determined/exec/harness.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(1)</div><div id='n_method'> N Method Name: main(0)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: harness/determined/exec/harness.py</div><div id='n_file'> N File Name: harness/determined/exec/harness.py</div><div id='m_start'> M Start Line: 21</div><div id='m_end'> M End Line: 114</div><div id='n_start'> N Start Line: 33</div><div id='n_end'> N End Line: 129</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            _get_filter(f) if isinstance(f, tp.Type) else f for f in filters
+        )
+
+        <a id="change">with _Context</a><a id="change">(get_value_annotations=True):
+
+            </a>flat<a id="change">, treedef = </a>jax.tree_flatten(self)
+            flat_out<a id="change"> = </a>[
+                info.value if any(f(info) for f in filters) else types.Nothing()
+                for info in flat
+            ]</code></pre><h3>After Change</h3><pre><code class='java'>
+        def apply_filters(info: FieldInfo) -&gt; tp.Any:
+            return info.value if any(f(info) for f in filters) else types.Nothing()
+
+        <a id="change">with </a><a id="change">_Context(add_field_info=True):
+            </a>module<a id="change"> = </a>jax.tree_map(apply_filters, self)
+
+        return module
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/cgarciae/treex/commit/ba314576e99212ef464d3a855ad3992412075516#diff-96f394610cf28826465ebc951b41b9fcfdf8673fa5e028b78b7e5f5ed5a97dd4L170' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 62785340</div><div id='project'> Project Name: cgarciae/treex</div><div id='commit'> Commit Name: ba314576e99212ef464d3a855ad3992412075516</div><div id='time'> Time: 2021-09-06</div><div id='author'> Author: cgarcia.e88@gmail.com</div><div id='file'> File Name: treex/tree_object.py</div><div id='m_class'> M Class Name: TreeObject</div><div id='n_method'> N Class Name: TreeObject</div><div id='m_method'> M Method Name: filter(0)</div><div id='n_method'> N Method Name: filter(0)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: treex/tree_object.py</div><div id='n_file'> N File Name: treex/tree_object.py</div><div id='m_start'> M Start Line: 231</div><div id='m_end'> M End Line: 240</div><div id='n_start'> N Start Line: 225</div><div id='n_end'> N End Line: 228</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    desc = &quot| epoch {:03d}&quot.format(epoch)
+    lr = trainer.get_lr()
+    <a id="change">with progress_bar</a><a id="change">(itr, desc, leave=False) as t:
+        </a>for i, sample in data.skip_group_enumerator(t, num_gpus, batch_offset):
+            loss_dict = trainer.train_step(sample)
+            loss = loss_dict[&quotloss&quot]
+            del loss_dict[&quotloss&quot]  &#47&#47 don&quott include in extra_meters or extra_postfix
+
+            ntokens = sum(s[&quotntokens&quot] for s in sample)
+            nsentences = sum(s[&quotsrc_tokens&quot].size(0) for s in sample)
+            loss_meter.update(loss, nsentences if args.sentence_avg else ntokens)
+            bsz_meter.update(nsentences)
+            wpb_meter.update(ntokens)
+            wps_meter.update(ntokens)
+            clip_meter.update(1 if loss_dict[&quotgnorm&quot] &gt; args.clip_norm else 0)
+
+            extra_postfix = []
+            for k, v in loss_dict.items():
+                extra_meters[k].update(v)
+                extra_postfix.append((k, &quot{:.4f}&quot.format(extra_meters[k].avg)))
+
+            t.set_postfix(collections.OrderedDict([
+                (&quotloss&quot, &quot{:.2f} ({:.2f})&quot.format(loss, loss_meter.avg)),
+                (&quotwps&quot, &quot{:5d}&quot.format(round(wps_meter.avg))),
+                (&quotwpb&quot, &quot{:5d}&quot.format(round(wpb_meter.avg))),
+                (&quotbsz&quot, &quot{:5d}&quot.format(round(bsz_meter.avg))),
+                (&quotlr&quot, lr),
+                (&quotclip&quot, &quot{:3.0f}%&quot.format(clip_meter.avg * 100)),
+            ] + extra_postfix), refresh=False)
+
+            if i == 0:
+                &#47&#47 ignore the first mini-batch in words-per-second calculation
+                wps_meter.reset()
+            if args.save_interval &gt; 0 and (i + 1) % args.save_interval == 0:
+                save_checkpoint(trainer, args, epoch, i + 1)
+
+        fmt = desc + &quot | train loss {:2.2f} | train ppl {:3.2f}&quot.format(
+            loss_meter.avg, get_perplexity(loss_meter.avg))
+        fmt<a id="change"> += </a>&quot | s/checkpoint {:7d} | words/s {:6d} | words/batch {:6d}&quot.format(
+            round(wps_meter.elapsed_time), round(wps_meter.avg), round(wpb_meter.avg))
+        fmt<a id="change"> += </a>&quot | bsz {:5d} | lr {:0.6f} | clip {:3.0f}%&quot.format(
+            round(bsz_meter.avg), lr, clip_meter.avg * 100)
+        fmt<a id="change"> += </a>&quot&quot.join(
+            &quot | {} {:.4f}&quot.format(k, meter.avg)
+            for k, meter in extra_meters.items()
+        )</code></pre><h3>After Change</h3><pre><code class='java'>
+    extra_meters = collections.defaultdict(lambda: AverageMeter())
+
+    lr = trainer.get_lr()
+    <a id="change">with </a><a id="change">utils.build_progress_bar(args, itr, epoch) as t:
+        </a>for i, sample in data.skip_group_enumerator(t, num_gpus, batch_offset):
+            loss_dict = trainer.train_step(sample)
+            loss = loss_dict[&quotloss&quot]
+            del loss_dict[&quotloss&quot]  &#47&#47 don&quott include in extra_meters or extra_postfix
+
+            ntokens = sum(s[&quotntokens&quot] for s in sample)
+            nsentences = sum(s[&quotsrc_tokens&quot].size(0) for s in sample)
+            loss_meter.update(loss, nsentences if args.sentence_avg else ntokens)
+            bsz_meter.update(nsentences)
+            wpb_meter.update(ntokens)
+            wps_meter.update(ntokens)
+            clip_meter.update(1 if loss_dict[&quotgnorm&quot] &gt; args.clip_norm else 0)
+
+            extra_postfix = []
+            for k, v in loss_dict.items():
+                extra_meters[k].update(v)
+                extra_postfix.append((k, extra_meters[k].avg))
+
+            t.log(collections.OrderedDict([
+                (&quotloss&quot, loss_meter),
+                (&quotwps&quot, round(wps_meter.avg)),
+                (&quotwpb&quot, round(wpb_meter.avg)),
+                (&quotbsz&quot, round(bsz_meter.avg)),
+                (&quotlr&quot, lr),
+                (&quotclip&quot, &quot{:.0%}&quot.format(clip_meter.avg)),
+            ] + extra_postfix))
+
+            if i == 0:
+                &#47&#47 ignore the first mini-batch in words-per-second calculation
+                wps_meter.reset()
+            if args.save_interval &gt; 0 and (i + 1) % args.save_interval == 0:
+                save_checkpoint(trainer, args, epoch, i + 1)
+
+        t.print(collections.OrderedDict([
+            (&quottrain loss&quot, round(loss_meter.avg, 2)),
+            (&quottrain ppl&quot, get_perplexity(loss_meter.avg)),
+            (&quots/checkpoint&quot<a id="change">, round(wps_meter.elapsed_time)</a>),
+            (&quotwords/s&quot, round(wps_meter.avg)),
+            (&quotwords/batch&quot, round(wpb_meter.avg)),
+            (&quotbsz&quot, round(bsz_meter.avg)),</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/kssteven418/i-bert/commit/c6d6256ba52387066a47ce61da234e6a6a7d319c#diff-ed183d67207df065a11e1289f19d34cc2abbc5448dea952683cfe9728c342b95L132' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 62785461</div><div id='project'> Project Name: kssteven418/i-bert</div><div id='commit'> Commit Name: c6d6256ba52387066a47ce61da234e6a6a7d319c</div><div id='time'> Time: 2017-11-11</div><div id='author'> Author: myleott@fb.com</div><div id='file'> File Name: train.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train(7)</div><div id='n_method'> N Method Name: train(7)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: train.py</div><div id='n_file'> N File Name: train.py</div><div id='m_start'> M Start Line: 139</div><div id='m_end'> M End Line: 200</div><div id='n_start'> N Start Line: 137</div><div id='n_end'> N End Line: 199</div><BR>

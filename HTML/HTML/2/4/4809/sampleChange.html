@@ -1,0 +1,57 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+    with torch.no_grad():
+        for i, (data, target) in enumerate(tqdm(data_loader)):
+            data, target = data.to(device), <a id="change">target.to(</a>device<a id="change">)</a>
+            output = model(data)
+
+            &#47&#47
+            &#47&#47 save sample images, or do something with output here</code></pre><h3>After Change</h3><pre><code class='java'>
+    &#47&#47 testset
+    testset = config.init_obj(&quotdataset&quot, module_data, mode=&quottest&quot)
+    &#47&#47 dataloader
+    testloader<a id="change"> = </a>config.init_obj(&quotdata_loader&quot, module_data, testset)
+
+    &#47&#47 build model architecture
+    model = config.init_obj(&quotmodel&quot, module_model)
+    logger.debug(model)
+
+    &#47&#47 get function handles of loss and metrics
+    loss_fn = getattr(module_loss, config[&quotloss&quot])
+    metric_fns = [getattr(module_metric, met) for met in config[&quotmetrics&quot]]
+
+    logger.debug(&quotLoading model: {} ...&quot.format(config.resume))
+    checkpoint = torch.load(config.resume)
+    state_dict = checkpoint[&quotstate_dict&quot]
+    if config[&quotn_gpu&quot] &gt; 1:
+        model = torch.nn.DataParallel(model)
+    model.load_state_dict(state_dict)
+
+    &#47&#47 prepare model for testing
+    device = torch.device(&quotcuda&quot if torch.cuda.is_available() else &quotcpu&quot)
+    model = model.to(device)
+    model.eval()
+
+    total_loss = 0.0
+    total_metrics = torch.zeros(len(metric_fns))
+
+    image_id = []
+    label = []
+    with torch.no_grad():
+        logger.debug(&quottesting...&quot)
+        for i, (data, target) in enumerate(testloader):
+            data = data.to(device)
+            output = model(data)
+            pred = output.max(1, keepdim=True)[1].squeeze()
+            &#47&#47
+            &#47&#47 save sample images, or do something with output here
+            &#47&#47
+            image_id.extend(target)
+            label.extend(<a id="change">pred.data.cpu().tolist()</a>)
+            output_path<a id="change"> = </a>os.path.join(args.output_dir, target)
+
+            &#47&#47&#47&#47 computing loss, metrics on test set
+            &#47&#47loss = loss_fn(output, target)</code></pre>

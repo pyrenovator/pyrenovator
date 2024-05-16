@@ -1,0 +1,51 @@
+<html><h3>Pattern ID :38182
+</h3><img src='109389412.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        idx = self._get_src_permutation_idx(indices)
+
+        target_classes_o = torch.cat([t["labels"][J] for t, (_, J) in zip(targets, indices)])
+        target_classes<a id="change"> = </a>torch.full(<a id="change">src_logits.shape[:2]</a>, 0,
+                                    dtype=torch.int64, device=src_logits.device)
+        target_classes[idx] = target_classes_o
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    def loss_class(self, outputs, matches, soft_labels):
+        assert &quotpred_logits&quot in outputs
+        cls_preds = outputs[&quotpred_logits&quot].flatten()
+        cls_labels = <a id="change">matches.flatten()</a>.float()
+
+        &#47&#47 Remove non existent classes
+        valid_ids = (soft_labels.flatten() != -1).nonzero()</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/bwittmann/transoar/commit/50cc4661dc99397fe437a829cff6659bfd58eaba#diff-72325bd8560b0c87dc6c780bd674d1f642bdf043c4336b8d7d2033c2cfe1d9efL42' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 109389412</div><div id='project'> Project Name: bwittmann/transoar</div><div id='commit'> Commit Name: 50cc4661dc99397fe437a829cff6659bfd58eaba</div><div id='time'> Time: 2022-04-19</div><div id='author'> Author: bastian.wittmann@tum.de</div><div id='file'> File Name: transoar/models/criterion.py</div><div id='m_class'> M Class Name: TransoarCriterion</div><div id='n_method'> N Class Name: TransoarCriterion</div><div id='m_method'> M Method Name: loss_class(4)</div><div id='n_method'> N Method Name: loss_class(4)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: transoar/models/criterion.py</div><div id='n_file'> N File Name: transoar/models/criterion.py</div><div id='m_start'> M Start Line: 45</div><div id='m_end'> M End Line: 54</div><div id='n_start'> N Start Line: 42</div><div id='n_end'> N End Line: 48</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        y_true: 
+        unilm式样，需要手动把非seq2seq部分mask掉
+        &quot&quot&quot
+        y_mask<a id="change"> = </a>(<a id="change">y_true[:, 1:]</a> != tokenizer._token_pad_id).long()
+        y_true = y_true[:, 1:]&#47&#47 目标token_ids
+        y_pred = y_pred[:, :-1, :]  &#47&#47 预测序列，错开一位
+        </code></pre><h3>After Change</h3><pre><code class='java'>
+        y_pred = y_pred[:, :-1, :]  &#47&#47 预测序列，错开一位
+        
+        y_pred = y_pred.reshape(-1, y_pred.shape[-1])
+        y_true = <a id="change">y_true.flatten()</a>
+        return super().forward(y_pred, y_true)
+model.compile(loss=CrossEntropyLoss(ignore_index=0), optimizer=optim.Adam(model.parameters(), 1e-5))
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/tongjilibo/bert4torch/commit/c440dc0826c9e401f8d3de3922cfeea3cec1d79e#diff-2d20a7d47fd618cb71df7cadc30cf8dab5088b36ae4c14b1c4400dda58dec435L60' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 109389415</div><div id='project'> Project Name: tongjilibo/bert4torch</div><div id='commit'> Commit Name: c440dc0826c9e401f8d3de3922cfeea3cec1d79e</div><div id='time'> Time: 2022-12-05</div><div id='author'> Author: tongjilibo@163.com</div><div id='file'> File Name: examples/pretrain/gpt_lm_pretrain/pretrain_gpt_lm.py</div><div id='m_class'> M Class Name: CrossEntropyLoss</div><div id='n_method'> N Class Name: CrossEntropyLoss</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: nn.CrossEntropyLoss</div><div id='n_parent_class'> N Parent Class: nn.CrossEntropyLoss</div><div id='m_file'> M File Name: examples/pretrain/gpt_lm_pretrain/pretrain_gpt_lm.py</div><div id='n_file'> N File Name: examples/pretrain/gpt_lm_pretrain/pretrain_gpt_lm.py</div><div id='m_start'> M Start Line: 66</div><div id='m_end'> M End Line: 71</div><div id='n_start'> N Start Line: 66</div><div id='n_end'> N End Line: 70</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+        src_idx = self._get_src_permutation_idx(indices)
+
+        target_classes = torch.full(<a id="change">src_logits.shape[:2]</a>, 0, dtype=torch.int64, device=src_logits.device)
+        target_classes[src_idx] = 1
+
+        loss_ce<a id="change"> = </a>F.cross_entropy(src_logits.transpose(1, 2), target_classes, weight=self.cls_weights.cuda(), label_smoothing=0.0)
+
+        return loss_ce
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        targets dicts must contain the key "labels" containing a tensor of dim [nb_target_boxes]
+        
+        assert &quotpred_logits&quot in outputs
+        cls_preds = <a id="change">outputs[&quotpred_logits&quot].flatten()</a>
+        cls_labels = soft_labels.flatten()
+
+        &#47&#47 Remove non existent classes
+        valid_ids = (cls_labels != -1).nonzero()</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/bwittmann/transoar/commit/09f57bf9bd1146b57db0cce80a0901defe5e5d63#diff-72325bd8560b0c87dc6c780bd674d1f642bdf043c4336b8d7d2033c2cfe1d9efL35' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 109389417</div><div id='project'> Project Name: bwittmann/transoar</div><div id='commit'> Commit Name: 09f57bf9bd1146b57db0cce80a0901defe5e5d63</div><div id='time'> Time: 2022-02-15</div><div id='author'> Author: bastian.wittmann@tum.de</div><div id='file'> File Name: transoar/models/criterion.py</div><div id='m_class'> M Class Name: TransoarCriterion</div><div id='n_method'> N Class Name: TransoarCriterion</div><div id='m_method'> M Method Name: loss_class(3)</div><div id='n_method'> N Method Name: loss_class(3)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: transoar/models/criterion.py</div><div id='n_file'> N File Name: transoar/models/criterion.py</div><div id='m_start'> M Start Line: 40</div><div id='m_end'> M End Line: 47</div><div id='n_start'> N Start Line: 41</div><div id='n_end'> N End Line: 47</div><BR>

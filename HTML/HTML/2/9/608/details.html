@@ -1,0 +1,687 @@
+<html><h3>Pattern ID :608
+</h3><img src='2981293.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    tensor_id += 1
+
+    &#47&#47 卷积层写入权重。参考了onnx2ncnn，开头写个0
+    s = <a id="change">struct.pack(&quoti&quot</a>, <a id="change">0</a><a id="change">)</a>
+    <a id="change">bp.write(</a>s<a id="change">)</a>
+
+    conv_w = conv.weight.cpu().detach().numpy()
+    for i1 in range(out_C):
+        for i2 in range(in_C):
+            for i3 in range(kH):
+                for i4 in range(kW):
+                    s = struct.pack(&quotf&quot, conv_w[i1][i2][i3][i4])
+                    <a id="change">bp.write(</a>s<a id="change">)</a>
+    if conv.bias is not None:
+        conv_b = conv.bias.cpu().detach().numpy()
+        for i1 in range(out_C):
+            s = struct.pack(&quotf&quot, conv_b[i1])
+            <a id="change">bp.write(</a>s<a id="change">)</a>
+    ncnn_data[&quotbp&quot] = bp
+    ncnn_data[&quotpp&quot] = pp
+    ncnn_data[&quotlayer_id&quot] = layer_id
+    ncnn_data[&quottensor_id&quot] = tensor_id</code></pre><h3>After Change</h3><pre><code class='java'>
+
+def conv2d(ncnn_data, bottom_names, conv, act_name=None, act_param_dict=None):
+    bottom_names = check_bottom_names(bottom_names)
+    <a id="change">bp</a> = ncnn_data[&quotbp&quot]
+    pp = ncnn_data[&quotpp&quot]
+    layer_id = ncnn_data[&quotlayer_id&quot]
+    tensor_id = ncnn_data[&quottensor_id&quot]
+
+    top_names = create_top_names(ncnn_data, num=1)
+    pp += &quotConvolution\tlayer_%.8d\t1 1 %s %s&quot % (layer_id, bottom_names[0], top_names[0])
+    pp += &quot 0=%d&quot % conv.out_channels
+    if len(conv.kernel_size) == 2:
+        pp += &quot 1=%d&quot % conv.kernel_size[1]
+        pp += &quot 11=%d&quot % conv.kernel_size[0]
+    else:
+        raise NotImplementedError("not implemented.")
+    if len(conv.stride) == 2:
+        pp += &quot 3=%d&quot % conv.stride[1]
+        pp += &quot 13=%d&quot % conv.stride[0]
+    else:
+        raise NotImplementedError("not implemented.")
+    if len(conv.padding) == 2:
+        pp += &quot 4=%d&quot % conv.padding[1]
+        pp += &quot 14=%d&quot % conv.padding[0]
+    else:
+        raise NotImplementedError("not implemented.")
+    if conv.bias is not None:
+        pp += &quot 5=1&quot
+    else:
+        pp += &quot 5=0&quot
+    out_C, in_C, kH, kW = conv.weight.shape
+    w_ele_num = out_C * in_C * kH * kW
+    pp += &quot 6=%d&quot % w_ele_num
+    assert conv.groups == 1
+    &#47&#47 合并激活
+    pp = fused_activation(pp, act_name, act_param_dict)
+    pp += &quot\n&quot
+    layer_id += 1
+    tensor_id += 1
+
+    &#47&#47 卷积层写入权重。
+    bp = <a id="change">bp_write_tag(bp</a><a id="change">)</a>
+
+    conv_w = conv.weight.cpu().detach().numpy()
+    for i1 in range(out_C):
+        for i2 in range(in_C):</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 5</div><BR><div id='size'>Non-data size: 5</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/miemie2013/miemiedetection/commit/0f42120c66300de5a09bdd11953da39da01686d9#diff-aeb6f141664fb042b3d1792eac436d7eec22629e0ec395388a1bb977d993feffL282' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 2981293</div><div id='project'> Project Name: miemie2013/miemiedetection</div><div id='commit'> Commit Name: 0f42120c66300de5a09bdd11953da39da01686d9</div><div id='time'> Time: 2022-08-06</div><div id='author'> Author: 53960695+miemie2013@users.noreply.github.com</div><div id='file'> File Name: mmdet/models/ncnn_utils.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: conv2d(5)</div><div id='n_method'> N Method Name: conv2d(5)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: mmdet/models/ncnn_utils.py</div><div id='n_file'> N File Name: mmdet/models/ncnn_utils.py</div><div id='m_start'> M Start Line: 282</div><div id='m_end'> M End Line: 334</div><div id='n_start'> N Start Line: 444</div><div id='n_end'> N End Line: 493</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+def fuse_conv_bn(ncnn_data, bottom_names, conv, bn, act_name=None, act_param_dict=None):
+    bottom_names = check_bottom_names(bottom_names)
+    <a id="change">bp</a> = ncnn_data[&quotbp&quot]
+    pp = ncnn_data[&quotpp&quot]
+    layer_id = ncnn_data[&quotlayer_id&quot]
+    tensor_id = ncnn_data[&quottensor_id&quot]
+
+    top_names = create_top_names(ncnn_data, num=1)
+    pp += &quotConvolution\tlayer_%.8d\t1 1 %s %s&quot % (layer_id, bottom_names[0], top_names[0])
+    pp += &quot 0=%d&quot % conv.out_channels
+    if len(conv.kernel_size) == 2:
+        pp += &quot 1=%d&quot % conv.kernel_size[1]
+        pp += &quot 11=%d&quot % conv.kernel_size[0]
+    else:
+        raise NotImplementedError("not implemented.")
+    if len(conv.stride) == 2:
+        pp += &quot 3=%d&quot % conv.stride[1]
+        pp += &quot 13=%d&quot % conv.stride[0]
+    else:
+        raise NotImplementedError("not implemented.")
+    if len(conv.padding) == 2:
+        pp += &quot 4=%d&quot % conv.padding[1]
+        pp += &quot 14=%d&quot % conv.padding[0]
+    else:
+        raise NotImplementedError("not implemented.")
+    &#47&#47 合并卷积层和BN层。肯定使用了偏移bias
+    pp += &quot 5=1&quot
+    out_C, in_C, kH, kW = conv.weight.shape
+    w_ele_num = out_C * in_C * kH * kW
+    pp += &quot 6=%d&quot % w_ele_num
+    assert conv.groups == 1
+    &#47&#47 合并激活
+    pp = fused_activation(pp, act_name, act_param_dict)
+    pp += &quot\n&quot
+    layer_id += 1
+    tensor_id += 1
+
+    &quot&quot&quot
+    合并卷积层和BN层。推导：
+    y = [(conv_w * x + conv_b) - bn_m] / sqrt(bn_v + eps) * bn_w + bn_b
+    = [conv_w * x + (conv_b - bn_m)] / sqrt(bn_v + eps) * bn_w + bn_b
+    = conv_w * x / sqrt(bn_v + eps) * bn_w + (conv_b - bn_m) / sqrt(bn_v + eps) * bn_w + bn_b
+    = conv_w * bn_w / sqrt(bn_v + eps) * x + (conv_b - bn_m) / sqrt(bn_v + eps) * bn_w + bn_b
+
+    所以
+    new_conv_w = conv_w * bn_w / sqrt(bn_v + eps)
+    new_conv_b = (conv_b - bn_m) / sqrt(bn_v + eps) * bn_w + bn_b
+    &quot&quot&quot
+
+    &#47&#47 卷积层写入权重。参考了onnx2ncnn，开头写个0
+    s = <a id="change">struct.pack(&quoti&quot</a>, <a id="change">0</a><a id="change">)</a>
+    <a id="change">bp.write(</a>s<a id="change">)</a>
+
+    conv_w = conv.weight.cpu().detach().numpy()
+    bn_w = bn.weight.cpu().detach().numpy()
+    bn_b = bn.bias.cpu().detach().numpy()
+    bn_m = bn.running_mean.cpu().detach().numpy()
+    bn_v = bn.running_var.cpu().detach().numpy()
+    eps = bn.eps
+    if conv.bias is not None:
+        conv_b = conv.bias.cpu().detach().numpy()
+    else:
+        conv_b = np.zeros(bn_w.shape)
+    new_conv_w = conv_w * (bn_w / np.sqrt(bn_v + eps)).reshape((-1, 1, 1, 1))
+    new_conv_b = (conv_b - bn_m) / np.sqrt(bn_v + eps) * bn_w + bn_b
+    for i1 in range(out_C):
+        for i2 in range(in_C):
+            for i3 in range(kH):
+                for i4 in range(kW):
+                    s = struct.pack(&quotf&quot, new_conv_w[i1][i2][i3][i4])
+                    <a id="change">bp.write(</a>s<a id="change">)</a>
+    for i1 in range(out_C):
+        s = struct.pack(&quotf&quot, new_conv_b[i1])
+        <a id="change">bp.write(</a>s<a id="change">)</a>
+    ncnn_data[&quotbp&quot] = bp
+    ncnn_data[&quotpp&quot] = pp
+    ncnn_data[&quotlayer_id&quot] = layer_id
+    ncnn_data[&quottensor_id&quot] = tensor_id</code></pre><h3>After Change</h3><pre><code class='java'>
+
+def fuse_conv_bn(ncnn_data, bottom_names, conv, bn, act_name=None, act_param_dict=None):
+    bottom_names = check_bottom_names(bottom_names)
+    <a id="change">bp</a> = ncnn_data[&quotbp&quot]
+    pp = ncnn_data[&quotpp&quot]
+    layer_id = ncnn_data[&quotlayer_id&quot]
+    tensor_id = ncnn_data[&quottensor_id&quot]
+
+    top_names = create_top_names(ncnn_data, num=1)
+    pp += &quotConvolution\tlayer_%.8d\t1 1 %s %s&quot % (layer_id, bottom_names[0], top_names[0])
+    pp += &quot 0=%d&quot % conv.out_channels
+    if len(conv.kernel_size) == 2:
+        pp += &quot 1=%d&quot % conv.kernel_size[1]
+        pp += &quot 11=%d&quot % conv.kernel_size[0]
+    else:
+        raise NotImplementedError("not implemented.")
+    if len(conv.stride) == 2:
+        pp += &quot 3=%d&quot % conv.stride[1]
+        pp += &quot 13=%d&quot % conv.stride[0]
+    else:
+        raise NotImplementedError("not implemented.")
+    if len(conv.padding) == 2:
+        pp += &quot 4=%d&quot % conv.padding[1]
+        pp += &quot 14=%d&quot % conv.padding[0]
+    else:
+        raise NotImplementedError("not implemented.")
+    &#47&#47 合并卷积层和BN层。肯定使用了偏移bias
+    pp += &quot 5=1&quot
+    out_C, in_C, kH, kW = conv.weight.shape
+    w_ele_num = out_C * in_C * kH * kW
+    pp += &quot 6=%d&quot % w_ele_num
+    assert conv.groups == 1
+    &#47&#47 合并激活
+    pp = fused_activation(pp, act_name, act_param_dict)
+    pp += &quot\n&quot
+    layer_id += 1
+    tensor_id += 1
+
+    &quot&quot&quot
+    合并卷积层和BN层。推导：
+    y = [(conv_w * x + conv_b) - bn_m] / sqrt(bn_v + eps) * bn_w + bn_b
+    = [conv_w * x + (conv_b - bn_m)] / sqrt(bn_v + eps) * bn_w + bn_b
+    = conv_w * x / sqrt(bn_v + eps) * bn_w + (conv_b - bn_m) / sqrt(bn_v + eps) * bn_w + bn_b
+    = conv_w * bn_w / sqrt(bn_v + eps) * x + (conv_b - bn_m) / sqrt(bn_v + eps) * bn_w + bn_b
+
+    所以
+    new_conv_w = conv_w * bn_w / sqrt(bn_v + eps)
+    new_conv_b = (conv_b - bn_m) / sqrt(bn_v + eps) * bn_w + bn_b
+    &quot&quot&quot
+
+    &#47&#47 卷积层写入权重。
+    bp = <a id="change">bp_write_tag(</a>bp<a id="change">)</a>
+
+    conv_w = conv.weight.cpu().detach().numpy()
+    bn_w = bn.weight.cpu().detach().numpy()
+    bn_b = bn.bias.cpu().detach().numpy()</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/miemie2013/miemiedetection/commit/0f42120c66300de5a09bdd11953da39da01686d9#diff-aeb6f141664fb042b3d1792eac436d7eec22629e0ec395388a1bb977d993feffL563' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 2981292</div><div id='project'> Project Name: miemie2013/miemiedetection</div><div id='commit'> Commit Name: 0f42120c66300de5a09bdd11953da39da01686d9</div><div id='time'> Time: 2022-08-06</div><div id='author'> Author: 53960695+miemie2013@users.noreply.github.com</div><div id='file'> File Name: mmdet/models/ncnn_utils.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: fuse_conv_bn(6)</div><div id='n_method'> N Method Name: fuse_conv_bn(6)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: mmdet/models/ncnn_utils.py</div><div id='n_file'> N File Name: mmdet/models/ncnn_utils.py</div><div id='m_start'> M Start Line: 565</div><div id='m_end'> M End Line: 636</div><div id='n_start'> N Start Line: 721</div><div id='n_end'> N End Line: 789</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+def shell(ncnn_data, bottom_names, weight, bias, ncnn_weight_dims=4):
+    bottom_names = check_bottom_names(bottom_names)
+    <a id="change">bp</a> = ncnn_data[&quotbp&quot]
+    pp = ncnn_data[&quotpp&quot]
+    layer_id = ncnn_data[&quotlayer_id&quot]
+    tensor_id = ncnn_data[&quottensor_id&quot]
+
+    &quot&quot&quot
+    weight 是2维张量时，要求传入的weight reshape成 CD11形状(ncnn中的形状也是CD11)，bias形状要求是[C, ](ncnn中的形状是111C)；
+    weight 是4维张量时，要求传入的weight是CDHW形状(ncnn中的形状也是CDHW)，bias形状要求是[C, ](ncnn中的形状是111C)；
+    &quot&quot&quot
+
+    w_dims = len(weight.shape)
+    assert w_dims == 4
+    C, D, H, W = weight.shape
+    num = 1
+    if bias is not None:
+        num = 2
+
+
+    top_names = create_top_names(ncnn_data, num=num)
+    pp += &quotShell\tlayer_%.8d\t1 %d %s&quot % (layer_id, num, bottom_names[0])
+    for i in range(num):
+        pp += &quot %s&quot % top_names[i]
+
+    pp += &quot 2=%d&quot % C
+    pp += &quot 11=%d&quot % D
+    pp += &quot 1=%d&quot % H
+    pp += &quot 0=%d&quot % W
+    pp += &quot 3=%d&quot % ncnn_weight_dims
+    if bias is not None:
+        pp += &quot 5=1&quot
+    else:
+        pp += &quot 5=0&quot
+    w_ele_num = C * D * H * W
+    pp += &quot 6=%d&quot % w_ele_num
+    pp += &quot\n&quot
+    layer_id += 1
+    tensor_id += num
+
+    &#47&#47 卷积层写入权重。参考了onnx2ncnn，开头写个0
+    s = <a id="change">struct.pack(&quoti&quot</a>, <a id="change">0</a><a id="change">)</a>
+    <a id="change">bp.write(</a>s<a id="change">)</a>
+
+    conv_w = weight.cpu().detach().numpy()
+
+    if w_dims == 4:
+        for i1 in range(C):
+            for i2 in range(D):
+                for i3 in range(H):
+                    for i4 in range(W):
+                        s = struct.pack(&quotf&quot, conv_w[i1][i2][i3][i4])
+                        <a id="change">bp.write(</a>s<a id="change">)</a>
+    if bias is not None:
+        conv_b = bias.cpu().detach().numpy()
+        for i1 in range(C):
+            s = struct.pack(&quotf&quot, conv_b[i1])
+            <a id="change">bp.write(</a>s<a id="change">)</a>
+    ncnn_data[&quotbp&quot] = bp
+    ncnn_data[&quotpp&quot] = pp
+    ncnn_data[&quotlayer_id&quot] = layer_id
+    ncnn_data[&quottensor_id&quot] = tensor_id</code></pre><h3>After Change</h3><pre><code class='java'>
+
+def shell(ncnn_data, bottom_names, weight, bias, ncnn_weight_dims=4):
+    bottom_names = check_bottom_names(bottom_names)
+    <a id="change">bp</a> = ncnn_data[&quotbp&quot]
+    pp = ncnn_data[&quotpp&quot]
+    layer_id = ncnn_data[&quotlayer_id&quot]
+    tensor_id = ncnn_data[&quottensor_id&quot]
+
+    &quot&quot&quot
+    weight 是2维张量时，要求传入的weight reshape成 CD11形状(ncnn中的形状也是CD11)，bias形状要求是[C, ](ncnn中的形状是111C)；
+    weight 是4维张量时，要求传入的weight是CDHW形状(ncnn中的形状也是CDHW)，bias形状要求是[C, ](ncnn中的形状是111C)；
+    &quot&quot&quot
+
+    w_dims = len(weight.shape)
+    assert w_dims == 4
+    C, D, H, W = weight.shape
+    num = 1
+    if bias is not None:
+        num = 2
+
+
+    top_names = create_top_names(ncnn_data, num=num)
+    pp += &quotShell\tlayer_%.8d\t1 %d %s&quot % (layer_id, num, bottom_names[0])
+    for i in range(num):
+        pp += &quot %s&quot % top_names[i]
+
+    pp += &quot 2=%d&quot % C
+    pp += &quot 11=%d&quot % D
+    pp += &quot 1=%d&quot % H
+    pp += &quot 0=%d&quot % W
+    pp += &quot 3=%d&quot % ncnn_weight_dims
+    if bias is not None:
+        pp += &quot 5=1&quot
+    else:
+        pp += &quot 5=0&quot
+    w_ele_num = C * D * H * W
+    pp += &quot 6=%d&quot % w_ele_num
+    pp += &quot\n&quot
+    layer_id += 1
+    tensor_id += num
+
+    &#47&#47 卷积层写入权重。
+    bp = <a id="change">bp_write_tag(</a>bp<a id="change">)</a>
+
+    conv_w = weight.cpu().detach().numpy()
+
+    if w_dims == 4:</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/miemie2013/miemiedetection/commit/0f42120c66300de5a09bdd11953da39da01686d9#diff-aeb6f141664fb042b3d1792eac436d7eec22629e0ec395388a1bb977d993feffL1760' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 2981295</div><div id='project'> Project Name: miemie2013/miemiedetection</div><div id='commit'> Commit Name: 0f42120c66300de5a09bdd11953da39da01686d9</div><div id='time'> Time: 2022-08-06</div><div id='author'> Author: 53960695+miemie2013@users.noreply.github.com</div><div id='file'> File Name: mmdet/models/ncnn_utils.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: shell(5)</div><div id='n_method'> N Method Name: shell(5)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: mmdet/models/ncnn_utils.py</div><div id='n_file'> N File Name: mmdet/models/ncnn_utils.py</div><div id='m_start'> M Start Line: 1762</div><div id='m_end'> M End Line: 1817</div><div id='n_start'> N Start Line: 1912</div><div id='n_end'> N End Line: 1964</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+def conv2d(ncnn_data, bottom_names, conv, act_name=None, act_param_dict=None):
+    bottom_names = check_bottom_names(bottom_names)
+    <a id="change">bp</a> = ncnn_data[&quotbp&quot]
+    pp = ncnn_data[&quotpp&quot]
+    layer_id = ncnn_data[&quotlayer_id&quot]
+    tensor_id = ncnn_data[&quottensor_id&quot]
+
+    top_names = create_top_names(ncnn_data, num=1)
+    pp += &quotConvolution\tlayer_%.8d\t1 1 %s %s&quot % (layer_id, bottom_names[0], top_names[0])
+    pp += &quot 0=%d&quot % conv.out_channels
+    if len(conv.kernel_size) == 2:
+        pp += &quot 1=%d&quot % conv.kernel_size[1]
+        pp += &quot 11=%d&quot % conv.kernel_size[0]
+    else:
+        raise NotImplementedError("not implemented.")
+    if len(conv.stride) == 2:
+        pp += &quot 3=%d&quot % conv.stride[1]
+        pp += &quot 13=%d&quot % conv.stride[0]
+    else:
+        raise NotImplementedError("not implemented.")
+    if len(conv.padding) == 2:
+        pp += &quot 4=%d&quot % conv.padding[1]
+        pp += &quot 14=%d&quot % conv.padding[0]
+    else:
+        raise NotImplementedError("not implemented.")
+    if conv.bias is not None:
+        pp += &quot 5=1&quot
+    else:
+        pp += &quot 5=0&quot
+    out_C, in_C, kH, kW = conv.weight.shape
+    w_ele_num = out_C * in_C * kH * kW
+    pp += &quot 6=%d&quot % w_ele_num
+    assert conv.groups == 1
+    &#47&#47 合并激活
+    pp = fused_activation(pp, act_name, act_param_dict)
+    pp += &quot\n&quot
+    layer_id += 1
+    tensor_id += 1
+
+    &#47&#47 卷积层写入权重。参考了onnx2ncnn，开头写个0
+    s = <a id="change">struct.pack(&quoti&quot</a>, <a id="change">0</a><a id="change">)</a>
+    <a id="change">bp.write(</a>s<a id="change">)</a>
+
+    conv_w = conv.weight.cpu().detach().numpy()
+    for i1 in range(out_C):
+        for i2 in range(in_C):
+            for i3 in range(kH):
+                for i4 in range(kW):
+                    s = struct.pack(&quotf&quot, conv_w[i1][i2][i3][i4])
+                    <a id="change">bp.write(</a>s<a id="change">)</a>
+    if conv.bias is not None:
+        conv_b = conv.bias.cpu().detach().numpy()
+        for i1 in range(out_C):
+            s = struct.pack(&quotf&quot, conv_b[i1])
+            <a id="change">bp.write(</a>s<a id="change">)</a>
+    ncnn_data[&quotbp&quot] = bp
+    ncnn_data[&quotpp&quot] = pp
+    ncnn_data[&quotlayer_id&quot] = layer_id
+    ncnn_data[&quottensor_id&quot] = tensor_id</code></pre><h3>After Change</h3><pre><code class='java'>
+
+def conv2d(ncnn_data, bottom_names, conv, act_name=None, act_param_dict=None):
+    bottom_names = check_bottom_names(bottom_names)
+    <a id="change">bp</a> = ncnn_data[&quotbp&quot]
+    pp = ncnn_data[&quotpp&quot]
+    layer_id = ncnn_data[&quotlayer_id&quot]
+    tensor_id = ncnn_data[&quottensor_id&quot]
+
+    top_names = create_top_names(ncnn_data, num=1)
+    pp += &quotConvolution\tlayer_%.8d\t1 1 %s %s&quot % (layer_id, bottom_names[0], top_names[0])
+    pp += &quot 0=%d&quot % conv.out_channels
+    if len(conv.kernel_size) == 2:
+        pp += &quot 1=%d&quot % conv.kernel_size[1]
+        pp += &quot 11=%d&quot % conv.kernel_size[0]
+    else:
+        raise NotImplementedError("not implemented.")
+    if len(conv.stride) == 2:
+        pp += &quot 3=%d&quot % conv.stride[1]
+        pp += &quot 13=%d&quot % conv.stride[0]
+    else:
+        raise NotImplementedError("not implemented.")
+    if len(conv.padding) == 2:
+        pp += &quot 4=%d&quot % conv.padding[1]
+        pp += &quot 14=%d&quot % conv.padding[0]
+    else:
+        raise NotImplementedError("not implemented.")
+    if conv.bias is not None:
+        pp += &quot 5=1&quot
+    else:
+        pp += &quot 5=0&quot
+    out_C, in_C, kH, kW = conv.weight.shape
+    w_ele_num = out_C * in_C * kH * kW
+    pp += &quot 6=%d&quot % w_ele_num
+    assert conv.groups == 1
+    &#47&#47 合并激活
+    pp = fused_activation(pp, act_name, act_param_dict)
+    pp += &quot\n&quot
+    layer_id += 1
+    tensor_id += 1
+
+    &#47&#47 卷积层写入权重。
+    bp = <a id="change">bp_write_tag(</a>bp<a id="change">)</a>
+
+    conv_w = conv.weight.cpu().detach().numpy()
+    for i1 in range(out_C):
+        for i2 in range(in_C):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/miemie2013/miemiedetection/commit/0f42120c66300de5a09bdd11953da39da01686d9#diff-aeb6f141664fb042b3d1792eac436d7eec22629e0ec395388a1bb977d993feffL280' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 2981289</div><div id='project'> Project Name: miemie2013/miemiedetection</div><div id='commit'> Commit Name: 0f42120c66300de5a09bdd11953da39da01686d9</div><div id='time'> Time: 2022-08-06</div><div id='author'> Author: 53960695+miemie2013@users.noreply.github.com</div><div id='file'> File Name: mmdet/models/ncnn_utils.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: conv2d(5)</div><div id='n_method'> N Method Name: conv2d(5)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: mmdet/models/ncnn_utils.py</div><div id='n_file'> N File Name: mmdet/models/ncnn_utils.py</div><div id='m_start'> M Start Line: 282</div><div id='m_end'> M End Line: 334</div><div id='n_start'> N Start Line: 444</div><div id='n_end'> N End Line: 493</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+def fuse_deformconv_bn(ncnn_data, bottom_names, conv, bn, act_name=None, act_param_dict=None):
+    bottom_names = check_bottom_names(bottom_names)
+    <a id="change">bp</a> = ncnn_data[&quotbp&quot]
+    pp = ncnn_data[&quotpp&quot]
+    layer_id = ncnn_data[&quotlayer_id&quot]
+    tensor_id = ncnn_data[&quottensor_id&quot]
+
+    top_names = create_top_names(ncnn_data, num=1)
+    num = len(bottom_names)
+    pp += &quotDeformableConv2D\tlayer_%.8d\t%d 1&quot % (layer_id, num)
+    for i in range(num):
+        pp += &quot %s&quot % bottom_names[i]
+    pp += &quot %s&quot % top_names[0]
+    pp += &quot 0=%d&quot % conv.out_channels
+    if len(conv.kernel_size) == 2:
+        pp += &quot 1=%d&quot % conv.kernel_size[1]
+        pp += &quot 11=%d&quot % conv.kernel_size[0]
+    else:
+        raise NotImplementedError("not implemented.")
+    if len(conv.stride) == 2:
+        pp += &quot 3=%d&quot % conv.stride[1]
+        pp += &quot 13=%d&quot % conv.stride[0]
+    else:
+        raise NotImplementedError("not implemented.")
+    if len(conv.padding) == 2:
+        pp += &quot 4=%d&quot % conv.padding[1]
+        pp += &quot 14=%d&quot % conv.padding[0]
+    else:
+        raise NotImplementedError("not implemented.")
+    &#47&#47 合并卷积层和BN层。肯定使用了偏移bias
+    pp += &quot 5=1&quot
+    out_C, in_C, kH, kW = conv.weight.shape
+    w_ele_num = out_C * in_C * kH * kW
+    pp += &quot 6=%d&quot % w_ele_num
+    assert conv.groups == 1
+    &#47&#47 合并激活
+    pp = fused_activation(pp, act_name, act_param_dict)
+    pp += &quot\n&quot
+    layer_id += 1
+    tensor_id += 1
+
+    &quot&quot&quot
+    合并卷积层和BN层。推导：
+    y = [(conv_w * x + conv_b) - bn_m] / sqrt(bn_v + eps) * bn_w + bn_b
+    = [conv_w * x + (conv_b - bn_m)] / sqrt(bn_v + eps) * bn_w + bn_b
+    = conv_w * x / sqrt(bn_v + eps) * bn_w + (conv_b - bn_m) / sqrt(bn_v + eps) * bn_w + bn_b
+    = conv_w * bn_w / sqrt(bn_v + eps) * x + (conv_b - bn_m) / sqrt(bn_v + eps) * bn_w + bn_b
+
+    所以
+    new_conv_w = conv_w * bn_w / sqrt(bn_v + eps)
+    new_conv_b = (conv_b - bn_m) / sqrt(bn_v + eps) * bn_w + bn_b
+    &quot&quot&quot
+
+    &#47&#47 卷积层写入权重。参考了onnx2ncnn，开头写个0
+    s = <a id="change">struct.pack(&quoti&quot</a>, <a id="change">0</a><a id="change">)</a>
+    <a id="change">bp.write(</a>s<a id="change">)</a>
+
+    conv_w = conv.weight.cpu().detach().numpy()
+    bn_w = bn.weight.cpu().detach().numpy()
+    bn_b = bn.bias.cpu().detach().numpy()
+    bn_m = bn.running_mean.cpu().detach().numpy()
+    bn_v = bn.running_var.cpu().detach().numpy()
+    eps = bn.eps
+    if conv.bias is not None:
+        conv_b = conv.bias.cpu().detach().numpy()
+    else:
+        conv_b = np.zeros(bn_w.shape)
+    new_conv_w = conv_w * (bn_w / np.sqrt(bn_v + eps)).reshape((-1, 1, 1, 1))
+    new_conv_b = (conv_b - bn_m) / np.sqrt(bn_v + eps) * bn_w + bn_b
+    for i1 in range(out_C):
+        for i2 in range(in_C):
+            for i3 in range(kH):
+                for i4 in range(kW):
+                    s = struct.pack(&quotf&quot, new_conv_w[i1][i2][i3][i4])
+                    <a id="change">bp.write(</a>s<a id="change">)</a>
+    for i1 in range(out_C):
+        s = struct.pack(&quotf&quot, new_conv_b[i1])
+        <a id="change">bp.write(</a>s<a id="change">)</a>
+    ncnn_data[&quotbp&quot] = bp
+    ncnn_data[&quotpp&quot] = pp
+    ncnn_data[&quotlayer_id&quot] = layer_id
+    ncnn_data[&quottensor_id&quot] = tensor_id</code></pre><h3>After Change</h3><pre><code class='java'>
+
+def fuse_deformconv_bn(ncnn_data, bottom_names, conv, bn, act_name=None, act_param_dict=None):
+    bottom_names = check_bottom_names(bottom_names)
+    <a id="change">bp</a> = ncnn_data[&quotbp&quot]
+    pp = ncnn_data[&quotpp&quot]
+    layer_id = ncnn_data[&quotlayer_id&quot]
+    tensor_id = ncnn_data[&quottensor_id&quot]
+
+    top_names = create_top_names(ncnn_data, num=1)
+    num = len(bottom_names)
+    pp += &quotDeformableConv2D\tlayer_%.8d\t%d 1&quot % (layer_id, num)
+    for i in range(num):
+        pp += &quot %s&quot % bottom_names[i]
+    pp += &quot %s&quot % top_names[0]
+    pp += &quot 0=%d&quot % conv.out_channels
+    if len(conv.kernel_size) == 2:
+        pp += &quot 1=%d&quot % conv.kernel_size[1]
+        pp += &quot 11=%d&quot % conv.kernel_size[0]
+    else:
+        raise NotImplementedError("not implemented.")
+    if len(conv.stride) == 2:
+        pp += &quot 3=%d&quot % conv.stride[1]
+        pp += &quot 13=%d&quot % conv.stride[0]
+    else:
+        raise NotImplementedError("not implemented.")
+    if len(conv.padding) == 2:
+        pp += &quot 4=%d&quot % conv.padding[1]
+        pp += &quot 14=%d&quot % conv.padding[0]
+    else:
+        raise NotImplementedError("not implemented.")
+    &#47&#47 合并卷积层和BN层。肯定使用了偏移bias
+    pp += &quot 5=1&quot
+    out_C, in_C, kH, kW = conv.weight.shape
+    w_ele_num = out_C * in_C * kH * kW
+    pp += &quot 6=%d&quot % w_ele_num
+    assert conv.groups == 1
+    &#47&#47 合并激活
+    pp = fused_activation(pp, act_name, act_param_dict)
+    pp += &quot\n&quot
+    layer_id += 1
+    tensor_id += 1
+
+    &quot&quot&quot
+    合并卷积层和BN层。推导：
+    y = [(conv_w * x + conv_b) - bn_m] / sqrt(bn_v + eps) * bn_w + bn_b
+    = [conv_w * x + (conv_b - bn_m)] / sqrt(bn_v + eps) * bn_w + bn_b
+    = conv_w * x / sqrt(bn_v + eps) * bn_w + (conv_b - bn_m) / sqrt(bn_v + eps) * bn_w + bn_b
+    = conv_w * bn_w / sqrt(bn_v + eps) * x + (conv_b - bn_m) / sqrt(bn_v + eps) * bn_w + bn_b
+
+    所以
+    new_conv_w = conv_w * bn_w / sqrt(bn_v + eps)
+    new_conv_b = (conv_b - bn_m) / sqrt(bn_v + eps) * bn_w + bn_b
+    &quot&quot&quot
+
+    &#47&#47 卷积层写入权重。
+    bp = <a id="change">bp_write_tag(</a>bp<a id="change">)</a>
+
+    conv_w = conv.weight.cpu().detach().numpy()
+    bn_w = bn.weight.cpu().detach().numpy()
+    bn_b = bn.bias.cpu().detach().numpy()</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/miemie2013/miemiedetection/commit/0f42120c66300de5a09bdd11953da39da01686d9#diff-aeb6f141664fb042b3d1792eac436d7eec22629e0ec395388a1bb977d993feffL644' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 2981285</div><div id='project'> Project Name: miemie2013/miemiedetection</div><div id='commit'> Commit Name: 0f42120c66300de5a09bdd11953da39da01686d9</div><div id='time'> Time: 2022-08-06</div><div id='author'> Author: 53960695+miemie2013@users.noreply.github.com</div><div id='file'> File Name: mmdet/models/ncnn_utils.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: fuse_deformconv_bn(6)</div><div id='n_method'> N Method Name: fuse_deformconv_bn(6)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: mmdet/models/ncnn_utils.py</div><div id='n_file'> N File Name: mmdet/models/ncnn_utils.py</div><div id='m_start'> M Start Line: 646</div><div id='m_end'> M End Line: 721</div><div id='n_start'> N Start Line: 799</div><div id='n_end'> N End Line: 871</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+def deformable_conv2d(ncnn_data, bottom_names, conv, act_name=None, act_param_dict=None):
+    bottom_names = check_bottom_names(bottom_names)
+    <a id="change">bp</a> = ncnn_data[&quotbp&quot]
+    pp = ncnn_data[&quotpp&quot]
+    layer_id = ncnn_data[&quotlayer_id&quot]
+    tensor_id = ncnn_data[&quottensor_id&quot]
+
+    top_names = create_top_names(ncnn_data, num=1)
+    num = len(bottom_names)
+    pp += &quotDeformableConv2D\tlayer_%.8d\t%d 1&quot % (layer_id, num)
+    for i in range(num):
+        pp += &quot %s&quot % bottom_names[i]
+    pp += &quot %s&quot % top_names[0]
+    pp += &quot 0=%d&quot % conv.out_channels
+    if len(conv.kernel_size) == 2:
+        pp += &quot 1=%d&quot % conv.kernel_size[1]
+        pp += &quot 11=%d&quot % conv.kernel_size[0]
+    else:
+        raise NotImplementedError("not implemented.")
+    if len(conv.stride) == 2:
+        pp += &quot 3=%d&quot % conv.stride[1]
+        pp += &quot 13=%d&quot % conv.stride[0]
+    elif len(conv.stride) == 1:
+        pp += &quot 3=%d&quot % conv.stride[1]
+        pp += &quot 13=%d&quot % conv.stride[0]
+    else:
+        raise NotImplementedError("not implemented.")
+    if len(conv.padding) == 2:
+        pp += &quot 4=%d&quot % conv.padding[1]
+        pp += &quot 14=%d&quot % conv.padding[0]
+    else:
+        raise NotImplementedError("not implemented.")
+    if conv.bias is not None:
+        pp += &quot 5=1&quot
+    else:
+        pp += &quot 5=0&quot
+    out_C, in_C, kH, kW = conv.weight.shape
+    w_ele_num = out_C * in_C * kH * kW
+    pp += &quot 6=%d&quot % w_ele_num
+    assert conv.groups == 1
+    &#47&#47 合并激活
+    pp = fused_activation(pp, act_name, act_param_dict)
+    pp += &quot\n&quot
+    layer_id += 1
+    tensor_id += 1
+
+    &#47&#47 卷积层写入权重。参考了onnx2ncnn，开头写个0
+    s = <a id="change">struct.pack(&quoti&quot</a>, <a id="change">0</a><a id="change">)</a>
+    <a id="change">bp.write(</a>s<a id="change">)</a>
+
+    conv_w = conv.weight.cpu().detach().numpy()
+    for i1 in range(out_C):
+        for i2 in range(in_C):
+            for i3 in range(kH):
+                for i4 in range(kW):
+                    s = struct.pack(&quotf&quot, conv_w[i1][i2][i3][i4])
+                    <a id="change">bp.write(</a>s<a id="change">)</a>
+    if conv.bias is not None:
+        conv_b = conv.bias.cpu().detach().numpy()
+        for i1 in range(out_C):
+            s = struct.pack(&quotf&quot, conv_b[i1])
+            <a id="change">bp.write(</a>s<a id="change">)</a>
+    ncnn_data[&quotbp&quot] = bp
+    ncnn_data[&quotpp&quot] = pp
+    ncnn_data[&quotlayer_id&quot] = layer_id
+    ncnn_data[&quottensor_id&quot] = tensor_id</code></pre><h3>After Change</h3><pre><code class='java'>
+
+def deformable_conv2d(ncnn_data, bottom_names, conv, act_name=None, act_param_dict=None):
+    bottom_names = check_bottom_names(bottom_names)
+    <a id="change">bp</a> = ncnn_data[&quotbp&quot]
+    pp = ncnn_data[&quotpp&quot]
+    layer_id = ncnn_data[&quotlayer_id&quot]
+    tensor_id = ncnn_data[&quottensor_id&quot]
+
+    top_names = create_top_names(ncnn_data, num=1)
+    num = len(bottom_names)
+    pp += &quotDeformableConv2D\tlayer_%.8d\t%d 1&quot % (layer_id, num)
+    for i in range(num):
+        pp += &quot %s&quot % bottom_names[i]
+    pp += &quot %s&quot % top_names[0]
+    pp += &quot 0=%d&quot % conv.out_channels
+    if len(conv.kernel_size) == 2:
+        pp += &quot 1=%d&quot % conv.kernel_size[1]
+        pp += &quot 11=%d&quot % conv.kernel_size[0]
+    else:
+        raise NotImplementedError("not implemented.")
+    if len(conv.stride) == 2:
+        pp += &quot 3=%d&quot % conv.stride[1]
+        pp += &quot 13=%d&quot % conv.stride[0]
+    elif len(conv.stride) == 1:
+        pp += &quot 3=%d&quot % conv.stride[1]
+        pp += &quot 13=%d&quot % conv.stride[0]
+    else:
+        raise NotImplementedError("not implemented.")
+    if len(conv.padding) == 2:
+        pp += &quot 4=%d&quot % conv.padding[1]
+        pp += &quot 14=%d&quot % conv.padding[0]
+    else:
+        raise NotImplementedError("not implemented.")
+    if conv.bias is not None:
+        pp += &quot 5=1&quot
+    else:
+        pp += &quot 5=0&quot
+    out_C, in_C, kH, kW = conv.weight.shape
+    w_ele_num = out_C * in_C * kH * kW
+    pp += &quot 6=%d&quot % w_ele_num
+    assert conv.groups == 1
+    &#47&#47 合并激活
+    pp = fused_activation(pp, act_name, act_param_dict)
+    pp += &quot\n&quot
+    layer_id += 1
+    tensor_id += 1
+
+    &#47&#47 卷积层写入权重。
+    bp = <a id="change">bp_write_tag(</a>bp<a id="change">)</a>
+
+    conv_w = conv.weight.cpu().detach().numpy()
+    for i1 in range(out_C):
+        for i2 in range(in_C):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/miemie2013/miemiedetection/commit/0f42120c66300de5a09bdd11953da39da01686d9#diff-aeb6f141664fb042b3d1792eac436d7eec22629e0ec395388a1bb977d993feffL342' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 2981286</div><div id='project'> Project Name: miemie2013/miemiedetection</div><div id='commit'> Commit Name: 0f42120c66300de5a09bdd11953da39da01686d9</div><div id='time'> Time: 2022-08-06</div><div id='author'> Author: 53960695+miemie2013@users.noreply.github.com</div><div id='file'> File Name: mmdet/models/ncnn_utils.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: deformable_conv2d(5)</div><div id='n_method'> N Method Name: deformable_conv2d(5)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: mmdet/models/ncnn_utils.py</div><div id='n_file'> N File Name: mmdet/models/ncnn_utils.py</div><div id='m_start'> M Start Line: 344</div><div id='m_end'> M End Line: 403</div><div id='n_start'> N Start Line: 503</div><div id='n_end'> N End Line: 559</div><BR>

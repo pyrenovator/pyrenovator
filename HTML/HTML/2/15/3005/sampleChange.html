@@ -1,0 +1,30 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        if reverse:
+            img_data = torch.flip(img_data, dims=[1])
+            actions = torch.flip(actions, dims=[1])
+        input_frames = img_data if self.NEEDS_COMPLETE_INPUT else <a id="change">img_data[:, :config["context_frames"]]</a>
+        target_frames = <a id="change">img_data[:, config["context_frames"]: config["context_frames"] + config["pred_frames"]]</a>
+        return input_frames, target_frames, actions
+
+    def pred_1(self, x: torch.Tensor, **kwargs):
+        r</code></pre><h3>After Change</h3><pre><code class='java'>
+        Returns: The specified amount of input/target frames as well as the actions. All inputs will come in the
+        shape the model expects as input later.
+        
+        <a id="change">img_data</a> = data["frames"].to(config["device"])  &#47&#47 [b, T, c, h, w], with T = total_frames
+        actions = data["actions"].to(config["device"])  &#47&#47 [b, T-1, a]. Action t happens between frame t and t+1
+        if reverse:
+            img_data = torch.flip(img_data, dims=[1])
+            actions = torch.flip(actions, dims=[1])
+        <a id="change">T_in</a><a id="change">, T_pred</a> = config["context_frames"], config["pred_frames"]
+        if self.NEEDS_COMPLETE_INPUT:
+            input_frames<a id="change"> = img_data[:, :T_in+T_pred]</a>
+            target_frames = input_frames[:, T_in:].clone()
+        else:
+            input_frames, target_frames = torch.split(<a id="change">img_data[:, :T_in+T_pred]</a>, [T_in, T_pred], dim=1)
+        return input_frames, target_frames, actions
+
+    def pred_1(self, x: torch.Tensor, **kwargs):</code></pre>

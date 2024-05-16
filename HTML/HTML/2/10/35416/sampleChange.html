@@ -1,0 +1,45 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 For each allocation made by the operations in the pipeline
+        for op_id, memory_allocation in memory_allocations.items():
+            &#47&#47 If the operation didn&quott make a query we stop here
+            <a id="change">if memory_allocation is None</a>:
+                memory_buffers[op_id]<a id="change"> = </a>None
+            else:
+                &#47&#47 We compute the total amount of memory needed for this
+                &#47&#47 operation
+                final_shape = [batches_ahead,
+                               batch_size, *memory_allocation.shape]
+                if isinstance(memory_allocation.dtype, ch.dtype):
+                    result = []
+                    for _ in range(final_shape[0]):
+                        partial<a id="change"> = </a>ch.empty(*final_shape[1:],
+                                          dtype=memory_allocation.dtype,
+                                          device=memory_allocation.device)
+                        try:
+                            partial = partial.pin_memory()
+                        except:
+                            pass
+                        result.append(partial)
+                else:
+                    ch_dtype<a id="change"> = </a>ch.from_numpy(np.empty(0, dtype=memory_allocation.dtype)).dtype
+                    result = ch.empty(*final_shape,
+                                      dtype=ch_dtype)
+                    try:
+                        result<a id="change"> = </a>result.pin_memory()
+                    except:
+                        pass
+                    result = result.numpy()</code></pre><h3>After Change</h3><pre><code class='java'>
+                allocated_buffer = self.allocate_query(memory_allocation,
+                                                            batch_size,
+                                                            batches_ahead)
+            elif <a id="change"></a>isinstance(memory_allocation, Sequence):
+                allocated_buffer<a id="change"> = </a><a id="change">tuple(
+                    </a>self<a id="change">.allocate_query(q, batch_size, batches_ahead) for q in memory_allocation
+                )</a>
+
+            memory_buffers[op_id] = allocated_buffer
+
+</code></pre>

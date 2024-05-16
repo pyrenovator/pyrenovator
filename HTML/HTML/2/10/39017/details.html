@@ -1,0 +1,96 @@
+<html><h3>Pattern ID :39017
+</h3><img src='111156512.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+@pytest.mark.parametrize("engine", ["parquet", "csv", "csv-no-header"])
+@pytest.mark.parametrize("op_columns", [["x"], None])
+def test_normalize(tmpdir, df, dataset, gpu_memory_frac, engine, op_columns):
+    cat_names = ["name-cat", "name-string"]<a id="change"> if engine == "parquet"</a><a id="change"> else </a>["name-string"]
+    cont_names = ["x", "y"]
+    label_name = ["label"]
+</code></pre><h3>After Change</h3><pre><code class='java'>
+@pytest.mark.parametrize("engine", ["parquet", "csv", "csv-no-header"])
+@pytest.mark.parametrize("op_columns", [["x"], ["x", "y"]])
+def test_normalize(tmpdir, df, dataset, gpu_memory_frac, engine, op_columns):
+    cont_features = op_columns<a id="change"> &gt;&gt; </a>ops.Normalize()
+    processor = <a id="change">nvtabular.Workflow(</a>cont_features<a id="change">)</a>
+    <a id="change">processor.fit(dataset</a><a id="change">)</a>
+
+    new_gdf = <a id="change">processor.transform(dataset).to_ddf()</a>.compute()
+    for col in op_columns:
+        assert math.isclose(df[col].mean(), processor.column_group.op.means[col], rel_tol=1e-4)
+        assert math.isclose(df[col].std(), processor.column_group.op.stds[col], rel_tol=1e-4)
+        df[col]<a id="change"> = </a>(df[col] - processor.column_group.op.means[col]) / processor.column_group.op.stds[
+            col
+        ]
+        assert np.all((df[col] - new_gdf[col]).abs().values &lt;= 1e-2)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 8</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/nvidia/nvtabular/commit/4c92dffac4354d816178264bcfcdec722db2ec1c#diff-e4d18001a1d407273320606db51ffe8ef20709522220cdc6e3cde2070f06b246L240' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 111156512</div><div id='project'> Project Name: nvidia/nvtabular</div><div id='commit'> Commit Name: 4c92dffac4354d816178264bcfcdec722db2ec1c</div><div id='time'> Time: 2021-01-05</div><div id='author'> Author: github@benfrederickson.com</div><div id='file'> File Name: tests/unit/test_ops.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: test_normalize(6)</div><div id='n_method'> N Method Name: test_normalize(6)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: tests/unit/test_ops.py</div><div id='n_file'> N File Name: tests/unit/test_ops.py</div><div id='m_start'> M Start Line: 418</div><div id='m_end'> M End Line: 439</div><div id='n_start'> N Start Line: 240</div><div id='n_end'> N End Line: 253</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    cont_names = ["x", "y"]
+
+    columns = mycols_pq<a id="change"> if engine == "parquet"</a><a id="change"> else </a>mycols_csv
+    columns_ctx = {}
+    columns_ctx["all"] = {}
+    columns_ctx["all"]["base"] = columns</code></pre><h3>After Change</h3><pre><code class='java'>
+@pytest.mark.parametrize("engine", ["parquet"])
+def test_filter(tmpdir, df, dataset, gpu_memory_frac, engine):
+    cont_names = ["x", "y"]
+    filtered = cont_names<a id="change"> &gt;&gt; </a>ops.Filter(f=lambda df: df[df["y"] &gt; 0.5])
+    processor = nvtabular.Workflow(filtered)
+    processor.fit(dataset)
+    new_gdf = processor.transform(dataset).to_ddf().compute().reset_index()
+    filter_df = df[df["y"] &gt; 0.5].reset_index()
+    for col in cont_names:
+        assert np.all((new_gdf[col] - filter_df[col]).abs().values &lt;= 1e-2)
+
+    &#47&#47 return isnull() rows
+    for col in cont_names:
+        idx = np.random.choice(df.shape[0] - 1, int(df.shape[0] * 0.2))
+        df[col].iloc[idx] = None
+
+    <a id="change">dataset</a> = nvt.Dataset(df)
+    filtered = cont_names &gt;&gt; ops.Filter(f=lambda df: df[df.x.isnull()])
+    processor = <a id="change">nvtabular.Workflow(</a>filtered<a id="change">)</a>
+    processor.fit(dataset)
+    new_gdf = processor.transform(dataset).to_ddf().compute()
+    assert new_gdf.shape[0] &lt; df.shape[0], "null values do not exist"
+
+    &#47&#47 again testing filtering by returning a series rather than a df
+    filtered = cont_names &gt;&gt; ops.Filter(f=lambda df: df.x.isnull())
+    processor = nvtabular.Workflow(filtered)
+    <a id="change">processor.fit(</a>dataset<a id="change">)</a>
+    new_gdf = <a id="change">processor.transform(dataset).to_ddf()</a>.compute()
+    assert new_gdf.shape[0] &lt; df.shape[0], "null values do not exist"
+
+    &#47&#47 if the filter returns an invalid type we should get an exception immediately
+    &#47&#47 (rather than causing problems downstream in the workflow)
+    filtered = cont_names &gt;&gt; ops.Filter(f=lambda df: "some invalid value")
+    processor = nvtabular.Workflow(filtered)
+    with pytest.raises(ValueError):
+        new_gdf<a id="change"> = </a>processor.transform(dataset).to_ddf().compute()
+
+
+def test_difference_lag():</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/nvidia/nvtabular/commit/4c92dffac4354d816178264bcfcdec722db2ec1c#diff-e4d18001a1d407273320606db51ffe8ef20709522220cdc6e3cde2070f06b246L991' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 111156449</div><div id='project'> Project Name: nvidia/nvtabular</div><div id='commit'> Commit Name: 4c92dffac4354d816178264bcfcdec722db2ec1c</div><div id='time'> Time: 2021-01-05</div><div id='author'> Author: github@benfrederickson.com</div><div id='file'> File Name: tests/unit/test_ops.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: test_filter(5)</div><div id='n_method'> N Method Name: test_filter(6)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: tests/unit/test_ops.py</div><div id='n_file'> N File Name: tests/unit/test_ops.py</div><div id='m_start'> M Start Line: 991</div><div id='m_end'> M End Line: 1027</div><div id='n_start'> N Start Line: 596</div><div id='n_end'> N End Line: 629</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+@pytest.mark.parametrize("engine", ["parquet", "csv", "csv-no-header"])
+@pytest.mark.parametrize("op_columns", [["x"], None])
+def test_normalize_minmax(tmpdir, df, dataset, gpu_memory_frac, engine, op_columns):
+    cat_names = ["name-cat", "name-string"]<a id="change"> if engine == "parquet"</a><a id="change"> else </a>["name-string"]
+    cont_names = ["x", "y"]
+    label_name = ["label"]
+</code></pre><h3>After Change</h3><pre><code class='java'>
+&#47&#47 with op_columns=None
+@pytest.mark.parametrize("op_columns", [["x"], ["x", "y"]])
+def test_normalize_minmax(tmpdir, df, dataset, gpu_memory_frac, engine, op_columns):
+    cont_features = op_columns<a id="change"> &gt;&gt; </a>ops.NormalizeMinMax()
+    processor = <a id="change">nvtabular.Workflow(</a>cont_features<a id="change">)</a>
+    <a id="change">processor.fit(</a>dataset<a id="change">)</a>
+    new_gdf = <a id="change">processor.transform(dataset).to_ddf()</a>.compute()
+    for col in op_columns:
+        col_min = df[col].min()
+        assert col_min == pytest.approx(processor.column_group.op.mins[col], 1e-2)
+        col_max = df[col].max()
+        assert col_max == pytest.approx(processor.column_group.op.maxs[col], 1e-2)
+        df[col]<a id="change"> = </a>(df[col] - processor.column_group.op.mins[col]) / (
+            processor.column_group.op.maxs[col] - processor.column_group.op.mins[col]
+        )
+        assert np.all((df[col] - new_gdf[col]).abs().values &lt;= 1e-2)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/nvidia/nvtabular/commit/4c92dffac4354d816178264bcfcdec722db2ec1c#diff-e4d18001a1d407273320606db51ffe8ef20709522220cdc6e3cde2070f06b246L477' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 111156520</div><div id='project'> Project Name: nvidia/nvtabular</div><div id='commit'> Commit Name: 4c92dffac4354d816178264bcfcdec722db2ec1c</div><div id='time'> Time: 2021-01-05</div><div id='author'> Author: github@benfrederickson.com</div><div id='file'> File Name: tests/unit/test_ops.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: test_normalize_minmax(6)</div><div id='n_method'> N Method Name: test_normalize_minmax(6)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: tests/unit/test_ops.py</div><div id='n_file'> N File Name: tests/unit/test_ops.py</div><div id='m_start'> M Start Line: 478</div><div id='m_end'> M End Line: 501</div><div id='n_start'> N Start Line: 40</div><div id='n_end'> N End Line: 54</div><BR>

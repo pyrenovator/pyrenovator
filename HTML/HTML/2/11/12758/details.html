@@ -1,0 +1,91 @@
+<html><h3>Pattern ID :12758
+</h3><img src='43236064.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        raise ValueError("unkown padding type.")
+
+    row_indices = []
+    column_indices<a id="change"> = []</a>
+    values = []
+    for column in range(0, input_rows):
+        <a id="change">for </a>row in range(0, filter_length)<a id="change">:
+            </a>check_row = column + row
+            if (check_row &gt;= start_row) and (check_row &lt;= stop_row):
+                row_indices.append(row + column - start_row)
+                <a id="change">column_indices.append(</a>column<a id="change">)</a>
+                values.append(filter[row])
+    indices = torch.tensor(
+        np.stack([row_indices, column_indices]), device=filter.device
+    )</code></pre><h3>After Change</h3><pre><code class='java'>
+    else:
+        raise ValueError("unkown padding type.")
+
+    product_lst = <a id="change">[
+        (row, col)
+        for col, row in product(range(input_rows), range(filter_length))
+        if row + col in range(start_row, stop_row + 1)
+    ]</a>
+
+    row_indices = torch.tensor(
+        [row + col - start_row for row, col in product_lst], device=filter.device
+    )
+    col_indices = torch.tensor([col for row, col in product_lst], device=filter.device)
+    indices = torch.stack([row_indices, col_indices])
+    values<a id="change"> = </a><a id="change">torch.stack([filter[row] for row, col in product_lst]</a><a id="change">)</a>
+
+    return torch.sparse_coo_tensor(
+        indices, values, device=filter.device, dtype=filter.dtype
+    )</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 10</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/v0lta/pytorch-wavelet-toolbox/commit/623deeb220e325f65bd2a0ad576cd2ebfedc7cce#diff-4cf3e41efbfc338d0b6af6fd66d51bf77a37adf3814121abe1d2f6fc7040efa8L354' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 43236064</div><div id='project'> Project Name: v0lta/pytorch-wavelet-toolbox</div><div id='commit'> Commit Name: 623deeb220e325f65bd2a0ad576cd2ebfedc7cce</div><div id='time'> Time: 2023-02-20</div><div id='author'> Author: felix.blanke@scai.fraunhofer.de</div><div id='file'> File Name: src/ptwt/sparse_math.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: construct_conv_matrix(3)</div><div id='n_method'> N Method Name: construct_conv_matrix(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/ptwt/sparse_math.py</div><div id='n_file'> N File Name: src/ptwt/sparse_math.py</div><div id='m_start'> M Start Line: 354</div><div id='m_end'> M End Line: 385</div><div id='n_start'> N Start Line: 354</div><div id='n_end'> N End Line: 384</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        if self.mode == 1:
+            return self.extractor(wavs)
+        elif self.mode == 2:
+            feats<a id="change"> = []</a>
+            <a id="change">for wav</a> in wavs<a id="change">:
+                </a>feat = self.extractor.extract_features(wav.unsqueeze(0), None)[
+                    0
+                ].squeeze(0)
+                <a id="change">feats.append(</a>feat<a id="change">)</a>
+        elif self.mode == 3:
+            wavs = [wav.cpu().numpy() for wav in wavs]
+            feats = [self.extractor(wav) for wav in wavs]
+            feats = [torch.FloatTensor(feat).to(self.device) for feat in feats]</code></pre><h3>After Change</h3><pre><code class='java'>
+            return self.extractor(wavs)
+
+        elif self.mode == 2:
+            wav_lens = <a id="change">[len(wav) for wav in wavs]</a>
+            wavs = pad_sequence(wavs, batch_first=True)
+            padding_mask = <a id="change">[
+                torch.arange(wavs.size(1)) &gt;= wav_len for wav_len in wav_lens
+            ]</a>
+            padding_mask = <a id="change">torch.stack(</a>padding_mask<a id="change">)</a>.to(self.device)
+
+            feats = self.extractor.extract_features(wavs, padding_mask)["x"]
+            feats<a id="change"> = </a>[f for f in feats]
+
+        elif self.mode == 3:
+            wavs = [wav.cpu().numpy() for wav in wavs]</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/ga642381/robust-vc/commit/26399d6990737b2aa2afb010573a5e04d0804bb0#diff-f3934326cc6756b24891b2884192bc0f7f13a14f3ce6ad1107045bd8cbcf2358L76' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 43236055</div><div id='project'> Project Name: ga642381/robust-vc</div><div id='commit'> Commit Name: 26399d6990737b2aa2afb010573a5e04d0804bb0</div><div id='time'> Time: 2021-10-12</div><div id='author'> Author: ga642381@gmail.com</div><div id='file'> File Name: S2VC/S2VC-robust/data/feature_extract.py</div><div id='m_class'> M Class Name: FeatureExtractor</div><div id='n_method'> N Class Name: FeatureExtractor</div><div id='m_method'> M Method Name: get_feature(2)</div><div id='n_method'> N Method Name: get_feature(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: S2VC/S2VC-robust/data/feature_extract.py</div><div id='n_file'> N File Name: S2VC/S2VC-robust/data/feature_extract.py</div><div id='m_start'> M Start Line: 76</div><div id='m_end'> M End Line: 86</div><div id='n_start'> N Start Line: 76</div><div id='n_end'> N End Line: 92</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    &#47&#47 https://www.biorxiv.org/content/10.1101/2020.11.27.401232v1.full.pdf
+    if eigen == True:
+        if weights is None:
+            preds_3d<a id="change"> = []</a>
+            <a id="change">for bi</a> in range(pre_dist_mat.shape[0])<a id="change">:
+                </a>D = pre_dist_mat[bi]**2
+                M = D[:1, :] + D[:, :1] - D 
+                u,s,v = torch.svd_lowrank(M/2)
+                <a id="change">preds_3d.append( </a>(u@torch.diag(s).sqrt())[:, :3].t()<a id="change"> )</a>
+            return torch.stack(preds_3d, dim=0), torch.zeros_like(torch.stack(his, dim=0))
+        else:
+            if verbose:
+                print("Can&quott use eigen flag if weights are active. Fallback to iterative")</code></pre><h3>After Change</h3><pre><code class='java'>
+            M =  0.5 * (D[:, :1, :] + D[:, :, :1] - D) 
+            &#47&#47 do loop svd bc it&quots faster: (2-3x in CPU and 1-2x in GPU)
+            &#47&#47 https://discuss.pytorch.org/t/batched-svd-lowrank-being-much-slower-than-loop-implementation-both-cpu-and-gpu/119336
+            svds = <a id="change">[torch.svd_lowrank(mi) for mi in M]</a>
+            u = torch.stack([svd[0] for svd in svds], dim=0)
+            s = torch.stack([svd[1] for svd in svds], dim=0)
+            v<a id="change"> = </a><a id="change">torch.stack([svd[2] for svd in svds]</a><a id="change">, dim=0)</a>
+            preds_3d = torch.transpose( torch.bmm(u, torch.diag_embed(s).sqrt())[..., :3], -1, -2)
+            
+            return preds_3d, torch.zeros_like(torch.stack(his, dim=0))
+        else:</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lucidrains/alphafold2/commit/c3e564efd689bff4df9759b2855bdbb6dcd1b67b#diff-f9b2e05be1f80257f9a80ec7cc1290e3337a54fcc62aeee31b23a4cb827f12efL636' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 43236052</div><div id='project'> Project Name: lucidrains/alphafold2</div><div id='commit'> Commit Name: c3e564efd689bff4df9759b2855bdbb6dcd1b67b</div><div id='time'> Time: 2021-04-25</div><div id='author'> Author: ericalcaide1@gmail.com</div><div id='file'> File Name: alphafold2_pytorch/utils.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: mds_torch(6)</div><div id='n_method'> N Method Name: mds_torch(6)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: alphafold2_pytorch/utils.py</div><div id='n_file'> N File Name: alphafold2_pytorch/utils.py</div><div id='m_start'> M Start Line: 650</div><div id='m_end'> M End Line: 668</div><div id='n_start'> N Start Line: 645</div><div id='n_end'> N End Line: 671</div><BR>

@@ -1,0 +1,45 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+    start_epoch = args.resume if args.resume is not None else 0
+    global_steps = 0
+    <a id="change">for </a>epoch in range(start_epoch, args.epoch)<a id="change">:
+        </a>for batch in dataloader:
+            model.set_input(batch[0], batch[2], batch[1])
+            model.optimize_parameters()
+            if global_steps % args.checkpoint_steps == 0:</code></pre><h3>After Change</h3><pre><code class='java'>
+    checkpoint_dir = os.path.join(args.experiment_dir, "checkpoint")
+    sample_dir = os.path.join(args.experiment_dir, "sample")
+    log_dir = os.path.join(args.experiment_dir, "logs")
+    start_time<a id="change"> = time</a><a id="change">.time()</a>
+
+    &#47&#47 train_dataset = DatasetFromObj(os.path.join(data_dir, &quottrain.obj&quot), augment=True, bold=True, rotate=True, blur=True)
+    &#47&#47 val_dataset = DatasetFromObj(os.path.join(data_dir, &quotval.obj&quot))
+    &#47&#47 dataloader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
+
+    model = Zi2ZiModel(embedding_num=args.embedding_num, embedding_dim=args.embedding_dim,
+                       Lconst_penalty=args.Lconst_penalty, Lcategory_penalty=args.Lcategory_penalty,
+                       save_dir=checkpoint_dir, gpu_ids=args.gpu_ids)
+    model.setup()
+    model.print_networks(True)
+    if args.resume is not None:
+        model.load_networks(args.resume)
+
+    start_epoch = args.resume if args.resume is not None else 0
+    global_steps = 0
+
+    for epoch in range(start_epoch, args.epoch):
+        &#47&#47 generate dataset every epoch so that different styles of saved char imgs can be trained.
+        train_dataset = DatasetFromObj(os.path.join(data_dir, &quottrain.obj&quot),
+                                       augment=True, bold=True, rotate=True, blur=True)
+        total_batches = math.ceil(len(train_dataset) / args.batch_size)
+        dataloader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
+        for bid, batch in enumerate(dataloader):
+            model.set_input(batch[0], batch[2], batch[1])
+            const_loss, l1_loss, category_loss, cheat_loss = model.optimize_parameters()
+            passed = <a id="change">time.time() - </a>start_time
+            log_format = "Epoch: [%2d], [%4d/%4d] time: %4.2f, d_loss: %.5f, g_loss: %.5f, " + \
+                         "category_loss: %.5f, cheat_loss: %.5f, const_loss: %.5f, l1_loss: %.5f"
+            print(log_format % (epoch, bid, total_batches, passed, model.d_loss.item(), model.g_loss.item(),</code></pre>

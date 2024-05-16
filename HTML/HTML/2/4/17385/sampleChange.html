@@ -1,0 +1,25 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        if memory_saving_sd_config:
+            self.vae = AutoencoderKL.from_pretrained(model_key, subfolder="vae", torch_dtype=torch.float16).to(self.device)
+            self.tokenizer = CLIPTokenizer.from_pretrained(model_key, subfolder="tokenizer", torch_dtype=torch.float16)
+            self.text_encoder = <a id="change">CLIPTextModel.from_pretrained(model_key, subfolder="text_encoder", torch_dtype=torch.float16).to(</a>self.device<a id="change">)</a>
+            self.unet = UNet2DConditionModel.from_pretrained(model_key, subfolder="unet", torch_dtype=torch.float16).to(self.device)
+            self.unet.set_attention_slice("auto")
+        else:
+            self.vae = AutoencoderKL.from_pretrained(model_key, subfolder="vae").to(self.device)</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        &#47&#47 Create model
+        if vram_O &gt; 0:
+            pipe = <a id="change">StableDiffusionPipeline.from_pretrained(</a>model_key<a id="change">, torch_dtype=torch.float16)</a>
+            if vram_O &gt; 1:
+                pipe.enable_sequential_cpu_offload()
+            pipe.enable_attention_slicing(1)
+            self.vae = pipe.vae
+            self.tokenizer = pipe.tokenizer
+            self.text_encoder<a id="change"> = </a>pipe.text_encoder
+            self.unet = pipe.unet
+            self.scheduler = DDIMScheduler.from_pretrained(model_key, subfolder="scheduler", torch_dtype=torch.float16)
+        else:</code></pre>

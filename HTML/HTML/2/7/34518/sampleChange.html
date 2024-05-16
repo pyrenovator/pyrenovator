@@ -1,0 +1,38 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        optimizer.step()
+
+        epoch_losses.append(loss.item())
+        recall, precision = calc_recall_precision(<a id="change">batch[&quotmatches&quot][0]</a>, output.matches0[0].cpu().detach().numpy(), output.matches1[0].cpu().detach().numpy())
+        epoch_recalls.append(recall)
+        epoch_precisions.append(precision)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    epoch_losses = []
+    epoch_recalls = []
+    epoch_precisions = []
+    t0<a id="change"> = time</a><a id="change">.time()</a>
+    for i_batch, batch in enumerate(dataloader):
+        if args.max_batches is not None and i_batch &gt;= args.max_batches:
+            break
+
+        optimizer.zero_grad()
+        color_input = batch[&quotobjects_colors&quot] if args.use_color else None
+        output = model(batch[&quotobjects_classes&quot], batch[&quotobjects_positions&quot], batch[&quothint_descriptions&quot], object_colors=color_input)
+
+        loss = criterion(output.P, batch[&quotall_matches&quot])
+        &#47&#47 print(f&quot\t\t batch {i_batch} loss {loss.item(): 0.3f}&quot)
+
+        loss.backward()
+        optimizer.step()
+
+        epoch_losses.append(loss.item())
+        recall, precision = calc_recall_precision(batch[&quotmatches&quot], output.matches0.cpu().detach().numpy(), output.matches1.cpu().detach().numpy())
+        epoch_recalls.append(recall)
+        epoch_precisions.append(precision)
+
+    return np.mean(epoch_losses), np.mean(epoch_recalls), np.mean(epoch_precisions), <a id="change">time.time()</a><a id="change">-</a>t0
+
+@torch.no_grad()
+def val_epoch(model, dataloader, args):</code></pre>

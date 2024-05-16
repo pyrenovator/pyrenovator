@@ -1,0 +1,103 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+            &#47&#47 relation 特殊表示
+            index_ = torch.arange(self.start_idx, self.start_idx+num_relations).to(self.device)
+            index_<a id="change"> = </a>index_.expand(batch_size, num_relations)
+            &#47&#47 需要拼接的部分1：REL， 选取拼接的部分
+            relation_output_sigmoid_number = torch.masked_select(index_, relation_output_sigmoid_.bool())
+            &#47&#47 需要拼接的部分2：SEP
+            cat_sep = torch.full((relation_output_sigmoid_number.shape[0], 1), 102).long().to(self.device)
+            &#47&#47 需要拼接的部分3：[1]
+            cat_one = torch.full((relation_output_sigmoid_number.shape[0], 1), 1).long().to(self.device)
+            &#47&#47 需要拼接的部4：[0]
+            cat_zero = torch.full((relation_output_sigmoid_number.shape[0], 1), 0).long().to(self.device)
+
+            &#47&#47 需要原来的input_ids 扩展到relation num维度。
+            input_ids_ner = torch.unsqueeze(inputs[&quotinput_ids&quot], 1)
+            &#47&#47 [batch_size, 50, max_length], 复制50份
+            input_ids_ner = input_ids_ner.expand(-1, len(self.label_map_seq.keys()), -1)
+            &#47&#47 [batch_size * 50, max_length]
+            input_ids_ner_reshape = input_ids_ner.reshape(batch_size * num_relations, max_length)
+            &#47&#47 选择预测正确的所有关系
+            tmp1 = relation_output_sigmoid_index.unsqueeze(dim=1)  &#47&#47 [200, 1]
+            mask = tmp1.expand(-1, max_length)  &#47&#47 [200, 79]
+            tmp2 = torch.masked_select(input_ids_ner_reshape, mask.bool())
+            &#47&#47 n(选出来的关系数字) * max_length
+            &#47&#47 n &gt;&gt; batch_size, 因为一句话中有多个关系
+            tmp3 = tmp2.view(-1, max_length)
+            &#47&#47 拼接 0
+            tmp4 = torch.cat((tmp3, cat_zero), 1)
+            &#47&#47 拼接 0
+            input_ids_ner = torch.cat((tmp4, cat_zero), 1)
+
+            &#47&#47 利用attention中1的求和的到rel_pos的位置
+            attention_mask_ner = torch.unsqueeze(inputs[&quotattention_mask&quot], 1)
+            &#47&#47 [batch_size, 50, max_length], 复制50份
+            attention_mask_ner = attention_mask_ner.expand(-1, len(self.label_map_seq.keys()), -1)
+            &#47&#47 [batch_size * 50, max_length]
+            attention_mask_ner_reshape = attention_mask_ner.reshape(batch_size * num_relations, max_length)
+            &#47&#47 选择预测正确的所有关系
+            tmp1 = relation_output_sigmoid_index.unsqueeze(dim=1)  &#47&#47 [200, 1]
+            mask = tmp1.expand(-1, max_length)  &#47&#47 [200, 79]
+            tmp2 = torch.masked_select(attention_mask_ner_reshape, mask.bool())
+            &#47&#47 n(选出来的关系数字) * max_length
+            &#47&#47 n &gt;&gt; batch_size, 因为一句话中有多个关系
+            tmp3 = tmp2.view(-1, max_length)
+            &#47&#47 利用attention中1的求和的到rel_pos的位置
+            rel_pos = torch.sum(tmp3, dim=1)
+            (rel_number_find, max_length_find) = input_ids_ner.shape
+            one_hot = torch.sparse.torch.eye(max_length_find).long().to(self.device)
+            rel_pos_mask = one_hot.index_select(0, rel_pos)
+            rel_pos_mask_plus = one_hot.index_select(0, rel_pos+1)
+
+            &#47&#47 拼接input_ids的输入
+            input_ids_ner[rel_pos_mask.bool()] = relation_output_sigmoid_number
+            input_ids_ner[rel_pos_mask_plus.bool()] = cat_sep.squeeze()
+
+            &#47&#47 拼接token_type_ids的输入
+            token_type_ids_ner = torch.zeros(rel_number_find, max_length_find).to(self.device)
+            token_type_ids_ner[rel_pos_mask.bool()] = 1
+            token_type_ids_ner[rel_pos_mask_plus.bool()] = 1
+            token_type_ids_ner = token_type_ids_ner.long()
+
+            &#47&#47 拼接attention_mask的输入
+            &#47&#47 拼接 0
+            tmp4 = torch.cat((tmp3, cat_zero), dim=1)
+            &#47&#47 拼接 0
+            tmp5 = torch.cat((tmp4, cat_zero), dim=1)
+            tmp5[rel_pos_mask.bool()] = 1
+            tmp5[rel_pos_mask_plus.bool()] = 1
+            attention_mask_ner_tmp = tmp5
+
+            inputs_ner = {
+                &quotinput_ids&quot: input_ids_ner,
+                &quottoken_type_ids&quot: token_type_ids_ner,
+                &quotattention_mask&quot: attention_mask_ner_tmp,
+            }
+
+            try:
+                outputs_ner = self.model_ner(**inputs_ner)[0]
+            except BaseException:
+                print(&quot23&quot)
+
+            _, results = torch.max(outputs_ner, dim=2)
+            results_np = results.cpu().numpy()
+            attention_position_np = rel_pos.cpu().numpy()
+
+            results_list = results_np.tolist()
+            attention_position_list = attention_position_np.tolist()
+            predict_relation_list<a id="change"> = </a><a id="change">relation_output_sigmoid_number.long()</a>.tolist()
+            input_ids_list = input_ids_ner.tolist()
+
+            processed_results_list = []</code></pre><h3>After Change</h3><pre><code class='java'>
+            &#47&#47 选择预测正确的所有关系
+            mask = mask_output.unsqueeze(dim=1).expand(-1, max_length)  &#47&#47 [batch_size * num_relations, max_length]
+            &#47&#47 选取了正确的input_ids
+            input_ids = <a id="change">torch.masked_select(input_ids_ner_reshape, mask.bool()).view(-1</a>, max_length<a id="change">)</a>
+            &#47&#47 n(选出来的关系数字) * max_length
+            &#47&#47 n &gt;&gt; batch_size, 因为一句话中有多个关系
+            &#47&#47 添加 sep relation_ids 需要增加的东西
+            input_ids = torch.cat((input_ids, cat_zero), 1)</code></pre>

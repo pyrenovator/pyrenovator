@@ -1,0 +1,22 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                module.bias.data.fill_(0.0)
+
+    def forward(self, user, item):
+        user = torch.from_numpy(<a id="change">self.interaction_matrix[user.cpu()]</a>.todense()).to(self.device)
+        item = torch.from_numpy(self.interaction_matrix[:, item.cpu()].todense()).to(self.device).t()
+        user = self.user_linear(user)
+        item = self.item_linear(item)</code></pre><h3>After Change</h3><pre><code class='java'>
+        user = self.get_user_embedding(user)
+
+        &#47&#47 Following lines construct tensor of shape [B,n_users] using the tensor of shape [B,H]
+        col_indices<a id="change"> = </a>self.history_user_id[item].flatten()
+        row_indices = torch.arange(item.shape[0]).to(self.device).repeat_interleave(self.history_user_id.shape[1], dim=0)
+        matrix_01 = torch.zeros(1).to(self.device).repeat(item.shape[0], self.n_users)
+        <a id="change">matrix_01.index_put_(</a>(row_indices, col_indices), self.history_user_value[item].flatten()<a id="change">)</a>
+        item = self.item_linear(matrix_01)
+
+        user = self.user_fc_layers(user)
+        item = self.item_fc_layers(item)</code></pre>

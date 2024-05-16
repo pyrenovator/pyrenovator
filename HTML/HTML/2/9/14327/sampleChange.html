@@ -1,0 +1,38 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+
+def inferencer(word, topk = 3):
+    <a id="change">if topk == 0</a>:
+        in_vec = torch.from_numpy(en_glyph.word2xlitvec(word)).to(device)
+        out = model.inference(in_vec)
+        out<a id="change"> = </a>corr_model.inference(out)
+        &#47&#47 result =[ hi_glyph.xlitvec2word(out.cpu().numpy()) ]
+        result = [ hi_vocab.get_word(out.cpu().numpy()) ]
+        return result
+    else:
+        in_vec = torch.from_numpy(en_glyph.word2xlitvec(word)).to(device)
+        &#47&#47&#47&#47 change to active or passive beam
+        p_out_list = model.active_beam_inference(in_vec, beam_width = topk)
+        p_result = [ hi_glyph.xlitvec2word(out.cpu().numpy()) for out in p_out_list]
+
+        &quot&quot&quot
+        c_out_list = [ corr_model.inference(out) for out in out_list]
+        c_result = [ hi_vocab.get_word(out.cpu().numpy()) for out in c_out_list]
+        &quot&quot&quot
+        c_result<a id="change"> = </a>annoy_obj.chars_to_nearest_vocab(p_result)
+        result = pred_contrive(c_result, p_result)
+        return result
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    p_out_list = model.active_beam_inference(in_vec, beam_width = topk)
+    p_result = [ hi_glyph.xlitvec2word(out.cpu().numpy()) for out in p_out_list]
+
+    emb_list<a id="change"> = </a>[ emb_model.get_word_embedding(out) for out in p_out_list]
+
+    c_result = [annoy_obj.get_nearest_vocab(emb, count = knear) <a id="change">for</a> emb in emb_list ]
+    c_result<a id="change"> = </a><a id="change">sum(</a>c_result, []<a id="change">)</a> &#47&#47 delinieate 2d list
+    result = pred_contrive(c_result, p_result)
+    return result
+</code></pre>

@@ -1,0 +1,26 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+def attention(ctx: Context, inp: jnp.ndarray, idx: int) -&gt; jnp.ndarray:
+    ctx = ctx.add_to_prefix("attention")
+    feature_dims = [ctx.dims.heads, ctx.dims.features_per_head]
+    base_param = get_param(ctx, "base", <a id="change">feature_dims</a><a id="change"> + [</a>ctx.dims.intermediate_replicated<a id="change"></a>],
+                           scale=1 / ctx.model.activation_std)
+    key_param = get_param(ctx, "key", [ctx.dims.intermediate_replicated] + feature_dims, column_axes=2)
+    qry_param<a id="change"> = </a><a id="change">get_param(</a>ctx, <a id="change">"qry"</a>, <a id="change">[</a>ctx.dims.intermediate_replicated<a id="change"></a>]<a id="change"> + feature_dims</a><a id="change">, column_axes=2)</a>
+    val_param = get_param(ctx, "val", <a id="change">[</a>ctx.dims.intermediate_replicated<a id="change"></a>]<a id="change"> + feature_dims</a>, column_axes=2,
+                          scale=ctx.model.depth ** -0.5)
+    if ctx.is_initializing:
+        return inp</code></pre><h3>After Change</h3><pre><code class='java'>
+def attention(ctx: Context, inp: jnp.ndarray, idx: int) -&gt; jnp.ndarray:
+    ctx = ctx.add_to_prefix("attention")
+    feature_dims = [ctx.dims.heads, ctx.dims.features_per_head]
+    base_param = get_param(ctx, "base", <a id="change">[ctx.dims.depth] + feature_dims + [</a>ctx.dims.intermediate_replicated<a id="change"></a>],
+                           scale=1 / ctx.model.activation_std)
+    key_param<a id="change"> = </a><a id="change">get_param(</a>ctx, <a id="change">"key"</a>, <a id="change">[</a>ctx.dims.depth, ctx.dims.intermediate_replicated<a id="change"></a>]<a id="change"> + feature_dims</a><a id="change">, column_axes=2)</a>
+    qry_param = get_param(ctx, "qry", [ctx.dims.depth, ctx.dims.intermediate_replicated] + feature_dims, column_axes=2)
+    val_param = get_param(ctx, "val", <a id="change">[</a>ctx.dims.depth, ctx.dims.intermediate_replicated<a id="change"></a>]<a id="change"> + feature_dims</a>, column_axes=2,
+                          scale=ctx.model.depth ** -0.5)
+    if ctx.is_initializing:
+        return inp</code></pre>

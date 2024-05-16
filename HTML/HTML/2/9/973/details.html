@@ -1,0 +1,401 @@
+<html><h3>Pattern ID :973
+</h3><img src='4644038.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    env = env_fn(1)[0]
+    print("env generated at process ID: {}".format(os.getpid()))
+    try:
+        while <a id="change">True</a>:
+            cmd<a id="change">, data = </a>remote.recv()
+            <a id="change">if </a>cmd == &quotstep&quot:
+                if env.done:
+                    env.reset()
+                elif data is not None:
+                    env.step(data)  &#47&#47 do action
+            elif cmd == &quotreset&quot:
+                env.reset()
+            elif cmd == &quotget_state_reward_done&quot:
+                remote.send((env.state, env.reward, env.done))
+            elif cmd == &quotclose&quot:
+                remote.close()
+                <a id="change">break</a>
+            elif cmd == &quotget_spaces&quot:
+                remote.send((env.action_space, env.observation_space))
+            elif cmd == &quotseed&quot:  &#47&#47 TODO: incorrect seeds?
+                np.random.seed(data)</code></pre><h3>After Change</h3><pre><code class='java'>
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+
+    env<a id="change"> = </a>make_env()
+    env.seed(seed)
+    lazy_agent = lazy_agent_class(shared_models)
+    print("env generated at process ID: {}".format(os.getpid()))
+
+    <a id="change">while not done_event.is_set()</a><a id="change">:
+        </a>env.reset()
+        returns = 0
+        action<a id="change"> = </a>lazy_agent.act(env.state, env.reward)
+
+        while not env.done:
+            with shared_frames.get_lock():
+                shared_frames.value<a id="change"> += </a>1
+            env.step(action)
+            returns += env.reward
+            action = lazy_agent.act(env.state, env.reward)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 8</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/syuntoku14/pytorch-rl-il/commit/44827568e5fb19b2ea99d6b31219a8e82067cab3#diff-bab4baf182865fa63fe1f2a94b02c057f98cc1dc8591b77f5a15aff7a222d37fL15' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 4644038</div><div id='project'> Project Name: syuntoku14/pytorch-rl-il</div><div id='commit'> Commit Name: 44827568e5fb19b2ea99d6b31219a8e82067cab3</div><div id='time'> Time: 2020-04-01</div><div id='author'> Author: syuntoku14@gmail.com</div><div id='file'> File Name: rlil/samplers/sampler.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: worker(9)</div><div id='n_method'> N Method Name: worker(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: rlil/samplers/sampler.py</div><div id='n_file'> N File Name: rlil/samplers/sampler.py</div><div id='m_start'> M Start Line: 97</div><div id='m_end'> M End Line: 128</div><div id='n_start'> N Start Line: 15</div><div id='n_end'> N End Line: 50</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        logging.debug(f"Training with {training_epochs} epochs and {training_batches} batches")
+        logging.debug(f"Batch size is {self.batch_size}; dataset size is {len(dataset)}")
+
+        for <a id="change">epoch</a> in range(training_epochs):
+
+            loss_meter = AverageMeter()
+            dataiter = iter(dataloader)
+            &#47&#47 Set encoder and decoder to be in training mode
+
+            for step in range(1, num_batches_per_epoch + 1):
+                batch<a id="change"> = </a>next(dataiter)
+                &#47&#47 Construct batch (currently just using Torch&quots default batch-creator)
+                contexts, targets, traj_ts_info, extra_context = self.unpack_batch(batch)
+
+                &#47&#47 Use an algorithm-specific augmentation strategy to augment either
+                &#47&#47 just context, or both context and targets
+                contexts, targets = self._prep_tensors(contexts), self._prep_tensors(targets)
+                extra_context = self._prep_tensors(extra_context)
+                traj_ts_info = self._prep_tensors(traj_ts_info)
+                &#47&#47 Note: preprocessing might be better to do on CPU if, in future, we can parallelize doing so
+                contexts = self._preprocess(contexts)
+                if self.preprocess_target:
+                    targets = self._preprocess(targets)
+                contexts, targets = self.augmenter(contexts, targets)
+                extra_context = self._preprocess_extra_context(extra_context)
+
+
+                &#47&#47 These will typically just use the forward() function for the encoder, but can optionally
+                &#47&#47 use a specific encode_context and encode_target if one is implemented
+                encoded_contexts = self.encoder.encode_context(contexts, traj_ts_info)
+                encoded_targets = self.encoder.encode_target(targets, traj_ts_info)
+                &#47&#47 Typically the identity function
+                extra_context = self.encoder.encode_extra_context(extra_context, traj_ts_info)
+
+                &#47&#47 Use an algorithm-specific decoder to "decode" the representations into a loss-compatible tensor
+                &#47&#47 As with encode, these will typically just use forward()
+                decoded_contexts = self.decoder.decode_context(encoded_contexts, traj_ts_info, extra_context)
+                decoded_targets = self.decoder.decode_target(encoded_targets, traj_ts_info, extra_context)
+
+                &#47&#47 Optionally add to the batch before loss. By default, this is an identity operation, but
+                &#47&#47 can also implement momentum queue logic
+                decoded_contexts, decoded_targets = self.batch_extender(decoded_contexts, decoded_targets)
+
+                &#47&#47 Use an algorithm-specific loss function. Typically this only requires decoded_contexts and
+                &#47&#47 decoded_targets, but VAE requires encoded_contexts, so we pass it in here
+
+                loss = self.loss_calculator(decoded_contexts, decoded_targets, encoded_contexts)
+                loss_item = loss.item()
+                assert not np.isnan(loss_item), "Loss is not NAN"
+                loss_meter.update(loss_item)
+
+                self.optimizer.zero_grad()
+                loss.backward()
+                self.optimizer.step()
+                del loss  &#47&#47 so we don&quott use again
+
+                gradient_norm, weight_norm = self._calculate_norms()
+
+                &#47&#47 FIXME(sam): don&quott plot this every batch, plot it every k
+                &#47&#47 batches (will make log files much smaller)
+                loss_meter.update(loss_item)
+                logger.record(&quotloss&quot, loss_item)
+                logger.record(&quotgradient_norm&quot, gradient_norm.item())
+                logger.record(&quotweight_norm&quot, weight_norm.item())
+                logger.record(&quotepoch&quot, epoch)
+                logger.record(&quotwithin_epoch_step&quot, step)
+                logger.dump(step=batches_trained)
+                batches_trained += 1
+                if batches_trained &gt;= training_batches:
+                    logging.info(f"Breaking out of training in epoch {epoch} because max batches "
+                                 f"value of {training_batches} has been reached")
+                    training_complete = True
+                    break
+
+            if self.scheduler is not None:
+                self.scheduler.step()
+
+            loss_record.append(loss_meter.avg)
+            should_save_checkpoint = (training_complete or
+                                      epoch % self.save_interval == 0 or
+                                      epoch == training_epochs - 1)
+            if should_save_checkpoint:
+                most_recent_encoder_checkpoint_path = os.path.join(self.encoder_checkpoints_path, f&quot{epoch}_epochs.ckpt&quot)
+                torch.save(self.encoder, most_recent_encoder_checkpoint_path)
+                torch.save(self.decoder, os.path.join(self.decoder_checkpoints_path, f&quot{epoch}_epochs.ckpt&quot))
+            <a id="change">if </a>training_complete:
+                <a id="change">break</a>
+
+        return loss_record, most_recent_encoder_checkpoint_path
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        self.encoder.train(True)
+        self.decoder.train(True)
+        batches_trained = 0
+        epochs_trained<a id="change"> = </a>0
+        training_complete = False
+        logging.debug(f"Training with {training_epochs} epochs and {training_batches} batches")
+        logging.debug(f"Batch size is {self.batch_size}; dataset size is {len(dataset)}")
+
+        <a id="change">while not training_complete</a><a id="change">:
+            </a>loss_meter = AverageMeter()
+            dataiter = iter(dataloader)
+            &#47&#47 Set encoder and decoder to be in training mode
+
+            for step, batch in enumerate(dataiter):
+                &#47&#47 Construct batch (currently just using Torch&quots default batch-creator)
+                contexts, targets, traj_ts_info, extra_context = self.unpack_batch(batch)
+
+                &#47&#47 Use an algorithm-specific augmentation strategy to augment either
+                &#47&#47 just context, or both context and targets
+                contexts, targets = self._prep_tensors(contexts), self._prep_tensors(targets)
+                extra_context = self._prep_tensors(extra_context)
+                traj_ts_info = self._prep_tensors(traj_ts_info)
+                &#47&#47 Note: preprocessing might be better to do on CPU if, in future, we can parallelize doing so
+                contexts = self._preprocess(contexts)
+                if self.preprocess_target:
+                    targets = self._preprocess(targets)
+                contexts, targets = self.augmenter(contexts, targets)
+                extra_context = self._preprocess_extra_context(extra_context)
+
+
+                &#47&#47 These will typically just use the forward() function for the encoder, but can optionally
+                &#47&#47 use a specific encode_context and encode_target if one is implemented
+                encoded_contexts = self.encoder.encode_context(contexts, traj_ts_info)
+                encoded_targets = self.encoder.encode_target(targets, traj_ts_info)
+                &#47&#47 Typically the identity function
+                extra_context = self.encoder.encode_extra_context(extra_context, traj_ts_info)
+
+                &#47&#47 Use an algorithm-specific decoder to "decode" the representations into a loss-compatible tensor
+                &#47&#47 As with encode, these will typically just use forward()
+                decoded_contexts = self.decoder.decode_context(encoded_contexts, traj_ts_info, extra_context)
+                decoded_targets = self.decoder.decode_target(encoded_targets, traj_ts_info, extra_context)
+
+                &#47&#47 Optionally add to the batch before loss. By default, this is an identity operation, but
+                &#47&#47 can also implement momentum queue logic
+                decoded_contexts, decoded_targets = self.batch_extender(decoded_contexts, decoded_targets)
+
+                &#47&#47 Use an algorithm-specific loss function. Typically this only requires decoded_contexts and
+                &#47&#47 decoded_targets, but VAE requires encoded_contexts, so we pass it in here
+
+                loss = self.loss_calculator(decoded_contexts, decoded_targets, encoded_contexts)
+                loss_item = loss.item()
+                assert not np.isnan(loss_item), "Loss is not NAN"
+                loss_meter.update(loss_item)
+
+                self.optimizer.zero_grad()
+                loss.backward()
+                self.optimizer.step()
+                del loss  &#47&#47 so we don&quott use again
+
+                gradient_norm, weight_norm = self._calculate_norms()
+
+                &#47&#47 FIXME(sam): don&quott plot this every batch, plot it every k
+                &#47&#47 batches (will make log files much smaller)
+                loss_meter.update(loss_item)
+                logger.record(&quotloss&quot, loss_item)
+                logger.record(&quotgradient_norm&quot, gradient_norm.item())
+                logger.record(&quotweight_norm&quot, weight_norm.item())
+                logger.record(&quotepoch&quot, epochs_trained)
+                logger.record(&quotwithin_epoch_step&quot, step)
+                logger.record(&quotbatches_trained&quot, batches_trained)
+                logger.dump(step=batches_trained)
+                batches_trained += 1
+                if batches_trained &gt;= training_batches:
+                    logging.info(f"Breaking out of training in epoch {epochs_trained} because max batches "
+                                 f"value of {training_batches} has been reached")
+                    training_complete = True
+                    break
+
+            if self.scheduler is not None:
+                self.scheduler.step()
+            loss_record.append(loss_meter.avg)
+
+            epochs_trained<a id="change"> += </a>1
+            if epochs_trained &gt;= training_epochs:
+                training_complete<a id="change"> = </a>True
+
+            should_save_checkpoint = (training_complete or
+                                      epochs_trained % self.save_interval == 0)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/humancompatibleai/eirli/commit/406d01948fae64f0ec8b970402ffc13856832c28#diff-da75b71a2421881ac87f16bdedbc66a6eee21a60650cb052fb123cfe1436b72fL204' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 4644019</div><div id='project'> Project Name: humancompatibleai/eirli</div><div id='commit'> Commit Name: 406d01948fae64f0ec8b970402ffc13856832c28</div><div id='time'> Time: 2020-11-10</div><div id='author'> Author: codywild@berkeley.edu</div><div id='file'> File Name: src/il_representations/algos/representation_learner.py</div><div id='m_class'> M Class Name: RepresentationLearner</div><div id='n_method'> N Class Name: RepresentationLearner</div><div id='m_method'> M Method Name: learn(4)</div><div id='n_method'> N Method Name: learn(4)</div><div id='m_parent_class'> M Parent Class: BaseEnvironmentLearner</div><div id='n_parent_class'> N Parent Class: BaseEnvironmentLearner</div><div id='m_file'> M File Name: src/il_representations/algos/representation_learner.py</div><div id='n_file'> N File Name: src/il_representations/algos/representation_learner.py</div><div id='m_start'> M Start Line: 224</div><div id='m_end'> M End Line: 332</div><div id='n_start'> N Start Line: 224</div><div id='n_end'> N End Line: 336</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        logging.debug(f"Training with {training_epochs} epochs and {training_batches} batches")
+        logging.debug(f"Batch size is {self.batch_size}; dataset size is {len(dataset)}")
+
+        for <a id="change">epoch</a> in range(training_epochs):
+
+            loss_meter = AverageMeter()
+            dataiter = iter(dataloader)
+            &#47&#47 Set encoder and decoder to be in training mode
+
+            for step in range(1, num_batches_per_epoch + 1):
+                batch<a id="change"> = </a>next(dataiter)
+                &#47&#47 Construct batch (currently just using Torch&quots default batch-creator)
+                contexts, targets, traj_ts_info, extra_context = self.unpack_batch(batch)
+
+                &#47&#47 Use an algorithm-specific augmentation strategy to augment either
+                &#47&#47 just context, or both context and targets
+                contexts, targets = self._prep_tensors(contexts), self._prep_tensors(targets)
+                extra_context = self._prep_tensors(extra_context)
+                traj_ts_info = self._prep_tensors(traj_ts_info)
+                &#47&#47 Note: preprocessing might be better to do on CPU if, in future, we can parallelize doing so
+                contexts = self._preprocess(contexts)
+                if self.preprocess_target:
+                    targets = self._preprocess(targets)
+                contexts, targets = self.augmenter(contexts, targets)
+                extra_context = self._preprocess_extra_context(extra_context)
+
+
+                &#47&#47 These will typically just use the forward() function for the encoder, but can optionally
+                &#47&#47 use a specific encode_context and encode_target if one is implemented
+                encoded_contexts = self.encoder.encode_context(contexts, traj_ts_info)
+                encoded_targets = self.encoder.encode_target(targets, traj_ts_info)
+                &#47&#47 Typically the identity function
+                extra_context = self.encoder.encode_extra_context(extra_context, traj_ts_info)
+
+                &#47&#47 Use an algorithm-specific decoder to "decode" the representations into a loss-compatible tensor
+                &#47&#47 As with encode, these will typically just use forward()
+                decoded_contexts = self.decoder.decode_context(encoded_contexts, traj_ts_info, extra_context)
+                decoded_targets = self.decoder.decode_target(encoded_targets, traj_ts_info, extra_context)
+
+                &#47&#47 Optionally add to the batch before loss. By default, this is an identity operation, but
+                &#47&#47 can also implement momentum queue logic
+                decoded_contexts, decoded_targets = self.batch_extender(decoded_contexts, decoded_targets)
+
+                &#47&#47 Use an algorithm-specific loss function. Typically this only requires decoded_contexts and
+                &#47&#47 decoded_targets, but VAE requires encoded_contexts, so we pass it in here
+
+                loss = self.loss_calculator(decoded_contexts, decoded_targets, encoded_contexts)
+                loss_item = loss.item()
+                assert not np.isnan(loss_item), "Loss is not NAN"
+                loss_meter.update(loss_item)
+
+                self.optimizer.zero_grad()
+                loss.backward()
+                self.optimizer.step()
+                del loss  &#47&#47 so we don&quott use again
+
+                gradient_norm, weight_norm = self._calculate_norms()
+
+                &#47&#47 FIXME(sam): don&quott plot this every batch, plot it every k
+                &#47&#47 batches (will make log files much smaller)
+                loss_meter.update(loss_item)
+                logger.record(&quotloss&quot, loss_item)
+                logger.record(&quotgradient_norm&quot, gradient_norm.item())
+                logger.record(&quotweight_norm&quot, weight_norm.item())
+                logger.record(&quotepoch&quot, epoch)
+                logger.record(&quotwithin_epoch_step&quot, step)
+                logger.dump(step=batches_trained)
+                batches_trained += 1
+                if batches_trained &gt;= training_batches:
+                    logging.info(f"Breaking out of training in epoch {epoch} because max batches "
+                                 f"value of {training_batches} has been reached")
+                    training_complete = True
+                    break
+
+            if self.scheduler is not None:
+                self.scheduler.step()
+
+            loss_record.append(loss_meter.avg)
+            should_save_checkpoint = (training_complete or
+                                      epoch % self.save_interval == 0 or
+                                      epoch == training_epochs - 1)
+            if should_save_checkpoint:
+                most_recent_encoder_checkpoint_path = os.path.join(self.encoder_checkpoints_path, f&quot{epoch}_epochs.ckpt&quot)
+                torch.save(self.encoder, most_recent_encoder_checkpoint_path)
+                torch.save(self.decoder, os.path.join(self.decoder_checkpoints_path, f&quot{epoch}_epochs.ckpt&quot))
+            <a id="change">if </a>training_complete:
+                <a id="change">break</a>
+
+        return loss_record, most_recent_encoder_checkpoint_path
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        self.encoder.train(True)
+        self.decoder.train(True)
+        batches_trained = 0
+        epochs_trained<a id="change"> = </a>0
+        training_complete = False
+        logging.debug(f"Training with {training_epochs} epochs and {training_batches} batches")
+        logging.debug(f"Batch size is {self.batch_size}; dataset size is {len(dataset)}")
+
+        <a id="change">while not training_complete</a><a id="change">:
+            </a>loss_meter = AverageMeter()
+            dataiter = iter(dataloader)
+            &#47&#47 Set encoder and decoder to be in training mode
+
+            for step, batch in enumerate(dataiter):
+                &#47&#47 Construct batch (currently just using Torch&quots default batch-creator)
+                contexts, targets, traj_ts_info, extra_context = self.unpack_batch(batch)
+
+                &#47&#47 Use an algorithm-specific augmentation strategy to augment either
+                &#47&#47 just context, or both context and targets
+                contexts, targets = self._prep_tensors(contexts), self._prep_tensors(targets)
+                extra_context = self._prep_tensors(extra_context)
+                traj_ts_info = self._prep_tensors(traj_ts_info)
+                &#47&#47 Note: preprocessing might be better to do on CPU if, in future, we can parallelize doing so
+                contexts = self._preprocess(contexts)
+                if self.preprocess_target:
+                    targets = self._preprocess(targets)
+                contexts, targets = self.augmenter(contexts, targets)
+                extra_context = self._preprocess_extra_context(extra_context)
+
+
+                &#47&#47 These will typically just use the forward() function for the encoder, but can optionally
+                &#47&#47 use a specific encode_context and encode_target if one is implemented
+                encoded_contexts = self.encoder.encode_context(contexts, traj_ts_info)
+                encoded_targets = self.encoder.encode_target(targets, traj_ts_info)
+                &#47&#47 Typically the identity function
+                extra_context = self.encoder.encode_extra_context(extra_context, traj_ts_info)
+
+                &#47&#47 Use an algorithm-specific decoder to "decode" the representations into a loss-compatible tensor
+                &#47&#47 As with encode, these will typically just use forward()
+                decoded_contexts = self.decoder.decode_context(encoded_contexts, traj_ts_info, extra_context)
+                decoded_targets = self.decoder.decode_target(encoded_targets, traj_ts_info, extra_context)
+
+                &#47&#47 Optionally add to the batch before loss. By default, this is an identity operation, but
+                &#47&#47 can also implement momentum queue logic
+                decoded_contexts, decoded_targets = self.batch_extender(decoded_contexts, decoded_targets)
+
+                &#47&#47 Use an algorithm-specific loss function. Typically this only requires decoded_contexts and
+                &#47&#47 decoded_targets, but VAE requires encoded_contexts, so we pass it in here
+
+                loss = self.loss_calculator(decoded_contexts, decoded_targets, encoded_contexts)
+                loss_item = loss.item()
+                assert not np.isnan(loss_item), "Loss is not NAN"
+                loss_meter.update(loss_item)
+
+                self.optimizer.zero_grad()
+                loss.backward()
+                self.optimizer.step()
+                del loss  &#47&#47 so we don&quott use again
+
+                gradient_norm, weight_norm = self._calculate_norms()
+
+                &#47&#47 FIXME(sam): don&quott plot this every batch, plot it every k
+                &#47&#47 batches (will make log files much smaller)
+                loss_meter.update(loss_item)
+                logger.record(&quotloss&quot, loss_item)
+                logger.record(&quotgradient_norm&quot, gradient_norm.item())
+                logger.record(&quotweight_norm&quot, weight_norm.item())
+                logger.record(&quotepoch&quot, epochs_trained)
+                logger.record(&quotwithin_epoch_step&quot, step)
+                logger.record(&quotbatches_trained&quot, batches_trained)
+                logger.dump(step=batches_trained)
+                batches_trained += 1
+                if batches_trained &gt;= training_batches:
+                    logging.info(f"Breaking out of training in epoch {epochs_trained} because max batches "
+                                 f"value of {training_batches} has been reached")
+                    training_complete = True
+                    break
+
+            if self.scheduler is not None:
+                self.scheduler.step()
+            loss_record.append(loss_meter.avg)
+
+            epochs_trained<a id="change"> += </a>1
+            if epochs_trained &gt;= training_epochs:
+                training_complete<a id="change"> = </a>True
+
+            should_save_checkpoint = (training_complete or
+                                      epochs_trained % self.save_interval == 0)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/humancompatibleai/eirli/commit/a862749c9f67968ddec51d83ceb5ff286517ab57#diff-da75b71a2421881ac87f16bdedbc66a6eee21a60650cb052fb123cfe1436b72fL204' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 4644078</div><div id='project'> Project Name: humancompatibleai/eirli</div><div id='commit'> Commit Name: a862749c9f67968ddec51d83ceb5ff286517ab57</div><div id='time'> Time: 2020-11-10</div><div id='author'> Author: codywild@berkeley.edu</div><div id='file'> File Name: src/il_representations/algos/representation_learner.py</div><div id='m_class'> M Class Name: RepresentationLearner</div><div id='n_method'> N Class Name: RepresentationLearner</div><div id='m_method'> M Method Name: learn(4)</div><div id='n_method'> N Method Name: learn(4)</div><div id='m_parent_class'> M Parent Class: BaseEnvironmentLearner</div><div id='n_parent_class'> N Parent Class: BaseEnvironmentLearner</div><div id='m_file'> M File Name: src/il_representations/algos/representation_learner.py</div><div id='n_file'> N File Name: src/il_representations/algos/representation_learner.py</div><div id='m_start'> M Start Line: 224</div><div id='m_end'> M End Line: 332</div><div id='n_start'> N Start Line: 224</div><div id='n_end'> N End Line: 336</div><BR>

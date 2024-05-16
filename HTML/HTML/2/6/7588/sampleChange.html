@@ -1,0 +1,27 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    kernel_sizes = (ctx.dims.pointwise_kernel, ctx.dims.outer_bottleneck_kernel, ctx.dims.inner_bottleneck_kernel)
+    if grad.ndim != 3 or last_size not in kernel_sizes:
+        return _shampoo(ctx, grad, step)
+    <a id="change">return </a><a id="change">jnp.stack(</a>[_shampoo(ctx, grad[:, :, i], step) for i in range(last_size)]<a id="change">, axis=-1)</a>
+
+
+def clip_norm(val: jnp.ndarray, min_norm: float) -&gt; jnp.ndarray:
+    return jnp.maximum(jnp.sqrt(jnp.square(val).sum()), min_norm)</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    preconditioner = Preconditioner(grad, ctx.optimizer.block_size)
+    new_preconditioners = []
+    <a id="change">for </a>i, old_stat in enumerate(preconditioner.statistics_from_grad(grad))<a id="change">:
+        </a>new_stat = ema(ctx, old_stat, step, 1 - ctx.optimizer.shampoo_beta2, f"statistics_{i}", True,
+                       jnp.eye(old_stat.shape[0], dtype=ctx.model.storage_dtype) * ctx.optimizer.epsilon)
+        prev_p<a id="change"> = </a>get_param(ctx, f&quotpreconditioner_{i}&quot, old_stat.shape, dtype=ctx.model.storage_dtype,
+                           init_val=jnp.eye(old_stat.shape[0], dtype=ctx.model.storage_dtype))
+        if ctx.is_initializing:
+            continue
+
+        new_p<a id="change">, error</a> = matrix_inverse_pth_root(new_stat, preconditioner.exponent_for_preconditioner(),
+                                               ridge_epsilon=ctx.optimizer.epsilon)
+        new_p = select_preconditioner(error, new_p, prev_p)
+        new_preconditioners.append(new_p)</code></pre>

@@ -1,0 +1,20 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+    sorted_out, argsort_out = lax.sort_key_val(out_token, lax.broadcasted_iota(jnp.int32, out_token.shape, dimension=2))
+    ranks = jnp.argsort(argsort_out)
+    top_p_mask = jnp.greater(<a id="change">jnp.cumsum(</a>jax.nn.softmax(sorted_out), -1<a id="change">)</a>, wctx.top_p)
+    top_p_mask = jnp.take_along_axis(top_p_mask, ranks, axis=2)
+    top_k_mask = jnp.less(ranks, wctx.top_k)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    ranks = jnp.argsort(argsort_out, -1)
+    top_k_mask = jnp.less(ranks, wctx.top_k)
+
+    cumulative_probabilities = <a id="change">jnp.cumsum(</a>jax.nn.softmax(sorted_out), -1<a id="change">)</a>
+    overflow = jnp.argmax(jnp.greater(cumulative_probabilities, wctx.top_p), -1, keepdims=True)  &#47&#47 overflow index
+    top_p_mask<a id="change"> = </a>jnp.arange(wctx.ctx.dims.sizes.vocab).reshape(1, 1, -1) &gt; overflow  &#47&#47 to shift by 1
+    top_p_mask = jnp.take_along_axis(top_p_mask, ranks, axis=2)
+
+    out_token = out_token + temp</code></pre>

@@ -1,0 +1,68 @@
+<html><h3>Pattern ID :28645
+</h3><img src='84541919.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        }
+
+    def load_state_dict(self, state_dict):
+        fast_state_dict<a id="change"> = </a><a id="change">{
+            </a>&quotstate&quot: state_dict[&quotstate&quot],
+            &quotparam_groups&quot: state_dict[&quotparam_groups&quot]<a id="change">,
+        }</a>
+        self.base_optimizer.load_state_dict(fast_state_dict)
+
+        &#47&#47 We want to restore the slow state, but share param_groups reference
+        &#47&#47 with base_optimizer. This is a bit redundant but least code</code></pre><h3>After Change</h3><pre><code class='java'>
+        return self._base_optimizer.state_dict()
+
+    def load_state_dict(self, state_dict):
+        <a id="change">self._base_optimizer.load_state_dict(</a>state_dict<a id="change">)</a>
+        self.param_groups = self._base_optimizer.param_groups
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/feng-lab/pytorch-image-models/commit/ac469b50da310546d1148ad8038aca92c1488a92#diff-4d7adb61d879edd0036a4d531b1eda72ec1f151241ed8c6455f8b7c329bb39f7L58' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 84541919</div><div id='project'> Project Name: feng-lab/pytorch-image-models</div><div id='commit'> Commit Name: ac469b50da310546d1148ad8038aca92c1488a92</div><div id='time'> Time: 2021-08-17</div><div id='author'> Author: rwightman@gmail.com</div><div id='file'> File Name: timm/optim/lookahead.py</div><div id='m_class'> M Class Name: Lookahead</div><div id='n_method'> N Class Name: Lookahead</div><div id='m_method'> M Method Name: load_state_dict(2)</div><div id='n_method'> N Method Name: load_state_dict(2)</div><div id='m_parent_class'> M Parent Class: Optimizer</div><div id='n_parent_class'> N Parent Class: Optimizer</div><div id='m_file'> M File Name: timm/optim/lookahead.py</div><div id='n_file'> N File Name: timm/optim/lookahead.py</div><div id='m_start'> M Start Line: 69</div><div id='m_end'> M End Line: 92</div><div id='n_start'> N Start Line: 58</div><div id='n_end'> N End Line: 59</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        raise AssertionError("checkpoint at {} doesn&quott include a model.pth file".format(ckpt_dir))
+
+    code_subdirs = [str(x) for x in code_path.iterdir() if x.is_dir()]
+    sys.path<a id="change"> = </a><a id="change">[</a>str(code_path)<a id="change"></a>] + code_subdirs + sys.path
+
+    return torch.load(maybe_model, pickle_module=cloudpickle.pickle, **kwargs)  &#47&#47 type: ignore
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    trial = cast(PyTorchTrial, trial)
+    model = trial.build_model()
+    checkpoint = torch.load(ckpt_dir.joinpath("state_dict.pth"), map_location="cpu")  &#47&#47 type: ignore
+    <a id="change">model.load_state_dict(</a>checkpoint["model_state_dict"]<a id="change">)</a>
+
+    return model
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/determined-ai/determined/commit/47ec6cc32234d8e797d9ae3c23d70bfb6d3a64a9#diff-90f3e871b5e54da58a3ae07e1fb06d8e642ed76363902f85b3282af52795790fL9' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 84541916</div><div id='project'> Project Name: determined-ai/determined</div><div id='commit'> Commit Name: 47ec6cc32234d8e797d9ae3c23d70bfb6d3a64a9</div><div id='time'> Time: 2020-05-18</div><div id='author'> Author: sidney@determined.ai</div><div id='file'> File Name: common/determined_common/experimental/checkpoint/_torch.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: load_model(2)</div><div id='n_method'> N Method Name: load_model(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: common/determined_common/experimental/checkpoint/_torch.py</div><div id='n_file'> N File Name: common/determined_common/experimental/checkpoint/_torch.py</div><div id='m_start'> M Start Line: 10</div><div id='m_end'> M End Line: 28</div><div id='n_start'> N Start Line: 10</div><div id='n_end'> N End Line: 22</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 now we save the output and parameter gradients that we will use for comparison purposes with
+        &#47&#47 the non-checkpointed run.
+        output_checkpointed = out.data.clone()
+        grad_checkpointed<a id="change"> = </a><a id="change">{}</a>
+        for name, param in model.named_parameters():
+            grad_checkpointed[name] = param.grad.data.clone()
+
+        &#47&#47 compare the output and parameters gradients</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 re-instantiate the model now enabling gradient checkpointing
+        model_2 = self.model_class(**init_dict)
+        &#47&#47 clone model
+        <a id="change">model_2.load_state_dict(</a>model.state_dict()<a id="change">)</a>
+        model_2.to(torch_device)
+        model_2.enable_gradient_checkpointing()
+
+        assert model_2.is_gradient_checkpointing and model_2.training</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/huggingface/diffusers/commit/22963ed82682465b5fdfd1bd474e1b0f2579b4db#diff-e65cd8679b47855997f7a1e7b0bc1db8231acd2168d2cb6616d03d1fc201c1d7L270' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 84541921</div><div id='project'> Project Name: huggingface/diffusers</div><div id='commit'> Commit Name: 22963ed82682465b5fdfd1bd474e1b0f2579b4db</div><div id='time'> Time: 2022-10-10</div><div id='author'> Author: patrick.v.platen@gmail.com</div><div id='file'> File Name: tests/test_models_unet.py</div><div id='m_class'> M Class Name: UNet2DConditionModelTests</div><div id='n_method'> N Class Name: UNet2DConditionModelTests</div><div id='m_method'> M Method Name: test_gradient_checkpointing(1)</div><div id='n_method'> N Method Name: test_gradient_checkpointing(1)</div><div id='m_parent_class'> M Parent Class: unittest.TestCase,ModelTesterMixin</div><div id='n_parent_class'> N Parent Class: unittest.TestCase,ModelTesterMixin</div><div id='m_file'> M File Name: tests/test_models_unet.py</div><div id='n_file'> N File Name: tests/test_models_unet.py</div><div id='m_start'> M Start Line: 273</div><div id='m_end'> M End Line: 333</div><div id='n_start'> N Start Line: 273</div><div id='n_end'> N End Line: 308</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        is_train = model.training
+        with torch.no_grad():
+            model.train()
+            all_probs<a id="change"> = </a><a id="change">[]</a>
+            logits = model(ims)
+            probs = torch.softmax(logits, dim=1)
+            scores, lbs = torch.max(probs, dim=1)
+            mask = scores.ge(self.thresh).float()</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47     if not all((model.state_dict()[k] == v).reshape(-1)):
+        &#47&#47         print(f&quot{k} diff&quot)
+
+        <a id="change">model.load_state_dict(</a>org_state<a id="change">)</a>
+        if is_train:
+            model.train()
+        else:
+            model.eval()</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/valencebond/fixmatch_pytorch/commit/b496b7eab88937bfb5da9eef7a7415674bdcd27b#diff-dc80aaf8be64310e2cf74926c555bd7b37b1f33e0f9b52ff24150c4c74f09f38L9' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 84541911</div><div id='project'> Project Name: valencebond/fixmatch_pytorch</div><div id='commit'> Commit Name: b496b7eab88937bfb5da9eef7a7415674bdcd27b</div><div id='time'> Time: 2020-03-30</div><div id='author'> Author: jian.jia@outlook.com</div><div id='file'> File Name: label_guessor.py</div><div id='m_class'> M Class Name: LabelGuessor</div><div id='n_method'> N Class Name: LabelGuessor</div><div id='m_method'> M Method Name: __call__(3)</div><div id='n_method'> N Method Name: __call__(3)</div><div id='m_parent_class'> M Parent Class: object</div><div id='n_parent_class'> N Parent Class: object</div><div id='m_file'> M File Name: label_guessor.py</div><div id='n_file'> N File Name: label_guessor.py</div><div id='m_start'> M Start Line: 17</div><div id='m_end'> M End Line: 17</div><div id='n_start'> N Start Line: 10</div><div id='n_end'> N End Line: 27</div><BR>

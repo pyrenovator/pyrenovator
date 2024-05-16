@@ -1,0 +1,70 @@
+<html><h3>Pattern ID :26445
+</h3><img src='79291960.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            optimizer_D_0.step()
+            lr_scheduler_D_0.step()
+            &#47&#47 update trade_off_module
+            <a id="change">trade_off_module.step()</a>
+
+            batch_time.update(time.time() - end)
+            end = time.time()
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    domain_adv_D = DomainAdversarialLoss(D).to(device)
+    &#47&#47 define trade off scheduler
+    grl = WarmStartGradientReverseLayer(alpha=1, lo=0, hi=args.trade_off, max_iters=args.epochs * args.iters_per_epoch)
+    domain_adv_D_0<a id="change"> = </a><a id="change">DomainAdversarialLoss(D_0, grl=grl).to(</a>device<a id="change">)</a>
+    &#47&#47 parameters
+    optimizer_D = SGD(D.get_parameters(), args.lr, momentum=args.momentum, weight_decay=args.weight_decay, nesterov=True)
+    optimizer_D_0 = SGD(classifier_t.get_parameters() + D_0.get_parameters(), args.lr, momentum=args.momentum,
+                      weight_decay=args.weight_decay, nesterov=True)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/thuml/transfer-learning-library/commit/b18cba0c0062d1eb8871fc0435500074063eb88a#diff-107bd7ffe31f9ba252d1c0a2066864ef8870e15c05eceabfe81644cfac732fc3L199' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 79291960</div><div id='project'> Project Name: thuml/transfer-learning-library</div><div id='commit'> Commit Name: b18cba0c0062d1eb8871fc0435500074063eb88a</div><div id='time'> Time: 2021-01-17</div><div id='author'> Author: chenbx18@mails.tsinghua.edu.cn</div><div id='file'> File Name: examples-da/partial/importance_weighted_adversarial_nets.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train(9)</div><div id='n_method'> N Method Name: train(9)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples-da/partial/importance_weighted_adversarial_nets.py</div><div id='n_file'> N File Name: examples-da/partial/importance_weighted_adversarial_nets.py</div><div id='m_start'> M Start Line: 199</div><div id='m_end'> M End Line: 289</div><div id='n_start'> N Start Line: 200</div><div id='n_end'> N End Line: 271</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    def forward(self, g_s, f_s, g_t, f_t):
+        trans_loss_s, domain_acc_s = self._single_domain_forward(g_s, f_s, domain=1)
+        trans_loss_t, domain_acc_t = self._single_domain_forward(g_t, f_t, domain=0)
+        <a id="change">self.grl.step()</a>
+        self.domain_discriminator_accuracy = 0.5 * (domain_acc_s + domain_acc_t)
+        return 0.5 * (trans_loss_s + trans_loss_t)
+
+    def _single_domain_forward(self, logits, features, domain=1):</code></pre><h3>After Change</h3><pre><code class='java'>
+        g = F.softmax(g,dim=1).detach()
+        h = self.grl(self.map(f, g))
+        d = self.domain_discriminator(h)
+        d_label<a id="change"> = </a>torch.cat((
+            <a id="change">torch.ones((g_s.size(0), 1)).to(</a>g_s.device<a id="change">)</a>,
+            torch.zeros((g_t.size(0), 1)).to(g_t.device),
+        ))
+        weight = 1.0 + torch.exp(-entropy(g))</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/thuml/transfer-learning-library/commit/8477111b23336e7dd2d349a4b35b969240ff5871#diff-921a2eeb848068663b0c58710b496c58d46246573eaab61f41628954ccf27867L85' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 79291951</div><div id='project'> Project Name: thuml/transfer-learning-library</div><div id='commit'> Commit Name: 8477111b23336e7dd2d349a4b35b969240ff5871</div><div id='time'> Time: 2020-04-12</div><div id='author'> Author: 13126830206@163.com</div><div id='file'> File Name: dalib/adaptation/cdan.py</div><div id='m_class'> M Class Name: ConditionalDomainAdversarialLoss</div><div id='n_method'> N Class Name: ConditionalDomainAdversarialLoss</div><div id='m_method'> M Method Name: forward(5)</div><div id='n_method'> N Method Name: forward(5)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: dalib/adaptation/cdan.py</div><div id='n_file'> N File Name: dalib/adaptation/cdan.py</div><div id='m_start'> M Start Line: 86</div><div id='m_end'> M End Line: 90</div><div id='n_start'> N Start Line: 87</div><div id='n_end'> N End Line: 100</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    def forward(self, g_s, f_s, g_t, f_t):
+        trans_loss_s, domain_acc_s = self._single_domain_forward(g_s, f_s, domain=1)
+        trans_loss_t, domain_acc_t = self._single_domain_forward(g_t, f_t, domain=0)
+        <a id="change">self.grl.step()</a>
+        self.domain_discriminator_accuracy = 0.5 * (domain_acc_s + domain_acc_t)
+        return 0.5 * (trans_loss_s + trans_loss_t)
+
+    def _single_domain_forward(self, logits, features, domain=1):</code></pre><h3>After Change</h3><pre><code class='java'>
+        g = F.softmax(g,dim=1).detach()
+        h = self.grl(self.map(f, g))
+        d = self.domain_discriminator(h)
+        d_label<a id="change"> = </a>torch.cat((
+            torch.ones((g_s.size(0), 1)).to(g_s.device),
+            <a id="change">torch.zeros((g_t.size(0), 1)).to(</a>g_t.device<a id="change">)</a>,
+        ))
+        weight = 1.0 + torch.exp(-entropy(g))
+        batch_size = f.size(0)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/thuml/transfer-learning-library/commit/6dfc8e293ca2cbc4d116dc8ed0a6ef176dff0d06#diff-921a2eeb848068663b0c58710b496c58d46246573eaab61f41628954ccf27867L85' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 79291950</div><div id='project'> Project Name: thuml/transfer-learning-library</div><div id='commit'> Commit Name: 6dfc8e293ca2cbc4d116dc8ed0a6ef176dff0d06</div><div id='time'> Time: 2020-04-12</div><div id='author'> Author: 13126830206@163.com</div><div id='file'> File Name: dalib/adaptation/cdan.py</div><div id='m_class'> M Class Name: ConditionalDomainAdversarialLoss</div><div id='n_method'> N Class Name: ConditionalDomainAdversarialLoss</div><div id='m_method'> M Method Name: forward(5)</div><div id='n_method'> N Method Name: forward(5)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: dalib/adaptation/cdan.py</div><div id='n_file'> N File Name: dalib/adaptation/cdan.py</div><div id='m_start'> M Start Line: 86</div><div id='m_end'> M End Line: 90</div><div id='n_start'> N Start Line: 87</div><div id='n_end'> N End Line: 100</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        loss = F.nll_loss(emb[batch.node_label_index],
+                          batch.node_label[batch.node_label_index])
+        loss.backward()
+        <a id="change">optimizer.step()</a>
+
+
+def test():
+    model.eval()</code></pre><h3>After Change</h3><pre><code class='java'>
+          device="cpu"):
+    model_cls = GNN
+
+    model = <a id="change">model_cls(num_node_features, args.hidden_dim, num_classes, args).to(</a>device<a id="change">)</a>
+    opt<a id="change"> = </a>build_optimizer(args, model.parameters())
+
+    for epoch in range(args.epochs):
+        total_loss = 0</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/snap-stanford/deepsnap/commit/7bd48169aea6ac9922ecbb0a7b1fa88b3809586e#diff-4780709f76611adc90c2e1b697215120ba78852cb10ec7fbbf7d1a4c963c16b5L75' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 79291955</div><div id='project'> Project Name: snap-stanford/deepsnap</div><div id='commit'> Commit Name: 7bd48169aea6ac9922ecbb0a7b1fa88b3809586e</div><div id='time'> Time: 2020-10-26</div><div id='author'> Author: youjiaxuan@gmail.com</div><div id='file'> File Name: examples/node_classification_cora.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train(7)</div><div id='n_method'> N Method Name: train(0)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples/node_classification_cora.py</div><div id='n_file'> N File Name: examples/node_classification_cora.py</div><div id='m_start'> M Start Line: 76</div><div id='m_end'> M End Line: 86</div><div id='n_start'> N Start Line: 120</div><div id='n_end'> N End Line: 145</div><BR>

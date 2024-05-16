@@ -1,0 +1,155 @@
+<html><h3>Pattern ID :24672
+</h3><img src='76513164.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    def forward(self, token):
+        x = self.bert(token).pooler_output
+        x = self.linear(x)
+        <a id="change">return </a>x
+
+    def evaluate(self, batch, metric_function):
+        token, label = batch</code></pre><h3>After Change</h3><pre><code class='java'>
+        current_device = input_ids.device
+        x = self.bert(input_ids=input_ids, attention_mask=attention_masks, token_type_ids=segment_ids).last_hidden_state
+        batch_size, max_token_len, embedding_dim = x.shape
+        valid_x<a id="change"> = </a>torch.zeros(batch_size, max_token_len, embedding_dim, dtype=torch.float, device=current_device)
+        for i in range(batch_size):
+            pos<a id="change"> = </a>0
+            <a id="change">for j</a> in <a id="change">range(</a>max_token_len<a id="change">):
+                </a>if valid_masks[i][j].item() == 1:
+                    valid_x[i][pos] = x[i][j]
+                    pos<a id="change"> += </a>1
+        valid_x = self.linear(valid_x)
+        <a id="change">return </a>valid_x
+
+    def evaluate(self, batch, metric_function):
+        input_ids, attention_masks, segment_ids, valid_masks, label_ids, label_masks, words_len = self.get_batch(batch)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 7</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/cognlp/cogktr/commit/07b44fcf057cd77c323c0e3084f112cbf33fc1c9#diff-f1899325a965d43cca52ac1ef8f9d9fb401d0ac442cc37742890763c7427baa0L27' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 76513164</div><div id='project'> Project Name: cognlp/cogktr</div><div id='commit'> Commit Name: 07b44fcf057cd77c323c0e3084f112cbf33fc1c9</div><div id='time'> Time: 2022-06-08</div><div id='author'> Author: 2113809110@qq.com</div><div id='file'> File Name: cogktr/models/base_sequence_labeling_model.py</div><div id='m_class'> M Class Name: BaseSequenceLabelingModel</div><div id='n_method'> N Class Name: BaseSequenceLabelingModel</div><div id='m_method'> M Method Name: forward(5)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: BaseModel</div><div id='n_parent_class'> N Parent Class: BaseModel</div><div id='m_file'> M File Name: cogktr/models/base_sequence_labeling_model.py</div><div id='n_file'> N File Name: cogktr/models/base_sequence_labeling_model.py</div><div id='m_start'> M Start Line: 27</div><div id='m_end'> M End Line: 30</div><div id='n_start'> N Start Line: 51</div><div id='n_end'> N End Line: 63</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    xij = squareform(pdist(X, &quoteuclidean&quot))
+    set_trace()
+
+    <a id="change">return </a>cost, grad
+
+  def train(self, X, y):
+    Trains NCA until convergence.</code></pre><h3>After Change</h3><pre><code class='java'>
+
+  def _objective_func(self, A, X, y, y_mask):
+    N, D = X.shape
+    A<a id="change"> = </a>A.reshape(-1, D)
+
+    &#47&#47 compute pairwise squared Euclidean distances
+    &#47&#47 in transformed space
+    distances = squareform(pdist(X @ A.T, &quotsqeuclidean&quot))
+
+    &#47&#47 compute pairwise probability matrix p_ij
+    &#47&#47 defined by a softmax over negative squared
+    &#47&#47 distances in the transformed space.
+    &#47&#47 since we are dealing with negative values
+    &#47&#47 with the largest value being 0, we need
+    &#47&#47 not worry about numerical instabilities
+    &#47&#47 in the softmax function
+    p_ij = self._softmax(-distances)
+
+    &#47&#47 for each p_i, zero out any p_ij that
+    &#47&#47 is not of the same class label as i.
+    p_ij_mask = p_ij * y_mask
+
+    &#47&#47 sum over js to compute p_i
+    p_i = np.sum(p_ij_mask, axis=1)
+
+    &#47&#47 compute expected number of points
+    &#47&#47 correctly classified by summing
+    &#47&#47 over all p_i&quots
+    p_total = np.sum(p_i)
+
+    &#47&#47 to maximize the above expectation
+    &#47&#47 we negate it and minimize it
+    loss = -p_total
+
+    &#47&#47 compute the gradient of the cost function
+    &#47&#47 with respect to A
+    outer_sum1<a id="change"> = </a>np.zeros((D, D))
+    outer_sum2 = np.zeros((D, D))
+    <a id="change">for i</a> in <a id="change">range(</a>N<a id="change">):
+      </a>diff = X[i] - X
+      p = p_ij[i]
+      outer_sum1 += (p_i[i] * np.einsum(&quoti,ij,ik-&gt;jk&quot, p, diff, diff))
+      p<a id="change"> = </a>p_ij_mask[i]
+      outer_sum2 += np.einsum(&quoti,ij,ik-&gt;jk&quot, p, diff, diff)
+    grad = 2 * A @ (outer_sum1 - outer_sum2)
+
+    <a id="change">return </a>loss, grad.ravel()
+
+  def train(self, X, y):
+    Trains NCA until convergence.</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/kevinzakka/torchnca/commit/32ad8306d3e4c09b74456cc5a1788f8b7971f7e4#diff-b46cf3cd1147942ab77db5d7e1161ff1d5125e4dab0e7aa13cb519ade667c4c6L52' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 76513178</div><div id='project'> Project Name: kevinzakka/torchnca</div><div id='commit'> Commit Name: 32ad8306d3e4c09b74456cc5a1788f8b7971f7e4</div><div id='time'> Time: 2020-01-26</div><div id='author'> Author: kevinarmandzakka@gmail.com</div><div id='file'> File Name: nca.py</div><div id='m_class'> M Class Name: NCA</div><div id='n_method'> N Class Name: NCA</div><div id='m_method'> M Method Name: _objective_func(5)</div><div id='n_method'> N Method Name: _objective_func(5)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: nca.py</div><div id='n_file'> N File Name: nca.py</div><div id='m_start'> M Start Line: 54</div><div id='m_end'> M End Line: 83</div><div id='n_start'> N Start Line: 58</div><div id='n_end'> N End Line: 102</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+				&#47&#47 if t % self.update_each == 0:
+				&#47&#47 	self.eprop._make_optim_step()
+			self.eprop._make_optim_step()
+			x_pred<a id="change"> = </a>torch.stack([t.cpu() for t in x_pred], dim=1)
+			pvar = PVarianceLoss()(x_pred, self.true_time_series.to(x_pred.device))
+			mse = torch.nn.MSELoss()(x_pred, self.true_time_series.to(x_pred.device))
+			progress_bar.set_postfix({"pvar": to_numpy(pvar).item(), "MSE": to_numpy(mse).item()})
+			pvars.append(to_numpy(pvar).item())
+			mses.append(to_numpy(mse).item())
+
+		<a id="change">return </a>x_pred, self.true_time_series
+
+	def compute_learning_signals(self, error: torch.Tensor):
+		learning_signals = []</code></pre><h3>After Change</h3><pre><code class='java'>
+		mse_func = torch.nn.MSELoss()
+		&#47&#47 self.eprop.optimizer.zero_grad()
+		
+		self.model<a id="change"> = </a>SequentialRNN(
+			layers=[reservoir, output_layer],
+			foresight_time_steps=self.true_time_series.shape[-2],
+			out_memory_size=self.true_time_series.shape[-2],
+			device=reservoir.device
+		).build()
+		self.eprop.start(self)
+		for _ in progress_bar:
+			self.eprop.on_train_begin(self)
+			self.eprop.on_batch_begin(self)
+			inputs = self.true_time_series[:, 0, :].clone().unsqueeze(1).to(self.model.device)
+			x_pred = self.model.get_prediction_trace(inputs)
+			self.current_training_state = self.current_training_state.update(pred_batch=x_pred)
+			self.eprop.on_batch_end(self)
+			self.eprop.on_train_end(self)
+			
+			pvar = PVarianceLoss()(x_pred, self.true_time_series.to(x_pred.device))
+			mse = torch.nn.MSELoss()(x_pred, self.true_time_series.to(x_pred.device))
+			progress_bar.set_postfix({"pvar": to_numpy(pvar).item(), "MSE": to_numpy(mse).item()})
+			pvars.append(to_numpy(pvar).item())
+			mses.append(to_numpy(mse).item())
+		
+		val_pvars = []
+		inputs = self.raw_time_series[:, 0, :].clone().unsqueeze(1).to(self.model.device)
+		<a id="change">for _</a> in <a id="change">range(</a>100<a id="change">):
+			</a>val_x_pred<a id="change"> = </a>self.model.get_prediction_trace(inputs)
+			pvar = PVarianceLoss()(val_x_pred, self.raw_time_series.to(val_x_pred.device))
+			val_pvars.append(to_numpy(pvar).item())
+		print(f"Validation PVariance: {np.mean(val_pvars):.3f}")
+		<a id="change">return </a>x_pred, self.raw_time_series
+
+	def compute_learning_signals(self, error: torch.Tensor):
+		learning_signals = []</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/neurotorch/neurotorch/commit/da8d4065502c761ccf6e28e47dd189e3b5488140#diff-bfbe6bfd7f09fee9a898ae4ce6ce338f6bfc05e7db28469ba6540dfae09a766dL109' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 76513142</div><div id='project'> Project Name: neurotorch/neurotorch</div><div id='commit'> Commit Name: da8d4065502c761ccf6e28e47dd189e3b5488140</div><div id='time'> Time: 2023-01-31</div><div id='author'> Author: 50332514+JeremieGince@users.noreply.github.com</div><div id='file'> File Name: src/neurotorch/learning_algorithms/debug_e_prop_v5.py</div><div id='m_class'> M Class Name: SimplifiedEpropFinal</div><div id='n_method'> N Class Name: SimplifiedEpropFinal</div><div id='m_method'> M Method Name: train(4)</div><div id='n_method'> N Method Name: train(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/neurotorch/learning_algorithms/debug_e_prop_v5.py</div><div id='n_file'> N File Name: src/neurotorch/learning_algorithms/debug_e_prop_v5.py</div><div id='m_start'> M Start Line: 120</div><div id='m_end'> M End Line: 153</div><div id='n_start'> N Start Line: 115</div><div id='n_end'> N End Line: 144</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                    gx.strides[3], gx.strides[4]),
+           writeable=False,
+         )
+    tx<a id="change"> = </a>np.ravel(tx).reshape(tx.shape)
+    tw = w.reshape(ctx.groups, rcout, cin, H, W)
+    ctx.save_for_backward(tx, tw, x.shape)
+    <a id="change">return </a>np.einsum(&quotigjYXyx,gkjyx -&gt; igkYX&quot, tx, tw).reshape(bs, cout, oy, ox)
+
+  @staticmethod
+  def backward(ctx, grad_output):</code></pre><h3>After Change</h3><pre><code class='java'>
+    tw = w.reshape(ctx.groups, rcout, cin, H, W)
+    ctx.save_for_backward(tx, tw, x.shape)
+    &#47&#47ret = np.einsum(&quotigjYXyx,gkjyx -&gt; igkYX&quot, tx, tw).reshape(bs, cout, oy, ox)
+    ret<a id="change"> = </a>np.zeros((bs,ctx.groups,rcout,oy,ox),dtype=x.dtype)
+    <a id="change">for g</a> in <a id="change">range(</a>ctx.groups<a id="change">):
+      &#47&#47ijYXyx,kjyx -&gt; iYXk -&gt;ikYX
+      </a>ret[:,g]<a id="change">+=</a>np.moveaxis(np.tensordot(tx[:,g], tw[g],((1,4,5),(1,2,3))),3,1)
+    <a id="change">return </a>ret.reshape(bs, cout, oy, ox) 
+
+
+  @staticmethod</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/geohot/tinygrad/commit/af5a4e0f5a3be62bd29e0220e1acee09be808645#diff-5736814df0b2c07a42d5c1bfef6b5aa5635ce18043f4aa030e21768694259ca3L163' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 76513216</div><div id='project'> Project Name: geohot/tinygrad</div><div id='commit'> Commit Name: af5a4e0f5a3be62bd29e0220e1acee09be808645</div><div id='time'> Time: 2020-11-02</div><div id='author'> Author: 65973015+marcelbischoff@users.noreply.github.com</div><div id='file'> File Name: tinygrad/ops.py</div><div id='m_class'> M Class Name: Conv2D</div><div id='n_method'> N Class Name: Conv2D</div><div id='m_method'> M Method Name: forward(5)</div><div id='n_method'> N Method Name: forward(5)</div><div id='m_parent_class'> M Parent Class: Function</div><div id='n_parent_class'> N Parent Class: Function</div><div id='m_file'> M File Name: tinygrad/ops.py</div><div id='n_file'> N File Name: tinygrad/ops.py</div><div id='m_start'> M Start Line: 175</div><div id='m_end'> M End Line: 185</div><div id='n_start'> N Start Line: 172</div><div id='n_end'> N End Line: 189</div><BR>

@@ -1,0 +1,82 @@
+<html><h3>Pattern ID :23137
+</h3><img src='73101499.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        weights = torch.zeros_like(central)
+    &#47&#47 rescale to 0-1. lower std / var  --&gt; weight=1
+    weights = 1 / (1+weights)
+    <a id="change">return </a>central<a id="change">, weights</a>
+
+&#47&#47 distance matrix to 3d coords: https://github.com/scikit-learn/scikit-learn/blob/42aff4e2e/sklearn/manifold/_mds.py&#47&#47L279
+
+def mds_torch(pre_dist_mat, weights=None, iters=10, tol=1e-5, verbose=2):</code></pre><h3>After Change</h3><pre><code class='java'>
+    elif center == "mean":
+        central  = (distogram * n_bins).sum(dim=-1)
+    &#47&#47 create mask for last class - (IGNORE_INDEX)   
+    mask = <a id="change">(central &lt;= bins[-2].item()).float()</a>
+    &#47&#47 mask diagonal to 0 dist 
+    central[np.arange(shape[-2]), np.arange(shape[-3])] = 0.
+    &#47&#47 provide weights
+    if wide == "var":
+        dispersion = (distogram * (n_bins - central.unsqueeze(-1))**2).sum(dim=-1)
+    elif wide == "std":
+        dispersion = (distogram * (n_bins - central.unsqueeze(-1))**2).sum(dim=-1).sqrt()
+    else:
+        dispersion = torch.zeros_like(central)
+    &#47&#47 rescale to 0-1. lower std / var  --&gt; weight=1
+    weights<a id="change"> = </a>mask<a id="change"> / </a>(1+dispersion)
+
+    <a id="change">return </a>central<a id="change">, dispersion, weights</a>
+
+&#47&#47 distance matrix to 3d coords: https://github.com/scikit-learn/scikit-learn/blob/42aff4e2e/sklearn/manifold/_mds.py&#47&#47L279
+
+def mds_torch(pre_dist_mat, weights=None, iters=10, tol=1e-5, verbose=2):</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 8</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/lucidrains/alphafold2/commit/c06c4f9c3730bde0428f72a973b0d38632c2646b#diff-09d0cbaf891d623ac245ccf84485a687b554217349ca55557c60b33234b969aeL136' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 73101499</div><div id='project'> Project Name: lucidrains/alphafold2</div><div id='commit'> Commit Name: c06c4f9c3730bde0428f72a973b0d38632c2646b</div><div id='time'> Time: 2021-01-16</div><div id='author'> Author: ericacaide1@gmail.com</div><div id='file'> File Name: utils.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: center_distogram_torch(5)</div><div id='n_method'> N Method Name: center_distogram_torch(5)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: utils.py</div><div id='n_file'> N File Name: utils.py</div><div id='m_start'> M Start Line: 136</div><div id='m_end'> M End Line: 157</div><div id='n_start'> N Start Line: 138</div><div id='n_end'> N End Line: 164</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+  buckets = torch.bucketize(sizes, size_bins)-1
+  stratified_risks = torch.tensor([losses[buckets == bucket].mean() for bucket in range(size_bins.shape[0])])
+  print(f"Model output shape: {x.shape}, label shape: {labels.shape}, Sets shape: {sets[2].shape}, sizes: {sizes}, size_bins:{size_bins}, stratified_risks: {stratified_risks}, mse: {mse}")
+  <a id="change">return </a>losses<a id="change">, sizes, spearman, stratified_risks, mse</a>
+
+def evaluate_from_loss_table(loss_table,n,alpha,delta):
+  with torch.no_grad():
+    perm = torch.randperm(loss_table.shape[0])</code></pre><h3>After Change</h3><pre><code class='java'>
+    size_random_idxs = np.random.choice(sets_full.shape[1],size=sets_full.shape[0])
+    size_samples = sets_full[range(sets_full.shape[0]),size_random_idxs]
+    residuals = residuals + [(labels - sets[1]).abs().flatten(start_dim=1)[range(sets_full.shape[0]),size_random_idxs]]
+    spatial_miscoverages = spatial_miscoverages<a id="change"> + </a>[<a id="change">(labels &gt; sets[2]).float()</a> + (labels &lt; sets[0]).float()]
+    sizes = sizes + [torch.tensor(size_samples),]
+  losses = torch.cat(losses,dim=0)
+  sizes = torch.cat(sizes,dim=0)
+  sizes = sizes + torch.rand(size=sizes.shape).to(sizes.device)*1e-6
+  residuals = torch.cat(residuals,dim=0).detach().cpu().numpy() 
+  spearman = spearmanr(residuals, sizes)[0]
+  mse = (residuals*residuals).mean().item()
+  spatial_miscoverage<a id="change"> = </a>torch.cat(spatial_miscoverages, dim=0).detach().cpu().numpy().mean(axis=0).mean(axis=0)
+  size_bins = torch.tensor([0, torch.quantile(sizes, 0.25), torch.quantile(sizes, 0.5), torch.quantile(sizes, 0.75)])
+  buckets = torch.bucketize(sizes, size_bins)-1
+  stratified_risks = torch.tensor([losses[buckets == bucket].mean() for bucket in range(size_bins.shape[0])])
+  print(f"Model output shape: {x.shape}, label shape: {labels.shape}, Sets shape: {sets[2].shape}, sizes: {sizes}, size_bins:{size_bins}, stratified_risks: {stratified_risks}, mse: {mse}")
+  <a id="change">return </a>losses<a id="change">, sizes, spearman, stratified_risks, mse, spatial_miscoverage</a>
+
+def evaluate_from_loss_table(loss_table,n,alpha,delta):
+  with torch.no_grad():
+    perm = torch.randperm(loss_table.shape[0])</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/aangelopoulos/im2im-uq/commit/eb08020dd8e3947a3c1f6d97819e247c0610dbab#diff-011a98acefcaf7c8c39c61d401546a49382baf5a3459d2ffbd563d9321c5f660L31' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 73101497</div><div id='project'> Project Name: aangelopoulos/im2im-uq</div><div id='commit'> Commit Name: eb08020dd8e3947a3c1f6d97819e247c0610dbab</div><div id='time'> Time: 2022-06-15</div><div id='author'> Author: angelopoulos@berkeley.edu</div><div id='file'> File Name: core/calibration/calibrate_model.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: get_rcps_metrics_from_outputs(4)</div><div id='n_method'> N Method Name: get_rcps_metrics_from_outputs(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: core/calibration/calibrate_model.py</div><div id='n_file'> N File Name: core/calibration/calibrate_model.py</div><div id='m_start'> M Start Line: 47</div><div id='m_end'> M End Line: 57</div><div id='n_start'> N Start Line: 35</div><div id='n_end'> N End Line: 60</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        model_mean, _, model_log_variance, x_start = self.p_mean_variance(x = x, t = batched_times, x_self_cond = x_self_cond, clip_denoised = clip_denoised)
+        noise = torch.randn_like(x) if t &gt; 0 else 0. &#47&#47 no noise if t == 0
+        pred_img = model_mean + (0.5 * model_log_variance).exp() * noise
+        <a id="change">return </a>pred_img<a id="change">, x_start</a>
+
+    @torch.no_grad()
+    def p_sample_loop(self, shape):
+        batch, device = shape[0], self.betas.device</code></pre><h3>After Change</h3><pre><code class='java'>
+        model_mean, _, model_log_variance, x_start = self.p_mean_variance(x = x, t = t, t_next = t_next, clip_denoised = True)
+        noise = torch.randn_like(x)
+        &#47&#47 no noise when t == 0
+        is_last_sampling_timestep = <a id="change">t_next == 0</a>
+        nonzero_mask<a id="change"> = </a>(1<a id="change"> - </a><a id="change">is_last_sampling_timestep.float()</a>).reshape(b, *((1,) * (len(x.shape) - 1)))
+        pred = model_mean + nonzero_mask * (0.5 * model_log_variance).exp() * noise
+        <a id="change">return </a>pred<a id="change">, x_start</a>
+
+    @torch.no_grad()
+    def p_sample_loop(self, shape):
+        batch, device = shape[0], self.device</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lucidrains/bit-diffusion/commit/7b25c9d18c4aa4200c7df429ffa7815641f67021#diff-fa1704ed33520f9e00eadcb67b10c809ebe7cdd9d08435ae908b1c8126a28435L495' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 73101494</div><div id='project'> Project Name: lucidrains/bit-diffusion</div><div id='commit'> Commit Name: 7b25c9d18c4aa4200c7df429ffa7815641f67021</div><div id='time'> Time: 2022-08-17</div><div id='author'> Author: lucidrains@gmail.com</div><div id='file'> File Name: bit_diffusion/bit_diffusion.py</div><div id='m_class'> M Class Name: BitDiffusion</div><div id='n_method'> N Class Name: BitDiffusion</div><div id='m_method'> M Method Name: p_sample(6)</div><div id='n_method'> N Method Name: p_sample(5)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: bit_diffusion/bit_diffusion.py</div><div id='n_file'> N File Name: bit_diffusion/bit_diffusion.py</div><div id='m_start'> M Start Line: 497</div><div id='m_end'> M End Line: 501</div><div id='n_start'> N Start Line: 518</div><div id='n_end'> N End Line: 526</div><BR>

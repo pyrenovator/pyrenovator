@@ -1,0 +1,160 @@
+<html><h3>Pattern ID :31008
+</h3><img src='91066796.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        t = val_batch[&quott&quot].float()
+                
+        node_features, edge_index, edge_features = self._build_graph(u[:,:,:self.time_slice], x, t[:,:self.time_slice])
+        target<a id="change"> = </a>u[:,:,self.time_slice:]
+        T_out = target.shape[-1]
+        u_hat = []
+        for i in range(T_out//self.time_slice):
+            y_hat = self.forward(node_features, edge_index, edge_features)
+            u_hat.append(y_hat)
+            node_features = torch.cat([y_hat, <a id="change">x.reshape(</a>B*N, -1<a id="change">)</a>, <a id="change">t</a>[:, <a id="change">(i+2)*self.time_slice-1</a>:(i<a id="change">+</a>2)<a id="change">*</a>self.time_slice].repeat(N, 1)], dim=-1)
+            &#47&#47 inp = u_future[:,t*self.time_slice:(t+1)*self.time_slice]
+            &#47&#47 inp = y_hat
+        </code></pre><h3>After Change</h3><pre><code class='java'>
+        x = val_batch[&quotx&quot].float().squeeze(-1)
+        B, _, N = u.shape
+        t = val_batch[&quott&quot].float() &#47&#47 B, T
+        dt<a id="change"> = </a>t[0][1]<a id="change"> - </a>t[0][0]
+                
+        graph = self._build_graph(
+            u[:,:self.time_window,:], 
+            t,
+            x,
+            steps=[0]*B)
+        
+        target = u[:,self.time_window:,:]
+        T_out = target.shape[1]
+        
+        u_hat = []
+        for i in range(T_out//self.time_window):
+            y_hat = self.forward(graph, x[0,-1], t[0,-1], dt)
+            y_hat = <a id="change">y_hat.reshape(</a>B, N, <a id="change">-1</a><a id="change">)</a>.permute(0,2,1)
+            u_hat.append(y_hat)
+                        
+            graph = self._build_graph(</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 10</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/jaggbow/magnet/commit/b9ec29a45c27a8d37c08fb091ec1cd92c00dee3b#diff-ba1dcef31074968b22979e6810ce1e30610f0589cb64add814954f5d28ecbd15L277' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 91066796</div><div id='project'> Project Name: jaggbow/magnet</div><div id='commit'> Commit Name: b9ec29a45c27a8d37c08fb091ec1cd92c00dee3b</div><div id='time'> Time: 2022-10-10</div><div id='author'> Author: oussama.boussif@student.ecp.fr</div><div id='file'> File Name: models/mpnn.py</div><div id='m_class'> M Class Name: MPNN</div><div id='n_method'> N Class Name: MPNN</div><div id='m_method'> M Method Name: validation_step(3)</div><div id='n_method'> N Method Name: validation_step(3)</div><div id='m_parent_class'> M Parent Class: pl.LightningModule</div><div id='n_parent_class'> N Parent Class: pl.LightningModule</div><div id='m_file'> M File Name: models/mpnn.py</div><div id='n_file'> N File Name: models/mpnn.py</div><div id='m_start'> M Start Line: 277</div><div id='m_end'> M End Line: 294</div><div id='n_start'> N Start Line: 300</div><div id='n_end'> N End Line: 325</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+        X = torch.linspace(-1, 1, resolution).split(S)
+        Y = torch.linspace(-1, 1, resolution).split(S)
+        Z<a id="change"> = </a>torch.linspace(-1, 1, resolution).split(S)
+        for xi, xs in enumerate(X):
+            for yi, ys in enumerate(Y):
+                for zi, zs in enumerate(Z):
+                    lx, ly, lz = len(xs), len(ys), len(zs)
+                    &#47&#47 construct points
+                    xx, yy, zz = custom_meshgrid(xs, ys, zs)
+                    xyzs = torch.cat([xx.reshape(-1, 1), yy.reshape(-1, 1), zz.reshape(-1, 1)], dim=-1) &#47&#47 [N, 3], in [-1, 1]
+
+                    &#47&#47 cascading
+                    for cas in range(self.cascade):
+                        bound = min(2 ** cas, self.bound)
+                        half_grid_size = bound / resolution
+                        &#47&#47 scale to current cascade&quots resolution
+                        cas_xyzs = xyzs * (bound - half_grid_size)
+                        &#47&#47 add noise in [-hgs, hgs]
+                        cas_xyzs += (torch.rand_like(cas_xyzs) * 2 - 1) * half_grid_size
+                        &#47&#47 query density
+                        sigmas = <a id="change">self.density(cas_xyzs.to(tmp_grid.device))[&quotsigma&quot].reshape(</a>lx, ly, lz<a id="change">)</a>.detach()
+                        &#47&#47 from `scalbnf(MIN_CONE_STEPSIZE(), 0)`, check `splat_grid_samples_nerf_max_nearest_neighbor`
+                        &#47&#47 scale == 2 * sqrt(3) / 1024
+                        sigmas *= self.density_scale * 0.003383
+                        &#47&#47 assign 
+                        <a id="change">tmp_grid</a>[cas, xi * S: xi * S + lx, yi * S: yi * S + ly, <a id="change">zi * S</a>: zi<a id="change"> * S + </a>lz] = sigmas
+        
+        
+        &#47&#47 ema update</code></pre><h3>After Change</h3><pre><code class='java'>
+                    xx, yy, zz = custom_meshgrid(xs, ys, zs)
+                    coords = torch.cat([xx.reshape(-1, 1), yy.reshape(-1, 1), zz.reshape(-1, 1)], dim=-1) &#47&#47 [N, 3], in [0, 128)
+                    indices = raymarching.morton3D(coords).long() &#47&#47 [N]
+                    xyzs<a id="change"> = </a>2 * coords.float() /<a id="change"> (self.grid_size - 1) - </a>1 &#47&#47 [N, 3] in [-1, 1]
+
+                    &#47&#47 cascading
+                    for cas in range(self.cascade):
+                        bound = min(2 ** cas, self.bound)
+                        half_grid_size = bound / self.grid_size
+                        &#47&#47 scale to current cascade&quots resolution
+                        cas_xyzs = xyzs * (bound - half_grid_size)
+                        &#47&#47 add noise in [-hgs, hgs]
+                        cas_xyzs += (torch.rand_like(cas_xyzs) * 2 - 1) * half_grid_size
+                        &#47&#47 query density
+                        sigmas = <a id="change">self.density(cas_xyzs)[&quotsigma&quot].reshape(-1</a><a id="change">)</a>.detach()
+                        &#47&#47 from `scalbnf(MIN_CONE_STEPSIZE(), 0)`, check `splat_grid_samples_nerf_max_nearest_neighbor`
+                        &#47&#47 scale == 2 * sqrt(3) / 1024
+                        sigmas *= self.density_scale * 0.003383</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/ashawkey/torch-ngp/commit/f02ec4824ef16a650c5a4acac510ec6c224a4337#diff-96330057ed34864879e5c07ca3b71aa0415cc9281c388c0ec9d3d6892d48343aL447' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 91066920</div><div id='project'> Project Name: ashawkey/torch-ngp</div><div id='commit'> Commit Name: f02ec4824ef16a650c5a4acac510ec6c224a4337</div><div id='time'> Time: 2022-06-02</div><div id='author'> Author: ashawkey1999@gmail.com</div><div id='file'> File Name: nerf/renderer.py</div><div id='m_class'> M Class Name: NeRFRenderer</div><div id='n_method'> N Class Name: NeRFRenderer</div><div id='m_method'> M Method Name: update_extra_state(3)</div><div id='n_method'> N Method Name: update_extra_state(3)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: nerf/renderer.py</div><div id='n_file'> N File Name: nerf/renderer.py</div><div id='m_start'> M Start Line: 454</div><div id='m_end'> M End Line: 488</div><div id='n_start'> N Start Line: 461</div><div id='n_end'> N End Line: 490</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        
+        X = torch.linspace(-1, 1, resolution).split(S)
+        Y = torch.linspace(-1, 1, resolution).split(S)
+        Z<a id="change"> = </a>torch.linspace(-1, 1, resolution).split(S)
+
+        count = torch.zeros_like(self.density_grid)
+        poses = poses.to(count.device)
+
+        &#47&#47 5-level loop, forgive me...
+        for xi, xs in enumerate(X):
+            for yi, ys in enumerate(Y):
+                for zi, zs in enumerate(Z):
+                    lx, ly, lz = len(xs), len(ys), len(zs)
+                    &#47&#47 construct points
+                    xx, yy, zz = custom_meshgrid(xs, ys, zs)
+                    world_xyzs = torch.cat([xx.reshape(-1, 1), yy.reshape(-1, 1), zz.reshape(-1, 1)], dim=-1).unsqueeze(0).to(count.device) &#47&#47 [1, N, 3]
+
+                    &#47&#47 cascading
+                    for cas in range(self.cascade):
+                        bound = min(2 ** cas, self.bound)
+                        half_grid_size = bound / resolution
+                        &#47&#47 scale to current cascade&quots resolution
+                        cas_world_xyzs = world_xyzs * (bound - half_grid_size)
+
+                        &#47&#47 split batch to avoid OOM
+                        head = 0
+                        while head &lt; B:
+                            tail = min(head + S, B)
+
+                            &#47&#47 world2cam transform (poses is c2w, so we need to transpose it. Another transpose is needed for batched matmul, so the final form is without transpose.)
+                            cam_xyzs = cas_world_xyzs - poses[head:tail, :3, 3].unsqueeze(1)
+                            cam_xyzs = cam_xyzs @ poses[head:tail, :3, :3] &#47&#47 [S, N, 3]
+                            
+                            &#47&#47 query if point is covered by any camera
+                            mask_z = cam_xyzs[:, :, 2] &gt; 0 &#47&#47 [S, N]
+                            mask_x = torch.abs(cam_xyzs[:, :, 0]) &lt; cx / fx * cam_xyzs[:, :, 2] + half_grid_size * 2
+                            mask_y = torch.abs(cam_xyzs[:, :, 1]) &lt; cy / fy * cam_xyzs[:, :, 2] + half_grid_size * 2
+                            mask = <a id="change">(mask_z & mask_x & mask_y).sum(0).reshape(</a>lx, ly, lz<a id="change">)</a> &#47&#47 [N] --&gt; [lx, ly, lz]
+
+                            &#47&#47 update count 
+                            <a id="change">count</a>[cas, xi * S: xi * S + lx, yi * S: yi * S + ly, <a id="change">zi * S</a>: zi<a id="change"> * S + </a>lz] += mask
+                            head += S
+    
+        &#47&#47 mark untrained grid as -1</code></pre><h3>After Change</h3><pre><code class='java'>
+                    xx, yy, zz = custom_meshgrid(xs, ys, zs)
+                    coords = torch.cat([xx.reshape(-1, 1), yy.reshape(-1, 1), zz.reshape(-1, 1)], dim=-1) &#47&#47 [N, 3], in [0, 128)
+                    indices = raymarching.morton3D(coords).long() &#47&#47 [N]
+                    world_xyzs<a id="change"> = </a>(2<a id="change"> * coords.float() / </a>(self.grid_size - 1) - 1).unsqueeze(0) &#47&#47 [1, N, 3] in [-1, 1]
+
+                    &#47&#47 cascading
+                    for cas in range(self.cascade):
+                        bound = min(2 ** cas, self.bound)
+                        half_grid_size = bound / self.grid_size
+                        &#47&#47 scale to current cascade&quots resolution
+                        cas_world_xyzs = world_xyzs * (bound - half_grid_size)
+
+                        &#47&#47 split batch to avoid OOM
+                        head = 0
+                        while head &lt; B:
+                            tail = min(head + S, B)
+
+                            &#47&#47 world2cam transform (poses is c2w, so we need to transpose it. Another transpose is needed for batched matmul, so the final form is without transpose.)
+                            cam_xyzs = cas_world_xyzs - poses[head:tail, :3, 3].unsqueeze(1)
+                            cam_xyzs = cam_xyzs @ poses[head:tail, :3, :3] &#47&#47 [S, N, 3]
+                            
+                            &#47&#47 query if point is covered by any camera
+                            mask_z = cam_xyzs[:, :, 2] &gt; 0 &#47&#47 [S, N]
+                            mask_x = torch.abs(cam_xyzs[:, :, 0]) &lt; cx / fx * cam_xyzs[:, :, 2] + half_grid_size * 2
+                            mask_y = torch.abs(cam_xyzs[:, :, 1]) &lt; cy / fy * cam_xyzs[:, :, 2] + half_grid_size * 2
+                            mask = <a id="change">(mask_z & mask_x & mask_y).sum(0).reshape(-1</a><a id="change">)</a> &#47&#47 [N]
+
+                            &#47&#47 update count 
+                            count[cas, indices] += mask</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/ashawkey/torch-ngp/commit/f02ec4824ef16a650c5a4acac510ec6c224a4337#diff-96330057ed34864879e5c07ca3b71aa0415cc9281c388c0ec9d3d6892d48343aL383' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 91066808</div><div id='project'> Project Name: ashawkey/torch-ngp</div><div id='commit'> Commit Name: f02ec4824ef16a650c5a4acac510ec6c224a4337</div><div id='time'> Time: 2022-06-02</div><div id='author'> Author: ashawkey1999@gmail.com</div><div id='file'> File Name: nerf/renderer.py</div><div id='m_class'> M Class Name: NeRFRenderer</div><div id='n_method'> N Class Name: NeRFRenderer</div><div id='m_method'> M Method Name: mark_untrained_grid(4)</div><div id='n_method'> N Method Name: mark_untrained_grid(4)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: nerf/renderer.py</div><div id='n_file'> N File Name: nerf/renderer.py</div><div id='m_start'> M Start Line: 397</div><div id='m_end'> M End Line: 438</div><div id='n_start'> N Start Line: 397</div><div id='n_end'> N End Line: 439</div><BR>

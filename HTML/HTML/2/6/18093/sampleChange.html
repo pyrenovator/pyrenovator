@@ -1,0 +1,59 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    potential HTTPError.
+    
+    request_id = response.headers.get("X-Request-Id")
+    <a id="change">try:
+        </a>response.raise_for_status()
+    <a id="change">except </a>HTTPError as e:
+        if "X-Error-Code" in response.headers:
+            error_code = response.headers["X-Error-Code"]
+            if error_code == "RepoNotFound":
+                message = (
+                    f"{response.status_code} Client Error: Repository Not Found for"
+                    f" url: {response.url}. If the repo is private, make sure you are"
+                    " authenticated."
+                )
+                e = RepositoryNotFoundError(message, response)
+            elif error_code == "RevisionNotFound":
+                message = (
+                    f"{response.status_code} Client Error: Revision Not Found for url:"
+                    f" {response.url}."
+                )
+                e = RevisionNotFoundError(message, response)
+            if error_code == "EntryNotFound":
+                message = (
+                    f"{response.status_code} Client Error: Entry Not Found for url:"
+                    f" {response.url}."
+                )
+                e = EntryNotFoundError(message, response)
+            <a id="change">_add_request_id_to_error_args(e</a>, request_id<a id="change">)</a>
+            raise e
+
+        if response.status_code == 401:
+            &#47&#47 The repo was not found and the user is not Authenticated
+            message = (
+                f"{response.status_code} Client Error: Repository Not Found for url:"
+                f" {response.url}. If the repo is private, make sure you are"
+                " authenticated."
+            )
+            e = RepositoryNotFoundError(message, response)
+
+        _add_request_id_to_error_args(e, request_id)
+        _add_server_message_to_error_args(e, response)
+
+        <a id="change">raise e</a>
+
+
+def _raise_with_request_id(request):
+    request_id = request.headers.get("X-Request-Id")</code></pre><h3>After Change</h3><pre><code class='java'>
+    TODO: deprecate this properly after next release (just after v0.10).
+          See https://github.com/huggingface/huggingface_hub/pull/1019&#47&#47issuecomment-1233240452
+    
+    <a id="change">hf_raise_for_status(</a>response<a id="change">)</a>
+
+
+@_deprecate_method(version="0.13", message="Use `hf_raise_for_status` instead.")
+def _raise_with_request_id(response):</code></pre>

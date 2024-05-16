@@ -1,0 +1,42 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        predictions = predictions.double()
+        labels = labels.double()
+        weights = weights.double()
+        num_samples = <a id="change">getattr(self, PREDICTIONS)[0].size(-1</a><a id="change">)</a>
+        batch_size = predictions.size(-1)
+        start_index = max(num_samples + batch_size - self._window_size, 0)
+        &#47&#47 Using `self.predictions =` will cause Pyre errors.
+        getattr(self, PREDICTIONS)[0]<a id="change"> = torch.cat(
+            </a><a id="change">[
+                cast</a><a id="change">(</a>torch.Tensor, <a id="change">getattr(self, PREDICTIONS)[0]</a><a id="change">)</a>[:, <a id="change">start_index</a>:],
+                predictions<a id="change"></a>,
+            ]<a id="change">,
+            dim=-1,
+        )</a>
+        <a id="change">getattr(self</a>, <a id="change">LABELS</a><a id="change">)</a>[0] = torch.cat(
+            [cast(torch.Tensor, <a id="change">getattr(self, LABELS)[0]</a>)[:, start_index:], labels],
+            dim=-1,
+        )
+        getattr(self, WEIGHTS)[0] = torch.cat(
+            [cast(torch.Tensor, <a id="change">getattr(self, WEIGHTS)[0]</a>)[:, start_index:], weights],
+            dim=-1,
+        )
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        predictions = predictions.double()
+        labels = labels.double()
+        weights = weights.double()
+        state = <a id="change">getattr(self</a>, self._fused_name<a id="change">)</a>
+        num_samples<a id="change"> = state.size(-1</a><a id="change">)</a>
+        batch_size = predictions.size(-1)
+        start_index = max(num_samples + batch_size - self._window_size, 0)
+
+        states = <a id="change">torch.stack(</a><a id="change">[</a>predictions, labels, weights<a id="change"></a>]<a id="change">)</a>
+        state = torch.cat([state[:, :, start_index:], states], dim=-1)
+        <a id="change">setattr(self</a>, self._fused_name, state<a id="change">)</a>
+
+    def _compute(self) -&gt; List[MetricComputationReport]:
+        return [
+            MetricComputationReport(</code></pre>

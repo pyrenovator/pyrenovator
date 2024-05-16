@@ -1,0 +1,125 @@
+<html><h3>Pattern ID :38069
+</h3><img src='109135489.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    py = np.clip(py, 0, height - 1)
+    heightmap[py, px] = points[:, 2] - bounds[2, 0]
+    for c in range(colors.shape[-1]):
+        colormap[py<a id="change">, px, c</a>] = colors[:, c]
+    segmmap[py, px] = ids[:]
+    <a id="change">return </a>heightmap<a id="change">, colormap, segmmap</a>
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    heightmap = np.zeros((height, width), dtype=np.float32)
+    colormap = np.zeros((height, width, colors.shape[-1]), dtype=np.uint8)
+    segmmap = np.zeros((height, width), dtype=np.int32)
+    positionmap<a id="change"> = np</a><a id="change">.zeros(</a>(height<a id="change">, width, 3</a>)<a id="change">, dtype=np.float32)</a>
+    posemap<a id="change"> = np.zeros(</a>(height<a id="change">, width, 3</a>)<a id="change">, dtype=np.float32)</a>
+
+    &#47&#47 Filter out 3D points that are outside of the predefined bounds.
+    ix = (points[..., 0] &gt;= bounds[0, 0]) & (points[..., 0] &lt; bounds[0, 1])
+    iy = (points[..., 1] &gt;= bounds[1, 0]) & (points[..., 1] &lt; bounds[1, 1])
+    iz = (points[..., 2] &gt;= bounds[2, 0]) & (points[..., 2] &lt; bounds[2, 1])
+    valid = ix & iy & iz
+    points = points[valid]
+    colors = colors[valid]
+    ids = ids[valid]
+    positions = positions[valid]
+    poses<a id="change"> = </a>poses[valid]
+
+    &#47&#47 Sort 3D points by z-value, which works with array assignment to simulate
+    &#47&#47 z-buffering for rendering the heightmap image.
+    iz = np.argsort(points[:, -1])
+    points, colors, ids, positions, poses = (
+        points[iz],
+        colors[iz],
+        ids[iz],
+        positions[iz],
+        poses[iz],
+    )
+    px = np.int32(np.floor((points[:, 0] - bounds[0, 0]) / pixel_size))
+    py = np.int32(np.floor((points[:, 1] - bounds[1, 0]) / pixel_size))
+    px = np.clip(px, 0, width - 1)
+    py = np.clip(py, 0, height - 1)
+    heightmap[py, px] = points[:, 2] - bounds[2, 0]
+    colormap[py<a id="change">, px</a>] = colors[:]
+    segmmap[py, px] = ids[:]
+    positionmap[py, px] = positions[:]
+    posemap[py, px] = poses[:]
+    <a id="change">return </a>heightmap<a id="change">, colormap, segmmap, positionmap, posemap</a>
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 13</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/wkentaro/safepicking/commit/56af9845d0c8c6e658161267f7677966f24e646c#diff-0ce1b0c37b41e509b85fee542b63caf2b1f8264561e57ddd6e52076bd53aebf4L4' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 109135489</div><div id='project'> Project Name: wkentaro/safepicking</div><div id='commit'> Commit Name: 56af9845d0c8c6e658161267f7677966f24e646c</div><div id='time'> Time: 2021-07-02</div><div id='author'> Author: www.kentaro.wada@gmail.com</div><div id='file'> File Name: examples/target_pick/_get_heightmap.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: get_heightmap(7)</div><div id='n_method'> N Method Name: get_heightmap(5)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples/target_pick/_get_heightmap.py</div><div id='n_file'> N File Name: examples/target_pick/_get_heightmap.py</div><div id='m_start'> M Start Line: 23</div><div id='m_end'> M End Line: 47</div><div id='n_start'> N Start Line: 4</div><div id='n_end'> N End Line: 58</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    returns = values + advantages
+    advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-10)
+
+    <a id="change">return </a>advantages<a id="change">, returns</a>
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    trans_shape_func = lambda x: x.reshape(trajectory_length, -1, 1)
+    rewards = trans_shape_func(rewards)  &#47&#47 [trajectory length, parallel size, 1]
+    masks = trans_shape_func(masks)  &#47&#47 [trajectory length, parallel size, 1]
+    values<a id="change"> = </a>trans_shape_func(values)  &#47&#47 [trajectory length, parallel size, 1]
+
+    deltas = FLOAT(rewards.size()).to(device)
+    advantages = FLOAT(rewards.size()).to(device)
+
+    &#47&#47 calculate advantages in parallel
+    prev_value<a id="change"> = torch.zeros(</a>(rewards.size(1)<a id="change">, 1</a>)<a id="change">, device=device)</a>
+    prev_advantage<a id="change"> = </a><a id="change">torch.zeros(</a>(rewards.size(1)<a id="change">, 1</a>)<a id="change">, device=device)</a>
+
+    for i in reversed(range(rewards.size(0))):
+        deltas[i<a id="change">, ...</a>] = rewards[i, ...] + gamma * prev_value * masks[i, ...] - values[i, ...]
+        advantages[i<a id="change">, ...</a>] = deltas[i, ...] + gamma * tau * prev_advantage * masks[i, ...]
+
+        prev_value = values[i, ...]
+        prev_advantage = advantages[i, ...]
+
+    returns = values + advantages
+    advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-10)
+
+    &#47&#47 reverse shape for ppo
+    <a id="change">return </a>advantages.reshape(-1, 1)<a id="change">, returns.reshape(-1, 1)</a>  &#47&#47 [trajectory length * parallel size, 1]
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/ritchiehuang/magail/commit/5f42babd1531e53f4852cdcb2ac2959f63b719e4#diff-c5d2b25e8ab77218d2ca4f874a70ed5809b0985f06fd243b6617f593851757deL6' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 109135601</div><div id='project'> Project Name: ritchiehuang/magail</div><div id='commit'> Commit Name: 5f42babd1531e53f4852cdcb2ac2959f63b719e4</div><div id='time'> Time: 2020-04-24</div><div id='author'> Author: ritchie-huang@outlook.com</div><div id='file'> File Name: algos/GAE.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: estimate_advantages(6)</div><div id='n_method'> N Method Name: estimate_advantages(5)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: algos/GAE.py</div><div id='n_file'> N File Name: algos/GAE.py</div><div id='m_start'> M Start Line: 7</div><div id='m_end'> M End Line: 22</div><div id='n_start'> N Start Line: 32</div><div id='n_end'> N End Line: 66</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    py = np.clip(py, 0, height - 1)
+    heightmap[py, px] = points[:, 2] - bounds[2, 0]
+    for c in range(colors.shape[-1]):
+        colormap[py<a id="change">, px, c</a>] = colors[:, c]
+    segmmap[py, px] = ids[:]
+    <a id="change">return </a>heightmap, colormap, segmmap
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    heightmap = np.zeros((height, width), dtype=np.float32)
+    colormap = np.zeros((height, width, colors.shape[-1]), dtype=np.uint8)
+    segmmap = np.zeros((height, width), dtype=np.int32)
+    positionmap<a id="change"> = np.zeros(</a>(height<a id="change">, width, 3</a>)<a id="change">, dtype=np.float32)</a>
+    posemap<a id="change"> = </a><a id="change">np.zeros(</a>(height<a id="change">, width, 3</a>)<a id="change">, dtype=np.float32)</a>
+
+    &#47&#47 Filter out 3D points that are outside of the predefined bounds.
+    ix = (points[..., 0] &gt;= bounds[0, 0]) & (points[..., 0] &lt; bounds[0, 1])
+    iy = (points[..., 1] &gt;= bounds[1, 0]) & (points[..., 1] &lt; bounds[1, 1])
+    iz = (points[..., 2] &gt;= bounds[2, 0]) & (points[..., 2] &lt; bounds[2, 1])
+    valid = ix & iy & iz
+    points = points[valid]
+    colors = colors[valid]
+    ids = ids[valid]
+    positions<a id="change"> = </a>positions[valid]
+    poses = poses[valid]
+
+    &#47&#47 Sort 3D points by z-value, which works with array assignment to simulate
+    &#47&#47 z-buffering for rendering the heightmap image.
+    iz = np.argsort(points[:, -1])
+    points, colors, ids, positions, poses = (
+        points[iz],
+        colors[iz],
+        ids[iz],
+        positions[iz],
+        poses[iz],
+    )
+    px = np.int32(np.floor((points[:, 0] - bounds[0, 0]) / pixel_size))
+    py = np.int32(np.floor((points[:, 1] - bounds[1, 0]) / pixel_size))
+    px = np.clip(px, 0, width - 1)
+    py = np.clip(py, 0, height - 1)
+    heightmap[py, px] = points[:, 2] - bounds[2, 0]
+    colormap[py<a id="change">, px</a>] = colors[:]
+    segmmap[py, px] = ids[:]
+    positionmap[py<a id="change">, px</a>] = positions[:]
+    posemap[py, px] = poses[:]
+    <a id="change">return </a>heightmap<a id="change">, colormap, segmmap, positionmap, posemap</a>
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/wkentaro/reorientbot/commit/56af9845d0c8c6e658161267f7677966f24e646c#diff-0ce1b0c37b41e509b85fee542b63caf2b1f8264561e57ddd6e52076bd53aebf4L4' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 109135529</div><div id='project'> Project Name: wkentaro/reorientbot</div><div id='commit'> Commit Name: 56af9845d0c8c6e658161267f7677966f24e646c</div><div id='time'> Time: 2021-07-02</div><div id='author'> Author: www.kentaro.wada@gmail.com</div><div id='file'> File Name: examples/target_pick/_get_heightmap.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: get_heightmap(7)</div><div id='n_method'> N Method Name: get_heightmap(5)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples/target_pick/_get_heightmap.py</div><div id='n_file'> N File Name: examples/target_pick/_get_heightmap.py</div><div id='m_start'> M Start Line: 23</div><div id='m_end'> M End Line: 47</div><div id='n_start'> N Start Line: 4</div><div id='n_end'> N End Line: 58</div><BR>

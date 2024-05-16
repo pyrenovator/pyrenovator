@@ -1,0 +1,64 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        is_last_partition = self.is_last_partition
+        run_batch_backward = self.run_batch_backward if not is_last_partition else self.last_partition_batch_backward
+        run_batch_forward = self.run_batch_forward
+        <a id="change">async_bwd_objects = </a>self.async_bwd_objects
+        async_fwd_objects = self.async_fwd_objects
+        wait_on_sent_object = self.wait_on_sent_object
+
+        mark_bwd_start = 0  &#47&#47 To handle LIFO
+
+        while done_bwds &lt; num_batches:
+            &#47&#47 Act according to some policy
+            action_is_fwd = work_scheduler(stage, num_stages, num_batches,
+                                           done_fwds, done_bwds)
+            if action_is_fwd:
+                &#47&#47 micro_batch_to_run = done_fwds - done_bwds
+                sent_request_objects = run_batch_forward(done_fwds,
+                                                         num_batches,
+                                                         done_bwds=done_bwds)
+                if sent_request_objects:
+                    &#47&#47 wait on prev send
+                    if async_fwd_objects:
+                        wait_on_sent_object(is_fwd=True)
+                    async_fwd_objects[done_fwds] = sent_request_objects
+                done_fwds += 1
+            else:
+                &#47&#47 NOTE: we want LIFO order
+                if done_fwds == done_bwds + self.step_every or done_bwds == self.first_effected_batch:
+                    mark_bwd_start = done_bwds
+
+                micro_batch_to_run = done_fwds - 1 - done_bwds
+                batch_idx_to_run = mark_bwd_start + micro_batch_to_run
+
+                sent_request_objects = run_batch_backward(
+                    batch_idx_to_run, num_batches)
+
+                <a id="change">if </a>not (is_first_partition):
+                    &#47&#47 wait on prev send
+                    <a id="change">if async_bwd_objects</a>:
+                        <a id="change">wait_on_sent_object(is_fwd=False)</a>
+                    &#47&#47 HACK: we laizly insert at wrong index to to avoid ordering issues
+                    <a id="change">async_bwd_objects[done_bwds] = </a>sent_request_objects
+                done_bwds += 1
+
+        while len(async_fwd_objects) &gt; 0:
+            wait_on_sent_object(is_fwd=True, fin=True)
+
+        <a id="change">while len(async_bwd_objects</a><a id="change">) &gt; 0:
+            wait_on_sent_object(is_fwd=False, fin=True)</a>
+
+        &#47&#47 Do a scheduler step at the end of epoch if not already doing so each step.
+        if not self.trainer.PER_STEP_SCHEDULER:
+            self.lr_scheduler.step()</code></pre><h3>After Change</h3><pre><code class='java'>
+                                       num_batches,
+                                       done_bwds=done_bwds)
+
+                <a id="change">futures_handler.after_forward(</a>ro, done_fwds, True<a id="change">)</a>
+
+                done_fwds += 1
+            else:
+                &#47&#47 NOTE: we want LIFO order</code></pre>

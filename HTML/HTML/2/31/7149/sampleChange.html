@@ -1,0 +1,84 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        self._is_weighted = is_weighted
+        self._embedding_bag_configs: List[EmbeddingBagConfig] = embedding_configs
+        self.embedding_bags: nn.ModuleList = nn.ModuleList()
+        <a id="change">self._embedding_names</a><a id="change">: List[str] = </a><a id="change">[]</a>
+        self._lengths_per_embedding: List[int] = []
+        <a id="change">shared_feature</a>: Dict[str, bool] = <a id="change">{}</a>
+        table_names = set()
+        for emb_config in self._embedding_bag_configs:
+            if emb_config.name in table_names:
+                raise ValueError(f"Duplicate table name {emb_config.name}")
+            table_names.add(emb_config.name)
+            emb_module = IntNBitTableBatchedEmbeddingBagsCodegen(
+                embedding_specs=[
+                    (
+                        "",
+                        emb_config.num_embeddings,
+                        emb_config.embedding_dim,
+                        data_type_to_sparse_type(emb_config.data_type),
+                        EmbeddingLocation.HOST
+                        if device.type == "cpu"
+                        else EmbeddingLocation.DEVICE,
+                    )
+                ],
+                pooling_mode=pooling_type_to_pooling_mode(emb_config.pooling),
+                weight_lists=[table_name_to_quantized_weights[emb_config.name]],
+                device=device,
+            )
+            self.embedding_bags.append(emb_module)
+            if not emb_config.feature_names:
+                emb_config.feature_names = [emb_config.name]
+            <a id="change">for </a>feature_name in emb_config.feature_names<a id="change">:
+                </a><a id="change">if feature_name not in shared_feature</a>:
+                    <a id="change">shared_feature[feature_name] = </a>False
+                else:
+                    <a id="change">shared_feature[feature_name] = </a>True
+                <a id="change">self._lengths_per_embedding.append(</a>emb_config.embedding_dim<a id="change">)</a>
+
+        <a id="change">for </a>emb_config in self._embedding_bag_configs<a id="change">:
+            </a><a id="change">for </a>feature_name in emb_config.feature_names<a id="change">:
+                if shared_feature[feature_name]</a>:
+                    <a id="change">self._embedding_names.append(feature_name</a><a id="change"> + "@" + </a>emb_config.name<a id="change">)</a>
+                else:
+                    <a id="change">self._embedding_names.append(feature_name</a><a id="change">)</a>
+
+    def forward(
+        self,
+        features: KeyedJaggedTensor,</code></pre><h3>After Change</h3><pre><code class='java'>
+        self.embedding_bags: nn.ModuleList = nn.ModuleList()
+        self._lengths_per_embedding: List[int] = []
+        table_names = set()
+        for <a id="change">emb_config</a> in self._embedding_bag_configs:
+            if emb_config.name in table_names:
+                raise ValueError(f"Duplicate table name {emb_config.name}")
+            table_names.add(emb_config.name)
+            emb_module = IntNBitTableBatchedEmbeddingBagsCodegen(
+                embedding_specs=[
+                    (
+                        "",
+                        emb_config.num_embeddings,
+                        emb_config.embedding_dim,
+                        data_type_to_sparse_type(emb_config.data_type),
+                        EmbeddingLocation.HOST
+                        if device.type == "cpu"
+                        else EmbeddingLocation.DEVICE,
+                    )
+                ],
+                pooling_mode=pooling_type_to_pooling_mode(emb_config.pooling),
+                weight_lists=[table_name_to_quantized_weights[emb_config.name]],
+                device=device,
+            )
+            self.embedding_bags.append(emb_module)
+            if not emb_config.feature_names:
+                emb_config.feature_names = [emb_config.name]
+            <a id="change">self._lengths_per_embedding.extend(
+                </a><a id="change">len(</a>emb_config.feature_names<a id="change">) * [</a>emb_config.embedding_dim<a id="change"></a>]<a id="change">
+            )</a>
+
+        self._embedding_names: List[str] = ebc_get_embedding_names(embedding_configs)
+
+    def forward(</code></pre>

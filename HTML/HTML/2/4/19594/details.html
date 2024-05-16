@@ -1,0 +1,57 @@
+<html><h3>Pattern ID :19594
+</h3><img src='63951982.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        out = model(**inputs_dict).sample
+        &#47&#47 run the backwards pass on the model. For backwards pass, for simplicity purpose,
+        &#47&#47 we won&quott calculate the loss and rather backprop on out.sum()
+        <a id="change">model.zero_grad()</a>
+        out.sum().backward()
+
+        &#47&#47 now we save the output and parameter gradients that we will use for comparison purposes with
+        &#47&#47 the non-checkpointed run.</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 run the backwards pass on the model. For backwards pass, for simplicity purpose,
+        &#47&#47 we won&quott calculate the loss and rather backprop on out.sum()
+        model_2.zero_grad()
+        loss_2<a id="change"> = </a><a id="change">(out_2 - labels).mean()</a>
+        loss_2.backward()
+
+        &#47&#47 compare the output and parameters gradients
+        self.assertTrue((loss<a id="change"> - </a>loss_2).abs() &lt; 1e-5)
+        named_params = dict(model.named_parameters())
+        named_params_2 = dict(model_2.named_parameters())
+        for name, param in named_params.items():</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/huggingface/diffusers/commit/22963ed82682465b5fdfd1bd474e1b0f2579b4db#diff-e65cd8679b47855997f7a1e7b0bc1db8231acd2168d2cb6616d03d1fc201c1d7L273' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 63951982</div><div id='project'> Project Name: huggingface/diffusers</div><div id='commit'> Commit Name: 22963ed82682465b5fdfd1bd474e1b0f2579b4db</div><div id='time'> Time: 2022-10-10</div><div id='author'> Author: patrick.v.platen@gmail.com</div><div id='file'> File Name: tests/test_models_unet.py</div><div id='m_class'> M Class Name: UNet2DConditionModelTests</div><div id='n_method'> N Class Name: UNet2DConditionModelTests</div><div id='m_method'> M Method Name: test_gradient_checkpointing(1)</div><div id='n_method'> N Method Name: test_gradient_checkpointing(1)</div><div id='m_parent_class'> M Parent Class: unittest.TestCase,ModelTesterMixin</div><div id='n_parent_class'> N Parent Class: unittest.TestCase,ModelTesterMixin</div><div id='m_file'> M File Name: tests/test_models_unet.py</div><div id='n_file'> N File Name: tests/test_models_unet.py</div><div id='m_start'> M Start Line: 273</div><div id='m_end'> M End Line: 333</div><div id='n_start'> N Start Line: 273</div><div id='n_end'> N End Line: 308</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            p.requires_grad = True
+
+        &#47&#47 Initialize the discriminator optimizer gradient
+        <a id="change">d_optimizer.zero_grad()</a>
+
+        &#47&#47 Calculate the loss of the discriminator on the high-resolution image
+        with amp.autocast():</code></pre><h3>After Change</h3><pre><code class='java'>
+            pixel_loss = config.pixel_weight * pixel_criterion(sr, hr.detach())
+            content_loss = config.content_weight * content_criterion(sr, hr.detach())
+            &#47&#47 Computational adversarial network loss
+            d_loss_hr<a id="change"> = </a>adversarial_criterion(hr_output - <a id="change">torch.mean(</a>sr_output<a id="change">)</a>, real_label) * 0.5
+            d_loss_sr = adversarial_criterion(sr_output - torch.mean(hr_output), fake_label) * 0.5
+            adversarial_loss = config.adversarial_weight * (d_loss_hr<a id="change"> + </a>d_loss_sr)
+            &#47&#47 Count discriminator total loss
+            g_loss = pixel_loss + content_loss + adversarial_loss
+        &#47&#47 Gradient zoom</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lornatang/esrgan-pytorch/commit/05d6929d6908a66c8bec48b0f3214c967218eb94#diff-d62cd92dbb6c2541c1742737f637aeab1aa9fcc576e3af108f8ef0c1fd28c8f8L231' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 63951998</div><div id='project'> Project Name: lornatang/esrgan-pytorch</div><div id='commit'> Commit Name: 05d6929d6908a66c8bec48b0f3214c967218eb94</div><div id='time'> Time: 2022-04-19</div><div id='author'> Author: liuchangyu1111@gmail.com</div><div id='file'> File Name: train_esrgan.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train(12)</div><div id='n_method'> N Method Name: train(12)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: train_esrgan.py</div><div id='n_file'> N File Name: train_esrgan.py</div><div id='m_start'> M Start Line: 280</div><div id='m_end'> M End Line: 328</div><div id='n_start'> N Start Line: 280</div><div id='n_end'> N End Line: 328</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+  &#47&#47 Update the policy by maximising the clipped PPO objective
+  policy_ratio = (trajectories[&quotlog_prob_actions&quot] - trajectories[&quotold_log_prob_actions&quot]).exp()
+  policy_loss = -torch.min(policy_ratio * trajectories[&quotadvantages&quot], torch.clamp(policy_ratio, min=1 - ppo_clip, max=1 + ppo_clip) * trajectories[&quotadvantages&quot]).mean()
+  <a id="change">actor_optimiser.zero_grad()</a>
+  policy_loss.backward()
+  actor_optimiser.step()
+</code></pre><h3>After Change</h3><pre><code class='java'>
+  &#47&#47 Fit value function by regression on mean squared error
+  value_loss = F.mse_loss(trajectories[&quotvalues&quot], trajectories[&quotrewards_to_go&quot])
+  &#47&#47 Add entropy regularisation
+  entropy_loss<a id="change"> = </a>-<a id="change">trajectories[&quotentropies&quot].mean()</a>  
+  
+  agent_optimiser.zero_grad()
+  (policy_loss + value_loss_coeff * value_loss + entropy_loss_coeff<a id="change"> * </a>entropy_loss).backward()
+  clip_grad_norm_(agent.parameters(), 1)  &#47&#47 Clamp norm of gradients
+  agent_optimiser.step()
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/kaixhin/imitation-learning/commit/fd3ee1838359dcc6da9836b6249396e595ff90db#diff-2b28d1dcda2cd70d29d3251359adce0fbfde60edb53108cba1a284ee0d39e256L33' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 63951985</div><div id='project'> Project Name: kaixhin/imitation-learning</div><div id='commit'> Commit Name: fd3ee1838359dcc6da9836b6249396e595ff90db</div><div id='time'> Time: 2020-04-16</div><div id='author'> Author: design@kaixhin.com</div><div id='file'> File Name: training.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: ppo_update(7)</div><div id='n_method'> N Method Name: ppo_update(6)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: training.py</div><div id='n_file'> N File Name: training.py</div><div id='m_start'> M Start Line: 33</div><div id='m_end'> M End Line: 50</div><div id='n_start'> N Start Line: 34</div><div id='n_end'> N End Line: 51</div><BR>

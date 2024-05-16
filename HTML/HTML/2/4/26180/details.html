@@ -1,0 +1,65 @@
+<html><h3>Pattern ID :26180
+</h3><img src='78888819.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            blocks = ((L*k)//threads) + C + 1
+            query_map = torch.ones((N, H, blocks), dtype=torch.int32).cuda() * L 
+            blocks_map = torch.ones((N, H, blocks), dtype=torch.int32).cuda() * -1 
+            _<a id="change">, sorted_group_indices</a> = torch.sort(groups, descending=True, dim=-1)
+
+            &#47&#47 Actually perform the dot product
+            ClusteredSparseDotProduct.dot[device.type](</code></pre><h3>After Change</h3><pre><code class='java'>
+            with torch.no_grad():
+                Q_pb = 16
+                block_counts = (counts + Q_pb - 1) // Q_pb
+                block_counts<a id="change"> = </a><a id="change">block_counts.int()</a>
+                block_counts_cumsum = block_counts.view(-1).cumsum(-1).view(N, H, C).int()
+                indx_maps = torch.ones(
+                    (block_counts.sum(), 4),
+                    device=Q.device,
+                    dtype=torch.int32
+                )
+                counts_cumsum = counts.cumsum(-1).int()
+                total_blocks<a id="change"> = </a>block_counts.sum().item()
+
+            &#47&#47 Actually perform the dot product
+            ClusteredSparseDotProduct.dot[device.type](</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/idiap/fast-transformers/commit/ac1fd6316f59b56faa3b4e9236810d4e97ed5b15#diff-e91bf79b7e2f1026ed509f7acfa914077ef9851d0eb373421f7aa40468c45da4L164' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 78888819</div><div id='project'> Project Name: idiap/fast-transformers</div><div id='commit'> Commit Name: ac1fd6316f59b56faa3b4e9236810d4e97ed5b15</div><div id='time'> Time: 2020-11-25</div><div id='author'> Author: avyas@idiap.ch</div><div id='file'> File Name: fast_transformers/sparse_product/__init__.py</div><div id='m_class'> M Class Name: ClusteredSparseDotProduct</div><div id='n_method'> N Class Name: ClusteredSparseDotProduct</div><div id='m_method'> M Method Name: forward(7)</div><div id='n_method'> N Method Name: forward(7)</div><div id='m_parent_class'> M Parent Class: torch.autograd.Function</div><div id='n_parent_class'> N Parent Class: torch.autograd.Function</div><div id='m_file'> M File Name: fast_transformers/sparse_product/__init__.py</div><div id='n_file'> N File Name: fast_transformers/sparse_product/__init__.py</div><div id='m_start'> M Start Line: 185</div><div id='m_end'> M End Line: 201</div><div id='n_start'> N Start Line: 164</div><div id='n_end'> N End Line: 208</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                union = (
+                    (y_pred[i, j, :, :].unsqueeze(0) | y_true[i, j, :, :].unsqueeze(0))
+                    .float()
+                    .sum((1<a id="change">, 2</a>))
+                )
+                self.iou_per_class[j] += ((intersection + 1e-15) / (union + 1e-15))[0]
+</code></pre><h3>After Change</h3><pre><code class='java'>
+                y_true_local = y_true[i, j, :, :].unsqueeze(0)
+                intersection = (y_pred_local & y_true_local).float().sum()
+                union = (y_pred_local | y_true_local).float().sum()
+                correct<a id="change"> = </a><a id="change">(y_pred_local == y_true_local).int()</a>.sum()
+
+                total = y_true_local.numel()
+                trues = y_pred_local.float().sum() + y_true_local.float().sum()
+
+                self.iou_per_class[j] += 1 if union == 0 else (intersection / union)
+                self.f1_score_per_class[j] += (
+                    1 if trues == 0 else (2 * intersection / trues)
+                )
+                self.pixel_accuracy_per_class[j]<a id="change"> += </a>correct / total
+
+    def reset(self):
+        Reset the metrics</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/biasvariancelabs/aitlas/commit/e11bf3d1eaac800ad330870791cd1f5e251967bd#diff-c0d71207f64739512046cec6efdc4d6e7d3cbd93d90bb13154c3dfebe606609eL244' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 78888787</div><div id='project'> Project Name: biasvariancelabs/aitlas</div><div id='commit'> Commit Name: e11bf3d1eaac800ad330870791cd1f5e251967bd</div><div id='time'> Time: 2021-09-17</div><div id='author'> Author: ivan.kitanovski@gmail.com</div><div id='file'> File Name: aitlas/base/metrics.py</div><div id='m_class'> M Class Name: SegmentationRunningScore</div><div id='n_method'> N Class Name: SegmentationRunningScore</div><div id='m_method'> M Method Name: update(3)</div><div id='n_method'> N Method Name: update(3)</div><div id='m_parent_class'> M Parent Class: RunningScore</div><div id='n_parent_class'> N Parent Class: RunningScore</div><div id='m_file'> M File Name: aitlas/base/metrics.py</div><div id='n_file'> N File Name: aitlas/base/metrics.py</div><div id='m_start'> M Start Line: 248</div><div id='m_end'> M End Line: 260</div><div id='n_start'> N Start Line: 256</div><div id='n_end'> N End Line: 269</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        pred_classif[pos_mask] += 3.0
+
+    &#47&#47&#47&#47 for classification &#47&#47&#47&#47&#47&#47
+    (best_truth_overlap<a id="change">, best_truth_idx</a>) = reg_overlaps.max(dim=0)
+    overlap_t[idx] = best_truth_overlap  &#47&#47 [num_priors] jaccord for each prior
+    conf_t[idx] = labels[best_truth_idx]  &#47&#47 [num_priors] top class label for each prior
+    &#47&#47&#47&#47 for regression &#47&#47&#47&#47&#47&#47</code></pre><h3>After Change</h3><pre><code class='java'>
+    ).clamp_(max=1)
+    qualities[qualities != qualities.max(dim=0, keepdim=True)[0]] = 0.0
+    for quality in qualities:
+        num_pos<a id="change"> = </a>max(1, <a id="change">torch.topk(quality, topk, largest=True)[0].sum().int()</a>)
+        num_pos<a id="change"> = </a>min(num_pos, (quality &gt; 0).sum())
+        pos_mask = torch.topk(quality, num_pos, largest=True)[1]
+        quality[pos_mask] += 3.0
+    (best_truth_overlap, best_truth_idx) = qualities.max(dim=0)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/zhangheng19931123/mutualguide/commit/e34b6b0002f1571fad0fa9bf00707f377f5fc431#diff-7cd6c36c75963c973216f2c18eee2df1b14116478cf12d69c842b403bdc1329fL64' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 78888798</div><div id='project'> Project Name: zhangheng19931123/mutualguide</div><div id='commit'> Commit Name: e34b6b0002f1571fad0fa9bf00707f377f5fc431</div><div id='time'> Time: 2022-07-01</div><div id='author'> Author: zhanghengdev@outlook.com</div><div id='file'> File Name: utils/box/box_utils.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: mutual_match(12)</div><div id='n_method'> N Method Name: mutual_match(12)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: utils/box/box_utils.py</div><div id='n_file'> N File Name: utils/box/box_utils.py</div><div id='m_start'> M Start Line: 79</div><div id='m_end'> M End Line: 99</div><div id='n_start'> N Start Line: 97</div><div id='n_end'> N End Line: 118</div><BR>

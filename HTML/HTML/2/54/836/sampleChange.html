@@ -1,0 +1,46 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 pred: batch_size x seq_len x vocab_size
+        self.ce_loss += self.ce_fct(pred, target).item()
+
+        <a id="change">target</a> = <a id="change">target.cpu().numpy()</a>.tolist()
+        for t in target:
+            self._target.append(<a id="change">self.label_map[t]</a>)
+
+        &#47&#47 calculate hinge loss
+        interest_index = list(self.label_map.keys())
+        <a id="change">for i</a> in <a id="change">range(len(target</a><a id="change">)</a><a id="change">):
+            </a>tgt<a id="change"> = </a><a id="change">self.label_map[target[i]]</a>
+            <a id="change">prd = pred[i, interest_index].cpu().numpy().tolist()</a>
+            <a id="change">for </a>j, <a id="change">p</a> in <a id="change">enumerate(prd</a><a id="change">):
+                </a><a id="change">if j == tgt</a>:
+                    <a id="change">continue</a>
+                else:
+                    tmp<a id="change"> = p</a><a id="change"> - prd[tgt] + </a>self.margin
+                    <a id="change">if tmp &gt; 0</a>:
+                        self.hinge_loss<a id="change"> += </a>tmp
+        pred = <a id="change">pred[:, interest_index].argmax(dim=-1).detach().cpu().numpy().tolist()</a>
+        self._pred.extend(pred)
+
+
+    def get_metric(self, reset=True):</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        &#47&#47 calculate hinge loss
+        hinge_target = target.clone()
+        <a id="change">for </a>key, <a id="change">val</a> in <a id="change">self.label_map.items():
+            hinge_target[target==key] = val</a>
+
+        for t in <a id="change">hinge_target.cpu().numpy().tolist()</a>:
+            self._target.append(t)
+
+        interest_index = list(self.label_map.keys())
+        pred = <a id="change">pred[:, interest_index]</a>
+        self.hinge<a id="change"> += </a><a id="change">hinge_loss(pred, hinge_target, self.margin, reduce=&quotsum&quot).item()</a>
+        
+        pred<a id="change"> = </a><a id="change">pred.argmax(dim=-1).detach().cpu().numpy().tolist()</a>
+        self._pred.extend(pred)
+
+
+    def get_metric(self, reset=True):</code></pre>

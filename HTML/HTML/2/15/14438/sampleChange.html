@@ -1,0 +1,40 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        return self.model(**input_)
+
+    def training_step(self, batch: TransformerTokenClassificationModelStepBatchEncoding, batch_idx):  &#47&#47 type: ignore
+        <a id="change">input_</a><a id="change">, target</a> = batch
+        assert target is not None, "target has to be available for training"
+
+        input_["labels"] = target
+        output<a id="change"> = </a><a id="change">self(input_</a><a id="change">)</a>
+
+        <a id="change">loss = </a>output.loss
+        <a id="change">self.log("train/loss"</a>, <a id="change">loss</a><a id="change">, on_step=True, on_epoch=True, prog_bar=True)</a>
+
+        target_flat = target.view(-1)
+
+        valid_indices = target_flat != self.label_pad_token_id
+        &#47&#47 ignore typing because hparams is Union
+        num_classes: int = self.hparams.num_classes  &#47&#47 type: ignore
+        valid_logits = output.logits.view(-1, num_classes)[valid_indices]
+        valid_target = target_flat[valid_indices]
+
+        <a id="change">self.train_f1(</a>valid_logits, valid_target<a id="change">)</a>
+        <a id="change">self.log("train/f1"</a>, self.train_f1<a id="change">, on_step=False, on_epoch=True, prog_bar=True)</a>
+
+        <a id="change">return loss</a>
+
+    def validation_step(self, batch: TransformerTokenClassificationModelStepBatchEncoding, batch_idx):  &#47&#47 type: ignore
+        input_, target = batch
+        assert target is not None, "target has to be available for validation"</code></pre><h3>After Change</h3><pre><code class='java'>
+        return loss
+
+    def training_step(self, batch: TransformerTokenClassificationModelStepBatchEncoding, batch_idx: int):  &#47&#47 type: ignore
+        <a id="change">return </a><a id="change">self.step(stage=TRAINING, batch=batch)</a>
+
+    def validation_step(self, batch: TransformerTokenClassificationModelStepBatchEncoding, batch_idx: int):  &#47&#47 type: ignore
+        return self.step(stage=VALIDATION, batch=batch)
+</code></pre>

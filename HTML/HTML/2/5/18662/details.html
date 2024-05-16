@@ -1,0 +1,52 @@
+<html><h3>Pattern ID :18662
+</h3><img src='60862673.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        target = (target * alpha.view(bs,c,1))
+        res = input - target
+
+        sisdr = 10 * <a id="change">torch.log10(((target**2).sum(-1)/(res**2).sum(-1) + self.eps)).mean()</a>
+        return -sisdr
+
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            target = target - target_mean
+
+        alpha = (input * target).sum(-1) / ((target ** 2).sum(-1))
+        target<a id="change"> = </a>target<a id="change"> * </a><a id="change">alpha.unsqueeze(-1</a><a id="change">)</a>
+        res = input - target
+
+        losses = 10 * torch.log10((target**2).sum(-1)/((res**2).sum(-1) + self.eps) + self.eps)
+        losses = apply_reduction(losses, self.reduction)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/csteinmetz1/auraloss/commit/9cacf0f11d2b6f8f1671cf14ca5fda3c1e3632aa#diff-770ca1600ec700c9645f8c795b6af5f8ce0af8bef0fee03f5d05a96c360d15a7L99' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 60862673</div><div id='project'> Project Name: csteinmetz1/auraloss</div><div id='commit'> Commit Name: 9cacf0f11d2b6f8f1671cf14ca5fda3c1e3632aa</div><div id='time'> Time: 2020-12-10</div><div id='author'> Author: csteinmetz1@gmail.com</div><div id='file'> File Name: auraloss/time.py</div><div id='m_class'> M Class Name: SISDRLoss</div><div id='n_method'> N Class Name: SISDRLoss</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: Module</div><div id='n_parent_class'> N Parent Class: torch.nn.Module</div><div id='m_file'> M File Name: auraloss/time.py</div><div id='n_file'> N File Name: auraloss/time.py</div><div id='m_start'> M Start Line: 99</div><div id='m_end'> M End Line: 112</div><div id='n_start'> N Start Line: 136</div><div id='n_end'> N End Line: 146</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        x = torch.cat((x, static_x), dim=1)
+
+        &#47&#47 take the mean of all time steps (rows) with additional row for static features; output size = (batch_size, 64)
+        x = <a id="change">torch.mean(</a>x, 1<a id="change">)</a>
+
+        &#47&#47 pass through fully-connected part to lower dimension to 2 (binary classification)
+        return self.feed_forward(x)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        &#47&#47 take the masked mean of all time steps (rows) with additional row for static features; output size = (batch_size, 64)
+        mask = torch.cat((mask, torch.ones((x.size()[0], 1), dtype=torch.bool)), dim=1).unsqueeze(2).long()
+        time_length = <a id="change">torch.FloatTensor(time_length).unsqueeze(1</a><a id="change">)</a>
+        x<a id="change"> = </a>torch.sum(x * (1 - mask), dim=1)<a id="change"> / </a>(time_length + 1)    &#47&#47 masked aggregation
+
+        &#47&#47 pass through fully-connected part to lower dimension to 2 (binary classification)
+        return self.feed_forward(x)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/mims-harvard/raindrop/commit/c78a0c22f831e2f0ee3f125343ad6e4a2894d680#diff-9130f919aee7ec822bf1d82f703744c78d2ed7fa68b5691eab535c724d94934aL137' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 60862690</div><div id='project'> Project Name: mims-harvard/raindrop</div><div id='commit'> Commit Name: c78a0c22f831e2f0ee3f125343ad6e4a2894d680</div><div id='time'> Time: 2021-08-19</div><div id='author'> Author: mz4730@student.uni-lj.si</div><div id='file'> File Name: code/baselines/Transformer_baseline.py</div><div id='m_class'> M Class Name: Transformer_P12</div><div id='n_method'> N Class Name: Transformer_P12</div><div id='m_method'> M Method Name: forward(4)</div><div id='n_method'> N Method Name: forward(4)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: code/baselines/Transformer_baseline.py</div><div id='n_file'> N File Name: code/baselines/Transformer_baseline.py</div><div id='m_start'> M Start Line: 147</div><div id='m_end'> M End Line: 163</div><div id='n_start'> N Start Line: 146</div><div id='n_end'> N End Line: 167</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    s1_q = t.maximum(error, t.zeros_like(error))
+    mqloss = (quantiles * sq + (1 - quantiles) * s1_q)
+
+    return <a id="change">t.mean(</a>t.mean(mqloss, axis=1)<a id="change">)</a>
+
+&#47&#47 Cell
+def wMQLoss(y: t.Tensor, y_hat: t.Tensor, quantiles: t.Tensor,
+            mask: t.Tensor =None) -&gt; t.Tensor:</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    &#47&#47 Match y/weights dimensions and compute weighted average
+    mask = mask / t.sum(mask)
+    mask = <a id="change">mask.unsqueeze(-1</a><a id="change">)</a>
+    mqloss<a id="change"> = </a>(<a id="change">1/n_q) * mqloss * </a>mask
+
+    return t.sum(mqloss)
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/nixtla/neuralforecast/commit/677abcee8cc7a5cdf5ddb7fa5aabe64514795fd8#diff-b802b4aae962f9e4c5e03302b63a22d5ed334b8e60bc54cfdb206ee1ac4d25dfL306' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 60862696</div><div id='project'> Project Name: nixtla/neuralforecast</div><div id='commit'> Commit Name: 677abcee8cc7a5cdf5ddb7fa5aabe64514795fd8</div><div id='time'> Time: 2022-04-05</div><div id='author'> Author: kin.gtz.olivares@gmail.com</div><div id='file'> File Name: neuralforecast/losses/pytorch.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: MQLoss(4)</div><div id='n_method'> N Method Name: MQLoss(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: neuralforecast/losses/pytorch.py</div><div id='n_file'> N File Name: neuralforecast/losses/pytorch.py</div><div id='m_start'> M Start Line: 351</div><div id='m_end'> M End Line: 360</div><div id='n_start'> N Start Line: 351</div><div id='n_end'> N End Line: 365</div><BR>

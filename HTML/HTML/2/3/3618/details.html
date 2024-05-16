@@ -1,0 +1,66 @@
+<html><h3>Pattern ID :3618
+</h3><img src='13657508.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            nstep_len = torch.zeros(batch_size, device=self.device, dtype=int_tens_type, requires_grad=False)
+            nstep_max_len = torch.max(nstep_len)
+            nstep_one_hot = torch.zeros(len(nstep_len), nstep_max_len + 1, device=self.device, requires_grad=False).scatter_(1, nstep_len.unsqueeze(1), 1.)
+            terminals = terminals<a id="change"> if </a>self.act_buf_size == 1<a id="change"> else </a>terminals * 0.0  &#47&#47 the way the replay memory works, RTAC will never encounter terminal states for buffers of more than 1 action
+        &#47&#47 print_debug(f"nstep_len: {nstep_len}")
+        &#47&#47 print_debug(f"nstep_max_len: {nstep_max_len}")
+        &#47&#47 print_debug(f"nstep_one_hot: {nstep_one_hot}")</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 print_debug(f"nstep_one_hot: {nstep_one_hot}")
+
+        &#47&#47 we compute the terminals tensor here
+        terminals<a id="change"> = </a><a id="change">torch.where(</a>(done_traj[nstep_len + 1]), ones_tens, zeros_tens<a id="change">)</a>
+
+        print_debug(f"terminals: {terminals}")
+        print("DEBUG EXIT")
+        exit()</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/trackmania-rl/tmrl/commit/353950133dc8f354d9d64909791a050df1fee02c#diff-f84a4b0bff360371bcf6b0bd5f505408752fe903005a3cc7160220528068ea51L71' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 13657508</div><div id='project'> Project Name: trackmania-rl/tmrl</div><div id='commit'> Commit Name: 353950133dc8f354d9d64909791a050df1fee02c</div><div id='time'> Time: 2020-11-30</div><div id='author'> Author: yann.bouteiller@hotmail.fr</div><div id='file'> File Name: agents-rt/agents/drtac.py</div><div id='m_class'> M Class Name: Agent</div><div id='n_method'> N Class Name: Agent</div><div id='m_method'> M Method Name: train(1)</div><div id='n_method'> N Method Name: train(1)</div><div id='m_parent_class'> M Parent Class: agents.sac.Agent</div><div id='n_parent_class'> N Parent Class: agents.sac.Agent</div><div id='m_file'> M File Name: agents-rt/agents/drtac.py</div><div id='n_file'> N File Name: agents-rt/agents/drtac.py</div><div id='m_start'> M Start Line: 71</div><div id='m_end'> M End Line: 114</div><div id='n_start'> N Start Line: 94</div><div id='n_end'> N End Line: 155</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        while not accepted:
+            &#47&#47 check if the current step exceeds the target
+            t1_achieved = t0 + h &gt; t1
+            hstep = t1 - t0<a id="change"> if </a>t1_achieved<a id="change"> else </a>h
+            tnew = t0 + hstep
+
+            &#47&#47 perform the RK-step to t0+h</code></pre><h3>After Change</h3><pre><code class='java'>
+        while not accepted:
+            &#47&#47 check if the current step exceeds the target
+            t1_achieved = t0 + h &gt; t1  &#47&#47 (...,)
+            hstep = <a id="change">torch.where(</a>t1_achieved, t1 - t0, h<a id="change">)</a>  &#47&#47 (...,)
+            tnew = t0 + hstep
+
+            &#47&#47 perform the RK-step to t0+h
+            abck = (self.A, self.B, self.C, self.K)
+            ynew, fnew = rk_step(self.func, t0, y0, f0, hstep, abck)
+
+            &#47&#47 estimate the error norm
+            scale = self.atol + torch.maximum(y0.norm(dim=self.ydims), ynew.norm(dim=self.ydims)) * self.rtol
+            errnorm = self._error_norm(self.K, hstep) / scale  &#47&#47 (...,)
+            accepted = bool(torch.all(errnorm &lt; 1).cpu().detach().item())
+
+            &#47&#47 adjust the step size
+            new_factor<a id="change"> = </a>self.step_mult * (errnorm + 1e-8) ** self.error_exponent
+            &#47&#47 if accepted and not t1_achieved:
+            if accepted:
+                factor = torch.minimum(torch.full_like(new_factor, self.max_factor), new_factor)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/xitorch/xitorch/commit/c6f0785664d60d1310778d43f14a3464660ea4d9#diff-1483d3ea142df8ec6c0e99905625e2421b3c2854fb87878e7255748ac68ae5a4L85' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 13657513</div><div id='project'> Project Name: xitorch/xitorch</div><div id='commit'> Commit Name: c6f0785664d60d1310778d43f14a3464660ea4d9</div><div id='time'> Time: 2021-12-30</div><div id='author'> Author: firman.kasim@gmail.com</div><div id='file'> File Name: xitorch/_impls/integrate/ivp/adaptive_rk.py</div><div id='m_class'> M Class Name: RKAdaptiveStepSolver</div><div id='n_method'> N Class Name: RKAdaptiveStepSolver</div><div id='m_method'> M Method Name: _single_step(3)</div><div id='n_method'> N Method Name: _single_step(3)</div><div id='m_parent_class'> M Parent Class: object</div><div id='n_parent_class'> N Parent Class: object</div><div id='m_file'> M File Name: xitorch/_impls/integrate/ivp/adaptive_rk.py</div><div id='n_file'> N File Name: xitorch/_impls/integrate/ivp/adaptive_rk.py</div><div id='m_start'> M Start Line: 85</div><div id='m_end'> M End Line: 122</div><div id='n_start'> N Start Line: 125</div><div id='n_end'> N End Line: 165</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        cond_prob_drop = 0.
+    ):
+        batch_size, device = image_embed.shape[0], image_embed.device
+        t = self.time_mlp(time)<a id="change"> if </a>exists(self.time_mlp)<a id="change"> else </a>None
+
+        cond_prob_mask = prob_mask_like(batch_size, cond_prob_drop, device = device)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 mask out image embedding depending on condition dropout
+        &#47&#47 for classifier free guidance
+
+        image_embed<a id="change"> = </a><a id="change">torch.where(
+            </a>rearrange(cond_prob_mask, &quotb -&gt; b 1&quot),
+            image_embed,
+            rearrange(self.null_image_embed, &quotd -&gt; 1 d&quot)<a id="change">
+        )</a>
+
+        cond = torch.cat((t, image_embed), dim = -1)
+
+        hiddens = []</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lucidrains/dalle2-pytorch/commit/25d980ebbf1e22ce8396cdec400e22e83f754176#diff-038ecede954c29266888cb88e37cc06f61ba2433f8b5142c7b2b2cefde5ed0edL402' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 13657515</div><div id='project'> Project Name: lucidrains/dalle2-pytorch</div><div id='commit'> Commit Name: 25d980ebbf1e22ce8396cdec400e22e83f754176</div><div id='time'> Time: 2022-04-12</div><div id='author'> Author: lucidrains@gmail.com</div><div id='file'> File Name: dalle2_pytorch/dalle2_pytorch.py</div><div id='m_class'> M Class Name: Unet</div><div id='n_method'> N Class Name: Unet</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: dalle2_pytorch/dalle2_pytorch.py</div><div id='n_file'> N File Name: dalle2_pytorch/dalle2_pytorch.py</div><div id='m_start'> M Start Line: 411</div><div id='m_end'> M End Line: 414</div><div id='n_start'> N Start Line: 412</div><div id='n_end'> N End Line: 425</div><BR>

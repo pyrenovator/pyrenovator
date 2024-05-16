@@ -1,0 +1,60 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        if (index + 1) % 100 == 0 or (index + 1) == batches:
+            iters = index + epoch * batches + 1
+            writer.add_scalar("Train/MSE_Loss", loss.item(), iters)
+            <a id="change">print(f"Epoch[{epoch + 1:05d}/{config.epochs:05d}]({index + 1:05d}/{batches:05d}) MSE loss: {loss.item():.6f}."</a><a id="change">)</a>
+
+
+def validate(model, valid_dataloader, criterion, epoch, writer) -&gt; float:
+    &#47&#47 Calculate how many iterations there are under Epoch.</code></pre><h3>After Change</h3><pre><code class='java'>
+    &#47&#47 Calculate how many iterations there are under epoch
+    batches = len(train_dataloader)
+
+    <a id="change">batch_time = AverageMeter("Time"</a>, <a id="change">":6.3f"</a><a id="change">)</a>
+    <a id="change">data_time = </a><a id="change">AverageMeter("Data"</a>, <a id="change">":6.3f"</a><a id="change">)</a>
+    <a id="change">losses = AverageMeter("Loss"</a>, <a id="change">":6.6f"</a><a id="change">)</a>
+    <a id="change">psnres = </a><a id="change">AverageMeter("PSNR"</a>, <a id="change">":4.2f"</a><a id="change">)</a>
+    progress<a id="change"> = </a><a id="change">ProgressMeter(</a>batches, <a id="change">[batch_time</a>, <a id="change">data_time</a>, <a id="change">losses</a>, <a id="change">psnres</a>]<a id="change">, prefix=f"Epoch: [{epoch}]")</a>
+
+    &#47&#47 Put the generator in training mode
+    model.train()
+
+    <a id="change">end = time</a><a id="change">.time()</a>
+    for index, (lr, hr) in enumerate(train_dataloader):
+        &#47&#47 measure data loading time
+        <a id="change">data_time.update(time</a><a id="change">.time()</a><a id="change"> - end</a><a id="change">)</a>
+
+        lr = lr.to(config.device, non_blocking=True)
+        hr = hr.to(config.device, non_blocking=True)
+
+        &#47&#47 Initialize the generator gradient
+        model.zero_grad()
+
+        &#47&#47 Mixed precision training
+        with amp.autocast():
+            sr = model(lr)
+            loss = criterion(sr, hr)
+        &#47&#47 Gradient zoom
+        scaler.scale(loss).backward()
+        &#47&#47 Update generator weight
+        scaler.step(optimizer)
+        scaler.update()
+
+        &#47&#47 measure accuracy and record loss
+        psnr<a id="change"> = 10.</a><a id="change"> * torch.log10(1.</a><a id="change"> / torch</a><a id="change">.mean(</a>(sr<a id="change"> - </a>hr)<a id="change"> ** 2</a><a id="change">))</a>
+        <a id="change">losses.update(loss.item()</a>, <a id="change">lr.size(0</a><a id="change">)</a><a id="change">)</a>
+        <a id="change">psnres.update(psnr.item()</a>, <a id="change">lr.size(0</a><a id="change">)</a><a id="change">)</a>
+
+        &#47&#47 measure elapsed time
+        <a id="change">batch_time.update(time</a><a id="change">.time()</a><a id="change"> - end</a><a id="change">)</a>
+        end<a id="change"> = time.time()</a>
+
+        <a id="change">if index % config.print_frequency == 0</a>:
+            <a id="change">progress.display(index</a><a id="change">)</a>
+
+        &#47&#47 In this Epoch, every one hundred iterations and the last iteration print the loss function
+        &#47&#47 and write it to Tensorboard at the same time
+        if (index + 1) % 100 == 0 or (index + 1) == batches:</code></pre>

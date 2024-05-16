@@ -1,0 +1,55 @@
+<html><h3>Pattern ID :2244
+</h3><img src='9566129.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        context = torch.einsum(&quotb h d n, b h e n -&gt; b h d e&quot, k, v)
+
+        out = torch.einsum(&quotb h d e, b h d n -&gt; b h e n&quot, context, q)
+        out = <a id="change">rearrange(</a>out, <a id="change">&quotb h c (x y) -&gt; b (h c) x y&quot</a><a id="change">, h = self.heads, x = h, y = w)</a>
+        return self.to_out(out)
+
+class Attention(nn.Module):
+    def __init__(</code></pre><h3>After Change</h3><pre><code class='java'>
+        q, k, v = map(lambda t: rearrange(t, &quotb n (h d) -&gt; b h n d&quot, h = h), qkv)
+
+        q = q.softmax(dim = -1)
+        k<a id="change"> = </a><a id="change">k.softmax(dim = -2)</a>
+
+        q = q * self.scale
+
+        context = torch.einsum(&quotb h n d, b h n e -&gt; b h d e&quot, k, v)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/lucidrains/recurrent-interface-network-pytorch/commit/5cd08b2823cfe105785a525aea43a7396fea07e9#diff-c245517a15c6c34e71df6f08ed422324484176189f4795463b7e58278d35b9cdL114' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 9566129</div><div id='project'> Project Name: lucidrains/recurrent-interface-network-pytorch</div><div id='commit'> Commit Name: 5cd08b2823cfe105785a525aea43a7396fea07e9</div><div id='time'> Time: 2022-12-24</div><div id='author'> Author: lucidrains@gmail.com</div><div id='file'> File Name: rin_pytorch/rin_pytorch.py</div><div id='m_class'> M Class Name: LinearAttention</div><div id='n_method'> N Class Name: LinearAttention</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: rin_pytorch/rin_pytorch.py</div><div id='n_file'> N File Name: rin_pytorch/rin_pytorch.py</div><div id='m_start'> M Start Line: 114</div><div id='m_end'> M End Line: 126</div><div id='n_start'> N Start Line: 136</div><div id='n_end'> N End Line: 157</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        dots = paddle.matmul(q, k.transpose((0,1,2,4,3))) * self.scale
+        attn = self.attend(dots)
+        out = paddle.matmul(attn, v)
+        out = paddle.to_tensor(<a id="change">rearrange(</a>out.numpy(), <a id="change">&quotb p h n d -&gt; b p n (h d)&quot</a><a id="change">)</a>,stop_gradient=False)
+        return self.to_out(out)
+
+class Transformer(nn.Layer):</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        attn = paddle.matmul(q, k, transpose_y=True)
+        attn = attn * self.scales
+        attn<a id="change"> = </a><a id="change">self.softmax(</a>attn<a id="change">)</a>
+        attn = self.attn_dropout(attn)
+        &#47&#47 [batch_size, P, num_heads, N, N]
+
+        z = paddle.matmul(attn, v)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/br-idl/paddlevit/commit/8830bbf1fbf940d9ae0cfd9625201c78addcf9f5#diff-d311fd2dc051ce5f1c6d31872d3962ebb51b529b0bbcf6e02c1202591c0f6b0fL73' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 9566119</div><div id='project'> Project Name: br-idl/paddlevit</div><div id='commit'> Commit Name: 8830bbf1fbf940d9ae0cfd9625201c78addcf9f5</div><div id='time'> Time: 2021-10-20</div><div id='author'> Author: xperzy@gmail.com</div><div id='file'> File Name: image_classification/MobileViT/mobile_vit.py</div><div id='m_class'> M Class Name: Attention</div><div id='n_method'> N Class Name: Attention</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: nn.Layer</div><div id='n_parent_class'> N Parent Class: nn.Layer</div><div id='m_file'> M File Name: image_classification/MobileViT/mobile_vit.py</div><div id='n_file'> N File Name: image_classification/MobileViT/mobile_vit.py</div><div id='m_start'> M Start Line: 74</div><div id='m_end'> M End Line: 83</div><div id='n_start'> N Start Line: 132</div><div id='n_end'> N End Line: 148</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        coor_weights = self.coors_mlp(coor_mlp_input)
+
+        if exists(mask):
+            coor_mask = <a id="change">rearrange(</a>mask, <a id="change">&quotb () i j -&gt; b i j&quot</a><a id="change">)</a>
+            coor_weights.masked_fill_(~coor_mask, 0.)
+
+        rel_coors = self.rel_coors_norm(rel_coors)
+        coors_out = einsum(&quotb i j, b i j c -&gt; b i c&quot, coor_weights, rel_coors)</code></pre><h3>After Change</h3><pre><code class='java'>
+        if exists(mask):
+            max_neg_value = -torch.finfo(coor_weights.dtype).max
+            coor_weights.masked_fill_(~mask, max_neg_value)
+            coor_weights = <a id="change">coor_weights.softmax(dim = -1)</a>
+
+        rel_coors = self.rel_coors_norm(rel_coors)
+
+        coors_out<a id="change"> = </a>einsum(&quotb h i j, b i j c -&gt; b i c h&quot, coor_weights, rel_coors)
+        coors_out = self.to_coors_out(coors_out)
+
+        &#47&#47 derive attention</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lucidrains/en-transformer/commit/af1cb7ebc156c67f0938d915840e079bb3073c24#diff-f288a1692c1c58a186cb9ac763046f632757db1647271b97852e59e3fc5696b9L167' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 9566118</div><div id='project'> Project Name: lucidrains/en-transformer</div><div id='commit'> Commit Name: af1cb7ebc156c67f0938d915840e079bb3073c24</div><div id='time'> Time: 2021-03-27</div><div id='author'> Author: lucidrains@gmail.com</div><div id='file'> File Name: en_transformer/en_transformer.py</div><div id='m_class'> M Class Name: EquivariantAttention</div><div id='n_method'> N Class Name: EquivariantAttention</div><div id='m_method'> M Method Name: forward(6)</div><div id='n_method'> N Method Name: forward(6)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: en_transformer/en_transformer.py</div><div id='n_file'> N File Name: en_transformer/en_transformer.py</div><div id='m_start'> M Start Line: 240</div><div id='m_end'> M End Line: 265</div><div id='n_start'> N Start Line: 244</div><div id='n_end'> N End Line: 271</div><BR>

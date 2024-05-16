@@ -1,0 +1,64 @@
+<html><h3>Pattern ID :39734
+</h3><img src='113175516.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        )
+
+        &#47&#47 TODO, use registered buffer
+        causal_mask = <a id="change">paddle.tensor.triu(</a>paddle.ones((input_shape[-1], input_shape[-1]))<a id="change"> * -1e4</a><a id="change">, diagonal=1)</a>
+        if past_key_values_length &gt; 0:
+            causal_mask = paddle.concat(
+                [
+                    paddle.zeros([input_shape[-1], past_key_values_length], dtype=causal_mask.dtype),
+                    causal_mask,
+                ],
+                axis=-1,
+            )
+
+        if attention_mask is not None:
+            if len(attention_mask.shape) == 2:
+                attention_mask = attention_mask[:, None, None, :]
+            attention_mask = attention_mask + causal_mask
+        else:
+            attention_mask<a id="change"> = </a>causal_mask
+
+        &#47&#47 The tensor returned by triu not in static graph.
+        attention_mask.stop_gradient = True</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        seq_length_with_past = input_shape[-1] + past_key_values_length
+
+        <a id="change">if attention_mask is None</a>:
+            attention_mask = paddle.ones((input_shape[0], seq_length_with_past), dtype=paddle.bool)
+
+        embedding_output = self.embeddings(</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 5</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/paddlepaddle/paddlenlp/commit/d7a059b2f99e377f887c530cec97bf719730acd7#diff-6f18e3f4e6ac6957480cc4c50be585e08bc1e7724d6900d54c2e337f0525d473L382' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 113175516</div><div id='project'> Project Name: paddlepaddle/paddlenlp</div><div id='commit'> Commit Name: d7a059b2f99e377f887c530cec97bf719730acd7</div><div id='time'> Time: 2023-04-27</div><div id='author'> Author: 1435130236@qq.com</div><div id='file'> File Name: paddlenlp/transformers/opt/modeling.py</div><div id='m_class'> M Class Name: OPTModel</div><div id='n_method'> N Class Name: OPTModel</div><div id='m_method'> M Method Name: forward(10)</div><div id='n_method'> N Method Name: forward(10)</div><div id='m_parent_class'> M Parent Class: OPTPretrainedModel</div><div id='n_parent_class'> N Parent Class: OPTPretrainedModel</div><div id='m_file'> M File Name: paddlenlp/transformers/opt/modeling.py</div><div id='n_file'> N File Name: paddlenlp/transformers/opt/modeling.py</div><div id='m_start'> M Start Line: 382</div><div id='m_end'> M End Line: 415</div><div id='n_start'> N Start Line: 880</div><div id='n_end'> N End Line: 917</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                mask_shift_len = qlen - mask_len
+            else:
+                mask_shift_len = qlen
+            dec_attn_mask<a id="change"> = </a>(<a id="change">torch.triu(</a>all_ones, <a id="change">1</a><a id="change">+</a>mlen<a id="change">)</a>
+                             + torch.tril(all_ones, -mask_shift_len)).bool()[:, :, None] &#47&#47 -1
+                            &#47&#47 changed to .bool() from .byte() due to Depreciation warning
+        else:
+            dec_attn_mask = torch.triu(</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 TODO: Possibly make this more efficient (check how much things slow down)
+        &#47&#47 This part only runs when calling model in "learn" since in "act" we will
+        &#47&#47 never need padding
+        <a id="change">if </a>not <a id="change">(padding_mask is None)</a>:
+            dec_attn_mask.repeat(1,1,bsz)
+            dec_attn_mask = dec_attn_mask | padding_mask
+            &#47&#47print(&quotATTN SHAPE: &quot, dec_attn_mask.shape)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/jerrodparker20/adaptive-transformers-in-rl/commit/b5e76b7bc25d417e67143386f818caf8bb0b1d13#diff-fa6bc1f27fcb2650947162d654bbfa0b14260f02704743b3aad6d8b62878e3d4L432' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 113175513</div><div id='project'> Project Name: jerrodparker20/adaptive-transformers-in-rl</div><div id='commit'> Commit Name: b5e76b7bc25d417e67143386f818caf8bb0b1d13</div><div id='time'> Time: 2020-03-21</div><div id='author'> Author: jerrodparker20@gmail.com</div><div id='file'> File Name: StableTransformersReplication/transformer_xl.py</div><div id='m_class'> M Class Name: MemTransformerLM</div><div id='n_method'> N Class Name: MemTransformerLM</div><div id='m_method'> M Method Name: _forward(4)</div><div id='n_method'> N Method Name: _forward(3)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: StableTransformersReplication/transformer_xl.py</div><div id='n_file'> N File Name: StableTransformersReplication/transformer_xl.py</div><div id='m_start'> M Start Line: 449</div><div id='m_end'> M End Line: 465</div><div id='n_start'> N Start Line: 435</div><div id='n_end'> N End Line: 459</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    if causal:
+        i, j = q.shape[-2], k.shape[-2]
+        causal_mask<a id="change"> = </a><a id="change">torch.ones(i, j, device = q.device, dtype = torch.bool).triu(</a>j<a id="change"> - i + 1</a><a id="change">)</a>
+        causal_mask_chunks = causal_mask.split(q_bucket_size, dim = 0)
+        causal_mask_chunks = list(map(lambda t: t.split(k_bucket_size, dim = -1), causal_mask_chunks))
+
+    if exists(attn_bias):</code></pre><h3>After Change</h3><pre><code class='java'>
+            q_start_index = q_index * q_bucket_size
+            k_start_index = k_index * k_bucket_size
+
+            <a id="change">if </a>causal and <a id="change">k_start_index &gt; (q_start_index + q_chunk.shape[-2] - 1)</a>:
+                &#47&#47 if chunk is to be all masked out causally, skip
+                continue
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lucidrains/memory-efficient-attention-pytorch/commit/4be82443e060be7224be5e8247c097fcc84aa72d#diff-7de1bf8844a9aafc0b616bb3f7f2bc3701cbdab6390a8d8096e5dfea36da1708L77' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 113175511</div><div id='project'> Project Name: lucidrains/memory-efficient-attention-pytorch</div><div id='commit'> Commit Name: 4be82443e060be7224be5e8247c097fcc84aa72d</div><div id='time'> Time: 2022-03-20</div><div id='author'> Author: lucidrains@gmail.com</div><div id='file'> File Name: memory_efficient_attention_pytorch/memory_efficient_attention.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: memory_efficient_attention(9)</div><div id='n_method'> N Method Name: memory_efficient_attention(9)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: memory_efficient_attention_pytorch/memory_efficient_attention.py</div><div id='n_file'> N File Name: memory_efficient_attention_pytorch/memory_efficient_attention.py</div><div id='m_start'> M Start Line: 87</div><div id='m_end'> M End Line: 136</div><div id='n_start'> N Start Line: 114</div><div id='n_end'> N End Line: 136</div><BR>

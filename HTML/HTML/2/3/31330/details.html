@@ -1,0 +1,130 @@
+<html><h3>Pattern ID :31330
+</h3><img src='91917195.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+    sorted_out, argsort_out = lax.sort_key_val(out_token, lax.broadcasted_iota(jnp.int32, out_token.shape, dimension=2))
+    ranks = jnp.argsort(argsort_out)
+    top_p_mask = jnp.greater(<a id="change">jnp.cumsum(</a>jax.nn.softmax(sorted_out), -1<a id="change">)</a>, wctx.top_p)
+    top_p_mask = jnp.take_along_axis(top_p_mask, ranks, axis=2)
+    top_k_mask = jnp.less(ranks, wctx.top_k)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    ranks = jnp.argsort(argsort_out, -1)
+    top_k_mask = jnp.less(ranks, wctx.top_k)
+
+    cumulative_probabilities = <a id="change">jnp.cumsum(</a>jax.nn.softmax(sorted_out), -1<a id="change">)</a>
+    overflow = jnp.argmax(jnp.greater(cumulative_probabilities, wctx.top_p), -1, keepdims=True)  &#47&#47 overflow index
+    top_p_mask<a id="change"> = </a>jnp.arange(wctx.ctx.dims.sizes.vocab).reshape(1, 1, -1) &gt; overflow  &#47&#47 to shift by 1
+    top_p_mask = jnp.take_along_axis(top_p_mask, ranks, axis=2)
+
+    out_token = out_token + temp</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 8</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/homebrewnlp/homebrewnlp-jax/commit/80d8ee9e590659e0b0f6ea75367a50d2797ebf7e#diff-6bb87854f62182076b9d47e5a3fa17d5fb46826b979e3292b7ae7bef07022cf4L27' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 91917195</div><div id='project'> Project Name: homebrewnlp/homebrewnlp-jax</div><div id='commit'> Commit Name: 80d8ee9e590659e0b0f6ea75367a50d2797ebf7e</div><div id='time'> Time: 2022-05-08</div><div id='author'> Author: 39779310+ClashLuke@users.noreply.github.com</div><div id='file'> File Name: inference.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: body_fn(1)</div><div id='n_method'> N Method Name: body_fn(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: inference.py</div><div id='n_file'> N File Name: inference.py</div><div id='m_start'> M Start Line: 44</div><div id='m_end'> M End Line: 46</div><div id='n_start'> N Start Line: 27</div><div id='n_end'> N End Line: 48</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+def causal_linear_attn(q, k, v, psi = DEFAULT_PSI):
+    q = q.softmax(dim=-1)
+    k = psi(k)
+    k_cumsum = <a id="change">k.cumsum(dim=1)</a>.unsqueeze(-1)
+
+    context = torch.einsum(&quotbhnd,bhne-&gt;bhnde&quot, k, v)
+    context_cumsum = context.cumsum(dim=1)</code></pre><h3>After Change</h3><pre><code class='java'>
+def causal_linear_attn(q, k, v, psi = DEFAULT_PSI, one_kv_head = False):
+    q = q.softmax(dim=-1)
+    k = psi(k)
+    k_cumsum = <a id="change">k.cumsum(dim=1)</a>
+
+    context_einsum_eq = &quotbhnd,bhne-&gt;bhnde&quot if not one_kv_head else &quotbnd,bne-&gt;bnde&quot
+    context = torch.einsum(context_einsum_eq, k, v)
+    context_cumsum = context.cumsum(dim=1)
+
+    context<a id="change"> = </a>safe_div(context_cumsum, k_cumsum.unsqueeze(-1))
+
+    attn_einsum_eq = &quotbhnd,bhnde-&gt;bhne&quot if not one_kv_head else &quotbhnd,bnde-&gt;bhne&quot
+    attn = torch.einsum(attn_einsum_eq, q, context)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lucidrains/linear-attention-transformer/commit/be1141f1b2a0a9b6456f5f286b9d841a5bc9b0e4#diff-eee6cf669463e9683bcf9643c4b19a493056f98ded32854287144d47f02a7032L134' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 91917192</div><div id='project'> Project Name: lucidrains/linear-attention-transformer</div><div id='commit'> Commit Name: be1141f1b2a0a9b6456f5f286b9d841a5bc9b0e4</div><div id='time'> Time: 2020-06-04</div><div id='author'> Author: lucidrains@gmail.com</div><div id='file'> File Name: linear_attention_transformer/linear_attention_transformer.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: causal_linear_attn(5)</div><div id='n_method'> N Method Name: causal_linear_attn(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: linear_attention_transformer/linear_attention_transformer.py</div><div id='n_file'> N File Name: linear_attention_transformer/linear_attention_transformer.py</div><div id='m_start'> M Start Line: 137</div><div id='m_end'> M End Line: 142</div><div id='n_start'> N Start Line: 139</div><div id='n_end'> N End Line: 151</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    context_einsum_eq = &quotbhund,bhune-&gt;bhude&quot if not one_kv_head else &quotbund,bune-&gt;bude&quot
+    context = torch.einsum(context_einsum_eq, b_k, b_v)
+    context_cumsum = <a id="change">context.cumsum(dim=-3)</a>
+
+    context = safe_div(context_cumsum, b_k_cumsum.unsqueeze(-1))
+
+    if buckets != n:</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    context_einsum_eq = &quotbhund,bhune-&gt;bhude&quot if not one_kv_head else &quotbund,bune-&gt;bude&quot
+    context = torch.einsum(context_einsum_eq, b_k, b_v)
+    context_cumsum = <a id="change">context.cumsum(dim=-3)</a>.type(dtype)
+
+    context = safe_div(context_cumsum, b_k_cumsum.unsqueeze(-1))
+
+    if bucket_size != 1:
+        context = F.pad(context, (0, 0, 0, 0, 1, 0), value=0.)
+        seq_dim = 1 if one_kv_head else 2
+        context<a id="change">, _ = </a>split_at_index(seq_dim, -1, context)
+
+    attn_einsum_eq = &quotbhund,bhude-&gt;bhune&quot if not one_kv_head else &quotbhund,bude-&gt;bhune&quot
+    attn = torch.einsum(attn_einsum_eq, b_q, context)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lucidrains/linear-attention-transformer/commit/44961eaab5473b3335bce02441bfd50d076d7af0#diff-eee6cf669463e9683bcf9643c4b19a493056f98ded32854287144d47f02a7032L156' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 91917214</div><div id='project'> Project Name: lucidrains/linear-attention-transformer</div><div id='commit'> Commit Name: 44961eaab5473b3335bce02441bfd50d076d7af0</div><div id='time'> Time: 2020-06-05</div><div id='author'> Author: lucidrains@gmail.com</div><div id='file'> File Name: linear_attention_transformer/linear_attention_transformer.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: causal_linear_attn(6)</div><div id='n_method'> N Method Name: causal_linear_attn(6)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: linear_attention_transformer/linear_attention_transformer.py</div><div id='n_file'> N File Name: linear_attention_transformer/linear_attention_transformer.py</div><div id='m_start'> M Start Line: 157</div><div id='m_end'> M End Line: 177</div><div id='n_start'> N Start Line: 187</div><div id='n_end'> N End Line: 208</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        q = torch.nan_to_num(torch.reciprocal(p), posinf=0)
+        if not self.training:
+            q = q.double()
+        s = <a id="change">torch.cumsum(</a>q<a id="change">, dim=-1)</a>
+        bias, _ = torch.cummax(s * ~mask, dim=-1)
+        s = torch.ceil(s - bias - eps)
+        s = torch.cat((s[..., :1] * 0, s), dim=-1)
+        pulse_pos = torch.ge(s[..., 1:] - s[..., :-1], 1)</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        &#47&#47 Compute phase.
+        q = torch.nan_to_num(torch.reciprocal(p), posinf=0)
+        s = <a id="change">torch.cumsum(</a>q.double()<a id="change">, dim=-1)</a>
+        bias, _ = torch.cummax(s * ~mask, dim=-1)
+        phase = (s - bias).to(p.dtype)
+
+        if self.voiced_region == "pulse":
+            r<a id="change"> = </a>torch.ceil(phase)
+            r = torch.cat((r[..., :1] * 0, r), dim=-1)
+            pulse_pos = torch.ge(r[..., 1:] - r[..., :-1], 1)
+            e = torch.zeros(*signal_shape, device=p.device, requires_grad=False)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/sp-nitech/diffsptk/commit/e0e6f861ae0049d8676f26e0b9bc6629c4a7dfd4#diff-67f9ab0b92a7f985bcadf886c56879784cffad18aeaf33c4d1709e836ff2807fL51' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 91917212</div><div id='project'> Project Name: sp-nitech/diffsptk</div><div id='commit'> Commit Name: e0e6f861ae0049d8676f26e0b9bc6629c4a7dfd4</div><div id='time'> Time: 2022-12-13</div><div id='author'> Author: takenori.yoshimura24@gmail.com</div><div id='file'> File Name: diffsptk/core/excite.py</div><div id='m_class'> M Class Name: ExcitationGeneration</div><div id='n_method'> N Class Name: ExcitationGeneration</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: diffsptk/core/excite.py</div><div id='n_file'> N File Name: diffsptk/core/excite.py</div><div id='m_start'> M Start Line: 100</div><div id='m_end'> M End Line: 111</div><div id='n_start'> N Start Line: 97</div><div id='n_end'> N End Line: 124</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    return values, index
+
+def cumsum_exclusive(t):
+    return <a id="change">F.pad(t, (0, 0, 1, 0)).cumsum(dim=-2)</a>[..., :-1, :]
+
+def cast_tuple(el):
+    return el if isinstance(el, tuple) else (el,)</code></pre><h3>After Change</h3><pre><code class='java'>
+    num_pad_dims = - dim - 1
+    pre_padding = (0, 0) * num_pad_dims
+    pre_slice   = (slice(None),) * num_pad_dims
+    padded_t<a id="change"> = </a><a id="change">F.pad(t, (*pre_padding, 1, 0)).cumsum(dim=dim)</a>
+    return padded_t[(..., slice(None, -1), *pre_slice)]
+
+def cast_tuple(el):
+    return el if isinstance(el, tuple) else (el,)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lucidrains/mixture-of-experts/commit/25f1394809601852ccc9c81c5d79658d1488014c#diff-d2fcbf22676a56b8a4ffda1a92c50fbda935ece9420ee77b5278fc7df61da574L21' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 91917203</div><div id='project'> Project Name: lucidrains/mixture-of-experts</div><div id='commit'> Commit Name: 25f1394809601852ccc9c81c5d79658d1488014c</div><div id='time'> Time: 2020-07-17</div><div id='author'> Author: lucidrains@gmail.com</div><div id='file'> File Name: mixture_of_experts/mixture_of_experts.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: cumsum_exclusive(2)</div><div id='n_method'> N Method Name: cumsum_exclusive(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: mixture_of_experts/mixture_of_experts.py</div><div id='n_file'> N File Name: mixture_of_experts/mixture_of_experts.py</div><div id='m_start'> M Start Line: 21</div><div id='m_end'> M End Line: 22</div><div id='n_start'> N Start Line: 21</div><div id='n_end'> N End Line: 27</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+        &#47&#47 for automatically offsetting unique category ids to the correct position in the categories embedding table
+
+        categories_offset = <a id="change">F.pad(torch.tensor(list(categories)), (1, 0), value = 0).cumsum(dim = -1)</a>[:-1]
+        self.register_buffer(&quotcategories_offset&quot, categories_offset)
+
+        self.categorical_embeds = nn.Embedding(self.num_unique_categories, dim)</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 for automatically offsetting unique category ids to the correct position in the categories embedding table
+
+        categories_offset = F.pad(torch.tensor(list(categories)), (1, 0), value = num_special_tokens)
+        categories_offset<a id="change"> = </a><a id="change">categories_offset.cumsum(dim = -1)</a>[:-1]
+        self.register_buffer(&quotcategories_offset&quot, categories_offset)
+
+        &#47&#47 continuous</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lucidrains/tab-transformer-pytorch/commit/f831f2b36e2cf18dbf601b0fc1152154330bf6bb#diff-d87dc12538c5ed85349330c1ea686aed85875355e3b485c6d2ab4ae1d54231c6L106' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 91917187</div><div id='project'> Project Name: lucidrains/tab-transformer-pytorch</div><div id='commit'> Commit Name: f831f2b36e2cf18dbf601b0fc1152154330bf6bb</div><div id='time'> Time: 2020-12-20</div><div id='author'> Author: lucidrains@gmail.com</div><div id='file'> File Name: tab_transformer_pytorch/tab_transformer_pytorch.py</div><div id='m_class'> M Class Name: TabTransformer</div><div id='n_method'> N Class Name: TabTransformer</div><div id='m_method'> M Method Name: __init__(1)</div><div id='n_method'> N Method Name: __init__(1)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: tab_transformer_pytorch/tab_transformer_pytorch.py</div><div id='n_file'> N File Name: tab_transformer_pytorch/tab_transformer_pytorch.py</div><div id='m_start'> M Start Line: 126</div><div id='m_end'> M End Line: 133</div><div id='n_start'> N Start Line: 127</div><div id='n_end'> N End Line: 139</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+def _get_frame_counts(samples):
+    samples.compute_metadata()
+
+    frame_counts = <a id="change">np.cumsum(
+        </a>[(fc or 0) for fc in samples.values("metadata.total_frame_count")]<a id="change">
+    )</a>
+
+    total_frame_count = frame_counts[-1] if frame_counts.size &gt; 0 else 0
+
+    return frame_counts, total_frame_count</code></pre><h3>After Change</h3><pre><code class='java'>
+        samples.compute_metadata()
+        frame_counts = samples.values("metadata.total_frame_count")
+
+    frame_counts<a id="change"> = </a><a id="change">np.cumsum(</a>[(fc or 0) for fc in frame_counts]<a id="change">)</a>
+    total_frame_count = frame_counts[-1] if frame_counts.size &gt; 0 else 0
+
+    return frame_counts, total_frame_count
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/voxel51/fiftyone/commit/3cb099c7a7e1d455ad2d1c3cd47671370928ba44#diff-13100db40bf4740e3fc3ea44ae6c6d9498102a7da42b58a9a539173965e1dc24L510' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 91917206</div><div id='project'> Project Name: voxel51/fiftyone</div><div id='commit'> Commit Name: 3cb099c7a7e1d455ad2d1c3cd47671370928ba44</div><div id='time'> Time: 2021-09-09</div><div id='author'> Author: brimoor@umich.edu</div><div id='file'> File Name: fiftyone/core/models.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: _get_frame_counts(1)</div><div id='n_method'> N Method Name: _get_frame_counts(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: fiftyone/core/models.py</div><div id='n_file'> N File Name: fiftyone/core/models.py</div><div id='m_start'> M Start Line: 511</div><div id='m_end'> M End Line: 515</div><div id='n_start'> N Start Line: 540</div><div id='n_end'> N End Line: 546</div><BR>

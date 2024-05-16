@@ -1,0 +1,28 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            mmg = mask[i].squeeze()
+            data[i] = cv2.warpAffine(img, M, (W, H), flags=cv2.INTER_CUBIC).reshape(C, H, W)
+            mask[i] = cv2.warpAffine(mmg, M, (W, H), flags=cv2.INTER_CUBIC).reshape(C, H, W)
+            T_aug += [<a id="change">torch.from_numpy(</a>get_transform(0, 0, -rot)<a id="change">)</a>]
+        else:
+            T_aug += [torch.from_numpy(np.identity(4, dtype=np.float32))]
+    batch[&quotdata&quot] = torch.from_numpy(data)</code></pre><h3>After Change</h3><pre><code class='java'>
+def augmentBatch(batch, config):
+    rot_max = config[&quotaugmentation&quot][&quotrot_max&quot]
+    batch_size = config[&quotbatch_size&quot]
+    window_size<a id="change"> = </a>config[&quotwindow_size&quot]
+    data = batch[&quotdata&quot].numpy()
+    mask = batch[&quotmask&quot].numpy()
+    T_21 = batch[&quotT_21&quot].numpy()
+    _, C, H, W = data.shape
+    for i in range(batch_size):
+        rot = np.random.uniform(-rot_max, rot_max)
+        T = get_transform(0, 0, -rot)
+        <a id="change">for j</a> in <a id="change">range(</a>1, window_size<a id="change">):
+            </a>k<a id="change"> = j</a><a id="change"> + </a>i * window_size
+            img<a id="change"> = </a>data[k].squeeze()
+            mmg = mask[k].squeeze()
+            M = cv2.getRotationMatrix2D((W / 2, H / 2), rot * 180 * j / np.pi, 1.0)
+            data[i] = cv2.warpAffine(img, M, (W, H), flags=cv2.INTER_CUBIC).reshape(C, H, W)</code></pre>

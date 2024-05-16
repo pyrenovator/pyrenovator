@@ -1,0 +1,42 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        qweight = torch.quantize_per_channel(weights, qparams[0], qparams[1], axis=0, dtype=torch.quint8)
+        qemb = nnq.EmbeddingBag(num_embeddings=num_embeddings, embedding_dim=embedding_dim,
+                                include_last_offset=True, mode=&quotsum&quot, _weight=qweight)
+        <a id="change">qemb(</a>indices, offsets<a id="change">)</a>
+
+        &#47&#47 Ensure the module has the correct weights
+        self.assertEqual(qweight, qemb.weight())
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        offsets = torch.cat((offsets, torch.tensor([indices.size(0)], dtype=torch.long)), 0)
+        weights = torch.from_numpy((np.random.random_sample((num_embeddings, embedding_dim)) + 1).astype(np.float32))
+
+        <a id="change">for </a><a id="change">qdtype</a> in <a id="change">[</a>torch.quint8, torch.quint4x2<a id="change"></a>]<a id="change">:
+            </a>obs = PerChannelMinMaxObserver(dtype=qdtype, qscheme=torch.per_channel_affine_float_qparams, ch_axis=0)
+            obs(weights)
+            &#47&#47 Get the scale and zero point for the weight tensor
+            qparams = obs.calculate_qparams()
+            &#47&#47 Quantize the weights to 8bits
+            qweight = torch.quantize_per_channel(weights, qparams[0], qparams[1], axis=0, dtype=qdtype)
+            qemb = nnq.EmbeddingBag(num_embeddings=num_embeddings, embedding_dim=embedding_dim,
+                                    include_last_offset=True, mode=&quotsum&quot, _weight=qweight, dtype=qdtype)
+            <a id="change">qemb(</a>indices, offsets<a id="change">)</a>
+
+            &#47&#47 Ensure the module has the correct weights
+            self.assertEqual(qweight, qemb.weight())
+
+            w_packed = qemb._packed_params._packed_weight
+            module_out = qemb(indices, offsets)
+
+            &#47&#47 Call the qembedding_bag operator directly
+            if qdtype == torch.quint8:
+                ref = torch.ops.quantized.embedding_bag_byte(w_packed, indices, offsets, mode=0,
+                                                             per_sample_weights=None,
+                                                             include_last_offset=True)
+            else:
+                ref<a id="change"> = </a>torch.ops.quantized.embedding_bag_4bit(w_packed, indices, offsets, mode=0,
+                                                             per_sample_weights=None,
+                                                             include_last_offset=True)
+</code></pre>

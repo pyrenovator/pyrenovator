@@ -1,0 +1,89 @@
+<html><h3>Pattern ID :40767
+</h3><img src='115129500.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    It also has a retry mechanism in case connection fails.
+    The args and kwargs are passed to fsspec.open, except `use_auth_token` which is used for queries to private repos on huggingface.co
+    
+    <a id="change">if fsspec.get_fs_token_paths(file)[0].protocol == "https"</a>:
+        kwargs["headers"]<a id="change"> = </a>get_authentication_headers_for_url(file, use_auth_token=use_auth_token)
+    file_obj = fsspec.open(file, mode=mode, *args, **kwargs).open()
+    _add_retries_to_file_obj_read_method(file_obj)
+    return file_obj</code></pre><h3>After Change</h3><pre><code class='java'>
+    
+    main_hop, *rest_hops = file.split("::")
+    &#47&#47 add headers and cookies for authentication on the HF Hub and for Google Drive
+    <a id="change">if </a>not rest_hops and <a id="change">(main_hop.startswith("http://") or main_hop.startswith("https://"))</a>:
+        file, new_kwargs = _prepare_http_url_kwargs(file, use_auth_token=use_auth_token)
+    elif rest_hops and (rest_hops[0].startswith("http://") or rest_hops[0].startswith("https://")):
+        <a id="change">url</a><a id="change"> = </a>rest_hops[0]
+        <a id="change">url</a><a id="change">, http_kwargs = </a>_prepare_http_url_kwargs(url, use_auth_token=use_auth_token)
+        new_kwargs<a id="change"> = </a><a id="change">{</a>"https": http_kwargs<a id="change">}</a>
+        file<a id="change"> = "::".join(</a><a id="change">[</a>main_hop, <a id="change">url</a>, *rest_hops[1:]<a id="change"></a>]<a id="change">)</a>
+    else:
+        new_kwargs = {}
+    kwargs = {**kwargs, **new_kwargs}
+    file_obj = fsspec.open(file, mode=mode, *args, **kwargs).open()</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 14</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/huggingface/datasets/commit/d30d25d3dad590dffe2d3004b4b301dd562dd4f2#diff-4c0de8006f7290eb614aea915a81e7f9dd9d42eda88ff80f2d13cdfe976a60ebL201' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 115129500</div><div id='project'> Project Name: huggingface/datasets</div><div id='commit'> Commit Name: d30d25d3dad590dffe2d3004b4b301dd562dd4f2</div><div id='time'> Time: 2021-11-12</div><div id='author'> Author: 42851186+lhoestq@users.noreply.github.com</div><div id='file'> File Name: src/datasets/utils/streaming_download_manager.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: xopen(2)</div><div id='n_method'> N Method Name: xopen(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/datasets/utils/streaming_download_manager.py</div><div id='n_file'> N File Name: src/datasets/utils/streaming_download_manager.py</div><div id='m_start'> M Start Line: 201</div><div id='m_end'> M End Line: 210</div><div id='n_start'> N Start Line: 269</div><div id='n_end'> N End Line: 287</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        yield from Path(main_hop).glob(pattern)
+    else:
+        &#47&#47 globbing inside a zip in a private repo requires authentication
+        <a id="change">if </a>rest_hops and <a id="change">fsspec.get_fs_token_paths(rest_hops[0])[0].protocol == "https"</a>:
+            storage_options<a id="change"> = </a>{
+                "headers": get_authentication_headers_for_url(rest_hops[0], use_auth_token=use_auth_token)
+            }
+        else:</code></pre><h3>After Change</h3><pre><code class='java'>
+        yield from Path(main_hop).glob(pattern)
+    else:
+        &#47&#47 globbing inside a zip in a private repo requires authentication
+        <a id="change">if </a>rest_hops and <a id="change">(rest_hops[0].startswith("http://") or rest_hops[0].startswith("https://"))</a>:
+            <a id="change">url</a><a id="change"> = </a>rest_hops[0]
+            url<a id="change">, kwargs = </a>_prepare_http_url_kwargs(url, use_auth_token=use_auth_token)
+            storage_options<a id="change"> = </a><a id="change">{</a>"https": kwargs<a id="change">}</a>
+            posix_path<a id="change"> = "::".join(</a><a id="change">[</a>main_hop, url, *rest_hops[1:]<a id="change"></a>]<a id="change">)</a>
+        else:
+            storage_options = None
+        fs, *_ = fsspec.get_fs_token_paths(xjoin(posix_path, pattern), storage_options=storage_options)
+        &#47&#47 - If there&quots no "*" in the pattern, get_fs_token_paths() doesn&quott do any pattern matching</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/huggingface/datasets/commit/d30d25d3dad590dffe2d3004b4b301dd562dd4f2#diff-4c0de8006f7290eb614aea915a81e7f9dd9d42eda88ff80f2d13cdfe976a60ebL259' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 115129517</div><div id='project'> Project Name: huggingface/datasets</div><div id='commit'> Commit Name: d30d25d3dad590dffe2d3004b4b301dd562dd4f2</div><div id='time'> Time: 2021-11-12</div><div id='author'> Author: 42851186+lhoestq@users.noreply.github.com</div><div id='file'> File Name: src/datasets/utils/streaming_download_manager.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: xpathglob(3)</div><div id='n_method'> N Method Name: xpathglob(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/datasets/utils/streaming_download_manager.py</div><div id='n_file'> N File Name: src/datasets/utils/streaming_download_manager.py</div><div id='m_start'> M Start Line: 275</div><div id='m_end'> M End Line: 281</div><div id='n_start'> N Start Line: 354</div><div id='n_end'> N End Line: 361</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    It also has a retry mechanism in case connection fails.
+    The args and kwargs are passed to fsspec.open, except `use_auth_token` which is used for queries to private repos on huggingface.co
+    
+    <a id="change">if fsspec.get_fs_token_paths(file)[0].protocol == "https"</a>:
+        kwargs["headers"]<a id="change"> = </a>get_authentication_headers_for_url(file, use_auth_token=use_auth_token)
+    file_obj = fsspec.open(file, mode=mode, *args, **kwargs).open()
+    _add_retries_to_file_obj_read_method(file_obj)
+    return file_obj</code></pre><h3>After Change</h3><pre><code class='java'>
+    
+    main_hop, *rest_hops = file.split("::")
+    &#47&#47 add headers and cookies for authentication on the HF Hub and for Google Drive
+    <a id="change">if </a>not rest_hops and <a id="change">(main_hop.startswith("http://") or main_hop.startswith("https://"))</a>:
+        file, new_kwargs = _prepare_http_url_kwargs(file, use_auth_token=use_auth_token)
+    elif rest_hops and (rest_hops[0].startswith("http://") or rest_hops[0].startswith("https://")):
+        <a id="change">url</a><a id="change"> = </a>rest_hops[0]
+        url<a id="change">, http_kwargs = </a>_prepare_http_url_kwargs(url, use_auth_token=use_auth_token)
+        new_kwargs<a id="change"> = </a><a id="change">{</a>"https": http_kwargs<a id="change">}</a>
+        file<a id="change"> = "::".join(</a><a id="change">[</a>main_hop, url, *rest_hops[1:]<a id="change"></a>]<a id="change">)</a>
+    else:
+        new_kwargs = {}
+    kwargs = {**kwargs, **new_kwargs}
+    file_obj = fsspec.open(file, mode=mode, *args, **kwargs).open()</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/huggingface/datasets/commit/d30d25d3dad590dffe2d3004b4b301dd562dd4f2#diff-4c0de8006f7290eb614aea915a81e7f9dd9d42eda88ff80f2d13cdfe976a60ebL201' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 115129503</div><div id='project'> Project Name: huggingface/datasets</div><div id='commit'> Commit Name: d30d25d3dad590dffe2d3004b4b301dd562dd4f2</div><div id='time'> Time: 2021-11-12</div><div id='author'> Author: 42851186+lhoestq@users.noreply.github.com</div><div id='file'> File Name: src/datasets/utils/streaming_download_manager.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: xopen(2)</div><div id='n_method'> N Method Name: xopen(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/datasets/utils/streaming_download_manager.py</div><div id='n_file'> N File Name: src/datasets/utils/streaming_download_manager.py</div><div id='m_start'> M Start Line: 201</div><div id='m_end'> M End Line: 210</div><div id='n_start'> N Start Line: 269</div><div id='n_end'> N End Line: 287</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        return glob.glob(main_hop, recursive=recursive)
+    else:
+        &#47&#47 globbing inside a zip in a private repo requires authentication
+        <a id="change">if </a>rest_hops and <a id="change">fsspec.get_fs_token_paths(rest_hops[0])[0].protocol == "https"</a>:
+            storage_options<a id="change"> = </a>{
+                "https": {"headers": get_authentication_headers_for_url(rest_hops[0], use_auth_token=use_auth_token)}
+            }
+        else:</code></pre><h3>After Change</h3><pre><code class='java'>
+        return glob.glob(main_hop, recursive=recursive)
+    else:
+        &#47&#47 globbing inside a zip in a private repo requires authentication
+        <a id="change">if </a>rest_hops and <a id="change">(rest_hops[0].startswith("http://") or rest_hops[0].startswith("https://"))</a>:
+            <a id="change">url</a><a id="change"> = </a>rest_hops[0]
+            url<a id="change">, kwargs = </a>_prepare_http_url_kwargs(url, use_auth_token=use_auth_token)
+            storage_options<a id="change"> = </a><a id="change">{</a>"https": kwargs<a id="change">}</a>
+            urlpath<a id="change"> = "::".join(</a><a id="change">[</a>main_hop, url, *rest_hops[1:]<a id="change"></a>]<a id="change">)</a>
+        else:
+            storage_options = None
+        fs, *_ = fsspec.get_fs_token_paths(urlpath, storage_options=storage_options)
+        &#47&#47 - If there&quots no "*" in the pattern, get_fs_token_paths() doesn&quott do any pattern matching</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/huggingface/datasets/commit/d30d25d3dad590dffe2d3004b4b301dd562dd4f2#diff-4c0de8006f7290eb614aea915a81e7f9dd9d42eda88ff80f2d13cdfe976a60ebL228' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 115129494</div><div id='project'> Project Name: huggingface/datasets</div><div id='commit'> Commit Name: d30d25d3dad590dffe2d3004b4b301dd562dd4f2</div><div id='time'> Time: 2021-11-12</div><div id='author'> Author: 42851186+lhoestq@users.noreply.github.com</div><div id='file'> File Name: src/datasets/utils/streaming_download_manager.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: xglob(1)</div><div id='n_method'> N Method Name: xglob(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/datasets/utils/streaming_download_manager.py</div><div id='n_file'> N File Name: src/datasets/utils/streaming_download_manager.py</div><div id='m_start'> M Start Line: 244</div><div id='m_end'> M End Line: 250</div><div id='n_start'> N Start Line: 322</div><div id='n_end'> N End Line: 329</div><BR>

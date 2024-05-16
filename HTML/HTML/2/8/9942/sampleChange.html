@@ -1,0 +1,74 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                &#47&#47 Wait the job to be started
+                status = spot_utils.get_job_status(self.backend,
+                                                   self.cluster_name)
+                <a id="change">while </a>(status is None or status in [
+                        job_lib.JobStatus.INIT,
+                        job_lib.JobStatus.PENDING,
+                ])<a id="change">:
+                    </a>time.sleep(spot_utils.JOB_STARTED_STATUS_CHECK_GAP_SECONDS)
+                    status = spot_utils.get_job_status(self.backend,
+                                                       self.cluster_name)
+                launch_time = spot_utils.get_job_timestamp(self.backend,</code></pre><h3>After Change</h3><pre><code class='java'>
+                if cluster_status != global_user_state.ClusterStatus.UP:
+                    &#47&#47 The cluster can be preempted before the job is launched.
+                    &#47&#47 Break to let the retry launch kick in.
+                    <a id="change">logger.info(&quotThe cluster is preempted before the job &quot
+                                &quotstarts.&quot</a><a id="change">)</a>
+                    &#47&#47 TODO(zhwu): we should recover the preemption with the
+                    &#47&#47 recovery strategy instead of the current while loop.
+                    retry_launch = True
+                    break
+
+                try:
+                    status = spot_utils.get_job_status(self.backend,
+                                                       self.cluster_name)
+                except Exception as e:  &#47&#47 pylint: disable=broad-except
+                    &#47&#47 If any unexpected error happens, retry the job checking
+                    &#47&#47 loop.
+                    &#47&#47 Note: the CommandError is already handled in the
+                    &#47&#47 get_job_status, so it should not happen here.
+                    &#47&#47 TODO(zhwu): log the unexpected error to usage collection
+                    &#47&#47 for future debugging.
+                    logger.info(f&quotUnexpected exception: {e}\nFailed to get the &quot
+                                &quotjob status. Retrying.&quot)
+                    continue
+
+                &#47&#47 Check the job status until it is not in initialized status
+                if status not in (None, job_lib.JobStatus.INIT,
+                                  job_lib.JobStatus.PENDING):
+                    try:
+                        launch_time = spot_utils.get_job_timestamp(
+                            self.backend, self.cluster_name, get_end_time=False)
+                        return launch_time
+                    except Exception as e:  &#47&#47 pylint: disable=broad-except
+                        &#47&#47 If we failed to get the job timestamp, we will retry
+                        &#47&#47 job checking loop.
+                        <a id="change">logger.info(f&quotUnexpected Exception: {e}\nFailed to get &quot
+                                    &quotthe job start timestamp. Retrying.&quot</a><a id="change">)</a>
+                        continue
+                &#47&#47 Wait for the job to be started
+                time.sleep(spot_utils.JOB_STARTED_STATUS_CHECK_GAP_SECONDS)
+
+            assert retry_launch
+
+            self.terminate_cluster()
+            if max_retry is not None and retry_cnt &gt;= max_retry:
+                &#47&#47 Retry forever if max_retry is None.
+                if raise_on_failure:
+                    with ux_utils.print_exception_no_traceback():
+                        raise exceptions.ResourcesUnavailableError(
+                            &quotFailed to launch the spot cluster after &quot
+                            f&quot{max_retry} retries.&quot) from exception
+                else:
+                    return None
+            gap_seconds = backoff.current_backoff()
+            <a id="change">logger.info(&quotRetrying to launch the spot cluster in &quot
+                        f&quot{gap_seconds:.1f} seconds.&quot</a><a id="change">)</a>
+            time.sleep(gap_seconds)
+
+
+class FailoverStrategyExecutor(StrategyExecutor, name=&quotFAILOVER&quot, default=True):</code></pre>

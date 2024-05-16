@@ -1,0 +1,109 @@
+<html><h3>Pattern ID :11946
+</h3><img src='40510378.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+		self.head = SVDHead(args=args)
+
+	def forward(self, src, tgt, T_gt=None, prefix="train"):
+		feat1 = <a id="change">src[..., :3].transpose(1</a>, <a id="change">2</a><a id="change">)</a>
+		feat2 = tgt[..., :3].transpose(1, 2)
+		src = src[..., :3]
+		tgt = tgt[..., :3]
+
+		src_embedding = self.emb_nn(feat1)
+		tgt_embedding = self.emb_nn(feat2)
+		src_embedding_p, tgt_embedding_p = self.pointer(src_embedding, tgt_embedding)
+		src_embedding = src_embedding + src_embedding_p
+		tgt_embedding = tgt_embedding + tgt_embedding_p
+
+		scores = torch.matmul(src_embedding.transpose(2, 1).contiguous(), tgt_embedding) / math.sqrt(self.emb_dims)
+		scores = torch.softmax(scores, dim=2)
+		&#47&#47 b x points x points
+		feat1_corr<a id="change"> = </a>torch.matmul(feat2, <a id="change">scores.transpose(2, 1).contiguous()</a>)
+		rotation_ab, translation_ab = self.head(feat1, feat1_corr)
+
+		T_12 = rt_to_transformation(rotation_ab, translation_ab.unsqueeze(2))</code></pre><h3>After Change</h3><pre><code class='java'>
+        tgt_embedding = tgt_embedding + tgt_embedding_p
+
+        rotation_ab, translation_ab = self.head(src_embedding, tgt_embedding, src, tgt)
+        if <a id="change">self.cycle</a>:
+            rotation_ba<a id="change">, translation_ba = </a>self.head(tgt_embedding, src_embedding, tgt, src)
+
+        else:
+            rotation_ba<a id="change"> = rotation_ab.transpose(2</a><a id="change">, 1).contiguous()</a>
+            translation_ba<a id="change"> = </a>-torch.matmul(rotation_ba, translation_ab.unsqueeze(2)).squeeze(2)
+        
+        T_12 = rt_to_transformation(rotation_ab, translation_ab.unsqueeze(2))
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 8</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/paul007pl/mvp_benchmark/commit/cb5622fec6ad947b57a83033563a402533978c61#diff-b0b2731ff940d2b158077f966e3841337bc29d9303d97f5bbc31253fe6eaf136L270' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 40510378</div><div id='project'> Project Name: paul007pl/mvp_benchmark</div><div id='commit'> Commit Name: cb5622fec6ad947b57a83033563a402533978c61</div><div id='time'> Time: 2021-07-12</div><div id='author'> Author: panliang_de2007@qq.com</div><div id='file'> File Name: registration/models/dcp.py</div><div id='m_class'> M Class Name: Model</div><div id='n_method'> N Class Name: Model</div><div id='m_method'> M Method Name: forward(5)</div><div id='n_method'> N Method Name: forward(5)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: registration/models/dcp.py</div><div id='n_file'> N File Name: registration/models/dcp.py</div><div id='m_start'> M Start Line: 270</div><div id='m_end'> M End Line: 294</div><div id='n_start'> N Start Line: 394</div><div id='n_end'> N End Line: 425</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            interval = 16
+            idx = torch.arange(0,T,interval)
+            rpn_inputs = inputs[:,:,idx]
+            rpn_inputs<a id="change"> = </a><a id="change">rpn_inputs.transpose(1,2).contiguous()</a>.view(N*(T//interval),C,H,W)
+            with torch.no_grad():
+                proposals = rpn(rpn_inputs)
+            proposals = proposals.view(N,T//interval,10,4)</code></pre><h3>After Change</h3><pre><code class='java'>
+    accuracies = AverageMeter()
+
+    end_time = time.time()
+    for <a id="change">i</a>, (inputs, targets) in enumerate(data_loader):
+        data_time.update(time.time() - end_time)
+        targets = targets.to(device, non_blocking=True)
+        if rpn is not None:
+            &quot&quot&quot
+                There was an unexpected CUDNN_ERROR when len(rpn_inputs) is
+                decrased.
+            &quot&quot&quot
+            N, C, T, H, W = inputs.size()
+            if i == 0:
+                max_N = N
+            interval = 16
+            &#47&#47 sample frames for RPN
+            sample = torch.arange(0,T,interval)
+            rpn_inputs = <a id="change">inputs[:,:,sample].transpose(1,2).contiguous()</a>
+            rpn_inputs<a id="change"> = </a>rpn_inputs.view(-1,C,H,W)
+            if len(inputs) &lt; max_N:
+                print("Modified from {} to {}".format(len(inputs), max_N))
+                rpn_inputs<a id="change"> = </a>torch.cat((rpn_inputs, rpn_inputs[:(max_N-len(inputs))*(T//interval)]))
+            with torch.no_grad():
+                proposals = rpn(rpn_inputs)
+            proposals = proposals.view(-1,T//interval,10,4)
+            if len(inputs) &lt; max_N:
+                proposals<a id="change"> = </a>proposals[:len(inputs)]
+            outputs = model(inputs, proposals.detach())
+            &#47&#47 update to the largest batch_size
+            max_N = max(N, max_N)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/jd730/strg/commit/439d8eb70d35c5cc16fdabda09a67e2149af8c8a#diff-2b28d1dcda2cd70d29d3251359adce0fbfde60edb53108cba1a284ee0d39e256L24' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 40510379</div><div id='project'> Project Name: jd730/strg</div><div id='commit'> Commit Name: 439d8eb70d35c5cc16fdabda09a67e2149af8c8a</div><div id='time'> Time: 2020-06-12</div><div id='author'> Author: jdhwang730@gmail.com</div><div id='file'> File Name: training.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train_epoch(12)</div><div id='n_method'> N Method Name: train_epoch(12)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: training.py</div><div id='n_file'> N File Name: training.py</div><div id='m_start'> M Start Line: 57</div><div id='m_end'> M End Line: 62</div><div id='n_start'> N Start Line: 50</div><div id='n_end'> N End Line: 76</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                interval = 16
+                idx = torch.arange(0,T,interval)
+                rpn_inputs = inputs[:,:,idx]
+                rpn_inputs<a id="change"> = </a><a id="change">rpn_inputs.transpose(1,2).contiguous()</a>.view(N*(T//interval),C,H,W)
+                print(rpn_inputs.shape)
+                with torch.no_grad():
+                    proposals = rpn(rpn_inputs)</code></pre><h3>After Change</h3><pre><code class='java'>
+    end_time = time.time()
+
+    with torch.no_grad():
+        for <a id="change">i</a>, (inputs, targets) in enumerate(data_loader):
+            data_time.update(time.time() - end_time)
+            targets = targets.to(device, non_blocking=True)
+            if rpn is not None:
+                &quot&quot&quot
+                    There was an unexpected CUDNN_ERROR when len(rpn_inputs) is
+                    decrased.
+                &quot&quot&quot
+
+                T = inputs.shape[2]
+                N, C, T, H, W = inputs.size()
+                if i == 0:
+                    max_N<a id="change"> = </a>N
+                interval = 16
+                &#47&#47 sample frames for RPN
+                idx = torch.arange(0,T,interval)
+                rpn_inputs = <a id="change">inputs[:,:,idx].transpose(1,2).contiguous()</a>
+                rpn_inputs<a id="change"> = </a>rpn_inputs.view(-1,C,H,W)
+                if len(inputs) &lt; max_N:
+                    print("Modified from {} to {}".format(len(inputs), max_N))
+                    rpn_inputs<a id="change"> = </a>torch.cat((rpn_inputs, rpn_inputs[:(max_N-len(inputs))*(T//interval)]))
+                with torch.no_grad():
+                    proposals = rpn(rpn_inputs)
+                proposals = proposals.view(-1,T//interval,10,4)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/jd730/strg/commit/b98d2a6a9e626ae8be88646109eca0d53f1f4af5#diff-d8dc951a58d6c06dd3d6f87ac1f2cfb94e6ce5b092447fcbe6aeef79292976f2L11' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 40510370</div><div id='project'> Project Name: jd730/strg</div><div id='commit'> Commit Name: b98d2a6a9e626ae8be88646109eca0d53f1f4af5</div><div id='time'> Time: 2020-06-12</div><div id='author'> Author: jdhwang730@gmail.com</div><div id='file'> File Name: validation.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: val_epoch(9)</div><div id='n_method'> N Method Name: val_epoch(9)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: validation.py</div><div id='n_file'> N File Name: validation.py</div><div id='m_start'> M Start Line: 40</div><div id='m_end'> M End Line: 49</div><div id='n_start'> N Start Line: 34</div><div id='n_end'> N End Line: 62</div><BR>

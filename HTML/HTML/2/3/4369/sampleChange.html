@@ -1,0 +1,21 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    if avg_rxx:
+        diag = Rxx.diagonal(dim1=-2, dim2=-1)
+        diag[..., :] = diag.mean(-1, keepdim=True)
+    R_inv = <a id="change">torch.inverse(</a>Rxx<a id="change">)</a>
+    &#47&#47 Manual way
+    w = torch.einsum("...nm,...m-&gt;...n", R_inv, ifc)
+    Y = torch.einsum("...fn,...fn-&gt;...f", Xw, w)
+    &#47&#47 Using torch module (which expects real valued flattened input)</code></pre><h3>After Change</h3><pre><code class='java'>
+        diag[..., :] = diag.mean(-1, keepdim=True)
+    A = Rxx
+    if inverse:
+        A = <a id="change">torch.linalg.inv(</a>A<a id="change">)</a>
+    if cholesky_decomp:
+        A<a id="change">, info = </a>torch.linalg.cholesky_ex(A)
+        print("Number of errors during cholesky_decomp:", torch.where(info &gt; 0, 1, 0).sum())
+    ic(A.abs().mean())
+    &#47&#47 Manual way</code></pre>

@@ -1,0 +1,61 @@
+<html><h3>Pattern ID :39004
+</h3><img src='111153163.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            ]
+            output_shape = [x.shape[0], self.weight.shape[0]] + output_shape
+            empty = _NewEmptyTensorOp.apply(x, output_shape)
+            <a id="change">if </a>self.training:
+                &#47&#47 https://github.com/pytorch/pytorch/issues/12013
+                assert not isinstance(
+                    self.norm, torch.nn.SyncBatchNorm
+                ), "SyncBatchNorm does not support empty inputs!"
+
+                &#47&#47 This is to make DDP happy.
+                &#47&#47 DDP expects all workers to have gradient w.r.t the same set of parameters.
+                _dummy = sum(x.view(-1)[0] for x in <a id="change">self.parameters()</a>) * 0.0
+                return empty + _dummy
+            else:
+                return empty</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 2. features needed by exporting module to torchscript are added in PyTorch 1.6 or
+        &#47&#47 later version, `Conv2d` in these PyTorch versions has already supported empty inputs.
+        if not torch.jit.is_scripting():
+            <a id="change">with </a><a id="change">warnings.catch_warnings(record=True):
+                </a>if x.numel() == 0 and self.training:
+                    &#47&#47 https://github.com/pytorch/pytorch/issues/12013
+                    assert not isinstance(
+                        self.norm, torch.nn.SyncBatchNorm</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/stevewongv/instanceshadowdetection/commit/52f5f2cdcdb670b07efe4086abf503d9d50753c5#diff-013791abb9a2879485a664b3062b408cce57c163b4ec14151e126fdcad50bfb1L61' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 111153163</div><div id='project'> Project Name: stevewongv/instanceshadowdetection</div><div id='commit'> Commit Name: 52f5f2cdcdb670b07efe4086abf503d9d50753c5</div><div id='time'> Time: 2022-07-28</div><div id='author'> Author: steve.w.git@icloud.com</div><div id='file'> File Name: detectron2/layers/wrappers.py</div><div id='m_class'> M Class Name: Conv2d</div><div id='n_method'> N Class Name: Conv2d</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: torch.nn.Conv2d</div><div id='n_parent_class'> N Parent Class: torch.nn.Conv2d</div><div id='m_file'> M File Name: detectron2/layers/wrappers.py</div><div id='n_file'> N File Name: detectron2/layers/wrappers.py</div><div id='m_start'> M Start Line: 61</div><div id='m_end'> M End Line: 87</div><div id='n_start'> N Start Line: 105</div><div id='n_end'> N End Line: 115</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        actor_parameters = actor.parameters()
+        optimizer = self.optimizer_class(actor_parameters, lr=self.lr)
+        &#47&#47 make sure critic isn&quott updated!
+        <a id="change">if </a>critic2 is not None:
+            critic_parameters = critic1.parameters() + <a id="change">critic2.parameters()</a>
+        else:
+            critic_parameters = critic1.parameters()
+        for var in critic_parameters:
+            var.requires_grad = False</code></pre><h3>After Change</h3><pre><code class='java'>
+        log_probs = distributions.log_prob(actions)
+        entropy = distributions.entropy().mean()
+
+        <a id="change">with </a><a id="change">T.no_grad():
+            </a>values1 = critic1(observations, actions)
+            if critic2 is not None:
+                values2 = critic2(observations, actions)
+                values = T.min(values1, values2)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/londonnode/pearl/commit/630c4814f3e238ec120cfabf2023a4bf9156a22d#diff-b68c703d61b55535b734b62646c41dc40f50b287ada3402dbf6b5a6cd37fddceL266' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 111153164</div><div id='project'> Project Name: londonnode/pearl</div><div id='commit'> Commit Name: 630c4814f3e238ec120cfabf2023a4bf9156a22d</div><div id='time'> Time: 2021-09-24</div><div id='author'> Author: rohan.tangri@gmail.com</div><div id='file'> File Name: anvil/updaters/actors.py</div><div id='m_class'> M Class Name: SoftPolicyGradient</div><div id='n_method'> N Class Name: SoftPolicyGradient</div><div id='m_method'> M Method Name: __call__(5)</div><div id='n_method'> N Method Name: __call__(5)</div><div id='m_parent_class'> M Parent Class: BaseActorUpdater</div><div id='n_parent_class'> N Parent Class: BaseActorUpdater</div><div id='m_file'> M File Name: anvil/updaters/actors.py</div><div id='n_file'> N File Name: anvil/updaters/actors.py</div><div id='m_start'> M Start Line: 284</div><div id='m_end'> M End Line: 315</div><div id='n_start'> N Start Line: 287</div><div id='n_end'> N End Line: 295</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+            &#47&#47 Clip grads to counter exploding grads
+            max_norm = self._config[&quotclip_max_norm&quot]
+            <a id="change">if </a>max_norm &gt; 0:
+                torch.nn.utils.clip_grad_norm_(<a id="change">self._model.parameters()</a>, max_norm)
+
+            self._optimizer.step()
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            targets[&quottarget_seg&quot] = seg_mask.squeeze().to(device=self._device)
+
+            &#47&#47 Make prediction 
+            <a id="change">with </a><a id="change">autocast():
+                </a>losses, _ = self._model.train_step(data, targets, evaluation=False)
+                loss_abs = sum(losses.values())
+
+            self._optimizer.zero_grad()</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/bwittmann/transoar/commit/67ff1090209f6d8c530711c83549b5eb060e64d6#diff-28ec89610fef11ba86f164936f92f63b62628c7ca9c19bc8d8bea1346cff4ec9L38' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 111153165</div><div id='project'> Project Name: bwittmann/transoar</div><div id='commit'> Commit Name: 67ff1090209f6d8c530711c83549b5eb060e64d6</div><div id='time'> Time: 2022-01-23</div><div id='author'> Author: bastian.wittmann@tum.de</div><div id='file'> File Name: transoar/trainer.py</div><div id='m_class'> M Class Name: Trainer</div><div id='n_method'> N Class Name: Trainer</div><div id='m_method'> M Method Name: _train_one_epoch(2)</div><div id='n_method'> N Method Name: _train_one_epoch(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: transoar/trainer.py</div><div id='n_file'> N File Name: transoar/trainer.py</div><div id='m_start'> M Start Line: 47</div><div id='m_end'> M End Line: 70</div><div id='n_start'> N Start Line: 50</div><div id='n_end'> N End Line: 82</div><BR>

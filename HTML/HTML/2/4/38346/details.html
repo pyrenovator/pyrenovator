@@ -1,0 +1,707 @@
+<html><h3>Pattern ID :38346
+</h3><img src='109620392.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    ])
+
+    dataset = datasets.__dict__[args.data]
+    train_source_dataset<a id="change"> = </a>dataset(root=args.root, task=args.source, download=True, transform=train_transform)
+    train_source_loader = DataLoader(train_source_dataset, batch_size=args.batch_size,
+                                     shuffle=True, num_workers=args.workers, drop_last=True)
+    train_target_dataset = dataset(root=args.root, task=args.target, download=True, transform=MultipleApply([train_transform, val_transform]))
+    train_target_loader = DataLoader(train_target_dataset, batch_size=args.batch_size,
+                                     shuffle=True, num_workers=args.workers, drop_last=True)
+    val_dataset = dataset(root=args.root, task=args.target, download=True, transform=val_transform)
+    val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
+    if args.data == &quotDomainNet&quot:
+        test_dataset = dataset(root=args.root, task=args.target, split=&quottest&quot, download=True,
+                               transform=val_transform)
+        test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
+    else:
+        test_loader = val_loader
+
+    train_source_iter = ForeverDataIterator(train_source_loader)
+    train_target_iter = ForeverDataIterator(train_target_loader)
+
+    &#47&#47 create model
+    num_classes = train_source_dataset.num_classes
+    backbone = models.__dict__[args.arch](pretrained=True)
+    classifier = ImageClassifier(backbone, num_classes, args.bottleneck_dim).to(device)
+
+    &#47&#47 define optimizer and lr scheduler
+    optimizer = Adam(classifier.get_parameters(), args.lr)
+    lr_scheduler = LambdaLR(optimizer, lambda x: args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay))
+
+    &#47&#47 resume from the best checkpoint
+    if args.phase != &quottrain&quot:
+        checkpoint = torch.load(logger.get_checkpoint_path(&quotbest&quot), map_location=&quotcpu&quot)
+        classifier.load_state_dict(checkpoint)
+
+    &#47&#47 analysis the model
+    if args.phase == &quotanalysis&quot:
+        &#47&#47 extract features from both domains
+        feature_extractor = nn.Sequential(classifier.backbone, classifier.bottleneck).to(device)
+        source_feature = collect_feature(train_source_loader, feature_extractor, device)
+        target_feature = collect_feature(train_target_loader, feature_extractor, device)
+        &#47&#47 plot t-SNE
+        tSNE_filename = osp.join(logger.visualize_directory, &quotTSNE.png&quot)
+        tsne.visualize(source_feature, target_feature, tSNE_filename)
+        print("Saving t-SNE to", tSNE_filename)
+        &#47&#47 calculate A-distance, which is a measure for distribution discrepancy
+        A_distance = a_distance.calculate(source_feature, target_feature, device)
+        print("A-distance =", A_distance)
+        return
+
+    if args.phase == &quottest&quot:
+        acc1 = validate(test_loader, classifier, args)
+        print(acc1)
+        return
+
+    if args.pretrain is None:
+        &#47&#47 first pretrain the classifier wish source data
+        print("Pretraining the model on source domain.")
+        args.pretrain = logger.get_checkpoint_path(&quotpretrain&quot)
+        pretrained_model = ImageClassifier(backbone, num_classes, args.bottleneck_dim).to(device)
+        pretrain_optimizer = Adam(pretrained_model.get_parameters(), args.pretrain_lr)
+        pretrain_lr_scheduler = LambdaLR(pretrain_optimizer,
+                                         lambda x: args.pretrain_lr * (1. + args.lr_gamma * float(x)) ** (
+                                             -args.lr_decay))
+
+        &#47&#47 start pretraining
+        for epoch in range(args.pretrain_epochs):
+            &#47&#47 pretrain for one epoch
+            pretrain(train_source_iter, pretrained_model, pretrain_optimizer, pretrain_lr_scheduler, epoch, args)
+            &#47&#47 validate to show pretrain process
+            validate(val_loader, pretrained_model, args)
+
+        torch.save(pretrained_model.state_dict(), args.pretrain)
+
+        &#47&#47 show pretrain result
+        pretrain_acc = validate(val_loader, pretrained_model, args)
+        print("pretrain_acc1 = {:3.1f}".format(pretrain_acc))
+
+    checkpoint = torch.load(args.pretrain, map_location=&quotcpu&quot)
+    classifier.load_state_dict(checkpoint)
+    teacher = EmaTeacher(classifier, alpha=args.alpha)
+    consistent_loss = L2ConsistencyLoss().to(device)
+    class_balance_loss = ClassBalanceLoss(num_classes).to(device)
+
+    &#47&#47 start training
+    best_acc1 = 0.
+    for epoch in range(args.epochs):
+        print(lr_scheduler.get_lr())
+        &#47&#47 train for one epoch
+        train(train_source_iter, train_target_iter, classifier, teacher, consistent_loss, class_balance_loss, optimizer,
+              lr_scheduler, epoch, args)
+
+        &#47&#47 evaluate on validation set
+        acc1 = validate(val_loader, classifier, args)
+
+        &#47&#47 remember best acc@1 and save checkpoint
+        torch.save(classifier.state_dict(), logger.get_checkpoint_path(&quotlatest&quot))
+        if acc1 &gt; best_acc1:
+            shutil.copy(logger.get_checkpoint_path(&quotlatest&quot), logger.get_checkpoint_path(&quotbest&quot))
+        best_acc1 = max(acc1, best_acc1)
+
+    print("best_acc1 = {:3.1f}".format(best_acc1))
+
+    &#47&#47 evaluate on test set
+    classifier.load_state_dict(torch.load(logger.get_checkpoint_path(&quotbest&quot)))
+    acc1<a id="change"> = </a><a id="change">validate(</a>test_loader, classifier, args<a id="change">)</a>
+    print("test_acc1 = {:3.1f}".format(acc1))
+
+    logger.close()
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        normalize
+    ])
+
+    train_source_dataset<a id="change">, train_target_dataset, val_dataset, test_dataset, num_classes</a> = \
+        utils.get_dataset(args.data, args.root, args.source, args.target,
+                          train_transform, val_transform, MultipleApply([train_transform, val_transform]))
+    train_source_loader = DataLoader(train_source_dataset, batch_size=args.batch_size,</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 9</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/thuml/transfer-learning-library/commit/ac06563cc969a7128fe67f950eafea6c805ef10d#diff-a53dd9060d9eb51c8de23097a754193edef5d750fd5f860a3e598e0b2939efa2L51' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 109620392</div><div id='project'> Project Name: thuml/transfer-learning-library</div><div id='commit'> Commit Name: ac06563cc969a7128fe67f950eafea6c805ef10d</div><div id='time'> Time: 2021-07-26</div><div id='author'> Author: 13126830206@163.com</div><div id='file'> File Name: examples/domain_adaptation/classification/self_ensemble.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(1)</div><div id='n_method'> N Method Name: main(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples/domain_adaptation/classification/self_ensemble.py</div><div id='n_file'> N File Name: examples/domain_adaptation/classification/self_ensemble.py</div><div id='m_start'> M Start Line: 66</div><div id='m_end'> M End Line: 169</div><div id='n_start'> N Start Line: 51</div><div id='n_end'> N End Line: 160</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    &#47&#47 create model
+    print("=&gt; using pre-trained model &quot{}&quot".format(args.arch))
+    backbone = models.__dict__[args.arch](pretrained=True)
+    num_classes<a id="change"> = </a>train_source_dataset.num_classes
+    classifier = ImageClassifier(backbone, num_classes, bottleneck_dim=args.bottleneck_dim).to(device)
+
+    &#47&#47 define optimizer and lr scheduler
+    optimizer = SGD(classifier.get_parameters(), args.lr, momentum=args.momentum, weight_decay=args.wd, nesterov=True)
+    lr_scheduler = LambdaLR(optimizer, lambda x:  args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay))
+
+    &#47&#47 define loss function
+    mkmmd_loss = MultipleKernelMaximumMeanDiscrepancy(
+        kernels=[GaussianKernel(alpha=2 ** k) for k in range(-3, 2)],
+        linear=not args.non_linear
+    )
+
+    &#47&#47 resume from the best checkpoint
+    if args.phase != &quottrain&quot:
+        checkpoint = torch.load(logger.get_checkpoint_path(&quotbest&quot), map_location=&quotcpu&quot)
+        classifier.load_state_dict(checkpoint)
+
+    &#47&#47 analysis the model
+    if args.phase == &quotanalysis&quot:
+        &#47&#47 extract features from both domains
+        feature_extractor = nn.Sequential(classifier.backbone, classifier.bottleneck).to(device)
+        source_feature = collect_feature(train_source_loader, feature_extractor, device)
+        target_feature = collect_feature(train_target_loader, feature_extractor, device)
+        &#47&#47 plot t-SNE
+        tSNE_filename = osp.join(logger.visualize_directory, &quotTSNE.png&quot)
+        tsne.visualize(source_feature, target_feature, tSNE_filename)
+        print("Saving t-SNE to", tSNE_filename)
+        &#47&#47 calculate A-distance, which is a measure for distribution discrepancy
+        A_distance = a_distance.calculate(source_feature, target_feature, device)
+        print("A-distance =", A_distance)
+        return
+
+    if args.phase == &quottest&quot:
+        acc1 = validate(test_loader, classifier, args)
+        print(acc1)
+        return
+
+    &#47&#47 start training
+    best_acc1 = 0.
+    for epoch in range(args.epochs):
+        &#47&#47 train for one epoch
+        train(train_source_iter, train_target_iter, classifier, mkmmd_loss, optimizer,
+              lr_scheduler, epoch, args)
+
+        &#47&#47 evaluate on validation set
+        acc1 = validate(val_loader, classifier, args)
+
+        &#47&#47 remember best acc@1 and save checkpoint
+        torch.save(classifier.state_dict(), logger.get_checkpoint_path(&quotlatest&quot))
+        if acc1 &gt; best_acc1:
+            shutil.copy(logger.get_checkpoint_path(&quotlatest&quot), logger.get_checkpoint_path(&quotbest&quot))
+        best_acc1 = max(acc1, best_acc1)
+
+    print("best_acc1 = {:3.1f}".format(best_acc1))
+
+    &#47&#47 evaluate on test set
+    classifier.load_state_dict(torch.load(logger.get_checkpoint_path(&quotbest&quot)))
+    acc1<a id="change"> = </a><a id="change">validate(</a>test_loader, classifier, args<a id="change">)</a>
+    print("test_acc1 = {:3.1f}".format(acc1))
+
+    logger.close()
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        normalize
+    ])
+
+    train_source_dataset<a id="change">, train_target_dataset, val_dataset, test_dataset, num_classes</a> = \
+        utils.get_dataset(args.data, args.root, args.source, args.target, train_transform, val_transform)
+    train_source_loader = DataLoader(train_source_dataset, batch_size=args.batch_size,
+                                     shuffle=True, num_workers=args.workers, drop_last=True)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/thuml/transfer-learning-library/commit/ac06563cc969a7128fe67f950eafea6c805ef10d#diff-1ae36f420944e9532982dfb8a2799a8201c1fd550018567bcf7a3b5b428449ccL33' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 109620394</div><div id='project'> Project Name: thuml/transfer-learning-library</div><div id='commit'> Commit Name: ac06563cc969a7128fe67f950eafea6c805ef10d</div><div id='time'> Time: 2021-07-26</div><div id='author'> Author: 13126830206@163.com</div><div id='file'> File Name: examples/domain_adaptation/classification/dan.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(1)</div><div id='n_method'> N Method Name: main(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples/domain_adaptation/classification/dan.py</div><div id='n_file'> N File Name: examples/domain_adaptation/classification/dan.py</div><div id='m_start'> M Start Line: 74</div><div id='m_end'> M End Line: 153</div><div id='n_start'> N Start Line: 68</div><div id='n_end'> N End Line: 147</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,
+                              num_workers=args.workers, drop_last=True)
+    train_iter = ForeverDataIterator(train_loader)
+    val_dataset<a id="change"> = </a>dataset(root=args.root, split=&quottest&quot, sample_rate=100, download=True, transform=val_transform)
+    val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
+
+    &#47&#47 create model
+    print("=&gt; using pre-trained model &quot{}&quot".format(args.arch))
+    backbone = models.__dict__[args.arch](pretrained=True)
+    if args.pretrained:
+        print("=&gt; loading pre-trained model from &quot{}&quot".format(args.pretrained))
+        pretrained_dict = torch.load(args.pretrained)
+        backbone.load_state_dict(pretrained_dict, strict=False)
+    num_classes = train_dataset.num_classes
+    classifier = Classifier(backbone, num_classes).to(device)
+    bss_module = BatchSpectralShrinkage(k=args.k)
+
+    &#47&#47 define optimizer and lr scheduler
+    optimizer = SGD(classifier.get_parameters(args.lr), momentum=args.momentum, weight_decay=args.wd, nesterov=True)
+    lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, args.lr_decay_epochs, gamma=args.lr_gamma)
+
+    &#47&#47 resume from the best checkpoint
+    if args.phase == &quottest&quot:
+        checkpoint = torch.load(logger.get_checkpoint_path(&quotbest&quot), map_location=&quotcpu&quot)
+        classifier.load_state_dict(checkpoint)
+        acc1 = validate(val_loader, classifier, args)
+        print(acc1)
+        return
+
+    &#47&#47 start training
+    best_acc1 = 0.0
+    for epoch in range(args.epochs):
+        &#47&#47 train for one epoch
+        train(train_iter, classifier, bss_module, optimizer, epoch, args)
+        lr_scheduler.step()
+        &#47&#47 evaluate on validation set
+        acc1<a id="change"> = </a><a id="change">validate(</a>val_loader, classifier, args<a id="change">)</a>
+
+        &#47&#47 remember best acc@1 and save checkpoint
+        torch.save(classifier.state_dict(), logger.get_checkpoint_path(&quotlatest&quot))
+        if acc1 &gt; best_acc1:</code></pre><h3>After Change</h3><pre><code class='java'>
+    print("train_transform: ", train_transform)
+    print("val_transform: ", val_transform)
+
+    train_dataset<a id="change">, val_dataset, num_classes</a> = utils.get_dataset(args.data, args.root, train_transform,
+                                                                    val_transform, args.sample_rate, args.sample_size)
+    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,
+                              num_workers=args.workers, drop_last=True)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/thuml/transfer-learning-library/commit/052625393790ff6b5ffcffb9f29a68670054ea93#diff-28b7d12f40c0e0363e65e17af84a0ae6b4ad95f260156802c18714e0289e34d0L29' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 109620395</div><div id='project'> Project Name: thuml/transfer-learning-library</div><div id='commit'> Commit Name: 052625393790ff6b5ffcffb9f29a68670054ea93</div><div id='time'> Time: 2021-08-01</div><div id='author'> Author: 13126830206@163.com</div><div id='file'> File Name: examples/finetune/image_classification/bss.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(1)</div><div id='n_method'> N Method Name: main(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples/finetune/image_classification/bss.py</div><div id='n_file'> N File Name: examples/finetune/image_classification/bss.py</div><div id='m_start'> M Start Line: 46</div><div id='m_end'> M End Line: 100</div><div id='n_start'> N Start Line: 46</div><div id='n_end'> N End Line: 86</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    &#47&#47 create model
+    print("=&gt; using pre-trained model &quot{}&quot".format(args.arch))
+    backbone = models.__dict__[args.arch](pretrained=True)
+    num_classes<a id="change"> = </a>train_source_dataset.num_classes
+    classifier = ImageClassifier(backbone, num_classes, bottleneck_dim=args.bottleneck_dim).to(device)
+
+    &#47&#47 define loss function
+    if args.adversarial:
+        thetas = [Theta(dim).to(device) for dim in (classifier.features_dim, num_classes)]
+    else:
+        thetas = None
+    jmmd_loss = JointMultipleKernelMaximumMeanDiscrepancy(
+        kernels=(
+            [GaussianKernel(alpha=2 ** k) for k in range(-3, 2)],
+            (GaussianKernel(sigma=0.92, track_running_stats=False),)
+        ),
+        linear=args.linear, thetas=thetas
+    ).to(device)
+
+    parameters = classifier.get_parameters()
+    if thetas is not None:
+        parameters += [{"params": theta.parameters(), &quotlr&quot: 0.1} for theta in thetas]
+
+    &#47&#47 define optimizer
+    optimizer = SGD(parameters, args.lr, momentum=args.momentum, weight_decay=args.wd, nesterov=True)
+    lr_scheduler = LambdaLR(optimizer, lambda x:  args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay))
+
+    &#47&#47 resume from the best checkpoint
+    if args.phase != &quottrain&quot:
+        checkpoint = torch.load(logger.get_checkpoint_path(&quotbest&quot), map_location=&quotcpu&quot)
+        classifier.load_state_dict(checkpoint)
+
+    &#47&#47 analysis the model
+    if args.phase == &quotanalysis&quot:
+        &#47&#47 extract features from both domains
+        feature_extractor = nn.Sequential(classifier.backbone, classifier.bottleneck).to(device)
+        source_feature = collect_feature(train_source_loader, feature_extractor, device)
+        target_feature = collect_feature(train_target_loader, feature_extractor, device)
+        &#47&#47 plot t-SNE
+        tSNE_filename = osp.join(logger.visualize_directory, &quotTSNE.png&quot)
+        tsne.visualize(source_feature, target_feature, tSNE_filename)
+        print("Saving t-SNE to", tSNE_filename)
+        &#47&#47 calculate A-distance, which is a measure for distribution discrepancy
+        A_distance = a_distance.calculate(source_feature, target_feature, device)
+        print("A-distance =", A_distance)
+        return
+
+    if args.phase == &quottest&quot:
+        acc1 = validate(test_loader, classifier, args)
+        print(acc1)
+        return
+
+    &#47&#47 start training
+    best_acc1 = 0.
+    for epoch in range(args.epochs):
+        &#47&#47 train for one epoch
+        train(train_source_iter, train_target_iter, classifier, jmmd_loss, optimizer,
+              lr_scheduler, epoch, args)
+
+        &#47&#47 evaluate on validation set
+        acc1 = validate(val_loader, classifier, args)
+
+        &#47&#47 remember best acc@1 and save checkpoint
+        torch.save(classifier.state_dict(), logger.get_checkpoint_path(&quotlatest&quot))
+        if acc1 &gt; best_acc1:
+            shutil.copy(logger.get_checkpoint_path(&quotlatest&quot), logger.get_checkpoint_path(&quotbest&quot))
+        best_acc1 = max(acc1, best_acc1)
+
+    print("best_acc1 = {:3.1f}".format(best_acc1))
+
+    &#47&#47 evaluate on test set
+    classifier.load_state_dict(torch.load(logger.get_checkpoint_path(&quotbest&quot)))
+    acc1<a id="change"> = </a><a id="change">validate(</a>test_loader, classifier, args<a id="change">)</a>
+    print("test_acc1 = {:3.1f}".format(acc1))
+
+    logger.close()
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        normalize
+    ])
+
+    train_source_dataset<a id="change">, train_target_dataset, val_dataset, test_dataset, num_classes</a> = \
+        utils.get_dataset(args.data, args.root, args.source, args.target, train_transform, val_transform)
+    train_source_loader = DataLoader(train_source_dataset, batch_size=args.batch_size,
+                                     shuffle=True, num_workers=args.workers, drop_last=True)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/thuml/transfer-learning-library/commit/ac06563cc969a7128fe67f950eafea6c805ef10d#diff-498f235b539b3e5184453e7bbf1bbca220258d3ca12dabdf7175d59730c23391L33' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 109620397</div><div id='project'> Project Name: thuml/transfer-learning-library</div><div id='commit'> Commit Name: ac06563cc969a7128fe67f950eafea6c805ef10d</div><div id='time'> Time: 2021-07-26</div><div id='author'> Author: 13126830206@163.com</div><div id='file'> File Name: examples/domain_adaptation/classification/jan.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(1)</div><div id='n_method'> N Method Name: main(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples/domain_adaptation/classification/jan.py</div><div id='n_file'> N File Name: examples/domain_adaptation/classification/jan.py</div><div id='m_start'> M Start Line: 74</div><div id='m_end'> M End Line: 164</div><div id='n_start'> N Start Line: 68</div><div id='n_end'> N End Line: 159</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    &#47&#47 create model
+    print("=&gt; using pre-trained model &quot{}&quot".format(args.arch))
+    backbone = models.__dict__[args.arch](pretrained=True).to(device)
+    num_classes<a id="change"> = </a>train_source_dataset.num_classes
+    classifier = ImageClassifier(backbone, num_classes, bottleneck_dim=args.bottleneck_dim,
+                                 width=args.bottleneck_dim).to(device)
+    mdd = MarginDisparityDiscrepancy(args.margin).to(device)
+
+    &#47&#47 define optimizer and lr_scheduler
+    &#47&#47 The learning rate of the classiﬁers are set 10 times to that of the feature extractor by default.
+    optimizer = SGD(classifier.get_parameters(), args.lr, momentum=args.momentum, weight_decay=args.wd, nesterov=True)
+    lr_scheduler = LambdaLR(optimizer, lambda x:  args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay))
+
+    &#47&#47 resume from the best checkpoint
+    if args.phase != &quottrain&quot:
+        checkpoint = torch.load(logger.get_checkpoint_path(&quotbest&quot), map_location=&quotcpu&quot)
+        classifier.load_state_dict(checkpoint)
+
+    &#47&#47 analysis the model
+    if args.phase == &quotanalysis&quot:
+        &#47&#47 extract features from both domains
+        feature_extractor = nn.Sequential(classifier.backbone, classifier.bottleneck).to(device)
+        source_feature = collect_feature(train_source_loader, feature_extractor, device)
+        target_feature = collect_feature(train_target_loader, feature_extractor, device)
+        &#47&#47 plot t-SNE
+        tSNE_filename = osp.join(logger.visualize_directory, &quotTSNE.png&quot)
+        tsne.visualize(source_feature, target_feature, tSNE_filename)
+        print("Saving t-SNE to", tSNE_filename)
+        &#47&#47 calculate A-distance, which is a measure for distribution discrepancy
+        A_distance = a_distance.calculate(source_feature, target_feature, device)
+        print("A-distance =", A_distance)
+        return
+
+    if args.phase == &quottest&quot:
+        acc1 = validate(test_loader, classifier, args)
+        print(acc1)
+        return
+
+    &#47&#47 start training
+    best_acc1 = 0.
+    for epoch in range(args.epochs):
+        &#47&#47 train for one epoch
+        train(train_source_iter, train_target_iter, classifier, mdd, optimizer,
+              lr_scheduler, epoch, args)
+
+        &#47&#47 evaluate on validation set
+        acc1 = validate(val_loader, classifier, args)
+
+        &#47&#47 remember best acc@1 and save checkpoint
+        torch.save(classifier.state_dict(), logger.get_checkpoint_path(&quotlatest&quot))
+        if acc1 &gt; best_acc1:
+            shutil.copy(logger.get_checkpoint_path(&quotlatest&quot), logger.get_checkpoint_path(&quotbest&quot))
+        best_acc1 = max(acc1, best_acc1)
+
+    print("best_acc1 = {:3.1f}".format(best_acc1))
+
+    &#47&#47 evaluate on test set
+    classifier.load_state_dict(torch.load(logger.get_checkpoint_path(&quotbest&quot)))
+    acc1<a id="change"> = </a><a id="change">validate(</a>test_loader, classifier, args<a id="change">)</a>
+    print("test_acc1 = {:3.1f}".format(acc1))
+
+    logger.close()
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        normalize
+    ])
+
+    train_source_dataset<a id="change">, train_target_dataset, val_dataset, test_dataset, num_classes</a> = \
+        utils.get_dataset(args.data, args.root, args.source, args.target, train_transform, val_transform)
+    train_source_loader = DataLoader(train_source_dataset, batch_size=args.batch_size,
+                                     shuffle=True, num_workers=args.workers, drop_last=True)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/thuml/transfer-learning-library/commit/f7950ee17554dc6b3e19c13851106cda21041bca#diff-e8a8c7adef9dde1bb6da9910af77d5815a0ffae2ded9b5a78c6b16a4e7fc0e02L33' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 109620398</div><div id='project'> Project Name: thuml/transfer-learning-library</div><div id='commit'> Commit Name: f7950ee17554dc6b3e19c13851106cda21041bca</div><div id='time'> Time: 2021-07-26</div><div id='author'> Author: 13126830206@163.com</div><div id='file'> File Name: examples/domain_adaptation/classification/mdd.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(1)</div><div id='n_method'> N Method Name: main(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples/domain_adaptation/classification/mdd.py</div><div id='n_file'> N File Name: examples/domain_adaptation/classification/mdd.py</div><div id='m_start'> M Start Line: 74</div><div id='m_end'> M End Line: 150</div><div id='n_start'> N Start Line: 67</div><div id='n_end'> N End Line: 150</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    &#47&#47 create model
+    print("=&gt; using pre-trained model &quot{}&quot".format(args.arch))
+    backbone = models.__dict__[args.arch](pretrained=True)
+    num_classes<a id="change"> = </a>train_source_dataset.num_classes
+    classifier = ImageClassifier(backbone, num_classes, bottleneck_dim=args.bottleneck_dim).to(device)
+    classifier_feature_dim = classifier.features_dim
+
+    if args.randomized:
+        domain_discri = DomainDiscriminator(args.randomized_dim, hidden_size=1024).to(device)
+    else:
+        domain_discri = DomainDiscriminator(classifier_feature_dim * num_classes, hidden_size=1024).to(device)
+
+    all_parameters = classifier.get_parameters() + domain_discri.get_parameters()
+    &#47&#47 define optimizer and lr scheduler
+    optimizer = SGD(all_parameters, args.lr, momentum=args.momentum, weight_decay=args.weight_decay, nesterov=True)
+    lr_scheduler = LambdaLR(optimizer, lambda x: args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay))
+
+    &#47&#47 define loss function
+    domain_adv = ConditionalDomainAdversarialLoss(
+        domain_discri, entropy_conditioning=args.entropy,
+        num_classes=num_classes, features_dim=classifier_feature_dim, randomized=args.randomized,
+        randomized_dim=args.randomized_dim
+    ).to(device)
+
+    &#47&#47 resume from the best checkpoint
+    if args.phase != &quottrain&quot:
+        checkpoint = torch.load(logger.get_checkpoint_path(&quotbest&quot), map_location=&quotcpu&quot)
+        classifier.load_state_dict(checkpoint)
+
+    &#47&#47 analysis the model
+    if args.phase == &quotanalysis&quot:
+        &#47&#47 extract features from both domains
+        feature_extractor = nn.Sequential(classifier.backbone, classifier.bottleneck).to(device)
+        source_feature = collect_feature(train_source_loader, feature_extractor, device)
+        target_feature = collect_feature(train_target_loader, feature_extractor, device)
+        &#47&#47 plot t-SNE
+        tSNE_filename = osp.join(logger.visualize_directory, &quotTSNE.png&quot)
+        tsne.visualize(source_feature, target_feature, tSNE_filename)
+        print("Saving t-SNE to", tSNE_filename)
+        &#47&#47 calculate A-distance, which is a measure for distribution discrepancy
+        A_distance = a_distance.calculate(source_feature, target_feature, device)
+        print("A-distance =", A_distance)
+        return
+
+    if args.phase == &quottest&quot:
+        acc1 = validate(test_loader, classifier, args)
+        print(acc1)
+        return
+
+    &#47&#47 start training
+    best_acc1 = 0.
+    for epoch in range(args.epochs):
+        print("lr:", lr_scheduler.get_last_lr()[0])
+        &#47&#47 train for one epoch
+        train(train_source_iter, train_target_iter, classifier, domain_adv, optimizer,
+              lr_scheduler, epoch, args)
+
+        &#47&#47 evaluate on validation set
+        acc1 = validate(val_loader, classifier, args)
+
+        &#47&#47 remember best acc@1 and save checkpoint
+        torch.save(classifier.state_dict(), logger.get_checkpoint_path(&quotlatest&quot))
+        if acc1 &gt; best_acc1:
+            shutil.copy(logger.get_checkpoint_path(&quotlatest&quot), logger.get_checkpoint_path(&quotbest&quot))
+        best_acc1 = max(acc1, best_acc1)
+
+    print("best_acc1 = {:3.1f}".format(best_acc1))
+
+    &#47&#47 evaluate on test set
+    classifier.load_state_dict(torch.load(logger.get_checkpoint_path(&quotbest&quot)))
+    acc1<a id="change"> = </a><a id="change">validate(</a>test_loader, classifier, args<a id="change">)</a>
+    print("test_acc1 = {:3.1f}".format(acc1))
+
+    logger.close()
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        normalize
+    ])
+
+    train_source_dataset<a id="change">, train_target_dataset, val_dataset, test_dataset, num_classes</a> = \
+        utils.get_dataset(args.data, args.root, args.source, args.target, train_transform, val_transform)
+    train_source_loader = DataLoader(train_source_dataset, batch_size=args.batch_size,
+                                     shuffle=True, num_workers=args.workers, drop_last=True)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/thuml/transfer-learning-library/commit/ac06563cc969a7128fe67f950eafea6c805ef10d#diff-3ef94bff8ea381a404378a0a2a2df338dd26da2fa9da1a66d3033bcac665bd5aL33' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 109620399</div><div id='project'> Project Name: thuml/transfer-learning-library</div><div id='commit'> Commit Name: ac06563cc969a7128fe67f950eafea6c805ef10d</div><div id='time'> Time: 2021-07-26</div><div id='author'> Author: 13126830206@163.com</div><div id='file'> File Name: examples/domain_adaptation/classification/cdan.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(1)</div><div id='n_method'> N Method Name: main(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples/domain_adaptation/classification/cdan.py</div><div id='n_file'> N File Name: examples/domain_adaptation/classification/cdan.py</div><div id='m_start'> M Start Line: 74</div><div id='m_end'> M End Line: 162</div><div id='n_start'> N Start Line: 68</div><div id='n_end'> N End Line: 157</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    &#47&#47 create model
+    print("=&gt; using pre-trained model &quot{}&quot".format(args.arch))
+    backbone = models.__dict__[args.arch](pretrained=True)
+    num_classes<a id="change"> = </a>train_source_dataset.num_classes
+    classifier = Classifier(backbone, num_classes).to(device)
+
+    &#47&#47 define optimizer and lr scheduler
+    optimizer = SGD(classifier.get_parameters(), args.lr, momentum=args.momentum, weight_decay=args.wd, nesterov=True)
+    lr_scheduler = LambdaLR(optimizer, lambda x:  args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay))
+
+    &#47&#47 resume from the best checkpoint
+    if args.phase != &quottrain&quot:
+        checkpoint = torch.load(logger.get_checkpoint_path(&quotbest&quot), map_location=&quotcpu&quot)
+        classifier.load_state_dict(checkpoint)
+
+    &#47&#47 analysis the model
+    if args.phase == &quotanalysis&quot:
+        &#47&#47 using shuffled val loader
+        val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.workers)
+        &#47&#47 extract features from both domains
+        feature_extractor = nn.Sequential(classifier.backbone, classifier.bottleneck).to(device)
+        source_feature = collect_feature(train_source_loader, feature_extractor, device)
+        target_feature = collect_feature(val_loader, feature_extractor, device)
+        &#47&#47 plot t-SNE
+        tSNE_filename = osp.join(logger.visualize_directory, &quotTSNE.png&quot)
+        tsne.visualize(source_feature, target_feature, tSNE_filename)
+        print("Saving t-SNE to", tSNE_filename)
+        &#47&#47 calculate A-distance, which is a measure for distribution discrepancy
+        A_distance = a_distance.calculate(source_feature, target_feature, device)
+        print("A-distance =", A_distance)
+        return
+
+    if args.phase == &quottest&quot:
+        acc1 = validate(test_loader, classifier, args)
+        print(acc1)
+        return
+
+    &#47&#47 start training
+    best_acc1 = 0.
+    for epoch in range(args.epochs):
+        &#47&#47 train for one epoch
+        train(train_source_iter, classifier, optimizer,
+              lr_scheduler, epoch, args)
+
+        &#47&#47 evaluate on validation set
+        acc1 = validate(val_loader, classifier, args)
+
+        &#47&#47 remember best acc@1 and save checkpoint
+        torch.save(classifier.state_dict(), logger.get_checkpoint_path(&quotlatest&quot))
+        if acc1 &gt; best_acc1:
+            shutil.copy(logger.get_checkpoint_path(&quotlatest&quot), logger.get_checkpoint_path(&quotbest&quot))
+        best_acc1 = max(acc1, best_acc1)
+
+    print("best_acc1 = {:3.1f}".format(best_acc1))
+
+    &#47&#47 evaluate on test set
+    classifier.load_state_dict(torch.load(logger.get_checkpoint_path(&quotbest&quot)))
+    acc1<a id="change"> = </a><a id="change">validate(</a>test_loader, classifier, args<a id="change">)</a>
+    print("test_acc1 = {:3.1f}".format(acc1))
+
+    logger.close()
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    &#47&#47     test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
+    &#47&#47 else:
+    &#47&#47     test_loader = val_loader
+    train_source_dataset<a id="change">, _, val_dataset, test_dataset, num_classes</a> = utils.get_dataset(args.data, args.root, args.source, args.target, train_transform, val_transform)
+    train_source_loader = DataLoader(train_source_dataset, batch_size=args.batch_size,
+                                     shuffle=True, num_workers=args.workers, drop_last=True)
+    val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/thuml/transfer-learning-library/commit/0520dbca23da2054e0264ce23b6639bad44c22f8#diff-fdaf3651e882d2abfd0cad255cddb03cf31f7d91056b9116b6e9ac0eacfe5403L32' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 109620400</div><div id='project'> Project Name: thuml/transfer-learning-library</div><div id='commit'> Commit Name: 0520dbca23da2054e0264ce23b6639bad44c22f8</div><div id='time'> Time: 2021-07-25</div><div id='author'> Author: 13126830206@163.com</div><div id='file'> File Name: examples/domain_adaptation/classification/source_only.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(1)</div><div id='n_method'> N Method Name: main(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples/domain_adaptation/classification/source_only.py</div><div id='n_file'> N File Name: examples/domain_adaptation/classification/source_only.py</div><div id='m_start'> M Start Line: 73</div><div id='m_end'> M End Line: 144</div><div id='n_start'> N Start Line: 69</div><div id='n_end'> N End Line: 152</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    &#47&#47 create model
+    print("=&gt; using pre-trained model &quot{}&quot".format(args.arch))
+    backbone = models.__dict__[args.arch](pretrained=True)
+    num_classes<a id="change"> = </a>train_source_dataset.num_classes
+    classifier = ImageClassifier(backbone, num_classes, bottleneck_dim=args.bottleneck_dim).to(device)
+
+    &#47&#47 define optimizer and lr scheduler
+    optimizer = SGD(classifier.get_parameters(), args.lr, momentum=args.momentum, weight_decay=args.weight_decay, nesterov=True)
+    lr_scheduler = LambdaLR(optimizer, lambda x:  args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay))
+
+    &#47&#47 define loss function
+    mcc_loss = MinimumClassConfusionLoss(temperature=args.temperature)
+
+    &#47&#47 resume from the best checkpoint
+    if args.phase != &quottrain&quot:
+        checkpoint = torch.load(logger.get_checkpoint_path(&quotbest&quot), map_location=&quotcpu&quot)
+        classifier.load_state_dict(checkpoint)
+
+    &#47&#47 analysis the model
+    if args.phase == &quotanalysis&quot:
+        &#47&#47 extract features from both domains
+        feature_extractor = nn.Sequential(classifier.backbone, classifier.bottleneck).to(device)
+        source_feature = collect_feature(train_source_loader, feature_extractor, device)
+        target_feature = collect_feature(train_target_loader, feature_extractor, device)
+        &#47&#47 plot t-SNE
+        tSNE_filename = osp.join(logger.visualize_directory, &quotTSNE.png&quot)
+        tsne.visualize(source_feature, target_feature, tSNE_filename)
+        print("Saving t-SNE to", tSNE_filename)
+        &#47&#47 calculate A-distance, which is a measure for distribution discrepancy
+        A_distance = a_distance.calculate(source_feature, target_feature, device)
+        print("A-distance =", A_distance)
+        return
+
+    if args.phase == &quottest&quot:
+        acc1 = validate(test_loader, classifier, args)
+        print(acc1)
+        return
+
+    &#47&#47 start training
+    best_acc1 = 0.
+    for epoch in range(args.epochs):
+        print("lr:", lr_scheduler.get_last_lr()[0])
+        &#47&#47 train for one epoch
+        train(train_source_iter, train_target_iter, classifier, mcc_loss, optimizer,
+              lr_scheduler, epoch, args)
+
+        &#47&#47 evaluate on validation set
+        acc1 = validate(val_loader, classifier, args)
+
+        &#47&#47 remember best acc@1 and save checkpoint
+        torch.save(classifier.state_dict(), logger.get_checkpoint_path(&quotlatest&quot))
+        if acc1 &gt; best_acc1:
+            shutil.copy(logger.get_checkpoint_path(&quotlatest&quot), logger.get_checkpoint_path(&quotbest&quot))
+        best_acc1 = max(acc1, best_acc1)
+
+    print("best_acc1 = {:3.1f}".format(best_acc1))
+
+    &#47&#47 evaluate on test set
+    classifier.load_state_dict(torch.load(logger.get_checkpoint_path(&quotbest&quot)))
+    acc1<a id="change"> = </a><a id="change">validate(</a>test_loader, classifier, args<a id="change">)</a>
+    print("test_acc1 = {:3.1f}".format(acc1))
+
+    logger.close()
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        normalize
+    ])
+
+    train_source_dataset<a id="change">, train_target_dataset, val_dataset, test_dataset, num_classes</a> = \
+        utils.get_dataset(args.data, args.root, args.source, args.target, train_transform, val_transform)
+    train_source_loader = DataLoader(train_source_dataset, batch_size=args.batch_size,
+                                     shuffle=True, num_workers=args.workers, drop_last=True)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/thuml/transfer-learning-library/commit/ac06563cc969a7128fe67f950eafea6c805ef10d#diff-755dc1e477172b28265e20a909a7d962e3ecf3aaf955072856ad8b524603ab4eL32' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 109620387</div><div id='project'> Project Name: thuml/transfer-learning-library</div><div id='commit'> Commit Name: ac06563cc969a7128fe67f950eafea6c805ef10d</div><div id='time'> Time: 2021-07-26</div><div id='author'> Author: 13126830206@163.com</div><div id='file'> File Name: examples/domain_adaptation/classification/mcc.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(1)</div><div id='n_method'> N Method Name: main(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples/domain_adaptation/classification/mcc.py</div><div id='n_file'> N File Name: examples/domain_adaptation/classification/mcc.py</div><div id='m_start'> M Start Line: 73</div><div id='m_end'> M End Line: 150</div><div id='n_start'> N Start Line: 67</div><div id='n_end'> N End Line: 145</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    dataset = datasets.__dict__[args.data]
+    partial_dataset = partial(dataset)
+    train_source_dataset<a id="change"> = </a>dataset(root=args.root, task=args.source, download=True, transform=train_transform)
+    train_source_loader = DataLoader(train_source_dataset, batch_size=args.batch_size,
+                                     shuffle=True, num_workers=args.workers, drop_last=True)
+    train_target_dataset = partial_dataset(root=args.root, task=args.target, download=True, transform=train_transform)
+    train_target_loader = DataLoader(train_target_dataset, batch_size=args.batch_size,
+                                     shuffle=True, num_workers=args.workers, drop_last=True)
+    val_dataset = partial_dataset(root=args.root, task=args.target, download=True, transform=val_transform)
+    val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
+    if args.data == &quotDomainNet&quot:
+        test_dataset = partial_dataset(root=args.root, task=args.target, split=&quottest&quot, download=True,
+                                       transform=val_transform)
+        test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
+    else:
+        test_loader = val_loader
+
+    train_source_iter = ForeverDataIterator(train_source_loader)
+    train_target_iter = ForeverDataIterator(train_target_loader)
+
+    &#47&#47 create model
+    print("=&gt; using pre-trained model &quot{}&quot".format(args.arch))
+    backbone = models.__dict__[args.arch](pretrained=True)
+    classifier = ImageClassifier(backbone, train_source_dataset.num_classes, args.num_blocks,
+                                 bottleneck_dim=args.bottleneck_dim, dropout_p=args.dropout_p).to(device)
+    adaptive_feature_norm = AdaptiveFeatureNorm(args.delta).to(device)
+
+    &#47&#47 define optimizer
+    &#47&#47 the learning rate is fixed according to origin paper
+    optimizer = SGD(classifier.get_parameters(), args.lr, weight_decay=args.weight_decay)
+
+    &#47&#47 resume from the best checkpoint
+    if args.phase != &quottrain&quot:
+        checkpoint = torch.load(logger.get_checkpoint_path(&quotbest&quot), map_location=&quotcpu&quot)
+        classifier.load_state_dict(checkpoint)
+
+    &#47&#47 analysis the model
+    if args.phase == &quotanalysis&quot:
+        &#47&#47 extract features from both domains
+        feature_extractor = nn.Sequential(classifier.backbone, classifier.bottleneck).to(device)
+        source_feature = collect_feature(train_source_loader, feature_extractor, device)
+        target_feature = collect_feature(train_target_loader, feature_extractor, device)
+        &#47&#47 plot t-SNE
+        tSNE_filename = osp.join(logger.visualize_directory, &quotTSNE.png&quot)
+        tsne.visualize(source_feature, target_feature, tSNE_filename)
+        print("Saving t-SNE to", tSNE_filename)
+        &#47&#47 calculate A-distance, which is a measure for distribution discrepancy
+        A_distance = a_distance.calculate(source_feature, target_feature, device)
+        print("A-distance =", A_distance)
+        return
+
+    if args.phase == &quottest&quot:
+        acc1 = validate(test_loader, classifier, args)
+        print(acc1)
+        return
+
+    &#47&#47 start training
+    best_acc1 = 0.
+    for epoch in range(args.epochs):
+        &#47&#47 train for one epoch
+        train(train_source_iter, train_target_iter, classifier, adaptive_feature_norm, optimizer, epoch, args)
+
+        &#47&#47 evaluate on validation set
+        acc1 = validate(val_loader, classifier, args)
+
+        &#47&#47 remember best acc@1 and save checkpoint
+        torch.save(classifier.state_dict(), logger.get_checkpoint_path(&quotlatest&quot))
+        if acc1 &gt; best_acc1:
+            shutil.copy(logger.get_checkpoint_path(&quotlatest&quot), logger.get_checkpoint_path(&quotbest&quot))
+        best_acc1 = max(acc1, best_acc1)
+
+    print("best_acc1 = {:3.1f}".format(best_acc1))
+
+    &#47&#47 evaluate on test set
+    classifier.load_state_dict(torch.load(logger.get_checkpoint_path(&quotbest&quot)))
+    acc1<a id="change"> = </a><a id="change">validate(</a>test_loader, classifier, args<a id="change">)</a>
+    print("test_acc1 = {:3.1f}".format(acc1))
+
+    logger.close()
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    print("train_transform: ", train_transform)
+    print("val_transform: ", val_transform)
+
+    train_source_dataset<a id="change">, train_target_dataset, val_dataset, test_dataset, num_classes, args.class_names</a> = \
+        utils.get_dataset(args.data, args.root, args.source, args.target, train_transform, val_transform)
+    train_source_loader = DataLoader(train_source_dataset, batch_size=args.batch_size,
+                                     shuffle=True, num_workers=args.workers, drop_last=True)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/thuml/transfer-learning-library/commit/1d780e2bcc7b08075283ebaf2160f7f2b09dabef#diff-545822ebc2897b26baf24a2a7cdfd14907922b30533c4ab6581e8d6959289e43L33' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 109620391</div><div id='project'> Project Name: thuml/transfer-learning-library</div><div id='commit'> Commit Name: 1d780e2bcc7b08075283ebaf2160f7f2b09dabef</div><div id='time'> Time: 2021-08-11</div><div id='author'> Author: 13126830206@163.com</div><div id='file'> File Name: examples/domain_adaptation/partial/afn.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(1)</div><div id='n_method'> N Method Name: main(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples/domain_adaptation/partial/afn.py</div><div id='n_file'> N File Name: examples/domain_adaptation/partial/afn.py</div><div id='m_start'> M Start Line: 50</div><div id='m_end'> M End Line: 149</div><div id='n_start'> N Start Line: 53</div><div id='n_end'> N End Line: 128</div><BR>

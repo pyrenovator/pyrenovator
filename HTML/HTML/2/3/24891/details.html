@@ -1,0 +1,106 @@
+<html><h3>Pattern ID :24891
+</h3><img src='76730199.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+  else: raise Exception(f"{op} isn&quott supported")
+  &#47&#47 TODO: this is insanely slow
+  &#47&#47 NOTE: ret.shape can be (1,), it&quots mostly by luck that this works
+  reduce = <a id="change">clbuild("reduce"</a>, 
+  __kernel void reduce(__global const float *a_g, int sz, __global float *res_g, int prod, int n_dims,
+                       __global const int *shape_x, __global const int *shape_ret) {
+    int gid = get_global_id(0);
+
+    float out = +start+;
+    for (int x = 0; x &lt; sz; x++) {
+      int idx = 0;  // compute index into a_g
+      int tprod = prod;
+      int tsz = sz;
+      for (int dim = 0; dim &lt; n_dims; dim++) {
+        idx *= shape_x[dim];
+        if (shape_x[dim] == shape_ret[dim]) {   // dim from gid, don&quott reduce
+          tprod /= shape_x[dim];
+          idx += (gid / tprod) % shape_x[dim];
+        } else {  // dim from x
+          tsz /= shape_x[dim];
+          idx += (x / tsz) % shape_x[dim];
+        }
+      }
+      float a = a_g[idx];
+      +code+;
+    }
+    res_g[gid] = out;
+  }<a id="change">)</a>
+  reduce([prod(ret.shape)], None, inp.cl,
+    i32(prod(inp.shape)//prod(ret.shape)), ret.cl,
+    i32(prod(ret.shape)), i32(len(ret.shape)),
+    buffer_np(np.array(inp.shape, dtype=np.int32)),</code></pre><h3>After Change</h3><pre><code class='java'>
+  view = View(ret.shape, strides_for_shape(inp.shape))
+
+  acc = 1
+  loop_start, loop_end = []<a id="change">, []</a>
+  for i,o in list(zip(inp.shape, ret.shape))[::-1]:
+    if i != o:    &#47&#47 reduce axis
+      assert o == 1
+      loop_start.append(f"for (int axis_{len(loop_start)} = 0; axis_{len(loop_start)} &lt; {i}; axis_{len(loop_start)}++) {{")</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 2</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/geohot/tinygrad/commit/906cce9916cb43ed6d28c2d950fb17420dd60085#diff-305e94e84668440e8f8a2a4e17d5796e43233474510c7af082ab29c9aa824eeeL95' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 76730199</div><div id='project'> Project Name: geohot/tinygrad</div><div id='commit'> Commit Name: 906cce9916cb43ed6d28c2d950fb17420dd60085</div><div id='time'> Time: 2022-06-14</div><div id='author'> Author: george@comma.ai</div><div id='file'> File Name: tinygrad/llops/ops_gpu.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: reduce_op(3)</div><div id='n_method'> N Method Name: reduce_op(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: tinygrad/llops/ops_gpu.py</div><div id='n_file'> N File Name: tinygrad/llops/ops_gpu.py</div><div id='m_start'> M Start Line: 95</div><div id='m_end'> M End Line: 124</div><div id='n_start'> N Start Line: 96</div><div id='n_end'> N End Line: 117</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+  def forward(ctx, input):
+    ctx.save_for_backward(input)
+    ret = buffer_new(ctx, (1,))
+    prg = <a id="change">clbuild(</a>ctx.cl_ctx, <a id="change">
+    __kernel void sum(
+        __global const float *a_g, __global float *res_g)
+    {
+      int gid = get_global_id(0);
+      res_g[0] += a_g[gid];
+    }
+    </a><a id="change">)</a>
+    prg.sum(ctx.cl_queue, [input.size//4], None, input, ret)
+    return ret
+
+  @staticmethod</code></pre><h3>After Change</h3><pre><code class='java'>
+    krnl = cl_reduct_krnl_build(ctx.cl_ctx, np.float32, neutral="0", reduce_expr="a+b", 
+      map_expr="x[i]", arguments="__global float *x")
+    ret = krnl(pycl_array.Array(ctx.cl_queue, input.size, dtype=np.float32, data=input)).data
+    ret.shape = (1<a id="change"></a>,)
+    ret.dtype = np.float32
+    return ret
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/geohot/tinygrad/commit/cd54697fd800ffd700652297c5cd4da646ddbc26#diff-b7e8a4d3462e65523c8cfd523079177ad58eb9176481ea76a4dedbe501683059L106' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 76730203</div><div id='project'> Project Name: geohot/tinygrad</div><div id='commit'> Commit Name: cd54697fd800ffd700652297c5cd4da646ddbc26</div><div id='time'> Time: 2020-11-05</div><div id='author'> Author: RDelg@users.noreply.github.com</div><div id='file'> File Name: tinygrad/opsgpu.py</div><div id='m_class'> M Class Name: Sum</div><div id='n_method'> N Class Name: Sum</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: Function</div><div id='n_parent_class'> N Parent Class: Function</div><div id='m_file'> M File Name: tinygrad/opsgpu.py</div><div id='n_file'> N File Name: tinygrad/opsgpu.py</div><div id='m_start'> M Start Line: 108</div><div id='m_end'> M End Line: 117</div><div id='n_start'> N Start Line: 114</div><div id='n_end'> N End Line: 118</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    &#47&#47 weight = (groups, rcout, cin, H, W)
+    &#47&#47 output = (bs, groups, rcout, oy, ox)
+
+    conv = <a id="change">clbuild("conv"</a>, 
+    __kernel void conv(__global const float *input, __global const float *weight, __global float *output,
+      int H, int W, int groups, int rcout, int cin, int oy, int ox, int iy, int ix, int ys, int xs) {
+
+      int B = get_global_id(0)/(groups*rcout);  // range 0-bs
+      int g = (get_global_id(0)/rcout)%groups;
+      int c = get_global_id(0) % rcout;
+
+      int Y = get_global_id(1);  // range 0-oy
+      int X = get_global_id(2);  // range 0-ox
+      int IY = Y*ys;
+      int IX = X*xs;
+
+      float acc = 0.0;
+      for (int ci = 0; ci &lt; cin; ci++) {
+        for (int y = IY; y &lt; IY+H; y++) {
+          for (int x = IX; x &lt; IX+W; x++) {
+            acc += input[B*groups*cin*iy*ix + g*cin*iy*ix + ci*iy*ix + y*ix + x] * \
+              weight[g*rcout*cin*H*W + c*cin*H*W + ci*H*W + (y-IY)*W + (x-IX)];
+          }
+        }
+      }
+      output[B*groups*rcout*oy*ox + g*rcout*oy*ox + c*oy*ox + Y*ox + X] = acc;
+    }<a id="change">)</a>
+
+    conv_args = H, W, groups, rcout, cin, oy, ox, iy, ix, ys, xs
+    conv([bs*groups*rcout, oy, ox], None, x.cl, w.cl, ret.cl, *[i32(x) for x in conv_args])
+    return ret</code></pre><h3>After Change</h3><pre><code class='java'>
+    ctx.save_for_backward(x,w)
+
+    &#47&#47 output buffer
+    conv_args = H<a id="change">, W, groups, rcout, cin, oy, ox, iy, ix, ys, xs, bs</a>
+    return conv(x, w, buffer_new(ctx, (bs, cout, oy, ox)), conv_args)
+
+  def backward(ctx, grad_output):
+    bs,_,oy,ox = grad_output.shape</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/geohot/tinygrad/commit/f01bad36c23c0261528608907a65f3371bc7076b#diff-8bb45fb4c0a48bb117ccd344d322687d080ebe652d54492029b741e4bf0e6d46L158' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 76730200</div><div id='project'> Project Name: geohot/tinygrad</div><div id='commit'> Commit Name: f01bad36c23c0261528608907a65f3371bc7076b</div><div id='time'> Time: 2022-06-05</div><div id='author'> Author: geohot@gmail.com</div><div id='file'> File Name: tinygrad/ops/ops_gpu.py</div><div id='m_class'> M Class Name: Conv2D</div><div id='n_method'> N Class Name: Conv2D</div><div id='m_method'> M Method Name: forward(5)</div><div id='n_method'> N Method Name: forward(5)</div><div id='m_parent_class'> M Parent Class: Function</div><div id='n_parent_class'> N Parent Class: Function</div><div id='m_file'> M File Name: tinygrad/ops/ops_gpu.py</div><div id='n_file'> N File Name: tinygrad/ops/ops_gpu.py</div><div id='m_start'> M Start Line: 166</div><div id='m_end'> M End Line: 204</div><div id='n_start'> N Start Line: 170</div><div id='n_end'> N End Line: 171</div><BR>

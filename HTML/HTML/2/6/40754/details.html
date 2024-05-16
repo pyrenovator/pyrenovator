@@ -1,0 +1,51 @@
+<html><h3>Pattern ID :40754
+</h3><img src='115097068.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    x,y = ctx.saved_tensors
+    grad_x = binary_op(&quota*b&quot, y, grad_output, Buffer(grad_output.shape))
+    grad_y = binary_op(&quota*b&quot, x, grad_output, Buffer(grad_output.shape))
+    return <a id="change">unbroadcast(</a>grad_x, x.shape<a id="change">), unbroadcast(grad_y, y.shape)</a>
+
+class Pow(Function):
+  def forward(ctx, x, y):
+    ctx.save_for_backward(x, y)</code></pre><h3>After Change</h3><pre><code class='java'>
+  def backward(ctx, grad_output):
+    x,y = ctx.saved_tensors
+    tmp = Buffer(grad_output.shape)
+    grad_x = <a id="change">unbroadcast(</a>binary_op(&quota*b&quot, y, grad_output, tmp), x.shape<a id="change">) if </a><a id="change">ctx.needs_input_grad[0] else </a>None
+    grad_y = unbroadcast(binary_op(&quota*b&quot, x, grad_output, tmp), y.shape) if ctx.needs_input_grad[1] else None
+    return grad_x, grad_y
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 5</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/geohot/tinygrad/commit/f177cd550f44050efeea4283e3216471c578428a#diff-8bb45fb4c0a48bb117ccd344d322687d080ebe652d54492029b741e4bf0e6d46L93' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 115097068</div><div id='project'> Project Name: geohot/tinygrad</div><div id='commit'> Commit Name: f177cd550f44050efeea4283e3216471c578428a</div><div id='time'> Time: 2022-06-06</div><div id='author'> Author: geohot@gmail.com</div><div id='file'> File Name: tinygrad/ops/ops_gpu.py</div><div id='m_class'> M Class Name: Mul</div><div id='n_method'> N Class Name: Mul</div><div id='m_method'> M Method Name: backward(2)</div><div id='n_method'> N Method Name: backward(2)</div><div id='m_parent_class'> M Parent Class: Function</div><div id='n_parent_class'> N Parent Class: Function</div><div id='m_file'> M File Name: tinygrad/ops/ops_gpu.py</div><div id='n_file'> N File Name: tinygrad/ops/ops_gpu.py</div><div id='m_start'> M Start Line: 93</div><div id='m_end'> M End Line: 95</div><div id='n_start'> N Start Line: 94</div><div id='n_end'> N End Line: 97</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    x,y = ctx.saved_tensors
+    grad_x_inter = binary_op(&quotb * pow(a, b-1.0)&quot, x, y, Buffer(grad_output.shape))
+    grad_y_inter = binary_op(&quotlog(a) * pow(a, b)&quot, x, y, Buffer(grad_output.shape))
+    return unbroadcast(binary_op(&quota*b&quot, grad_output, grad_x_inter, grad_x_inter), x.shape)<a id="change">, \
+           unbroadcast(binary_op(&quota*b&quot, grad_output, grad_y_inter, grad_y_inter), y.shape)</a>
+
+&#47&#47 ************* movement ops *************
+
+class Reshape(Function):</code></pre><h3>After Change</h3><pre><code class='java'>
+    x,y = ctx.saved_tensors
+    tmp = Buffer(grad_output.shape)
+    grad_x = unbroadcast(binary_op(&quota*b&quot, grad_output, binary_op(&quotb * pow(a, b-1.0)&quot, x, y, tmp), tmp), x.shape) if ctx.needs_input_grad[0] else None
+    grad_y = <a id="change">unbroadcast(</a>binary_op(&quota*b&quot, grad_output, binary_op(&quotlog(a) * pow(a, b)&quot, x, y, tmp), tmp), y.shape<a id="change">) if </a><a id="change">ctx.needs_input_grad[1] else </a>None
+    return grad_x, grad_y
+
+&#47&#47 ************* movement ops *************</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/geohot/tinygrad/commit/f177cd550f44050efeea4283e3216471c578428a#diff-8bb45fb4c0a48bb117ccd344d322687d080ebe652d54492029b741e4bf0e6d46L102' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 115097069</div><div id='project'> Project Name: geohot/tinygrad</div><div id='commit'> Commit Name: f177cd550f44050efeea4283e3216471c578428a</div><div id='time'> Time: 2022-06-06</div><div id='author'> Author: geohot@gmail.com</div><div id='file'> File Name: tinygrad/ops/ops_gpu.py</div><div id='m_class'> M Class Name: Pow</div><div id='n_method'> N Class Name: Pow</div><div id='m_method'> M Method Name: backward(2)</div><div id='n_method'> N Method Name: backward(2)</div><div id='m_parent_class'> M Parent Class: Function</div><div id='n_parent_class'> N Parent Class: Function</div><div id='m_file'> M File Name: tinygrad/ops/ops_gpu.py</div><div id='n_file'> N File Name: tinygrad/ops/ops_gpu.py</div><div id='m_start'> M Start Line: 104</div><div id='m_end'> M End Line: 107</div><div id='n_start'> N Start Line: 106</div><div id='n_end'> N End Line: 109</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+  def backward(ctx, grad_output):
+    shape_x, shape_y = ctx.saved_tensors
+    return unbroadcast(grad_output, shape_x)<a id="change">, unbroadcast(grad_output, shape_y)</a>
+
+class Sub(Function):
+  def forward(ctx, x, y):
+    ctx.save_for_backward(x.shape, y.shape)</code></pre><h3>After Change</h3><pre><code class='java'>
+  def backward(ctx, grad_output):
+    shape_x, shape_y = ctx.saved_tensors
+    return unbroadcast(grad_output, shape_x) if ctx.needs_input_grad[0] else None, \
+           <a id="change">unbroadcast(</a>grad_output, shape_y<a id="change">) if </a><a id="change">ctx.needs_input_grad[1] else </a>None
+
+class Sub(Function):
+  def forward(ctx, x, y):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/geohot/tinygrad/commit/f177cd550f44050efeea4283e3216471c578428a#diff-8bb45fb4c0a48bb117ccd344d322687d080ebe652d54492029b741e4bf0e6d46L72' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 115097070</div><div id='project'> Project Name: geohot/tinygrad</div><div id='commit'> Commit Name: f177cd550f44050efeea4283e3216471c578428a</div><div id='time'> Time: 2022-06-06</div><div id='author'> Author: geohot@gmail.com</div><div id='file'> File Name: tinygrad/ops/ops_gpu.py</div><div id='m_class'> M Class Name: Add</div><div id='n_method'> N Class Name: Add</div><div id='m_method'> M Method Name: backward(2)</div><div id='n_method'> N Method Name: backward(2)</div><div id='m_parent_class'> M Parent Class: Function</div><div id='n_parent_class'> N Parent Class: Function</div><div id='m_file'> M File Name: tinygrad/ops/ops_gpu.py</div><div id='n_file'> N File Name: tinygrad/ops/ops_gpu.py</div><div id='m_start'> M Start Line: 74</div><div id='m_end'> M End Line: 74</div><div id='n_start'> N Start Line: 74</div><div id='n_end'> N End Line: 75</div><BR>

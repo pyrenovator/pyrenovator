@@ -1,0 +1,23 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        x_denoised = (
+            self.c_skip(sigmas_padded) * x_noisy + self.c_out(sigmas_padded) * x_pred
+        )
+        x_denoised = x_denoised.clamp(-1.0, 1)<a id="change"> if </a>clamp<a id="change"> else </a>x_denoised
+
+        return x_denoised
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            return x_denoised.clamp(-1.0, 1.0)
+        else:
+            &#47&#47 Find dynamic threshold quantile for each batch
+            x_flat = <a id="change">rearrange(</a>x_denoised, <a id="change">"b ... -&gt; b (...)"</a><a id="change">)</a>
+            scale<a id="change"> = </a>torch.quantile(x_flat.abs(), self.dynamic_threshold, dim=-1)
+            &#47&#47 Clamp to a min of 1.0
+            scale.clamp_(min=1.0)
+            &#47&#47 Clamp all values and scale
+            scale<a id="change"> = </a>pad_dims(scale, ndim=x_denoised.ndim - scale.ndim)
+            x_denoised = x_denoised.clamp(-scale, scale) / scale
+            return x_denoised
+</code></pre>

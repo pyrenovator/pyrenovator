@@ -1,0 +1,81 @@
+<html><h3>Pattern ID :9142
+</h3><img src='33259339.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    outputs = dict()
+    output_shapes = gess_output_shape(inputs=inputs, model_onnx=model_onnx)
+    for axis_name, shape in output_shapes.items():
+        tensor = <a id="change">torch.empty(shape, dtype=torch.float32, device=device).contiguous()</a>
+        outputs[axis_name] = tensor
+        binding.bind_output(
+            name=axis_name,
+            device_type=device,</code></pre><h3>After Change</h3><pre><code class='java'>
+        if input_onnx.name not in inputs:  &#47&#47 some inputs may be optional
+            continue
+        tensor: torch.Tensor = inputs[input_onnx.name]
+        tensor<a id="change"> = </a><a id="change">tensor.detach()</a>
+        if tensor.dtype in [torch.int64, torch.long]:
+            &#47&#47 int32 mandatory as input of bindings, int64 not supported
+            tensor = tensor.type(dtype=torch.int32)
+        tensor = tensor.contiguous()</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/els-rd/triton_transformers/commit/d397869e95ee07570c47edefec01bdc673391b65#diff-22d489735df9423bad30606d9118a21cec063fedf1a2d9ae9e44a0e3c276bcd2L169' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 33259339</div><div id='project'> Project Name: els-rd/triton_transformers</div><div id='commit'> Commit Name: d397869e95ee07570c47edefec01bdc673391b65</div><div id='time'> Time: 2022-05-23</div><div id='author'> Author: pommedeterresautee@users.noreply.github.com</div><div id='file'> File Name: src/transformer_deploy/backends/ort_utils.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: inference_onnx_binding(6)</div><div id='n_method'> N Method Name: inference_onnx_binding(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/transformer_deploy/backends/ort_utils.py</div><div id='n_file'> N File Name: src/transformer_deploy/backends/ort_utils.py</div><div id='m_start'> M Start Line: 169</div><div id='m_end'> M End Line: 199</div><div id='n_start'> N Start Line: 204</div><div id='n_end'> N End Line: 264</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                interval = 16
+                idx = torch.arange(0,T,interval)
+                rpn_inputs = inputs[:,:,idx]
+                rpn_inputs = <a id="change">rpn_inputs.transpose(1,2).contiguous()</a>.view(N*(T//interval),C,H,W)
+                print(rpn_inputs.shape)
+                with torch.no_grad():
+                    proposals = rpn(rpn_inputs)</code></pre><h3>After Change</h3><pre><code class='java'>
+    end_time = time.time()
+
+    with torch.no_grad():
+        for <a id="change">i</a>, (inputs, targets) in enumerate(data_loader):
+            data_time.update(time.time() - end_time)
+            targets = targets.to(device, non_blocking=True)
+            if rpn is not None:
+                &quot&quot&quot
+                    There was an unexpected CUDNN_ERROR when len(rpn_inputs) is
+                    decrased.
+                &quot&quot&quot
+
+                T = inputs.shape[2]
+                N, C, T, H, W = inputs.size()
+                if i == 0:
+                    max_N = N
+                interval = 16
+                &#47&#47 sample frames for RPN
+                idx = torch.arange(0,T,interval)
+                rpn_inputs = inputs[:,:,idx].transpose(1,2).contiguous()
+                rpn_inputs = rpn_inputs.view(-1,C,H,W)
+                if len(inputs) &lt; max_N:
+                    print("Modified from {} to {}".format(len(inputs), max_N))
+                    rpn_inputs = torch.cat((rpn_inputs, rpn_inputs[:(max_N-len(inputs))*(T//interval)]))
+                with torch.no_grad():
+                    proposals = rpn(rpn_inputs)
+                proposals = proposals.view(-1,T//interval,10,4)
+                if len(inputs) &lt; max_N:
+                    proposals = proposals[:len(inputs)]
+                outputs<a id="change"> = </a>model(inputs, <a id="change">proposals.detach()</a>)
+                &#47&#47 update to the largest batch_size
+                max_N = max(N, max_N)
+            else:</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/jd730/strg/commit/b98d2a6a9e626ae8be88646109eca0d53f1f4af5#diff-d8dc951a58d6c06dd3d6f87ac1f2cfb94e6ce5b092447fcbe6aeef79292976f2L11' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 33259338</div><div id='project'> Project Name: jd730/strg</div><div id='commit'> Commit Name: b98d2a6a9e626ae8be88646109eca0d53f1f4af5</div><div id='time'> Time: 2020-06-12</div><div id='author'> Author: jdhwang730@gmail.com</div><div id='file'> File Name: validation.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: val_epoch(9)</div><div id='n_method'> N Method Name: val_epoch(9)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: validation.py</div><div id='n_file'> N File Name: validation.py</div><div id='m_start'> M Start Line: 40</div><div id='m_end'> M End Line: 49</div><div id='n_start'> N Start Line: 34</div><div id='n_end'> N End Line: 62</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    outputs = dict()
+    output_shapes = gess_output_shape(inputs=inputs, model_onnx=model_onnx)
+    for axis_name, shape in output_shapes.items():
+        tensor = <a id="change">torch.empty(shape, dtype=torch.float32, device=device).contiguous()</a>
+        outputs[axis_name] = tensor
+        binding.bind_output(
+            name=axis_name,
+            device_type=device,</code></pre><h3>After Change</h3><pre><code class='java'>
+    else:
+        binding.clear_binding_inputs()
+        binding.clear_binding_outputs()
+    for <a id="change">input_onnx</a> in model_onnx.get_inputs():
+        if input_onnx.name not in inputs:  &#47&#47 some inputs may be optional
+            continue
+        tensor: torch.Tensor = inputs[input_onnx.name]
+        tensor<a id="change"> = </a><a id="change">tensor.detach()</a>
+        if tensor.dtype in [torch.int64, torch.long]:
+            &#47&#47 int32 mandatory as input of bindings, int64 not supported
+            tensor = tensor.type(dtype=torch.int32)
+        tensor = tensor.contiguous()</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/els-rd/transformer-deploy/commit/d397869e95ee07570c47edefec01bdc673391b65#diff-22d489735df9423bad30606d9118a21cec063fedf1a2d9ae9e44a0e3c276bcd2L155' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 33259337</div><div id='project'> Project Name: els-rd/transformer-deploy</div><div id='commit'> Commit Name: d397869e95ee07570c47edefec01bdc673391b65</div><div id='time'> Time: 2022-05-23</div><div id='author'> Author: pommedeterresautee@users.noreply.github.com</div><div id='file'> File Name: src/transformer_deploy/backends/ort_utils.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: inference_onnx_binding(6)</div><div id='n_method'> N Method Name: inference_onnx_binding(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/transformer_deploy/backends/ort_utils.py</div><div id='n_file'> N File Name: src/transformer_deploy/backends/ort_utils.py</div><div id='m_start'> M Start Line: 169</div><div id='m_end'> M End Line: 199</div><div id='n_start'> N Start Line: 204</div><div id='n_end'> N End Line: 264</div><BR>

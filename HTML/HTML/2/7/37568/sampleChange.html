@@ -1,0 +1,21 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    zero = shard(jnp.zeros_like(src))
+    src = (ctx.parameters, src, zero, src, zero)
+    for i in range(ctx.model.depth):
+        src<a id="change"> = </a><a id="change">reversible(ctx, spatial_mixing, (i + 1) == ctx.model.depth)(</a>src<a id="change">)</a>
+        src = reversible(ctx, feed_forward, (i + 1) == ctx.model.depth)(src)
+    src<a id="change"> = </a>src[1] + src[3]
+    return contrastive_output_embed(ctx, src) if ctx.training.contrastive else output_embed(ctx, src)
+
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    zero = shard(jnp.zeros_like(src))
+    src = (ctx.parameters, src, zero, src, zero)
+    src = lax.scan(step(ctx), (src, jnp.zeros([])), None, ctx.dims.sizes.depth, unroll=ctx.model.scan_unroll)
+    <a id="change">return </a><a id="change">output_embed(</a>ctx, <a id="change">revnet_out(</a>src[0][1:]<a id="change">))</a>
+
+
+def compute(params: typing.Dict[str, jnp.ndarray], inp: jnp.ndarray) -&gt; typing.Tuple[jnp.ndarray, jnp.ndarray]:
+    ctx = Context()</code></pre>

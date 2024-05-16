@@ -1,0 +1,36 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    def Join(  &#47&#47 pylint: disable=invalid-name
+        self, request_iterator: Iterator[ClientRequest], context: grpc.ServicerContext
+    ) -&gt; Iterator[ServerResponse]:
+        <a id="change">for _</a> in request_iterator<a id="change">:
+            &#47&#47 Yield empty message
+            </a><a id="change">yield </a>ServerResponse()
+</code></pre><h3>After Change</h3><pre><code class='java'>
+                wrapping the actual message
+            - The Join method is (pretty much) protocol unaware
+        
+        peer<a id="change"> = </a>context.peer()
+        bridge = self.grpc_bridge_factory()
+        client = self.client_factory(peer, bridge)
+        is_success = register_client(self.client_manager, client, context)
+
+        <a id="change">if </a>is_success:
+            &#47&#47 Get iterators
+            client_message_iterator = request_iterator
+            server_message_iterator = bridge.server_message_iterator()
+
+            &#47&#47 All messages will be pushed to client bridge directly
+            while True:
+                try:
+                    &#47&#47 Get server message from bridge and yield it
+                    server_message = next(server_message_iterator)
+                    yield server_message
+                    &#47&#47 Wait for client message
+                    client_message = next(client_message_iterator)
+                    bridge.set_client_message(client_message)
+                except StopIteration:
+                    <a id="change">break</a>
+</code></pre>

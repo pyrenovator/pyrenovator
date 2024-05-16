@@ -1,0 +1,49 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    def _get_name_mappings(cls, config: RoFormerConfig) -&gt; List[StateDictNameMapping]:
+        mappings: List[StateDictNameMapping] = []
+        model_mappings = [
+            <a id="change">[</a>"embeddings.word_embeddings.weight", <a id="change">"embeddings.word_embeddings.weight"</a>],
+            ["embeddings.token_type_embeddings.weight", "embeddings.token_type_embeddings.weight"],
+            ["embeddings.LayerNorm.weight", "embeddings.layer_norm.weight"],
+            ["embeddings.LayerNorm.bias", "embeddings.layer_norm.bias"],</code></pre><h3>After Change</h3><pre><code class='java'>
+            ]
+            model_mappings.extend(layer_mappings)
+
+        <a id="change">init_name_mappings(model_mappings</a><a id="change">)</a>
+
+        &#47&#47 base-model prefix "RoFormerModel"
+        if "RoFormerModel" not in config.architectures:
+            for mapping in model_mappings:
+                mapping[0] = "roformer." + mapping[0]
+                mapping[1] = "roformer." + mapping[1]
+
+        if "RoFormerForMaskedLM" in config.architectures:
+            model_mappings.extend(
+                [
+                    ["cls.predictions.transform.dense.weight", "cls.predictions.transform.weight", "transpose"],
+                    ["cls.predictions.transform.dense.bias", "cls.predictions.transform.bias"],
+                    ["cls.predictions.transform.LayerNorm.weight", "cls.predictions.layer_norm.weight"],
+                    ["cls.predictions.transform.LayerNorm.bias", "cls.predictions.layer_norm.bias"],
+                    ["cls.predictions.decoder.bias", "cls.predictions.decoder_bias"],
+                ]
+            )
+        &#47&#47 downstream mappings
+        if "RoFormerForQuestionAnswering" in config.architectures:
+            model_mappings.extend(
+                [["qa_outputs.weight", "classifier.weight", "transpose"], ["qa_outputs.bias", "classifier.bias"]]
+            )
+        if (
+            "RoFormerForMultipleChoice" in config.architectures
+            or "RoFormerForSequenceClassification" in config.architectures
+            or "RoFormerForTokenClassification" in config.architectures
+        ):
+            model_mappings.extend([["classifier.weight", None, "transpose"]])
+
+        <a id="change">init_name_mappings(model_mappings</a><a id="change">)</a>
+        mappings = [StateDictNameMapping(*mapping, index=index) for index, mapping in enumerate(model_mappings)]
+        return mappings
+
+    def init_weights(self, layer):</code></pre>

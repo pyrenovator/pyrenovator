@@ -1,0 +1,127 @@
+<html><h3>Pattern ID :12707
+</h3><img src='43021457.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        predicts = [self.text_process.int2text(sent) for sent in predicts]
+        targets = [self.text_process.int2text(sent) for sent in targets]
+
+        list_wer<a id="change"> = </a>torch.tensor(
+            [self.cal_wer(i, j).item() for i, j in <a id="change">zip(</a>predicts, targets<a id="change">)</a>]
+        )
+        wer<a id="change"> = </a>torch.mean(list_wer)
+
+        if batch_idx % 100 == 0:
+            self.log_output(predicts[0], targets[0], wer)
+
+        self.log("test_loss", loss)
+        self.log("test_batch_wer", wer)
+
+        <a id="change">return </a>loss<a id="change">, wer</a>
+
+    def log_output(self, predict, target, wer):
+        print("=" * 50)
+        print("Sample Predicts: ", predict)</code></pre><h3>After Change</h3><pre><code class='java'>
+    def test_step(self, batch: Tensor, batch_idx: int):
+        inputs, input_lengths, targets, target_lengths = batch
+
+        targets_ctc = <a id="change">targets[:, 1:-1]</a>
+
+        outputs, output_lengths = self(inputs, input_lengths)
+
+        loss = self.criterion(
+            outputs.permute(1, 0, 2), targets_ctc, output_lengths, target_lengths
+        )
+
+        self.log("test loss", loss)
+
+        if batch_idx % self.log_idx == 0:
+            label_sequences<a id="change">, predict_sequences, wer = </a>self.get_wer(
+                targets_ctc, inputs, input_lengths
+            )
+            self.log_output(predict_sequences[0], label_sequences[0], wer)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 8</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/manhph2211/vistt/commit/742be9424d91058a3c3e25adc4db742534fffab3#diff-f1b082241219fb0667a5be1d3cebcfabcdd9c3c48ba0ce5ec9a10fce9cd7c01aL105' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 43021457</div><div id='project'> Project Name: manhph2211/vistt</div><div id='commit'> Commit Name: 742be9424d91058a3c3e25adc4db742534fffab3</div><div id='time'> Time: 2022-08-30</div><div id='author'> Author: manhph5@vingroup.net</div><div id='file'> File Name: VASR/local/src/engine/trainer.py</div><div id='m_class'> M Class Name: ConformerModule</div><div id='n_method'> N Class Name: ConformerModule</div><div id='m_method'> M Method Name: test_step(3)</div><div id='n_method'> N Method Name: test_step(3)</div><div id='m_parent_class'> M Parent Class: BaseModel</div><div id='n_parent_class'> N Parent Class: pl.LightningModule</div><div id='m_file'> M File Name: VASR/local/src/engine/trainer.py</div><div id='n_file'> N File Name: VASR/local/src/engine/trainer.py</div><div id='m_start'> M Start Line: 105</div><div id='m_end'> M End Line: 136</div><div id='n_start'> N Start Line: 128</div><div id='n_end'> N End Line: 148</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    def extract_events(self, raw_edf):
+        &#47&#47 all events
+        events = np.array(
+            list(<a id="change">zip(</a>raw_edf.info["gdf_events"][1], raw_edf.info["gdf_events"][2]<a id="change">)</a>)
+        )
+
+        &#47&#47 only trial onset events
+        trial_mask = [ev_code in [769, 770, 771, 772, 783] for ev_code in events[:, 1]]
+        trial_events = events[trial_mask]
+        assert len(trial_events) == 288, "Got {:d} markers".format(len(trial_events))
+        &#47&#47 event markers 769,770 -&gt; 1,2
+        trial_events[:, 1]<a id="change"> = </a>trial_events[:, 1] - 768
+        &#47&#47 possibly overwrite with markers from labels file
+        if self.labels_filename is not None:
+            classes = loadmat(self.labels_filename)["classlabel"].squeeze()
+            trial_events[:, 1] = classes
+        unique_classes = np.unique(trial_events[:, 1])
+        assert np.array_equal(
+            [1, 2, 3, 4], unique_classes
+        ), "Expect 1,2,3,4 as class labels, got {:s}".format(str(unique_classes))
+        &#47&#47 now also create 0-1 vector for rejected trials
+        trial_start_events = events[events[:, 1] == 768]
+        assert len(trial_start_events) == len(trial_events)
+        artifact_trial_mask = np.zeros(len(trial_events), dtype=np.uint8)
+        artifact_events = events[events[:, 1] == 1023]
+        for artifact_time in artifact_events[:, 0]:
+            i_trial = trial_start_events[:, 0].tolist().index(artifact_time)
+            artifact_trial_mask[i_trial] = 1
+
+        &#47&#47 mne expects events with 3 ints each:
+        events = np.zeros((len(trial_events), 3), dtype=np.int32)
+        events[:, 0]<a id="change"> = </a>trial_events[:, 0]
+        events[:, 2] = trial_events[:, 1]
+
+        <a id="change">return </a>events<a id="change">, artifact_trial_mask</a>
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        else:
+            trial_codes = [4]  &#47&#47 "unknown" class
+
+        trial_mask = [ev_code in trial_codes for ev_code in <a id="change">events[:, 2]</a>]
+        trial_events = events[trial_mask]
+        assert len(trial_events) == 288, "Got {:d} markers".format(
+            len(trial_events)
+        )
+        trial_events[:, 2]<a id="change"> = </a>trial_events[:, 2] - 3
+        &#47&#47 possibly overwrite with markers from labels file
+        if self.labels_filename is not None:
+            classes = loadmat(self.labels_filename)["classlabel"].squeeze()</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/braindecode/braindecode/commit/b63192caeb41424761592609c8d426b7ec23890b#diff-bd52c9792bc045267ce7043df37bd0f38ca3006db4683405e7f12d5c68d2e38cL41' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 43021459</div><div id='project'> Project Name: braindecode/braindecode</div><div id='commit'> Commit Name: b63192caeb41424761592609c8d426b7ec23890b</div><div id='time'> Time: 2019-05-22</div><div id='author'> Author: robintibor@gmail.com</div><div id='file'> File Name: braindecode/datasets/bcic_iv_2a.py</div><div id='m_class'> M Class Name: BCICompetition4Set2A</div><div id='n_method'> N Class Name: BCICompetition4Set2A</div><div id='m_method'> M Method Name: extract_events(2)</div><div id='n_method'> N Method Name: extract_events(2)</div><div id='m_parent_class'> M Parent Class: object</div><div id='n_parent_class'> N Parent Class: object</div><div id='m_file'> M File Name: braindecode/datasets/bcic_iv_2a.py</div><div id='n_file'> N File Name: braindecode/datasets/bcic_iv_2a.py</div><div id='m_start'> M Start Line: 43</div><div id='m_end'> M End Line: 75</div><div id='n_start'> N Start Line: 44</div><div id='n_end'> N End Line: 90</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        predicts = [self.text_process.int2text(sent) for sent in predicts]
+        targets = [self.text_process.int2text(sent) for sent in targets]
+
+        list_wer<a id="change"> = </a>torch.tensor(
+            [self.cal_wer(i, j).item() for i, j in <a id="change">zip(</a>predicts, targets<a id="change">)</a>]
+        )
+        wer<a id="change"> = </a>torch.mean(list_wer)
+
+        if batch_idx % 100 == 0:
+            self.log_output(predicts[0], targets[0], wer)
+
+        self.log("val_loss", loss)
+        self.log("val_batch_wer", wer)
+
+        <a id="change">return </a>loss<a id="change">, wer</a>
+
+    def test_step(self, batch, batch_idx):
+        (
+            inputs,</code></pre><h3>After Change</h3><pre><code class='java'>
+    def validation_step(self, batch: Tensor, batch_idx: int):
+        inputs, input_lengths, targets, target_lengths = batch
+
+        targets_ctc = <a id="change">targets[:, 1:-1]</a>
+
+        outputs, output_lengths = self(inputs, input_lengths)
+
+        loss = self.criterion(
+            outputs.permute(1, 0, 2), targets_ctc, output_lengths, target_lengths
+        )
+
+        self.log("test loss", loss)
+
+        if batch_idx % self.log_idx == 0:
+            label_sequences<a id="change">, predict_sequences, wer = </a>self.get_wer(
+                targets_ctc, inputs, input_lengths
+            )
+            self.log_output(predict_sequences[0], label_sequences[0], wer)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/manhph2211/vistt/commit/742be9424d91058a3c3e25adc4db742534fffab3#diff-f1b082241219fb0667a5be1d3cebcfabcdd9c3c48ba0ce5ec9a10fce9cd7c01aL72' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 43021461</div><div id='project'> Project Name: manhph2211/vistt</div><div id='commit'> Commit Name: 742be9424d91058a3c3e25adc4db742534fffab3</div><div id='time'> Time: 2022-08-30</div><div id='author'> Author: manhph5@vingroup.net</div><div id='file'> File Name: VASR/local/src/engine/trainer.py</div><div id='m_class'> M Class Name: ConformerModule</div><div id='n_method'> N Class Name: ConformerModule</div><div id='m_method'> M Method Name: validation_step(3)</div><div id='n_method'> N Method Name: validation_step(3)</div><div id='m_parent_class'> M Parent Class: BaseModel</div><div id='n_parent_class'> N Parent Class: pl.LightningModule</div><div id='m_file'> M File Name: VASR/local/src/engine/trainer.py</div><div id='n_file'> N File Name: VASR/local/src/engine/trainer.py</div><div id='m_start'> M Start Line: 72</div><div id='m_end'> M End Line: 103</div><div id='n_start'> N Start Line: 106</div><div id='n_end'> N End Line: 126</div><BR>

@@ -1,0 +1,126 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        dnn_blocks=2,
+        dnn_neurons=512,
+    ):
+        blocks<a id="change"> = </a><a id="change">[]</a>
+        for block_index in range(cnn_blocks):
+            if not using_2d_pooling:
+                pooling = Pooling1d(
+                    pool_type="max",
+                    kernel_size=inter_layer_pooling_size[block_index],
+                    pool_axis=2,
+                )
+            else:
+                pooling = Pooling2d(
+                    pool_type="max",
+                    kernel_size=(
+                        inter_layer_pooling_size[block_index],
+                        inter_layer_pooling_size[block_index],
+                    ),
+                    pool_axis=(1, 2),
+                )
+
+            blocks.extend(
+                [
+                    lambda input_shape: Conv2d(
+                        input_shape=input_shape,
+                        out_channels=cnn_channels[block_index],
+                        kernel_size=cnn_kernelsize,
+                    ),
+                    lambda input_shape: LayerNorm(input_shape),
+                    activation(),
+                    lambda input_shape: Conv2d(
+                        input_shape=input_shape,
+                        out_channels=cnn_channels[block_index],
+                        kernel_size=cnn_kernelsize,
+                    ),
+                    lambda input_shape: LayerNorm(input_shape),
+                    activation(),
+                    &#47&#47 Inter-layer Pooling
+                    pooling,
+                    Dropout2d(drop_rate=dropout),
+                ]
+            )
+
+        if time_pooling:
+            blocks.append(
+                Pooling1d(
+                    pool_type="max", kernel_size=time_pooling_size, pool_axis=1,
+                )
+            )
+
+        if rnn_layers &gt; 0:
+            blocks.append(
+                lambda input_shape: rnn_class(
+                    input_shape=input_shape,
+                    hidden_size=rnn_neurons,
+                    num_layers=rnn_layers,
+                    dropout=dropout,
+                    bidirectional=rnn_bidirectional,
+                    re_init=rnn_re_init,
+                )
+            )
+
+        for block_index in range(dnn_blocks):
+            <a id="change">blocks.extend(
+                </a><a id="change">[
+                    </a>lambda input_shape: Linear(
+                        input_shape=input_shape,
+                        n_neurons=dnn_neurons,
+                        bias=True,
+                        combine_dims=False,
+                    ),
+                    lambda input_shape: BatchNorm1d(input_shape),
+                    <a id="change">activation()</a>,
+                    torch.nn.Dropout(p=dropout)<a id="change"></a>,
+                ]<a id="change">
+            )</a>
+
+        super().__init__(input_shape, *blocks)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+                    pool_axis=(1, 2),
+                )
+
+            <a id="change">self.append(
+                </a>Conv2d<a id="change">,
+                out_channels=cnn_channels[block_index],
+                kernel_size=cnn_kernelsize,
+            )</a>
+            self.append(LayerNorm)
+            self.append(activation())
+            self.append(
+                Conv2d,
+                out_channels=cnn_channels[block_index],
+                kernel_size=cnn_kernelsize,
+            )
+            self.append(LayerNorm)
+            self.append(activation())
+            self.append(pooling)
+            self.append(Dropout2d(drop_rate=dropout))
+
+        if time_pooling:
+            self.append(
+                Pooling1d(
+                    pool_type="max", kernel_size=time_pooling_size, pool_axis=1,
+                )
+            )
+
+        if rnn_layers &gt; 0:
+            self.append(
+                rnn_class,
+                hidden_size=rnn_neurons,
+                num_layers=rnn_layers,
+                dropout=dropout,
+                bidirectional=rnn_bidirectional,
+                re_init=rnn_re_init,
+            )
+
+        for block_index in range(dnn_blocks):
+            self.append(Linear, n_neurons=dnn_neurons, bias=True)
+            self.append(BatchNorm1d)
+            <a id="change">self.append(</a><a id="change">activation())</a>
+            <a id="change">self.append(</a>torch.nn.Dropout(p=dropout)<a id="change">)</a>
+</code></pre>

@@ -1,0 +1,63 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        
+        self._time_profiler.record(self.uid, Event.queue_in)
+        data = self._in_ques[0].get_dict()
+        if <a id="change">data is None</a>:
+            <a id="change">self._set_finished()</a>
+            return True
+
+        side_by<a id="change"> = dict(</a><a id="change">(k, data[k]) for k in self._side_by_keys)</a>
+        process_data = [data.get(key) for key in self._node_repr.inputs]
+        if not any((i is Empty() for i in process_data)):
+            <a id="change">self._time_profiler.record(</a>self.uid, Event.process_in<a id="change">)</a>
+            succ<a id="change">, outputs, msg = </a>self._call(process_data)
+            <a id="change">if not succ</a>:
+                <a id="change">self._set_failed(</a>msg<a id="change">)</a>
+                <a id="change">return True</a>
+            if isinstance(outputs, Generator):
+                outputs = self._get_from_generator(outputs, len(self._node_repr.outputs))
+            self._time_profiler.record(self.uid, Event.process_out)
+
+            size = len(self._node_repr.outputs)
+            if size &gt; 1:
+                output_map = dict((self._node_repr.outputs[i], outputs[i])
+                                  for i in range(size))
+            elif size == 0:
+                output_map = {}
+            else:
+                output_map = {}
+                output_map[self._node_repr.outputs[0]] = outputs
+
+            side_by.update(output_map)
+        self._time_profiler.record(self.uid, Event.queue_out)
+
+        <a id="change">if </a><a id="change">not side_by</a>:
+            return False
+
+        for out_que in self._output_ques:
+            if not out_que.put_dict(side_by):
+                <a id="change">self._set_stopped()</a>
+                <a id="change">return True</a>
+
+        return False
+
+    def _get_from_generator(self, gen, size):</code></pre><h3>After Change</h3><pre><code class='java'>
+        
+        self._time_profiler.record(self.uid, Event.queue_in)
+        data = self.read_row()
+        if <a id="change">data is None or not self.side_by_to_next(data)</a>:
+            return None
+        process_data = [data.get(key) for key in self._node_repr.inputs]
+
+        <a id="change">if </a>any((item is Empty() for item in process_data)):
+            <a id="change">return None</a>
+
+        <a id="change">self._time_profiler.record(</a>self.uid, Event.process_in<a id="change">)</a>
+        succ<a id="change">, outputs, msg = </a>self._call(process_data)
+        <a id="change">assert </a>succ, msg
+        if isinstance(outputs, Generator):
+            outputs = self._get_from_generator(outputs, len(self._node_repr.outputs))
+        self._time_profiler.record(self.uid, Event.process_out)</code></pre>

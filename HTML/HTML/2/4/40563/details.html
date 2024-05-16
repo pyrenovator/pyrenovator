@@ -1,0 +1,60 @@
+<html><h3>Pattern ID :40563
+</h3><img src='114795782.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        self.temperature = temperature
+
+    def forward(self, g_t: torch.Tensor) -&gt; torch.Tensor:
+        train_bs, class_num = g_t.size(0), <a id="change">g_t.size(1</a><a id="change">)</a>
+        g_t_temp = g_t / self.temperature
+        g_t_temp_softmax = nn.Softmax(dim=1)(g_t_temp)
+        target_entropy_weight = entropy(g_t_temp_softmax).detach()
+        target_entropy_weight = 1 + torch.exp(-target_entropy_weight)</code></pre><h3>After Change</h3><pre><code class='java'>
+    def forward(self, logits: torch.Tensor) -&gt; torch.Tensor:
+        batch_size, num_classes = logits.shape
+        predictions = F.softmax(logits / self.temperature, dim=1)  &#47&#47 batch_size x num_classes
+        entropy_weight = <a id="change">entropy(predictions).detach()</a>
+        entropy_weight = 1 + torch.exp(-entropy_weight)
+        entropy_weight = (batch_size * entropy_weight / torch.sum(entropy_weight)).unsqueeze(dim=1)  &#47&#47 batch_size x 1
+        class_confusion_matrix<a id="change"> = </a>torch.mm((predictions * entropy_weight).transpose(1, 0), predictions)
+        class_confusion_matrix = class_confusion_matrix / torch.sum(class_confusion_matrix, dim=1)
+        mcc_loss = (torch.sum(class_confusion_matrix) - torch.trace(class_confusion_matrix)) / num_classes
+        return mcc_loss</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/thuml/transfer-learning-library/commit/7f63cd30ea0e7cf8961db90d2af8630e2429b434#diff-970938af033d5bdedb6c8ae49305f52cf895a99e2cc388cc89c2cf008f45f9e9L17' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 114795782</div><div id='project'> Project Name: thuml/transfer-learning-library</div><div id='commit'> Commit Name: 7f63cd30ea0e7cf8961db90d2af8630e2429b434</div><div id='time'> Time: 2020-08-28</div><div id='author'> Author: 13126830206@163.com</div><div id='file'> File Name: dalib/adaptation/mcc.py</div><div id='m_class'> M Class Name: MinimumClassConfusionLoss</div><div id='n_method'> N Class Name: MinimumClassConfusionLoss</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: dalib/adaptation/mcc.py</div><div id='n_file'> N File Name: dalib/adaptation/mcc.py</div><div id='m_start'> M Start Line: 17</div><div id='m_end'> M End Line: 23</div><div id='n_start'> N Start Line: 41</div><div id='n_end'> N End Line: 46</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        gap = x * gap_weight.unsqueeze(2).unsqueeze(3)
+
+        gmp = self.global_max_pool(x)
+        gmp_logit = self.global_max_pool_fc(gmp.view(<a id="change">x.size(0</a><a id="change">)</a>, -1))
+        gmp_weight = self.global_max_pool_fc.linear.weight.data.clone()
+        gmp = x * gmp_weight.unsqueeze(2).unsqueeze(3)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        gmp = self.maxpool(x)
+        gmp_logit = self.maxpool_fc(gmp.flatten(1))
+        gmp_weight = <a id="change">self.maxpool_fc.weight.detach()</a>.clone()
+        gmp = x * gmp_weight[:, :, None, None]
+
+        cam_logit = torch.cat([gap_logit, gmp_logit], dim=1)
+        x = torch.cat([gap, gmp], dim=1)
+        x = self.conv(x)
+        x = self.act(x)
+
+        heatmap<a id="change"> = </a>torch.sum(x, dim=1, keepdim=True)
+
+        return x, cam_logit, heatmap
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/stomoya/animeface/commit/a90fefdcfa84ce38987194a1ebd71b59eee30e0b#diff-46b2d268f745a9596b4f5f343345806f96fb3f625a37a7a0ee82b059949f6192L109' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 114795792</div><div id='project'> Project Name: stomoya/animeface</div><div id='commit'> Commit Name: a90fefdcfa84ce38987194a1ebd71b59eee30e0b</div><div id='time'> Time: 2022-03-23</div><div id='author'> Author: stomoya0110@gmail.com</div><div id='file'> File Name: implementations/UGATIT/model.py</div><div id='m_class'> M Class Name: CAM</div><div id='n_method'> N Class Name: CAM</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: implementations/UGATIT/model.py</div><div id='n_file'> N File Name: implementations/UGATIT/model.py</div><div id='m_start'> M Start Line: 112</div><div id='m_end'> M End Line: 123</div><div id='n_start'> N Start Line: 42</div><div id='n_end'> N End Line: 58</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+
+def calc_bandwidth(set1, set2, kernel_num=10):
+    batch_size = <a id="change">set1.size(0</a><a id="change">)</a>
+    seq_len = set2.size(0)
+    set1_centre = set1.mean(-1).view(-1, 1)
+    set2_centre = set2.mean(-1).view(1, -1)
+    distance = (set1_centre - set2_centre).pow(2).pow(0.5).max(-1)[0].max(-1)[0]</code></pre><h3>After Change</h3><pre><code class='java'>
+    particle_num = first_kernel.size(-1)
+    kernel_num
+    scale_list = list(np.linspace(min_scale, max_scale, num=kernel_num))
+    bandwidth_list<a id="change"> = </a>[<a id="change">(kernel_mean * scale).view(-1, 1, 1).detach()</a> for scale in scale_list]
+    first_items = 0
+    third_items = 0
+    for h in bandwidth_list:</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/deligentfool/dqn_zoo/commit/1ac00bac8d92870064cdcf754b6e29278f14ae79#diff-a3e85498ee9bd41175d1c0b181ebc32feaa59a654db95d7021e3167b795c0a05L32' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 114795784</div><div id='project'> Project Name: deligentfool/dqn_zoo</div><div id='commit'> Commit Name: 1ac00bac8d92870064cdcf754b6e29278f14ae79</div><div id='time'> Time: 2020-11-04</div><div id='author'> Author: 1027660817@qq.com</div><div id='file'> File Name: MMD_DQN/mmd_dqn.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: calc_bandwidth(5)</div><div id='n_method'> N Method Name: calc_bandwidth(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: MMD_DQN/mmd_dqn.py</div><div id='n_file'> N File Name: MMD_DQN/mmd_dqn.py</div><div id='m_start'> M Start Line: 33</div><div id='m_end'> M End Line: 40</div><div id='n_start'> N Start Line: 18</div><div id='n_end'> N End Line: 33</div><BR>

@@ -1,0 +1,55 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+def validation(model, dataset, loss, epoch, scaler=True):
+    model.eval()
+    valid_avg_cost = 0
+    valid_cost_sum<a id="change"> = 0</a>
+
+    valid_epoch = tqdm(dataset, desc=&quotValid{}&quot.format(str(epoch)), total=len(dataset), leave=True)
+
+    &#47&#47 with tqdm(dataset, desc=&quotTest{}&quot.format(str(epoch)), total=len(dataset), leave=True) as test_epoch:
+    with torch.no_grad():
+        for idx, (X_val, Y_val, dia, sys, mean) in enumerate(valid_epoch):
+            hypothesis = model(X_val, scaler=scaler)
+
+            &quot&quot&quotNegative Pearson Loss&quot&quot&quot
+            rmse_cost = loss[0](hypothesis, Y_val)
+            &#47&#47 neg_cost = 0
+            &quot&quot&quotSTFT Loss&quot&quot&quot
+            stft_cost = loss[1](hypothesis, Y_val)
+            &quot&quot&quotDBP Loss&quot&quot&quot
+            &#47&#47 d_cost = loss[0](pred_d, dia)
+            &quot&quot&quotSBP Loss&quot&quot&quot
+            &#47&#47 s_cost = loss[0](pred_s, sys)
+
+            &quot&quot&quotTotal Loss&quot&quot&quot
+            cost = rmse_cost + stft_cost&#47&#47  + d_cost + s_cost
+            valid_cost_sum<a id="change"> += </a><a id="change">cost.__float__()</a>
+            valid_avg_cost<a id="change"> = </a>valid_cost_sum<a id="change"> / </a>(idx<a id="change"> + 1</a>)
+            valid_epoch.set_postfix(rmse=rmse_cost.__float__(), stft=stft_cost.__float__(), tot=valid_avg_cost)
+        wandb.log({"Valid Loss": valid_avg_cost}, step=epoch)
+        &#47&#47 wandb.log({"Valid Loss": valid_avg_cost,</code></pre><h3>After Change</h3><pre><code class='java'>
+def validation(model, dataset, loss, epoch, scaler=True):
+    model.eval()
+
+    avg_cost_list = <a id="change">[]</a>
+    <a id="change">for _</a> in <a id="change">range(</a><a id="change">len(loss</a><a id="change">)):
+        avg_cost_list.append(0</a><a id="change">)</a>
+
+    with tqdm(dataset, desc=&quotValidation{}&quot.format(str(epoch)), total=len(dataset), leave=True) as valid_epoch:
+        with torch.no_grad():
+            for idx, (X_val, Y_val, dia, sys, size_class) in enumerate(valid_epoch):
+                hypothesis = model(X_val, scaler=scaler)
+                avg_cost_list<a id="change">, cost = </a><a id="change">tu.calc_losses(</a>avg_cost_list, <a id="change">loss</a>,
+                                                     hypothesis, Y_val,
+                                                     idx<a id="change"> + 1</a><a id="change">)</a>
+                total_cost = np.sum(avg_cost_list)
+                <a id="change">temp = </a><a id="change">{}</a>
+                <a id="change">for </a><a id="change">i</a> in <a id="change">range(len(loss</a><a id="change">)</a><a id="change">):
+                    temp</a><a id="change">[(str(loss[i]))[:-2]] = </a>(<a id="change">round(avg_cost_list[i]</a>, <a id="change">3</a><a id="change">))</a>
+
+                valid_epoch.set_postfix(losses=temp, tot=total_cost)
+            &#47&#47 wandb.init(project="VBPNet", entity="paperchae")
+            &#47&#47 wandb.log({"Valid Loss": total_cost}, step=epoch)</code></pre>

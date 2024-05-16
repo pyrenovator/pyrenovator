@@ -1,0 +1,68 @@
+<html><h3>Pattern ID :21270
+</h3><img src='68084191.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    return self.loaded_keys[buf_index]
+
+  def ast_parse(self, x:Union[GPUBuffer, LazyOp], reduce:Optional[Token]=None) -&gt; Token:
+    if not isinstance(x, LazyOp): return <a id="change">self.load(</a>self.bufs.index(x)<a id="change">)</a>
+    if isinstance(x.op, ReduceOps) and reduce is not None: return reduce
+    values = [self.ast_parse(v, reduce) for v in x.src]
+    code = GPUBuffer.code_for_op[x.op]  &#47&#47 TODO: replace this with a function
+    assert all_same([x.typ for x in values]), f"type mismatch in {values}"</code></pre><h3>After Change</h3><pre><code class='java'>
+    if isinstance(x.op, ReduceOps) and reduce is not None: return reduce
+    values = [self.ast_parse(v, offset, reduce) for v in x.src]
+    code = GPUBuffer.code_for_op[x.op]  &#47&#47 TODO: replace this with a function
+    <a id="change">if </a><a id="change">isinstance(</a>x.op, ReduceOps<a id="change">)</a> and values[0].typ != Types.FLOAT and not self.early_loads_are_non_reduce_float4:
+      self.prekernel.add("float clsum(float4 x) { return x.x + x.y + x.z + x.w; }\n")
+      return Token(code.replace("A", f"clsum({values[0].tok})").replace("acc", f"acc.s{offset}" if self.late_are_float4 else "acc"), Types.FLOAT)
+    assert all_same([x.typ for x in values]), f"type mismatch in {values}"</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 5</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/geohot/tinygrad/commit/49c6e6d472dfa05603dc156a47e6e22b95be37e8#diff-305e94e84668440e8f8a2a4e17d5796e43233474510c7af082ab29c9aa824eeeL137' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 68084191</div><div id='project'> Project Name: geohot/tinygrad</div><div id='commit'> Commit Name: 49c6e6d472dfa05603dc156a47e6e22b95be37e8</div><div id='time'> Time: 2023-01-12</div><div id='author'> Author: 72895+geohot@users.noreply.github.com</div><div id='file'> File Name: tinygrad/llops/ops_gpu.py</div><div id='m_class'> M Class Name: CLASTKernel</div><div id='n_method'> N Class Name: CLASTKernel</div><div id='m_method'> M Method Name: ast_parse(4)</div><div id='n_method'> N Method Name: ast_parse(3)</div><div id='m_parent_class'> M Parent Class: ASTKernel</div><div id='n_parent_class'> N Parent Class: ASTKernel</div><div id='m_file'> M File Name: tinygrad/llops/ops_gpu.py</div><div id='n_file'> N File Name: tinygrad/llops/ops_gpu.py</div><div id='m_start'> M Start Line: 137</div><div id='m_end'> M End Line: 137</div><div id='n_start'> N Start Line: 178</div><div id='n_end'> N End Line: 188</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        output = model_pytorch(**inputs_pytorch)
+        assert len(output.shape) == 2, "unexpected output tensor shape (!=2)"
+        nb_dim = output.shape[1]
+        onnx_model = <a id="change">onnx.load(</a>output_path<a id="change">)</a>
+        assert len(onnx_model.graph.output) == 1, "unexpected number of output tensors (!=1)"
+        assert len(onnx_model.graph.output[0].type.tensor_type.shape.dim) == 2, "unexpected ouput tensor shape (!=2)"
+        onnx_model.graph.output[0].type.tensor_type.shape.dim[1].dim_value = nb_dim
+        onnx.save(onnx_model, output_path)</code></pre><h3>After Change</h3><pre><code class='java'>
+        dynamic_axis["output"][1] = "sequence"
+    &#47&#47 replace int64 input tensors by int32 -&gt; for ONNX Runtime binding API and expected by TensorRT engine
+    for k, v in inputs_pytorch.items():
+        <a id="change">if </a>not <a id="change">isinstance(</a>v, torch.Tensor<a id="change">)</a>:
+            continue
+        if v.dtype in [torch.long, torch.int64]:
+            inputs_pytorch[k] = v.type(torch.int32)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/els-rd/triton_transformers/commit/d397869e95ee07570c47edefec01bdc673391b65#diff-b6a8238b3fb9a4340f2344d1920d7d21bb6d84607a20cc2039932f706418c8a6L81' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 68084200</div><div id='project'> Project Name: els-rd/triton_transformers</div><div id='commit'> Commit Name: d397869e95ee07570c47edefec01bdc673391b65</div><div id='time'> Time: 2022-05-23</div><div id='author'> Author: pommedeterresautee@users.noreply.github.com</div><div id='file'> File Name: src/transformer_deploy/backends/pytorch_utils.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: convert_to_onnx(5)</div><div id='n_method'> N Method Name: convert_to_onnx(5)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/transformer_deploy/backends/pytorch_utils.py</div><div id='n_file'> N File Name: src/transformer_deploy/backends/pytorch_utils.py</div><div id='m_start'> M Start Line: 118</div><div id='m_end'> M End Line: 158</div><div id='n_start'> N Start Line: 113</div><div id='n_end'> N End Line: 150</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        ]
+        try:
+            subprocess.run(onnx_cmd)
+            <a id="change">onnx.load(</a>output_file_path<a id="change">)</a>
+        except Exception:
+            logger.warning(
+                "Something went wrong during conversion from tensorflow"
+                " to onnx model. ONNX pipeline will be unavailable."</code></pre><h3>After Change</h3><pre><code class='java'>
+    
+
+    try:
+        <a id="change">if </a>isinstance(model, tf.keras.Model) or (
+            isinstance(model, TensorFlowTransformerWrapper)
+            and <a id="change">isinstance(</a>model.core_model, tf.keras.Model<a id="change">)</a>
+        ):
+            return convert_keras_to_onnx(model, model_params, output_file_path)
+        else:
+            return convert_tf_saved_model_to_onnx(model, output_file_path)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/nebuly-ai/nebullvm/commit/e24d9433b15969ee0bd75ccbb7f3f6b88eca4a41#diff-7579e96736c778c739fffc8e47d6b5777d0742a47e5aa3f1fba13ec2748bcdc0L15' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 68084201</div><div id='project'> Project Name: nebuly-ai/nebullvm</div><div id='commit'> Commit Name: e24d9433b15969ee0bd75ccbb7f3f6b88eca4a41</div><div id='time'> Time: 2023-01-03</div><div id='author'> Author: v.sofi@nebuly.ai</div><div id='file'> File Name: nebullvm/operations/conversions/tensorflow.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: convert_tf_to_onnx(3)</div><div id='n_method'> N Method Name: convert_tf_to_onnx(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: nebullvm/operations/conversions/tensorflow.py</div><div id='n_file'> N File Name: nebullvm/operations/conversions/tensorflow.py</div><div id='m_start'> M Start Line: 22</div><div id='m_end'> M End Line: 54</div><div id='n_start'> N Start Line: 17</div><div id='n_end'> N End Line: 44</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    def load_network(self, network, network_label, epoch):
+        save_filename = &quot%d_net_%s&quot % (epoch, network_label)
+        save_path = os.path.join(self.save_dir, save_filename)
+        <a id="change">network.load(</a>save_path<a id="change">)</a>
+
+    def update_learning_rate():
+        pass
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        torch.save(state_dict, save_path)
+
+    def load_network(self, load_path, network, strict=True):
+        <a id="change">if </a><a id="change">isinstance(</a>network, nn.DataParallel<a id="change">)</a>:
+            network = network.module
+        network.load_state_dict(torch.load(load_path), strict=strict)
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/janspiry/distributed-pytorch-template/commit/37e0ca8cb78b4f18bf00a8881a479a0c9e582a8c#diff-7c1ece53a18959b293126dd93f3cf0f768220f50d2c1201e1601681873e6f6e4L50' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 68084192</div><div id='project'> Project Name: janspiry/distributed-pytorch-template</div><div id='commit'> Commit Name: 37e0ca8cb78b4f18bf00a8881a479a0c9e582a8c</div><div id='time'> Time: 2022-01-29</div><div id='author'> Author: lw_jiang@foxmail.com</div><div id='file'> File Name: models/base_model.py</div><div id='m_class'> M Class Name: BaseModel</div><div id='n_method'> N Class Name: BaseModel</div><div id='m_method'> M Method Name: load_network(4)</div><div id='n_method'> N Method Name: load_network(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: models/base_model.py</div><div id='n_file'> N File Name: models/base_model.py</div><div id='m_start'> M Start Line: 50</div><div id='m_end'> M End Line: 53</div><div id='n_start'> N Start Line: 70</div><div id='n_end'> N End Line: 73</div><BR>

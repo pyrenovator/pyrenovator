@@ -1,0 +1,46 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    if isinstance(server.config, TerraformServerDeploymentConfig):
+        metadata["server_id"] = str(server.config.server_id)
+
+    <a id="change">track_event(
+        </a>AnalyticsEvent.ZENML_SERVER_DESTROYED<a id="change">,
+        metadata=metadata,
+    )</a>
+
+    cli_utils.declare(
+        "The ZenML server has been torn down and all resources removed."
+    )</code></pre><h3>After Change</h3><pre><code class='java'>
+)
+def destroy() -&gt; None:
+    Tear down and clean up a cloud ZenML deployment.
+    <a id="change">with event_handler</a><a id="change">(
+        AnalyticsEvent.ZENML_SERVER_DESTROYED
+    ) as analytics_handler:
+        </a>server = get_active_deployment(local=False)
+        if not server:
+            cli_utils.declare("No cloud ZenML server has been deployed.")
+            return
+
+        from zenml.zen_server.deploy.deployer import ServerDeployer
+
+        deployer = ServerDeployer()
+        deployer.remove_server(server.config.name)
+
+        metadata = {
+            "server_deployment": str(server.config.provider),
+        }
+
+        from zenml.zen_server.deploy.terraform.terraform_zen_server import (
+            TerraformServerDeploymentConfig,
+        )
+
+        if isinstance(server.config, TerraformServerDeploymentConfig):
+            metadata["server_id"] = str(server.config.server_id)
+
+        analytics_handler.metadata<a id="change"> = </a>metadata
+
+        cli_utils.declare(
+            "The ZenML server has been torn down and all resources removed."</code></pre>

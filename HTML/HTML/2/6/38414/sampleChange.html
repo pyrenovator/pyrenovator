@@ -1,0 +1,38 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                z1_var = z1_stds[i] ** 2  &#47&#47 [metric_dim]
+                z2_var = z2_stds[j] ** 2  &#47&#47 [metric_dim]
+
+                log_det_diff = torch.log((z1_var + 1e-5).prod() / <a id="change">(z2_var + 1e-5).prod()</a>)
+
+                trace_inv = ((1 / (z2_var + 1e-5)) * z1_var).sum()
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        z1 = z1.view(batch_size, 2, metric_dim)
+        z2 = z2.view(-1, batch_size, metric_dim).permute(1, 0, 2)  &#47&#47 [batch_size, num_conformers, metric_dim]
+        <a id="change">if </a>self.norm:
+            z1<a id="change"> = </a>F.normalize(z1, dim=2)
+            z2<a id="change"> = </a>F.normalize(z2, dim=2)
+        z1_means = z1[:, 0, :]  &#47&#47 [batch_size, metric_dim]
+        z1_stds = z1[:, 1, :]  &#47&#47 [batch_size, metric_dim]
+        z2_means = z2.mean(1)  &#47&#47 [batch_size, metric_dim]
+        z2_stds = z2.std(1)  &#47&#47 [batch_size, metric_dim]
+        kl_similarity = []
+        for i, z1_mean in enumerate(z1_means):
+            for j, z2_mean in enumerate(z2_means):
+                z1_var = z1_stds[i] ** 2  &#47&#47 [metric_dim]
+                z2_var = z2_stds[j] ** 2  &#47&#47 [metric_dim]
+
+                log_det_diff = torch.log(((z1_var).prod() + 1e-5) / ((z2_var).prod()+ 1e-5))
+
+                trace_inv = ((1 / (z2_var + 1e-5)) * z1_var).sum()
+
+                mean_sigma_mean = ((z2_mean - z1_mean) ** 2 * (1 / (z2_var + 1e-5))).sum()
+
+                kl_divergence = 0.5 * (log_det_diff - metric_dim + trace_inv + mean_sigma_mean)
+                kl_similarity.append(<a id="change">1</a><a id="change">-</a>kl_divergence)
+        kl_similarity = torch.stack(kl_similarity)
+        kl_similarity = kl_similarity.view(batch_size, batch_size)
+</code></pre>

@@ -1,0 +1,98 @@
+<html><h3>Pattern ID :36068
+</h3><img src='102348889.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    loader = get_loader(config[&quotdata&quot], &quottrain&quot)
+
+    model = TransoarNet(config[&quotmodel&quot], config[&quotdata&quot][&quotnum_classes&quot]).to(device=device)
+    <a id="change">model.train()</a>
+
+    criterion = build_criterion(config[&quottraining&quot]).to(device=device)
+    
+    for data, mask, bboxes, _ in tqdm(loader):</code></pre><h3>After Change</h3><pre><code class='java'>
+    model = TransoarNet(config[&quotmodel&quot], config[&quotdata&quot][&quotnum_classes&quot]).to(device=device)
+    criterion = build_criterion(config[&quottraining&quot]).to(device=device)
+
+    param_dicts<a id="change"> = </a><a id="change">[
+        </a>{"params": [p for n, p in model.named_parameters() if "backbone" not in n and p.requires_grad]},
+        {
+            "params": [p for n, p in model.named_parameters() if "backbone" in n and p.requires_grad],
+            "lr": float(config[&quottraining&quot][&quotlr_backbone&quot])
+        }<a id="change"></a>,
+    ]
+
+    optim = torch.optim.AdamW(
+        param_dicts, lr=float(config[&quottraining&quot][&quotlr&quot]), weight_decay=float(config[&quottraining&quot][&quotweight_decay&quot])
+    )
+    scheduler = torch.optim.lr_scheduler.StepLR(optim, config[&quottraining&quot][&quotlr_drop&quot])
+
+    &#47&#47 Build trainer and start training
+    trainer<a id="change"> = </a>Trainer(
+        train_loader, val_loader, model, criterion, optim, scheduler, device, config
+    )
+    trainer.run()</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/bwittmann/transoar/commit/fbe1515fe14ebf81c18bcf86c27bd7cb4ac79e7e#diff-0e048206896ef3808bf29e00f4ca534eb723fe51e27a47b583a92e913c33bbcfL15' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 102348889</div><div id='project'> Project Name: bwittmann/transoar</div><div id='commit'> Commit Name: fbe1515fe14ebf81c18bcf86c27bd7cb4ac79e7e</div><div id='time'> Time: 2021-11-22</div><div id='author'> Author: bastian.wittmann@tum.de</div><div id='file'> File Name: scripts/train.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train(1)</div><div id='n_method'> N Method Name: train(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: scripts/train.py</div><div id='n_file'> N File Name: scripts/train.py</div><div id='m_start'> M Start Line: 15</div><div id='m_end'> M End Line: 42</div><div id='n_start'> N Start Line: 15</div><div id='n_end'> N End Line: 41</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+        print("...fine-tuning")
+        self.model.cuda()
+        <a id="change">self.model.train()</a>
+        self.model._train(optimizer=optimizer, lr_scheduler=lr_scheduler, 
+                        loader_train=fine_tune_loader, loader_valid=self.val_loader_triggered,
+                        validate_func=None,  **kwargs)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        
+        print("replacing outlayer with a clean one")
+        params = self.model.add_new_last_layer()
+        train_params<a id="change"> = </a><a id="change">[]</a>
+        for param in params:
+            param.requires_grad = True
+            train_params.append(param)
+
+        yt_num = len(self.yt_labels)
+        ynt_num = len(self.ynt_labels)
+        all_num = yt_num + ynt_num
+        fine_tune_inds = np.random.choice(list(range(all_num)), 
+                         int(all_num*self.fine_tune_set_ratio), 
+                         replace=False)
+        val_inds = np.random.choice(list(range(len(fine_tune_inds))), int(len(fine_tune_inds)*self.val_ratio), replace=False)
+
+        fine_tune_imgs = torch.tensor(self.yt_imgs.tolist()+self.ynt_imgs.tolist())[fine_tune_inds]
+        fine_tune_labels = torch.tensor(self.yt_labels.tolist()+self.ynt_labels.tolist())[fine_tune_inds]
+        val_imgs_clean, val_imgs_triggered = fine_tune_imgs[val_inds], fine_tune_imgs[val_inds]
+        val_labels_clean, val_labels_triggered = fine_tune_labels[val_inds], fine_tune_labels[val_inds]
+
+        &#47&#47 add mark in triggered validate set
+        val_imgs_triggered = val_imgs_triggered.cpu() * (1-self.mask.cpu()) + self.mask.cpu() * torch.sigmoid(self.mark.cpu())
+        val_labels_triggered.fill_(self.target_class)
+
+        fine_tune_set = torch.utils.data.TensorDataset(fine_tune_imgs, fine_tune_labels)
+        fine_tune_loader = self.dataset.get_dataloader(mode=None, dataset=fine_tune_set)
+        val_set_clean = torch.utils.data.TensorDataset(val_imgs_clean, val_labels_clean)
+        self.val_loader_clean = self.dataset.get_dataloader(mode=None, dataset=val_set_clean)
+
+        val_set_triggered = torch.utils.data.TensorDataset(val_imgs_triggered, val_labels_triggered)
+        self.val_loader_triggered = self.dataset.get_dataloader(mode=None, dataset=val_set_triggered)
+
+        print("...fine-tuning")
+        self.model.cuda()
+        optimizer<a id="change"> = </a>optim.Adam(train_params, lr=0.01)
+        self.model._train(optimizer=optimizer, lr_scheduler=lr_scheduler, 
+                        loader_train=fine_tune_loader, loader_valid=self.val_loader_triggered,
+                        validate_func=None,  **kwargs)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/ain-soph/trojanzoo/commit/ab9477e1b0e41c6abe9e11d7345b20233d61b9d9#diff-1e9f08cdcf107dac703ba6ade89c7699ee84615bf2b5cdd4e776168a691df4dfL259' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 102348904</div><div id='project'> Project Name: ain-soph/trojanzoo</div><div id='commit'> Commit Name: ab9477e1b0e41c6abe9e11d7345b20233d61b9d9</div><div id='time'> Time: 2020-07-01</div><div id='author'> Author: zxx5113@lrs-twang01.ist.psu.edu</div><div id='file'> File Name: trojanzoo/attack/backdoor/latent_backdoor.py</div><div id='m_class'> M Class Name: Latent_Backdoor</div><div id='n_method'> N Class Name: Latent_Backdoor</div><div id='m_method'> M Method Name: student_fine_tuning(3)</div><div id='n_method'> N Method Name: student_fine_tuning(4)</div><div id='m_parent_class'> M Parent Class: BadNet</div><div id='n_parent_class'> N Parent Class: BadNet</div><div id='m_file'> M File Name: trojanzoo/attack/backdoor/latent_backdoor.py</div><div id='n_file'> N File Name: trojanzoo/attack/backdoor/latent_backdoor.py</div><div id='m_start'> M Start Line: 259</div><div id='m_end'> M End Line: 299</div><div id='n_start'> N Start Line: 216</div><div id='n_end'> N End Line: 248</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        :param label: batch of distance labels (-1 means same class and +1 means different class)
+        :return: loss to optimize for
+        
+        <a id="change">self.encoder.train()</a>
+        encoded1 = self.encoder(sample1)
+        encoded2 = self.encoder(sample2)
+        &#47&#47 reduce over sequence axis
+        vector1 = self.expander(torch.mean(encoded1, 3))</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        &#47&#47 expand dimensions
+        info1 = torch.cat([ef1_vec, em1_vec, ec1_vec], 2)
+        info2<a id="change"> = </a>torch.cat(<a id="change">[</a>ef2_vec, em2_vec, ec2_vec<a id="change"></a>], 2)
+        vector1 = self.expander(info1)
+        vector2<a id="change"> = </a>self.expander(info2)
+
+        &#47&#47 get similarity
+        sim = self.comparator(vector1, vector2)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/digitalphonetics/ims-toucan/commit/e00821e875c1dc3913edb61b7869c7bdc2a36dfa#diff-bc0bb039a4107c1aef8f739f51702815e3b1e3660906f43073f64344333f9a7fL32' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 102348893</div><div id='project'> Project Name: digitalphonetics/ims-toucan</div><div id='commit'> Commit Name: e00821e875c1dc3913edb61b7869c7bdc2a36dfa</div><div id='time'> Time: 2021-02-12</div><div id='author'> Author: florian.lux@ims.uni-stuttgart.de</div><div id='file'> File Name: SpeakerEmbedding/SiameseSpeakerEmbedding.py</div><div id='m_class'> M Class Name: SiameseSpeakerEmbedding</div><div id='n_method'> N Class Name: SiameseSpeakerEmbedding</div><div id='m_method'> M Method Name: forward(4)</div><div id='n_method'> N Method Name: forward(4)</div><div id='m_parent_class'> M Parent Class: torch.nn.Module</div><div id='n_parent_class'> N Parent Class: torch.nn.Module</div><div id='m_file'> M File Name: SpeakerEmbedding/SiameseSpeakerEmbedding.py</div><div id='n_file'> N File Name: SpeakerEmbedding/SiameseSpeakerEmbedding.py</div><div id='m_start'> M Start Line: 39</div><div id='m_end'> M End Line: 44</div><div id='n_start'> N Start Line: 44</div><div id='n_end'> N End Line: 67</div><BR>

@@ -1,0 +1,108 @@
+<html><h3>Pattern ID :28541
+</h3><img src='84402694.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 it will be returned early.
+        &#47&#47 Note: during inference batch_size needs to be 1
+        if inference:
+            uncertain_infos<a id="change"> = </a>[]
+            for i, (layer_module, (k, layer_classifier_module)) in enumerate(
+                    zip(self.layer, self.layer_classifiers.items())):
+                hidden_states = layer_module(hidden_states[0], attention_mask)
+                logits = layer_classifier_module(hidden_states[0])
+                prob = F.softmax(logits, dim=-1)
+                log_prob = F.log_softmax(logits, dim=-1)
+                uncertain = torch.sum(prob * log_prob, 1) / (-torch.log(self.num_class))
+                uncertain_infos.append([uncertain, prob])
+
+                &#47&#47 return early results
+                if uncertain &lt; inference_speed:
+                    <a id="change">return </a>prob<a id="change">, i, uncertain_infos</a>
+            return prob, i, uncertain_infos
+
+        &#47&#47 Training phase: the first phase corresponds to the backbone training
+        &#47&#47 the second phase to the branches training (actual distillation)</code></pre><h3>After Change</h3><pre><code class='java'>
+            &#47&#47 positions will keep track of the original position of each element in the
+            &#47&#47 batch when elements will be removed
+            final_probs = torch.zeros((hidden_states[0].shape[0], 2), device=device)
+            positions<a id="change"> = </a><a id="change">torch.arange(start=0, end=hidden_states[0].shape[0], device=device).long()</a>
+
+            for i, (layer_module, (k, layer_classifier_module)) in enumerate(
+                    zip(self.layer, self.layer_classifiers.items())):
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 5</div><BR><div id='size'>Non-data size: 5</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/julesbelveze/bert-squeeze/commit/3cb14b8f1e742b86fe609843f2779e3bb36de4aa#diff-aac748de92a29499c39463320f41c1eaeb283dae0ed8ead9584db8318265a4acL49' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 84402694</div><div id='project'> Project Name: julesbelveze/bert-squeeze</div><div id='commit'> Commit Name: 3cb14b8f1e742b86fe609843f2779e3bb36de4aa</div><div id='time'> Time: 2021-12-11</div><div id='author'> Author: 32683010+JulesBelveze@users.noreply.github.com</div><div id='file'> File Name: bert-squeeze/models/custom_transformers/fastbert.py</div><div id='m_class'> M Class Name: FastBertGraph</div><div id='n_method'> N Class Name: FastBertGraph</div><div id='m_method'> M Method Name: forward(7)</div><div id='n_method'> N Method Name: forward(6)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: bert-squeeze/models/custom_transformers/fastbert.py</div><div id='n_file'> N File Name: bert-squeeze/models/custom_transformers/fastbert.py</div><div id='m_start'> M Start Line: 57</div><div id='m_end'> M End Line: 70</div><div id='n_start'> N Start Line: 49</div><div id='n_end'> N End Line: 87</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            self.model_rank * self.model_batch_size
+        )
+        *all_X, target = [batch[0][v] for v in self.output_map]
+        target<a id="change"> = </a>target.squeeze(-1).long()
+        <a id="change">return </a>indexes<a id="change">, all_X, target</a>
+
+
+class Wrapper(BaseWrapper):
+    def __next__(self):</code></pre><h3>After Change</h3><pre><code class='java'>
+            indexes = indexes.flatten().long().detach().clone()
+        else:
+            *all_X, targets = [batch[v] for v in self.output_map]
+            targets<a id="change"> = </a><a id="change">targets.squeeze(-1).long()</a>.detach().clone()
+            &#47&#47 creates dummy indexes
+            indexes = (
+                (</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/vturrisi/contrastive-learning/commit/e90d420fa19620f36fead1b1a5b4c3478d59dd8a#diff-527ab26b393514123250cc89cb3d79c382aa1876a09d56cea20163b3360660b6L59' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 84402661</div><div id='project'> Project Name: vturrisi/contrastive-learning</div><div id='commit'> Commit Name: e90d420fa19620f36fead1b1a5b4c3478d59dd8a</div><div id='time'> Time: 2021-08-13</div><div id='author'> Author: enrico.fini@gmail.com</div><div id='file'> File Name: solo/methods/dali.py</div><div id='m_class'> M Class Name: PretrainWrapper</div><div id='n_method'> N Class Name: PretrainWrapper</div><div id='m_method'> M Method Name: __next__(1)</div><div id='n_method'> N Method Name: __next__(1)</div><div id='m_parent_class'> M Parent Class: BaseWrapper</div><div id='n_parent_class'> N Parent Class: BaseWrapper</div><div id='m_file'> M File Name: solo/methods/dali.py</div><div id='n_file'> N File Name: solo/methods/dali.py</div><div id='m_start'> M Start Line: 60</div><div id='m_end'> M End Line: 66</div><div id='n_start'> N Start Line: 73</div><div id='n_end'> N End Line: 97</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+			preds_ = torch.transpose(preds, 1, 2)
+			&#47&#47print(preds.size())
+
+			y<a id="change"> = </a>y.long()
+			loss = self.Loss(preds_, torch.squeeze(y))
+			<a id="change">return </a>preds<a id="change">, loss</a>
+		return preds
+
+</code></pre><h3>After Change</h3><pre><code class='java'>
+			preds = self.Linear(hs.contiguous().view(x.size(0), -1))
+			preds_.append(preds)
+			if y is not None:
+				loss<a id="change">+=</a>self.Loss(preds, <a id="change">y[:,i].squeeze().long()</a>)
+		preds_ = torch.stack(preds_, dim = 1)
+		if y is not None:
+			loss/=len(xs)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/dido1998/recurrent-independent-mechanisms/commit/d87a800096eaa36730cbabac535eea24973f3799#diff-e5165d0379320c04b38a0f79666ae179299255ae3019498345e3dd6fc2ef1521L253' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 84402676</div><div id='project'> Project Name: dido1998/recurrent-independent-mechanisms</div><div id='commit'> Commit Name: d87a800096eaa36730cbabac535eea24973f3799</div><div id='time'> Time: 2020-02-11</div><div id='author'> Author: adidolkar123@gmail.com</div><div id='file'> File Name: networks.py</div><div id='m_class'> M Class Name: CopyingModel</div><div id='n_method'> N Class Name: CopyingModel</div><div id='m_method'> M Method Name: forward(5)</div><div id='n_method'> N Method Name: forward(5)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: networks.py</div><div id='n_file'> N File Name: networks.py</div><div id='m_start'> M Start Line: 255</div><div id='m_end'> M End Line: 276</div><div id='n_start'> N Start Line: 291</div><div id='n_end'> N End Line: 313</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            valid_bleu_scores.append(valid_bleu_score)
+
+        mean_valid_loss = np.mean(valid_losses)
+        mean_bleu_score<a id="change"> = </a>np.mean(valid_bleu_scores)
+
+        <a id="change">return </a>mean_valid_loss<a id="change">, mean_bleu_score</a>
+
+
+    def test(self, model_name):</code></pre><h3>After Change</h3><pre><code class='java'>
+            src_input, tar_output, encoder_mask = \
+                src_input.to(device), tar_output.to(device), encoder_mask.to(device)
+
+            tar_input = <a id="change">torch.zeros(tar_output.shape[0], tar_output.shape[1]).long()</a>
+            for seq in tar_input:
+                seq[0] = sos_id
+
+            output = self.model(src_input, tar_input, encoder_mask)  &#47&#47 (B, L, vocab_size)
+            loss = self.criterion(output.view(-1, sp_vocab_size), tar_output.view(batch_size * seq_len))
+
+            valid_losses.append(loss.item())
+
+            output_list = torch.argmax(output, dim=-1).tolist()
+            tar_output_list = tar_output.tolist()
+
+            trimmed_output_list<a id="change">, trimmed_tar_output_list = </a>self.trim_output(output_list, tar_output_list)
+
+            valid_pred_outputs += trimmed_output_list
+            valid_true_outputs += trimmed_tar_output_list</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/devjwsong/transformer-translator-pytorch/commit/fe38eabe05fbd7e2b1b7a1077aee5f1563dba374#diff-2e5ad92c43aa96cc3a9cef6c6aec998b216f1379c43b1f651013d25e55989312L114' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 84402683</div><div id='project'> Project Name: devjwsong/transformer-translator-pytorch</div><div id='commit'> Commit Name: fe38eabe05fbd7e2b1b7a1077aee5f1563dba374</div><div id='time'> Time: 2020-04-27</div><div id='author'> Author: enflwodn@gmail.com</div><div id='file'> File Name: src/main.py</div><div id='m_class'> M Class Name: Manager</div><div id='n_method'> N Class Name: Manager</div><div id='m_method'> M Method Name: validation(1)</div><div id='n_method'> N Method Name: validation(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/main.py</div><div id='n_file'> N File Name: src/main.py</div><div id='m_start'> M Start Line: 118</div><div id='m_end'> M End Line: 141</div><div id='n_start'> N Start Line: 120</div><div id='n_end'> N End Line: 148</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    config = set_evasion_model(query, victim_input_shape, victim_input_targets)
+    x_adv, y_adv = init_hopskipjump(config, data)
+    x = torch.cat((x, x_adv))
+    y<a id="change"> = </a>torch.cat((y, y_adv))
+    <a id="change">return </a>x<a id="change">, y</a>
+
+
+@register_synth
+def seeded_hopskipjump(</code></pre><h3>After Change</h3><pre><code class='java'>
+    result = result.clone().detach()
+    print(result.shape)
+    y = torch.Tensor([query(x) for x in result])
+    y<a id="change"> = </a><a id="change">y.long()</a>
+    return result, y
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/trailofbits/privacyraven/commit/ce663f3b0895905a2731bf1907af06f1f99fbb12#diff-e399b6ad8d6d6523e65ad0d433b80f161b2fbc814e46ade00bbbb9b5d997c1aaL150' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 84402696</div><div id='project'> Project Name: trailofbits/privacyraven</div><div id='commit'> Commit Name: ce663f3b0895905a2731bf1907af06f1f99fbb12</div><div id='time'> Time: 2020-10-21</div><div id='author'> Author: suhashussain1@gmail.com</div><div id='file'> File Name: src/privacyraven/extraction/synthesis.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: hopskipjump(6)</div><div id='n_method'> N Method Name: hopskipjump(6)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/privacyraven/extraction/synthesis.py</div><div id='n_file'> N File Name: src/privacyraven/extraction/synthesis.py</div><div id='m_start'> M Start Line: 159</div><div id='m_end'> M End Line: 175</div><div id='n_start'> N Start Line: 118</div><div id='n_end'> N End Line: 144</div><BR>

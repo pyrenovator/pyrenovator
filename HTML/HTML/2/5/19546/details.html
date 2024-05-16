@@ -1,0 +1,47 @@
+<html><h3>Pattern ID :19546
+</h3><img src='63661163.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        :param H_all (N, L, H)
+        :return H_k (N, K, H)
+        
+        H_k = <a id="change">H_all[:, 1: self.hparams[&quotk&quot] + 1]</a>  &#47&#47 (N, L, H) -&gt; (N, K, H)
+        return H_k
+
+    def S_wisdom_literal(self, H_k: torch.Tensor) -&gt; torch.Tensor:</code></pre><h3>After Change</h3><pre><code class='java'>
+        
+        N, _, H = H_all.size()
+        &#47&#47 refer to: wisdomify/examples/explore_masked_select.py
+        wisdom_mask<a id="change"> = </a><a id="change">self.wisdom_mask.unsqueeze(2).expand(</a>H_all.shape<a id="change">)</a>  &#47&#47 (N, L) -&gt; (N, L, 1) -&gt; (N, L, H)
+        H_k = torch.masked_select(H_all, wisdom_mask.bool())  &#47&#47 (N, L, H), (N, L, H) -&gt; (N * K * H)
+        H_k = H_k.reshape(N, self.hparams[&quotk&quot], H)  &#47&#47 (N * K * H) -&gt; (N, K, H)
+        self.wisdom_mask = None  &#47&#47 clear wisdom_mask after it is used.</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/eubinecto/wisdomify/commit/75503eff37deeab19e2afe0fb0db20b030cef1ec#diff-5f23a84aa818c6cbad34ed97adf37af0767442ed5f4a4082158ba950c800d8a4L59' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 63661163</div><div id='project'> Project Name: eubinecto/wisdomify</div><div id='commit'> Commit Name: 75503eff37deeab19e2afe0fb0db20b030cef1ec</div><div id='time'> Time: 2021-10-03</div><div id='author'> Author: eubinecto</div><div id='file'> File Name: wisdomify/models.py</div><div id='m_class'> M Class Name: RD</div><div id='n_method'> N Class Name: RD</div><div id='m_method'> M Method Name: H_k(2)</div><div id='n_method'> N Method Name: H_k(2)</div><div id='m_parent_class'> M Parent Class: pl.LightningModule</div><div id='n_parent_class'> N Parent Class: pl.LightningModule</div><div id='m_file'> M File Name: wisdomify/models.py</div><div id='n_file'> N File Name: wisdomify/models.py</div><div id='m_start'> M Start Line: 90</div><div id='m_end'> M End Line: 90</div><div id='n_start'> N Start Line: 59</div><div id='n_end'> N End Line: 64</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    jacobian_g = group.new_empty(group.shape[0], 3, 6)
+    jacobian_g[:, :, :3] = group[:, :, :3]
+    jacobian_g[:, :, 3:] = -group[:, :, :3] @ SO3._hat_autograd_fn(tensor)
+    jacobian_p = group[:, :, :3].view(<a id="change">tensor.shape[:-1]</a> + (3, 3))
+    jacobians = []
+    jacobians.append(jacobian_g)
+    jacobians.append(jacobian_p)</code></pre><h3>After Change</h3><pre><code class='java'>
+    jacobian_g[..., :3] = group[..., :3]
+    jacobian_g[..., 3:] = -group[..., :3] @ SO3._hat_autograd_fn(tensor)
+    jacobian_p = group[..., :3]
+    jacobian_g<a id="change"> = </a><a id="change">jacobian_g.expand(</a>*size, 3, 6<a id="change">)</a>.clone()
+    jacobian_p = jacobian_p.expand(*size, 3, 3).clone()
+    return [jacobian_g, jacobian_p], ret
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/facebookresearch/theseus/commit/f8f533dbde1f2fc8e8591949bb127c0488467a20#diff-cfa904350fc8987ec496d3ace1da324ebd65a64182f7df8fbb00e05ea67b4639L750' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 63661161</div><div id='project'> Project Name: facebookresearch/theseus</div><div id='commit'> Commit Name: f8f533dbde1f2fc8e8591949bb127c0488467a20</div><div id='time'> Time: 2023-05-10</div><div id='author'> Author: 6612911+fantaosha@users.noreply.github.com</div><div id='file'> File Name: theseus/labs/lie/functional/se3_impl.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: _jtransform_from_impl(2)</div><div id='n_method'> N Method Name: _jtransform_from_impl(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: theseus/labs/lie/functional/se3_impl.py</div><div id='n_file'> N File Name: theseus/labs/lie/functional/se3_impl.py</div><div id='m_start'> M Start Line: 755</div><div id='m_end'> M End Line: 762</div><div id='n_start'> N Start Line: 754</div><div id='n_end'> N End Line: 762</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    check_group_tensor(group)
+    check_transform_tensor(tensor)
+    jacobian_g = -group @ _hat_autograd_fn(tensor)
+    jacobian_p = group.view(<a id="change">tensor.shape[:-1]</a> + (3, 3))
+    jacobians = []
+    jacobians.append(jacobian_g)
+    jacobians.append(jacobian_p)</code></pre><h3>After Change</h3><pre><code class='java'>
+    size = get_transform_tensor_size(ret)
+    jacobian_g = -group @ _hat_autograd_fn(tensor)
+    jacobian_p = group
+    jacobian_g<a id="change"> = </a><a id="change">jacobian_g.expand(</a>*size, 3, 3<a id="change">)</a>.clone()
+    jacobian_p = jacobian_p.expand(*size, 3, 3).clone()
+    return [jacobian_g, jacobian_p], ret
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/facebookresearch/theseus/commit/f8f533dbde1f2fc8e8591949bb127c0488467a20#diff-83558085f2c82ad7c8cad66c30ce54ee61215a24b69c263efe924ee8f1660d29L661' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 63661166</div><div id='project'> Project Name: facebookresearch/theseus</div><div id='commit'> Commit Name: f8f533dbde1f2fc8e8591949bb127c0488467a20</div><div id='time'> Time: 2023-05-10</div><div id='author'> Author: 6612911+fantaosha@users.noreply.github.com</div><div id='file'> File Name: theseus/labs/lie/functional/so3_impl.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: _jtransform_from_impl(2)</div><div id='n_method'> N Method Name: _jtransform_from_impl(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: theseus/labs/lie/functional/so3_impl.py</div><div id='n_file'> N File Name: theseus/labs/lie/functional/so3_impl.py</div><div id='m_start'> M Start Line: 666</div><div id='m_end'> M End Line: 671</div><div id='n_start'> N Start Line: 668</div><div id='n_end'> N End Line: 674</div><BR>

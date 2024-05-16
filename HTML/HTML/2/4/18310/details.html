@@ -1,0 +1,53 @@
+<html><h3>Pattern ID :18310
+</h3><img src='59978707.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        else:
+            diffs = rearrange(samples, &quot... n d -&gt; ... n 1 d&quot) - \
+                    rearrange(means, &quot... c d -&gt; ... 1 c d&quot)
+            dists = -<a id="change">(diffs ** 2).sum(dim = -1)</a>
+
+        buckets = torch.argmax(dists, dim = -1)
+        bins = batched_bincount(buckets, minlength = num_clusters)
+        all_reduce_fn(bins)</code></pre><h3>After Change</h3><pre><code class='java'>
+        if use_cosine_sim:
+            dists = samples @ rearrange(means, &quoth n d -&gt; h d n&quot)
+        else:
+            dists = -<a id="change">torch.cdist(</a>samples, means<a id="change">, p = 2)</a>
+
+        buckets = torch.argmax(dists, dim = -1)
+        bins = batched_bincount(buckets, minlength = num_clusters)
+        all_reduce_fn(bins)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/lucidrains/vector-quantize-pytorch/commit/381e5d12ac982e82b50f0d12006d66909bc54d1a#diff-8bcd9c958b614ce130dc4091c094d4cfcc2023716823c181e3a9edaddbcd433dL129' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 59978707</div><div id='project'> Project Name: lucidrains/vector-quantize-pytorch</div><div id='commit'> Commit Name: 381e5d12ac982e82b50f0d12006d66909bc54d1a</div><div id='time'> Time: 2022-07-30</div><div id='author'> Author: lucidrains@gmail.com</div><div id='file'> File Name: vector_quantize_pytorch/vector_quantize_pytorch.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: kmeans(6)</div><div id='n_method'> N Method Name: kmeans(6)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: vector_quantize_pytorch/vector_quantize_pytorch.py</div><div id='n_file'> N File Name: vector_quantize_pytorch/vector_quantize_pytorch.py</div><div id='m_start'> M Start Line: 129</div><div id='m_end'> M End Line: 137</div><div id='n_start'> N Start Line: 129</div><div id='n_end'> N End Line: 135</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+                &#47&#47 TODO vectorize more?
+                for single_slot, single_center in single_class:
+                    dists = <a id="change">((m_cluster_centers - single_center) ** 2).sum(dim=-1)</a>
+
+                    if (torch.any(dists &lt; (self.config[&quotdiff_cluster_threshold&quot] * 0.5))):  
+                        new_slot = single_slot   &#47&#47 TODO check if there is a place to move to
+                        label_id = dists.argmin()</code></pre><h3>After Change</h3><pre><code class='java'>
+                k, curr_quality, labels, m_cluster_centers = multiple_classes[current_slot]
+
+                &#47&#47 vectorized comparison of current slot clusters to single-cluster slots
+                dists = <a id="change">torch.cdist(</a>m_cluster_centers, single_centers<a id="change">)</a>
+                if dists.min() &lt; self.config[&quotdiff_cluster_threshold&quot] * 0.5:
+                    flat_idx = dists.argmin()
+                    label_id = flat_idx // dists.shape[1]
+                    single_slot_list_id = flat_idx - label_id * dists.shape[1]</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/maria-korosteleva/garment-pattern-estimation/commit/4f0a08b91c9d5e37a8b529fb523bd47047507750#diff-66aae7ec57f079963bb4847ebb79bfda4004ba832ee23e11911a14908193967cL1116' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 59978706</div><div id='project'> Project Name: maria-korosteleva/garment-pattern-estimation</div><div id='commit'> Commit Name: 4f0a08b91c9d5e37a8b529fb523bd47047507750</div><div id='time'> Time: 2021-07-26</div><div id='author'> Author: mariako@kaist.ac.kr</div><div id='file'> File Name: nn/metrics.py</div><div id='m_class'> M Class Name: ComposedPatternLoss</div><div id='n_method'> N Class Name: ComposedPatternLoss</div><div id='m_method'> M Method Name: _distribute_clusters(6)</div><div id='n_method'> N Method Name: _distribute_clusters(6)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: nn/metrics.py</div><div id='n_file'> N File Name: nn/metrics.py</div><div id='m_start'> M Start Line: 1134</div><div id='m_end'> M End Line: 1166</div><div id='n_start'> N Start Line: 1126</div><div id='n_end'> N End Line: 1182</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        dist = -(
+            (flatten ** 2).sum(dim = -1, keepdim=True)
+            - 2 * flatten @ embed
+            + <a id="change">(embed ** 2).sum(dim = -2, keepdim=True)</a>
+        )
+
+        embed_ind = gumbel_sample(dist, dim = -1, temperature = self.sample_codebook_temp)
+        embed_onehot = F.one_hot(embed_ind, self.codebook_size).type(dtype)</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        embed = self.embed if not self.learnable_codebook else self.embed.detach()
+
+        dist = -<a id="change">torch.cdist(</a>flatten, embed<a id="change">, p = 2)</a>
+
+        embed_ind = gumbel_sample(dist, dim = -1, temperature = self.sample_codebook_temp)
+        embed_onehot = F.one_hot(embed_ind, self.codebook_size).type(dtype)
+        embed_ind = embed_ind.view(*shape[:-1])</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lucidrains/vector-quantize-pytorch/commit/381e5d12ac982e82b50f0d12006d66909bc54d1a#diff-8bcd9c958b614ce130dc4091c094d4cfcc2023716823c181e3a9edaddbcd433dL263' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 59978705</div><div id='project'> Project Name: lucidrains/vector-quantize-pytorch</div><div id='commit'> Commit Name: 381e5d12ac982e82b50f0d12006d66909bc54d1a</div><div id='time'> Time: 2022-07-30</div><div id='author'> Author: lucidrains@gmail.com</div><div id='file'> File Name: vector_quantize_pytorch/vector_quantize_pytorch.py</div><div id='m_class'> M Class Name: EuclideanCodebook</div><div id='n_method'> N Class Name: EuclideanCodebook</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: vector_quantize_pytorch/vector_quantize_pytorch.py</div><div id='n_file'> N File Name: vector_quantize_pytorch/vector_quantize_pytorch.py</div><div id='m_start'> M Start Line: 272</div><div id='m_end'> M End Line: 284</div><div id='n_start'> N Start Line: 270</div><div id='n_end'> N End Line: 276</div><BR>

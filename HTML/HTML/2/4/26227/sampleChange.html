@@ -1,0 +1,20 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        self.dns = dns
+    def forward(self, label, pos_score, log_pos_prob, neg_score, log_neg_prob):
+        if not self.dns or pos_score.dim() &gt; 1:
+            weight = F.softmax(<a id="change">torch.ones_like(</a>neg_score<a id="change">)</a>, -1)
+            notpadnum = torch.logical_not(torch.isinf(pos_score)).float().sum(-1)
+            output = torch.nan_to_num(F.logsigmoid(pos_score), nan=0.0).sum(-1)\
+                 / notpadnum</code></pre><h3>After Change</h3><pre><code class='java'>
+            weight = self._cal_weight(neg_score, log_neg_prob)
+            notpadnum = torch.logical_not(torch.isinf(pos_score)).float().sum()
+            output = torch.nan_to_num(F.logsigmoid(pos_score), nan=0.0).sum() / notpadnum
+            neg_score<a id="change"> = </a>F.softplus(neg_score) * weight
+            neg_score_sum<a id="change"> = </a><a id="change">neg_score.sum(</a>-1<a id="change">)</a>
+            if pos_score.dim() == neg_score.dim()-1:
+                padding_mask = torch.isinf(pos_score)
+                neg_score_sum.masked_fill_(padding_mask, 0.0)
+            return -output + torch.mean(neg_score_sum)</code></pre>

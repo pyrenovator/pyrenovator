@@ -1,0 +1,29 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        params: List[Dict[str, Any]] = []
+        memo: Set[torch.nn.parameter.Parameter] = set()
+        for module in model.modules():
+            for key, value in <a id="change">module.named_parameters(recurse=False)</a>:
+                if not value.requires_grad:
+                    continue
+                &#47&#47 Avoid duplicating parameters
+                if value in memo:
+                    continue
+                memo.add(value)
+                lr = cfg.SOLVER.OPTIMIZER.BASE_LR
+                weight_decay = cfg.SOLVER.OPTIMIZER.WEIGHT_DECAY
+                if isinstance(module, NORM_MODULE_TYPES):
+                    weight_decay = cfg.SOLVER.OPTIMIZER.WEIGHT_DECAY_NORM
+                elif <a id="change"></a>key == "bias":
+                    &#47&#47 NOTE: unlike Detectron v1, we now default BIAS_LR_FACTOR to 1.0
+                    &#47&#47 and WEIGHT_DECAY_BIAS to WEIGHT_DECAY so that bias optimizer
+                    &#47&#47 hyperparameters are by default exactly the same as for regular</code></pre><h3>After Change</h3><pre><code class='java'>
+    @staticmethod
+    def build(model, cfg):
+        optimizer = optim.SGD(
+            <a id="change">model.parameters()</a>,
+            lr=cfg.SOLVER.OPTIMIZER.BASE_LR,
+            weight_decay=cfg.SOLVER.OPTIMIZER.WEIGHT_DECAY,
+            momentum=cfg.SOLVER.OPTIMIZER.MOMENTUM,</code></pre>

@@ -1,0 +1,101 @@
+<html><h3>Pattern ID :35647
+</h3><img src='101545021.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    batch_size = segmask_array.shape[0]
+    batch_stack = []
+    for b in range(batch_size):
+        one_hot_stack = <a id="change">[]</a>
+        &#47&#47 since the input tensor is 5D, with [batch_size, modality, x, y, z], we do not need to consider the modality dimension for labels
+        segmask_array_iter = segmask_array[b, 0, ...]
+        bin_mask = segmask_array_iter == 0  &#47&#47 initialize bin_mask
+        &#47&#47 this implementation allows users to combine logical operands
+        for _class in class_list:
+            if isinstance(_class, str):
+                if "||" in _class:  &#47&#47 special case
+                    class_split = _class.split("||")
+                    bin_mask = segmask_array_iter == int(class_split[0])
+                    for i in range(1, len(class_split)):
+                        bin_mask = bin_mask | (
+                            segmask_array_iter == int(class_split[i])
+                        )
+                elif "|" in _class:  &#47&#47 special case
+                    class_split = _class.split("|")
+                    bin_mask = segmask_array_iter == int(class_split[0])
+                    for i in range(1, len(class_split)):
+                        bin_mask = bin_mask | (
+                            segmask_array_iter == int(class_split[i])
+                        )
+                else:
+                    &#47&#47 assume that it is a simple int
+                    bin_mask = segmask_array_iter == int(_class)
+            else:
+                bin_mask = segmask_array_iter == int(_class)
+                bin_mask = bin_mask.long()
+            <a id="change">one_hot_stack.append(</a>bin_mask<a id="change">)</a>
+        one_hot_stack<a id="change"> = </a><a id="change">torch.stack(</a>one_hot_stack<a id="change">)</a>
+        batch_stack.append(one_hot_stack)
+    batch_stack = torch.stack(batch_stack)
+    if batch_stack.shape[-1] == 1:
+        batch_stack = batch_stack.squeeze(-1)</code></pre><h3>After Change</h3><pre><code class='java'>
+        else:
+            batch_stack = torch.stack([batch_stack, one_hot_stack])
+    &#47&#47 always ensure we are returning a tensor with batch_size encoded
+    if <a id="change">len(</a>batch_stack.shape<a id="change">)</a> != 5:
+        batch_stack = batch_stack.unsqueeze(0)
+    return batch_stack
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 5</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/mlcommons/gandlf/commit/7e55f84b996834a00df755fe6620a3f514b044d8#diff-bb94cfa3aa2c4896ffc51250bc8aaa76a69755d33e3ec31c80f29b9c9353119bL20' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 101545021</div><div id='project'> Project Name: mlcommons/gandlf</div><div id='commit'> Commit Name: 7e55f84b996834a00df755fe6620a3f514b044d8</div><div id='time'> Time: 2021-10-04</div><div id='author'> Author: sarthak.pati@hotmail.com</div><div id='file'> File Name: GANDLF/utils/tensor.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: one_hot(2)</div><div id='n_method'> N Method Name: one_hot(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: GANDLF/utils/tensor.py</div><div id='n_file'> N File Name: GANDLF/utils/tensor.py</div><div id='m_start'> M Start Line: 20</div><div id='m_end'> M End Line: 53</div><div id='n_start'> N Start Line: 20</div><div id='n_end'> N End Line: 62</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        :param channel_axis: Axis along which per channel quantize dequantize is performed
+        :return: quantized dequantized tensor
+        
+        quantized_tensors = <a id="change">[]</a>
+        for i, minimum in enumerate(encoding_min):
+            tensor_slice = tensor_to_quantize_dequantize.select(channel_axis, i).contiguous(memory_format=torch.contiguous_format)
+            tensor = torch.clamp(tensor_slice, minimum.item(), encoding_max[i].item())
+            tensor = torch.round(tensor / delta[i].item()) + offset[i].item()
+            tensor = (tensor - offset[i].item()) * delta[i].item()
+            <a id="change">quantized_tensors.append(</a>tensor<a id="change">)</a>
+        quantized_tensor<a id="change"> = </a><a id="change">torch.stack(</a>tuple(quantized_tensors)<a id="change">, dim=channel_axis)</a>
+
+        return quantized_tensor
+
+    @staticmethod</code></pre><h3>After Change</h3><pre><code class='java'>
+        :param channel_axis: Axis along which per channel quantize dequantize is performed
+        :return: quantized dequantized tensor
+        
+        if <a id="change">len(</a>tensor_to_quantize_dequantize.shape<a id="change">)</a> &gt; 1:
+            encoding_min = grad_fn.broadcast_to_tensor(tensor_to_quantize_dequantize, encoding_min, channel_axis)
+            encoding_max = grad_fn.broadcast_to_tensor(tensor_to_quantize_dequantize, encoding_max, channel_axis)
+            delta = grad_fn.broadcast_to_tensor(tensor_to_quantize_dequantize, delta, channel_axis)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/quic/aimet/commit/39d718ee58119c7fa7454959792727ee6cafea61#diff-53af21caaa602b295954c0afcf0271342e22c2c3e5f1386f293cd465e08e53d2L603' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 101545023</div><div id='project'> Project Name: quic/aimet</div><div id='commit'> Commit Name: 39d718ee58119c7fa7454959792727ee6cafea61</div><div id='time'> Time: 2022-04-05</div><div id='author'> Author: quic_mangal@quicinc.com</div><div id='file'> File Name: TrainingExtensions/torch/src/python/aimet_torch/tensor_quantizer.py</div><div id='m_class'> M Class Name: QuantizeDequantizeFunc</div><div id='n_method'> N Class Name: QuantizeDequantizeFunc</div><div id='m_method'> M Method Name: _per_channel_quantize_dequantize(6)</div><div id='n_method'> N Method Name: _per_channel_quantize_dequantize(6)</div><div id='m_parent_class'> M Parent Class: torch.autograd.Function</div><div id='n_parent_class'> N Parent Class: torch.autograd.Function</div><div id='m_file'> M File Name: TrainingExtensions/torch/src/python/aimet_torch/tensor_quantizer.py</div><div id='n_file'> N File Name: TrainingExtensions/torch/src/python/aimet_torch/tensor_quantizer.py</div><div id='m_start'> M Start Line: 615</div><div id='m_end'> M End Line: 624</div><div id='n_start'> N Start Line: 613</div><div id='n_end'> N End Line: 623</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        ---------
+        x : torch.Tensor
+        
+        h = <a id="change">[]</a>
+        if hx is not None:
+            if self.bidirectional:
+                hx = hx.reshape(
+                    self.num_layers, self.batch_size * 2, self.hidden_size
+                )
+
+        for i, ligru_lay in enumerate(self.model):
+            if hx is not None:
+                x = ligru_lay(x, hx=hx[i])
+            else:
+                x = ligru_lay(x, hx=None)
+            <a id="change">h.append(</a>x[:, -1, :]<a id="change">)</a>
+        h = <a id="change">torch.stack(</a>h<a id="change">, dim=1)</a>
+        if self.bidirectional:
+            h = h.reshape(h.shape[1] * 2, h.shape[0], self.hidden_size)
+        else:
+            h<a id="change"> = </a>h.transpose(0, 1)
+
+        return x, h
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        &#47&#47 Reshaping input tensors for 4d inputs
+        if self.reshape:
+            if <a id="change">len(</a>x.shape<a id="change">)</a> == 4:
+                x = x.reshape(x.shape[0], x.shape[1], x.shape[2] * x.shape[3])
+
+        &#47&#47 run ligru</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/speechbrain/speechbrain/commit/c5a72bf53e3750fbdeb290f4b5e78396ebbd91e0#diff-a76a3d2f7b9ebd2400440aaba89153d79574841e4fdea3a7aa335d177246c76eL272' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 101545022</div><div id='project'> Project Name: speechbrain/speechbrain</div><div id='commit'> Commit Name: c5a72bf53e3750fbdeb290f4b5e78396ebbd91e0</div><div id='time'> Time: 2020-05-29</div><div id='author'> Author: mirco.ravabelli@gmail.com</div><div id='file'> File Name: speechbrain/nnet/RNN.py</div><div id='m_class'> M Class Name: LiGRU</div><div id='n_method'> N Class Name: LiGRU</div><div id='m_method'> M Method Name: forward(4)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: torch.nn.Module</div><div id='n_parent_class'> N Parent Class: torch.jit.ScriptModule</div><div id='m_file'> M File Name: speechbrain/nnet/RNN.py</div><div id='n_file'> N File Name: speechbrain/nnet/RNN.py</div><div id='m_start'> M Start Line: 280</div><div id='m_end'> M End Line: 299</div><div id='n_start'> N Start Line: 500</div><div id='n_end'> N End Line: 523</div><BR>

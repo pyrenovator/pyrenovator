@@ -1,0 +1,29 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            in_cols = F.unfold(input, ctx.kernel_size, ctx.dilation, ctx.padding, ctx.stride)
+            in_cols = in_cols.view(bs, in_ch, ctx.kernel_size[0], ctx.kernel_size[1], out_sz[0], out_sz[1])
+        if ctx.needs_input_grad[0]:
+            grad_input = <a id="change">grad_output.new()</a>
+            grad_im2col_output = grad_in_mul_k * kernel
+            grad_im2col_output = grad_im2col_output.view(bs, -1, out_sz[0] * out_sz[1])
+            <a id="change">ctx._backend.Im2Col_updateGradInput(</a>ctx._backend.library_state,
+                                                grad_im2col_output,
+                                                grad_input,
+                                                <a id="change">ctx.input_size[0]</a>, ctx.input_size[1],
+                                                <a id="change">ctx.kernel_size[0]</a>, <a id="change">ctx.kernel_size[1]</a>,
+                                                <a id="change">ctx.dilation[0]</a>, <a id="change">ctx.dilation[1]</a>,
+                                                ctx.padding[0], <a id="change">ctx.padding[1]</a>,
+                                                <a id="change">ctx.stride[0]</a>, <a id="change">ctx.stride[1]</a><a id="change">)</a>
+        if ctx.needs_input_grad[1]:
+            grad_kernel = in_cols * grad_in_mul_k
+            grad_kernel = grad_kernel.sum(dim=1, keepdim=True)</code></pre><h3>After Change</h3><pre><code class='java'>
+            grad_im2col_output = grad_in_mul_k * kernel
+            grad_im2col_output = grad_im2col_output.view(bs, -1, out_sz[0] * out_sz[1])
+
+            grad_input = <a id="change">F.fold(</a>grad_im2col_output,
+                                ctx.input_size[:2], ctx.kernel_size, ctx.dilation, ctx.padding, ctx.stride<a id="change">)</a>
+        if ctx.needs_input_grad[1]:
+            grad_kernel = in_cols * grad_in_mul_k
+            grad_kernel = grad_kernel.sum(dim=1, keepdim=True)</code></pre>

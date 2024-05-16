@@ -1,0 +1,87 @@
+<html><h3>Pattern ID :7129
+</h3><img src='23785515.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+      int idx = get_global_id(0);
+      c[idx] = atan2(a[idx], b[idx]);
+    }, global_size=[prod(ret.shape)]).build(GPUBuffer.spec.runtime).exec([ret, a.contiguous(), b.contiguous()])
+  <a id="change">return </a>ret
+
+def atan2_cpu(a:CPUBuffer, b:CPUBuffer) -&gt; CPUBuffer:
+  return CPUBuffer(np.arctan2(a._buf, b._buf))</code></pre><h3>After Change</h3><pre><code class='java'>
+def atan2_gpu(ret:LazyBuffer, a:LazyBuffer, b:LazyBuffer):
+  assert a.device == "GPU" and b.device == "GPU", "gpu function requires GPUBuffers"
+  assert a.dtype == b.dtype and a.dtype == dtypes.float32, "gpu function only supports float32"
+  ret.realized<a id="change"> = </a><a id="change">Device[ret.device].buffer(</a>prod(ret.shape), ret.dtype<a id="change">)</a>
+  ASTRunner("atan2", 
+    __kernel void atan2(global float *c, global float *a, global float *b) {
+      int idx = get_global_id(0);
+      c[idx] = atan2(a[idx], b[idx]);
+    }, global_size=[prod(ret.shape)]).build(Device[ret.device].runtime).exec([ret, a, b])
+  <a id="change">return </a>ret.realized
+
+def atan2_cpu(ret:LazyBuffer, a:LazyBuffer, b:LazyBuffer):
+  return Device[ret.device].buffer(np.arctan2(a.realized._buf, b.realized._buf))</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 5</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/geohot/tinygrad/commit/f5467cfedcdde0b9758ff1b8add533bc2b9a6f83#diff-ecec59f14f0ba7ff509c08bb6705ff4da573c332e628280b11f82d1c29659e85L15' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 23785515</div><div id='project'> Project Name: geohot/tinygrad</div><div id='commit'> Commit Name: f5467cfedcdde0b9758ff1b8add533bc2b9a6f83</div><div id='time'> Time: 2023-03-18</div><div id='author'> Author: 72895+geohot@users.noreply.github.com</div><div id='file'> File Name: test/test_custom_function.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: atan2_gpu(3)</div><div id='n_method'> N Method Name: atan2_gpu(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: test/test_custom_function.py</div><div id='n_file'> N File Name: test/test_custom_function.py</div><div id='m_start'> M Start Line: 18</div><div id='m_end'> M End Line: 26</div><div id='n_start'> N Start Line: 15</div><div id='n_end'> N End Line: 24</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+class Ops:
+  def unary_op(ctx, op:UnaryOps, x, ret):
+    log_op(op, ret, [x])
+    <a id="change">return </a>ctx.op.unary_op(op, x, ret)
+
+  def reduce_op(ctx, op:BinaryOps, x, ret):
+    log_op(op, ret, [x])</code></pre><h3>After Change</h3><pre><code class='java'>
+from tinygrad.helpers import binary_broadcast
+class Ops:
+  def unary_op(ctx, op:UnaryOps, x):
+    ret<a id="change"> = </a><a id="change">ctx.buffer(</a>x.shape<a id="change">)</a>
+    ctx.op.unary_op(op, x, ret)
+    log_op(op, ret, [x])
+    <a id="change">return </a>ret
+
+  def reduce_op(ctx, op:BinaryOps, x, ret):
+    log_op(op, ret, [x])</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/geohot/tinygrad/commit/bbf231da3494d3d652e1a18ff7d5d524959af2f9#diff-5736814df0b2c07a42d5c1bfef6b5aa5635ce18043f4aa030e21768694259ca3L49' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 23785518</div><div id='project'> Project Name: geohot/tinygrad</div><div id='commit'> Commit Name: bbf231da3494d3d652e1a18ff7d5d524959af2f9</div><div id='time'> Time: 2022-06-11</div><div id='author'> Author: geohot@gmail.com</div><div id='file'> File Name: tinygrad/ops.py</div><div id='m_class'> M Class Name: Ops</div><div id='n_method'> N Class Name: Ops</div><div id='m_method'> M Method Name: unary_op(3)</div><div id='n_method'> N Method Name: unary_op(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: tinygrad/ops.py</div><div id='n_file'> N File Name: tinygrad/ops.py</div><div id='m_start'> M Start Line: 49</div><div id='m_end'> M End Line: 51</div><div id='n_start'> N Start Line: 51</div><div id='n_end'> N End Line: 54</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+  def binary_op(ctx, op:ReduceOps, x, y, ret):
+    log_op(op, ret, [x, y])
+    <a id="change">return </a>ctx.op.binary_op(op, x, y, ret)
+
+  def movement_op(ctx, op:MovementOps, x, ret, arg=None):
+    log_op(op, ret, [x])</code></pre><h3>After Change</h3><pre><code class='java'>
+    return ctx.op.reduce_op(op, x, ret)
+
+  def binary_op(ctx, op:ReduceOps, x, y):
+    ret<a id="change"> = </a><a id="change">ctx.buffer(</a>binary_broadcast(x.shape, y.shape)<a id="change">)</a>
+    ctx.op.binary_op(op, x, y, ret)
+    log_op(op, ret, [x, y])
+    <a id="change">return </a>ret
+
+  def movement_op(ctx, op:MovementOps, x, ret, arg=None):
+    log_op(op, ret, [x])</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/geohot/tinygrad/commit/bbf231da3494d3d652e1a18ff7d5d524959af2f9#diff-5736814df0b2c07a42d5c1bfef6b5aa5635ce18043f4aa030e21768694259ca3L57' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 23785519</div><div id='project'> Project Name: geohot/tinygrad</div><div id='commit'> Commit Name: bbf231da3494d3d652e1a18ff7d5d524959af2f9</div><div id='time'> Time: 2022-06-11</div><div id='author'> Author: geohot@gmail.com</div><div id='file'> File Name: tinygrad/ops.py</div><div id='m_class'> M Class Name: Ops</div><div id='n_method'> N Class Name: Ops</div><div id='m_method'> M Method Name: binary_op(4)</div><div id='n_method'> N Method Name: binary_op(5)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: tinygrad/ops.py</div><div id='n_file'> N File Name: tinygrad/ops.py</div><div id='m_start'> M Start Line: 57</div><div id='m_end'> M End Line: 59</div><div id='n_start'> N Start Line: 61</div><div id='n_end'> N End Line: 64</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+  def movement_op(ctx, op:MovementOps, x, ret, arg=None):
+    log_op(op, ret, [x])
+    <a id="change">return </a>ctx.op.movement_op(op, x, ret, arg)
+
+  def processing_op(ctx, op:ProcessingOps, x, y, ret, stride, groups):
+    log_op(op, ret, [x, y])</code></pre><h3>After Change</h3><pre><code class='java'>
+    if op == MovementOps.RESHAPE: new_shape = arg
+    if op == MovementOps.PERMUTE: new_shape = [x.shape[i] for i in arg]
+    if op == MovementOps.SLICE: new_shape = [y-x for x,y in arg]
+    ret<a id="change"> = </a><a id="change">ctx.buffer(</a>new_shape<a id="change">)</a>
+    ctx.op.movement_op(op, x, ret, arg)
+    log_op(op, ret, [x])
+    <a id="change">return </a>ret
+
+  def processing_op(ctx, op:ProcessingOps, x, y, ret, stride, groups):
+    log_op(op, ret, [x, y])</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/geohot/tinygrad/commit/6d5591f7a3c83a3437c30a8cb596065e75b1bf90#diff-5736814df0b2c07a42d5c1bfef6b5aa5635ce18043f4aa030e21768694259ca3L67' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 23785516</div><div id='project'> Project Name: geohot/tinygrad</div><div id='commit'> Commit Name: 6d5591f7a3c83a3437c30a8cb596065e75b1bf90</div><div id='time'> Time: 2022-06-11</div><div id='author'> Author: geohot@gmail.com</div><div id='file'> File Name: tinygrad/ops.py</div><div id='m_class'> M Class Name: Ops</div><div id='n_method'> N Class Name: Ops</div><div id='m_method'> M Method Name: movement_op(4)</div><div id='n_method'> N Method Name: movement_op(5)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: tinygrad/ops.py</div><div id='n_file'> N File Name: tinygrad/ops.py</div><div id='m_start'> M Start Line: 67</div><div id='m_end'> M End Line: 69</div><div id='n_start'> N Start Line: 68</div><div id='n_end'> N End Line: 74</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+  def processing_op(ctx, op:ProcessingOps, x, y, ret, stride, groups):
+    log_op(op, ret, [x, y])
+    <a id="change">return </a>ctx.op.processing_op(op, x, y, ret, stride, groups)</code></pre><h3>After Change</h3><pre><code class='java'>
+
+  def processing_op(ctx, op:ProcessingOps, x, y, out_shape, stride, groups):
+    &#47&#47 TODO: can we do better than out_shape?
+    ret<a id="change"> = </a><a id="change">ctx.buffer(</a>out_shape<a id="change">)</a>
+    ctx.op.processing_op(op, x, y, ret, stride, groups)
+    log_op(op, ret, [x, y])
+    <a id="change">return </a>ret</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/geohot/tinygrad/commit/35e55afe179c07d325a577fd07dd19c7a61a6caf#diff-5736814df0b2c07a42d5c1bfef6b5aa5635ce18043f4aa030e21768694259ca3L76' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 23785517</div><div id='project'> Project Name: geohot/tinygrad</div><div id='commit'> Commit Name: 35e55afe179c07d325a577fd07dd19c7a61a6caf</div><div id='time'> Time: 2022-06-11</div><div id='author'> Author: geohot@gmail.com</div><div id='file'> File Name: tinygrad/ops.py</div><div id='m_class'> M Class Name: Ops</div><div id='n_method'> N Class Name: Ops</div><div id='m_method'> M Method Name: processing_op(7)</div><div id='n_method'> N Method Name: processing_op(7)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: tinygrad/ops.py</div><div id='n_file'> N File Name: tinygrad/ops.py</div><div id='m_start'> M Start Line: 78</div><div id='m_end'> M End Line: 78</div><div id='n_start'> N Start Line: 78</div><div id='n_end'> N End Line: 81</div><BR>

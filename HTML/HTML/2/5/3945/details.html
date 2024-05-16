@@ -1,0 +1,82 @@
+<html><h3>Pattern ID :3945
+</h3><img src='14808961.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    alpha_loss.backward()
+    optimizer.step()
+    logs["losses/alpha_loss"] = alpha_loss.item()
+    logs["alpha"]<a id="change"> = </a><a id="change">log_alpha.exp()</a>.item()
+    return logs
+
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    with torch.no_grad():
+        s_rep = agent.encoder(o)
+
+    <a id="change">for </a>i in range(agent.ensemble_size)<a id="change">:
+        </a>with torch.no_grad():
+            a_dist = agent.actors[i](s_rep)
+        if discrete:
+            logp_a = (a_dist.probs * torch.log_softmax(a_dist.logits, dim=1)).sum(-1)
+        else:
+            logp_a = (
+                a_dist.log_prob(a_dist.sample())
+                .sum(-1, keepdim=True)
+                .clamp(-100.0, 100.0)
+            )
+        alpha_loss = -(log_alphas[i] * (logp_a + target_entropy).detach()).mean()
+        optimizers[i].zero_grad()
+        alpha_loss.backward()
+        optimizers[i].step()
+        logs[f"losses/alpha_loss_{i}"] = alpha_loss.item()
+        logs[f"alphas/alpha_{i}"]<a id="change"> = </a>log_alphas[i].exp().item()
+    return logs
+
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/jakegrigsby/super_sac/commit/819313070dbb7c72886cafb948c401c78eb03861#diff-ed592a42afa845d29a0da80d3c28fc31230301bf13d0d27e271c158cb7728875L185' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 14808961</div><div id='project'> Project Name: jakegrigsby/super_sac</div><div id='commit'> Commit Name: 819313070dbb7c72886cafb948c401c78eb03861</div><div id='time'> Time: 2021-10-12</div><div id='author'> Author: jcg6dn@virginia.edu</div><div id='file'> File Name: uafbc/learning.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: alpha_update(9)</div><div id='n_method'> N Method Name: alpha_update(9)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: uafbc/learning.py</div><div id='n_file'> N File Name: uafbc/learning.py</div><div id='m_start'> M Start Line: 185</div><div id='m_end'> M End Line: 198</div><div id='n_start'> N Start Line: 191</div><div id='n_end'> N End Line: 211</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    pred_classifs = jaccard(truths, point_form(priors))
+    classif = classif.sigmoid().t()[labels - 1, :]
+    &#47&#47 pred_classifs = pred_classifs ** ((sigma - classif + 1e-6) / sigma)
+    pred_classifs<a id="change"> = </a>(pred_classifs * <a id="change">torch.exp(</a>classif / sigma<a id="change">)</a>).clamp_(max=1, min=0)
+    reg_overlaps[reg_overlaps != reg_overlaps.max(dim=0, keepdim=True)[0]] = 0.0
+    pred_classifs[pred_classifs != pred_classifs.max(dim=0, keepdim=True)[0]] = 0.0
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        * torch.exp(classif.sigmoid().t()[labels, :] / sigma)
+    ).clamp_(max=1)
+    qualities[qualities != qualities.max(dim=0, keepdim=True)[0]] = 0.0
+    <a id="change">for quality</a> in qualities<a id="change">:
+        </a>num_pos = max(1, torch.topk(quality, topk, largest=True)[0].sum().int())
+        num_pos<a id="change"> = </a>min(num_pos, (quality &gt; 0).sum())
+        pos_mask = torch.topk(quality, num_pos, largest=True)[1]
+        quality[pos_mask] += 3.0
+    (best_truth_overlap, best_truth_idx) = qualities.max(dim=0)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/zhanghengdev/mutualguide/commit/e34b6b0002f1571fad0fa9bf00707f377f5fc431#diff-7cd6c36c75963c973216f2c18eee2df1b14116478cf12d69c842b403bdc1329fL64' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 14808960</div><div id='project'> Project Name: zhanghengdev/mutualguide</div><div id='commit'> Commit Name: e34b6b0002f1571fad0fa9bf00707f377f5fc431</div><div id='time'> Time: 2022-07-01</div><div id='author'> Author: zhanghengdev@outlook.com</div><div id='file'> File Name: utils/box/box_utils.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: mutual_match(12)</div><div id='n_method'> N Method Name: mutual_match(12)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: utils/box/box_utils.py</div><div id='n_file'> N File Name: utils/box/box_utils.py</div><div id='m_start'> M Start Line: 79</div><div id='m_end'> M End Line: 99</div><div id='n_start'> N Start Line: 97</div><div id='n_end'> N End Line: 118</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    second_item = 0
+    second_kernel = -(expected_q_particle_value.unsqueeze(-1) - expected_q_particle_value.unsqueeze(-2)).pow(2)
+    for h in h_list:
+        second_item<a id="change"> += </a><a id="change">(second_kernel / h).exp()</a>
+    second_item = (second_item.sum(-1).sum(-1) / (particle_num ** 2)).mean()
+
+    third_item = 0</code></pre><h3>After Change</h3><pre><code class='java'>
+    second_item = 0
+    second_kernel = (expected_q_particle_value.unsqueeze(-1) - expected_q_particle_value.unsqueeze(-2)).pow(2)
+    h_list = calc_bandwidth(second_kernel)
+    <a id="change">for h</a> in h_list<a id="change">:
+        </a>second_item<a id="change"> += </a>(-second_kernel / h).exp()
+    second_item = (second_item.sum(-1).sum(-1) / (particle_num ** 2)).mean()
+
+    third_item = 0</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/deligentfool/dqn_zoo/commit/4590575e58e28b09f2ddb8d950a7c34e766ade69#diff-a3e85498ee9bd41175d1c0b181ebc32feaa59a654db95d7021e3167b795c0a05L55' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 14808948</div><div id='project'> Project Name: deligentfool/dqn_zoo</div><div id='commit'> Commit Name: 4590575e58e28b09f2ddb8d950a7c34e766ade69</div><div id='time'> Time: 2020-10-20</div><div id='author'> Author: 1027660817@qq.com</div><div id='file'> File Name: MMD_DQN/mmd_dqn.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train(9)</div><div id='n_method'> N Method Name: train(9)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: MMD_DQN/mmd_dqn.py</div><div id='n_file'> N File Name: MMD_DQN/mmd_dqn.py</div><div id='m_start'> M Start Line: 73</div><div id='m_end'> M End Line: 91</div><div id='n_start'> N Start Line: 86</div><div id='n_end'> N End Line: 104</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    alpha_loss.backward()
+    optimizer.step()
+    logs["losses/alpha_loss"] = alpha_loss.item()
+    logs["alpha"]<a id="change"> = </a><a id="change">log_alpha.exp()</a>.item()
+    return logs
+
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    with torch.no_grad():
+        s_rep = agent.encoder(o)
+
+    <a id="change">for i</a> in range(agent.ensemble_size)<a id="change">:
+        </a>with torch.no_grad():
+            a_dist<a id="change"> = </a>agent.actors[i](s_rep)
+        if discrete:
+            logp_a = (a_dist.probs * torch.log_softmax(a_dist.logits, dim=1)).sum(-1)
+        else:</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/jakegrigsby/super_sac/commit/819313070dbb7c72886cafb948c401c78eb03861#diff-ed592a42afa845d29a0da80d3c28fc31230301bf13d0d27e271c158cb7728875L165' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 14808958</div><div id='project'> Project Name: jakegrigsby/super_sac</div><div id='commit'> Commit Name: 819313070dbb7c72886cafb948c401c78eb03861</div><div id='time'> Time: 2021-10-12</div><div id='author'> Author: jcg6dn@virginia.edu</div><div id='file'> File Name: uafbc/learning.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: alpha_update(9)</div><div id='n_method'> N Method Name: alpha_update(9)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: uafbc/learning.py</div><div id='n_file'> N File Name: uafbc/learning.py</div><div id='m_start'> M Start Line: 185</div><div id='m_end'> M End Line: 198</div><div id='n_start'> N Start Line: 191</div><div id='n_end'> N End Line: 211</div><BR>

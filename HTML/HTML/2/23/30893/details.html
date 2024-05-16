@@ -1,0 +1,165 @@
+<html><h3>Pattern ID :30893
+</h3><img src='90995068.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        scheduler = scheduler_class(**scheduler_config)
+
+        num_inference_steps, eta = 10, 0.1
+        <a id="change">num_trained_timesteps = </a>len(scheduler)
+
+        inference_step_times<a id="change"> = </a><a id="change">range(0</a>, <a id="change">num_trained_timesteps</a>, <a id="change">num_trained_timesteps</a><a id="change"> // num_inference_steps</a><a id="change">)</a>
+
+        model = self.dummy_model()
+        sample = self.dummy_sample_deter
+
+        <a id="change">for </a><a id="change">t</a> in <a id="change">reversed(</a><a id="change">range(num_inference_steps</a><a id="change">))</a><a id="change">:
+            </a>residual = model(sample, inference_step_times[t])
+
+            pred_prev_sample = scheduler.step(residual, sample, t, num_inference_steps, eta)
+
+            variance<a id="change"> = 0</a>
+            <a id="change">if eta &gt; 0</a>:
+                noise<a id="change"> = </a>self.dummy_sample_deter
+                variance<a id="change"> = scheduler.get_variance(t</a><a id="change">, num_inference_steps) ** (0.5) * eta * </a>noise
+
+            sample = pred_prev_sample + variance
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        model = self.dummy_model()
+        sample = self.dummy_sample_deter
+
+        <a id="change">scheduler.set_timesteps(</a>num_inference_steps<a id="change">)</a>
+        for t in scheduler.timesteps:
+            residual = model(sample, t)
+
+            sample = scheduler.step(residual, t, sample, eta)["prev_sample"]</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 16</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/huggingface/diffusers/commit/f448360bd0dfe5e28ee65ab2130532db91d5eafe#diff-7cab305a6a78540131fcce1fafb912ccf6b52aa50b4a0a2b794aea71004d5a95L303' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 90995068</div><div id='project'> Project Name: huggingface/diffusers</div><div id='commit'> Commit Name: f448360bd0dfe5e28ee65ab2130532db91d5eafe</div><div id='time'> Time: 2022-07-15</div><div id='author'> Author: patrick.v.platen@gmail.com</div><div id='file'> File Name: tests/test_scheduler.py</div><div id='m_class'> M Class Name: DDIMSchedulerTest</div><div id='n_method'> N Class Name: DDIMSchedulerTest</div><div id='m_method'> M Method Name: test_full_loop_no_noise(1)</div><div id='n_method'> N Method Name: test_full_loop_no_noise(1)</div><div id='m_parent_class'> M Parent Class: SchedulerCommonTest</div><div id='n_parent_class'> N Parent Class: SchedulerCommonTest</div><div id='m_file'> M File Name: tests/test_scheduler.py</div><div id='n_file'> N File Name: tests/test_scheduler.py</div><div id='m_start'> M Start Line: 303</div><div id='m_end'> M End Line: 325</div><div id='n_start'> N Start Line: 344</div><div id='n_end'> N End Line: 357</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        self.unet.to(torch_device)
+        self.vqvae.to(torch_device)
+
+        <a id="change">num_trained_timesteps = </a>self.noise_scheduler.config.timesteps
+        inference_step_times<a id="change"> = </a><a id="change">range(0</a>, num_trained_timesteps, num_trained_timesteps<a id="change"> // </a>num_inference_steps<a id="change">)</a>
+
+        image = torch.randn(
+            (batch_size, self.unet.in_channels, self.unet.image_size, self.unet.image_size),
+            generator=generator,
+        ).to(torch_device)
+
+        &#47&#47 See formulas (12) and (16) of DDIM paper https://arxiv.org/pdf/2010.02502.pdf
+        &#47&#47 Ideally, read DDIM paper in-detail understanding
+
+        &#47&#47 Notation (&lt;variable name&gt; -&gt; &lt;name in paper&gt;
+        &#47&#47 - pred_noise_t -&gt; e_theta(x_t, t)
+        &#47&#47 - pred_original_image -&gt; f_theta(x_t, t) or x_0
+        &#47&#47 - std_dev_t -&gt; sigma_t
+        &#47&#47 - eta -&gt; η
+        &#47&#47 - pred_image_direction -&gt; "direction pointingc to x_t"
+        &#47&#47 - pred_prev_image -&gt; "x_t-1"
+        <a id="change">for </a><a id="change">t</a> in tqdm.tqdm(<a id="change">reversed(</a><a id="change">range(</a>num_inference_steps<a id="change">))</a>, total=num_inference_steps)<a id="change">:
+            &#47&#47 1. predict noise residual
+            </a>timesteps = torch.tensor([inference_step_times[t]] * image.shape[0], device=torch_device)
+            pred_noise_t = self.unet(image, timesteps)
+
+            if isinstance(pred_noise_t, dict):
+                pred_noise_t = pred_noise_t["sample"]
+
+            &#47&#47 2. predict previous mean of image x_t-1
+            pred_prev_image = self.noise_scheduler.step(pred_noise_t, image, t, num_inference_steps, eta)
+
+            &#47&#47 3. optionally sample variance
+            variance<a id="change"> = 0</a>
+            <a id="change">if eta &gt; 0</a>:
+                noise<a id="change"> = </a>torch.randn(image.shape, generator=generator).to(image.device)
+                variance<a id="change"> = self.noise_scheduler.get_variance(</a><a id="change">t, num_inference_steps).sqrt() * eta * </a>noise
+
+            &#47&#47 4. set current image to prev_image: x_t -&gt; x_t-1
+            image = pred_prev_image + variance</code></pre><h3>After Change</h3><pre><code class='java'>
+            generator=generator,
+        ).to(torch_device)
+
+        <a id="change">self.scheduler.set_timesteps(</a>num_inference_steps<a id="change">)</a>
+
+        for t in tqdm.tqdm(self.scheduler.timesteps):
+            residual = self.unet(image, t)
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/huggingface/diffusers/commit/f448360bd0dfe5e28ee65ab2130532db91d5eafe#diff-5a7ee70ffdbd476077b691c023447641dd657f00acfc79868f392d410574c691L15' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 90995067</div><div id='project'> Project Name: huggingface/diffusers</div><div id='commit'> Commit Name: f448360bd0dfe5e28ee65ab2130532db91d5eafe</div><div id='time'> Time: 2022-07-15</div><div id='author'> Author: patrick.v.platen@gmail.com</div><div id='file'> File Name: src/diffusers/pipelines/latent_diffusion_uncond/pipeline_latent_diffusion_uncond.py</div><div id='m_class'> M Class Name: LatentDiffusionUncondPipeline</div><div id='n_method'> N Class Name: LatentDiffusionUncondPipeline</div><div id='m_method'> M Method Name: __call__(6)</div><div id='n_method'> N Method Name: __call__(6)</div><div id='m_parent_class'> M Parent Class: DiffusionPipeline</div><div id='n_parent_class'> N Parent Class: DiffusionPipeline</div><div id='m_file'> M File Name: src/diffusers/pipelines/latent_diffusion_uncond/pipeline_latent_diffusion_uncond.py</div><div id='n_file'> N File Name: src/diffusers/pipelines/latent_diffusion_uncond/pipeline_latent_diffusion_uncond.py</div><div id='m_start'> M Start Line: 31</div><div id='m_end'> M End Line: 71</div><div id='n_start'> N Start Line: 31</div><div id='n_end'> N End Line: 50</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        if torch_device is None:
+            torch_device = "cuda" if torch.cuda.is_available() else "cpu"
+
+        <a id="change">num_trained_timesteps = </a>self.noise_scheduler.config.timesteps
+        inference_step_times<a id="change"> = </a><a id="change">range(0</a>, num_trained_timesteps, num_trained_timesteps<a id="change"> // </a>num_inference_steps<a id="change">)</a>
+
+        self.unet.to(torch_device)
+
+        &#47&#47 Sample gaussian noise to begin loop
+        image = torch.randn(
+            (batch_size, self.unet.in_channels, self.unet.resolution, self.unet.resolution),
+            generator=generator,
+        )
+        image = image.to(torch_device)
+
+        &#47&#47 See formulas (12) and (16) of DDIM paper https://arxiv.org/pdf/2010.02502.pdf
+        &#47&#47 Ideally, read DDIM paper in-detail understanding
+
+        &#47&#47 Notation (&lt;variable name&gt; -&gt; &lt;name in paper&gt;
+        &#47&#47 - pred_noise_t -&gt; e_theta(x_t, t)
+        &#47&#47 - pred_original_image -&gt; f_theta(x_t, t) or x_0
+        &#47&#47 - std_dev_t -&gt; sigma_t
+        &#47&#47 - eta -&gt; η
+        &#47&#47 - pred_image_direction -&gt; "direction pointingc to x_t"
+        &#47&#47 - pred_prev_image -&gt; "x_t-1"
+        <a id="change">for </a><a id="change">t</a> in tqdm.tqdm(<a id="change">reversed(</a><a id="change">range(</a>num_inference_steps<a id="change">))</a>, total=num_inference_steps)<a id="change">:
+            &#47&#47 1. predict noise residual
+            </a>with torch.no_grad():
+                residual = self.unet(image, inference_step_times[t])
+
+                if isinstance(residual, dict):
+                    residual = residual["sample"]
+
+            &#47&#47 2. predict previous mean of image x_t-1
+            pred_prev_image = self.noise_scheduler.step(residual, image, t, num_inference_steps, eta)
+
+            &#47&#47 3. optionally sample variance
+            variance<a id="change"> = 0</a>
+            <a id="change">if eta &gt; 0</a>:
+                noise<a id="change"> = </a>torch.randn(image.shape, generator=generator).to(image.device)
+                variance<a id="change"> = self.noise_scheduler.get_variance(</a><a id="change">t, num_inference_steps).sqrt() * eta * </a>noise
+
+            &#47&#47 4. set current image to prev_image: x_t -&gt; x_t-1
+            image = pred_prev_image + variance</code></pre><h3>After Change</h3><pre><code class='java'>
+        image = image.to(torch_device)
+
+        &#47&#47 set step values
+        <a id="change">self.scheduler.set_timesteps(</a>num_inference_steps<a id="change">)</a>
+
+        for t in tqdm.tqdm(self.scheduler.timesteps):
+            &#47&#47 1. predict noise residual
+            with torch.no_grad():</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/huggingface/diffusers/commit/f448360bd0dfe5e28ee65ab2130532db91d5eafe#diff-e50584b7225637d287e815f280f5d4eba5415903cafc62f029cd5f03b738f577L30' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 90995072</div><div id='project'> Project Name: huggingface/diffusers</div><div id='commit'> Commit Name: f448360bd0dfe5e28ee65ab2130532db91d5eafe</div><div id='time'> Time: 2022-07-15</div><div id='author'> Author: patrick.v.platen@gmail.com</div><div id='file'> File Name: src/diffusers/pipelines/ddim/pipeline_ddim.py</div><div id='m_class'> M Class Name: DDIMPipeline</div><div id='n_method'> N Class Name: DDIMPipeline</div><div id='m_method'> M Method Name: __call__(6)</div><div id='n_method'> N Method Name: __call__(6)</div><div id='m_parent_class'> M Parent Class: DiffusionPipeline</div><div id='n_parent_class'> N Parent Class: DiffusionPipeline</div><div id='m_file'> M File Name: src/diffusers/pipelines/ddim/pipeline_ddim.py</div><div id='n_file'> N File Name: src/diffusers/pipelines/ddim/pipeline_ddim.py</div><div id='m_start'> M Start Line: 35</div><div id='m_end'> M End Line: 77</div><div id='n_start'> N Start Line: 42</div><div id='n_end'> N End Line: 59</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        scheduler = scheduler_class(**scheduler_config)
+
+        num_inference_steps, eta = 10, 0.1
+        <a id="change">num_trained_timesteps = </a>len(scheduler)
+
+        inference_step_times<a id="change"> = </a><a id="change">range(0</a>, num_trained_timesteps, num_trained_timesteps<a id="change"> // </a>num_inference_steps<a id="change">)</a>
+
+        model = self.dummy_model()
+        sample = self.dummy_sample_deter
+
+        <a id="change">for </a><a id="change">t</a> in <a id="change">reversed(</a><a id="change">range(</a>num_inference_steps<a id="change">))</a><a id="change">:
+            </a>residual = model(sample, inference_step_times[t])
+
+            pred_prev_sample = scheduler.step(residual, sample, t, num_inference_steps, eta)
+
+            variance<a id="change"> = 0</a>
+            <a id="change">if eta &gt; 0</a>:
+                noise<a id="change"> = </a>self.dummy_sample_deter
+                variance<a id="change"> = scheduler.get_variance(</a><a id="change">t, num_inference_steps) ** (0.5) * eta * </a>noise
+
+            sample = pred_prev_sample + variance
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        model = self.dummy_model()
+        sample = self.dummy_sample_deter
+
+        <a id="change">scheduler.set_timesteps(</a>num_inference_steps<a id="change">)</a>
+        for t in scheduler.timesteps:
+            residual = model(sample, t)
+
+            sample = scheduler.step(residual, t, sample, eta)["prev_sample"]</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/huggingface/diffusers/commit/f448360bd0dfe5e28ee65ab2130532db91d5eafe#diff-7cab305a6a78540131fcce1fafb912ccf6b52aa50b4a0a2b794aea71004d5a95L300' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 90995057</div><div id='project'> Project Name: huggingface/diffusers</div><div id='commit'> Commit Name: f448360bd0dfe5e28ee65ab2130532db91d5eafe</div><div id='time'> Time: 2022-07-15</div><div id='author'> Author: patrick.v.platen@gmail.com</div><div id='file'> File Name: tests/test_scheduler.py</div><div id='m_class'> M Class Name: DDIMSchedulerTest</div><div id='n_method'> N Class Name: DDIMSchedulerTest</div><div id='m_method'> M Method Name: test_full_loop_no_noise(1)</div><div id='n_method'> N Method Name: test_full_loop_no_noise(1)</div><div id='m_parent_class'> M Parent Class: SchedulerCommonTest</div><div id='n_parent_class'> N Parent Class: SchedulerCommonTest</div><div id='m_file'> M File Name: tests/test_scheduler.py</div><div id='n_file'> N File Name: tests/test_scheduler.py</div><div id='m_start'> M Start Line: 303</div><div id='m_end'> M End Line: 325</div><div id='n_start'> N Start Line: 344</div><div id='n_end'> N End Line: 357</div><BR>

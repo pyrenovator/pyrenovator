@@ -1,0 +1,23 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+  
+
+  &#47&#47 sadly, this is faster
+  x<a id="change"> = </a><a id="change">np.zeros(</a>(bs, cin, OY, OX)<a id="change">, dtype=tx.dtype)</a>
+  tx = tx.reshape(bs, oy, ox, cin, H, W)
+  for Y in range(oy):
+    for X in range(ox):
+      x[:, :, Y:Y+H, X:X+W]<a id="change"> += </a>tx[:, Y, X]
+
+  return x.reshape(bs, cin, OY, OX)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+  ridx = swizzle_col2im_index(oy, ox, cin, H, W)
+  &#47&#47 -1 has to be 0s
+  x = <a id="change">np.pad(tx.reshape(bs, -1), ((0,0),(0,1)))[:, ridx].sum(axis=2)</a>
+
+  
+  &#47&#47 col2im is just im2col in reverse, but np.add.at is SLOW
+  idx = get_im2col_index(oy, ox, cin, H, W)</code></pre>

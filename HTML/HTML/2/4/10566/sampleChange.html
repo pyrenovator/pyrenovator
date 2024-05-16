@@ -1,0 +1,38 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            input_data_x, label_probs = filter_empty_probabilities(input_data_x, label_probs)
+            if not use_probabilistic_labels:
+                label_probs = probabilistic_to_single_labels(label_probs, other_class_id)
+            <a id="change">return </a>input_data_x<a id="change">, label_probs</a>
+
+
+def probabilistic_to_single_labels(label_probs: np.ndarray, other_class_id: int) -&gt; np.ndarray:
+     The function converts labels represented as a prob distribution to a single label using majority voting </code></pre><h3>After Change</h3><pre><code class='java'>
+
+    noisy_y_train = z_t_matrices_to_majority_vote_probs(rule_matches_z, mapping_rules_labels_t, other_class_id)
+
+    if filter_non_labelled and <a id="change">probability_threshold is not None</a>:
+        raise ValueError("You can either filter all non labeled samples or those that have probabilities below "
+                         "some threshold.")
+
+    &#47&#47  filter out samples where no pattern matched
+    if filter_non_labelled:
+        model_input_x, noisy_y_train, rule_matches_z = filter_empty_probabilities(
+            model_input_x, noisy_y_train, rule_matches_z
+        )
+
+    &#47&#47  filter out samples where that have probabilities below the threshold
+    elif probability_threshold is not None:
+        model_input_x, noisy_y_train = filter_unconclusive_probabilities(
+            model_input_x, noisy_y_train, probability_threshold=probability_threshold
+            )
+
+    if not use_probabilistic_labels:
+        &#47&#47 convert labels represented as a prob distribution to a single label using majority voting
+        kwargs = {"choose_random_label": True, "other_class_id": other_class_id}
+        noisy_y_train = <a id="change">np.apply_along_axis(</a>probabilies_to_majority_vote<a id="change">, axis=1, arr=noisy_y_train, **kwargs)</a>
+
+    return model_input_x, noisy_y_train, rule_matches_z
+</code></pre>

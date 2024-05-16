@@ -1,0 +1,31 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    if padding_mode == &quotreplicate&quot:
+        &#47&#47 replication padding has some strange constraints...
+        assert len(tensor.shape) - dim &lt;= 2
+        padding = <a id="change">padding[:(len(tensor.shape) - 2) * 2]</a>
+
+    tensor_ = F.pad(tensor, padding, padding_mode, padding_value)
+
+    &#47&#47 create gaussian kernel from grid using current sigma</code></pre><h3>After Change</h3><pre><code class='java'>
+    assert tensor.shape[-1] == source_shape[dim]
+
+    &#47&#47 we need reshape instead of view for batches like B x C x H x W
+    tensor = <a id="change">tensor.reshape(-1</a>, <a id="change">1</a>, source_shape[dim]<a id="change">)</a>
+
+    padding = (math.ceil((kernel_size_int - 1) / 2), math.ceil((kernel_size_int - 1) / 2))
+    tensor_ = F.pad(tensor, padding, padding_mode, padding_value)
+
+    &#47&#47 create gaussian kernel from grid using current sigma
+    kernel = torch.exp(-0.5 * (grid / sigma) ** 2)
+    kernel = kernel / kernel.sum()
+
+    &#47&#47 convolve input with gaussian kernel
+    tensor_<a id="change"> = </a>F.conv1d(tensor_, kernel)
+    tensor_<a id="change"> = </a>tensor_.view(dim_last_shape)
+    tensor_<a id="change"> = </a>torch.movedim(tensor_, len(source_shape)-1, dim)
+
+    assert tensor_.shape == source_shape
+</code></pre>

@@ -1,0 +1,149 @@
+<html><h3>Pattern ID :3754
+</h3><img src='14123984.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 Remove padded values
+        &#47&#47 Want e.g. (..., 1000, 768) -&gt; (..., 999, 768)
+        if pad_length &gt; 0:
+            hidden_states = <a id="change">hidden_states[..., 0:(-pad_length), :]</a>
+
+        hidden_states = self.layer_norm(hidden_states)
+
+        if not return_dict:</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        if attention_mask is not None:
+            &#47&#47 make sure padded tokens are not attended to
+            expand_attention_mask = <a id="change">attention_mask.unsqueeze(-1</a><a id="change">)</a>.repeat(1, 1, hidden_states.shape[2])
+            hidden_states[~expand_attention_mask] = 0
+
+            &#47&#47 extend attention_mask
+            attention_mask = (1.0 - attention_mask[:, None, None, :].to(dtype=hidden_states.dtype)) * -10000.0
+            attention_mask = attention_mask.expand(
+                attention_mask.shape[0], 1, attention_mask.shape[-1], attention_mask.shape[-1]
+            )
+
+        position_embeddings = self.pos_conv_embed(hidden_states)
+        hidden_states = hidden_states + position_embeddings
+        hidden_states = self.dropout(hidden_states)
+
+        for layer in self.layers:
+            if output_hidden_states:
+                all_hidden_states<a id="change"> = </a>all_hidden_states + (hidden_states,)
+
+            layer_outputs = layer(hidden_states, attention_mask=attention_mask, output_attentions=output_attentions)
+
+            &#47&#47 add LayerDrop (see https://arxiv.org/abs/1909.11556 for description)
+            dropout_probability = torch.rand(tuple())
+            skip_the_layer = torch.tensor(self.training) and (dropout_probability &lt; self.config.layerdrop)
+            if self.config.layerdrop &gt; 0.0:
+                hidden_states = torch.where(skip_the_layer, hidden_states, layer_outputs[0])
+            else:
+                hidden_states = layer_outputs[0]
+
+            if skip_the_layer:
+                layer_outputs = (None, None)
+
+            if output_attentions:
+                all_self_attentions = all_self_attentions + (layer_outputs[1],)
+
+        hidden_states = self.layer_norm(hidden_states)
+
+        if output_hidden_states:
+            all_hidden_states<a id="change"> = </a>all_hidden_states<a id="change"> + </a>(hidden_states,)
+
+        if not return_dict:
+            return tuple(v for v in [hidden_states, all_hidden_states, all_self_attentions] if v is not None)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 6</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/huggingface/optimum-graphcore/commit/075200de7b5b118681fc46af97985bb53ce9c146#diff-78e7e62156963de0a5dbf323a0121639c4ddfcd5d6364518045269e8263e5b12L101' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 14123984</div><div id='project'> Project Name: huggingface/optimum-graphcore</div><div id='commit'> Commit Name: 075200de7b5b118681fc46af97985bb53ce9c146</div><div id='time'> Time: 2022-08-03</div><div id='author'> Author: gejinchen1996@gmail.com</div><div id='file'> File Name: optimum/graphcore/models/wav2vec2/ipu_layer_drop.py</div><div id='m_class'> M Class Name: IPUWav2Vec2EncoderStableLayerNorm</div><div id='n_method'> N Class Name: IPUWav2Vec2EncoderStableLayerNorm</div><div id='m_method'> M Method Name: forward(6)</div><div id='n_method'> N Method Name: forward(6)</div><div id='m_parent_class'> M Parent Class: Wav2Vec2EncoderStableLayerNorm</div><div id='n_parent_class'> N Parent Class: Wav2Vec2EncoderStableLayerNorm</div><div id='m_file'> M File Name: optimum/graphcore/models/wav2vec2/ipu_layer_drop.py</div><div id='n_file'> N File Name: optimum/graphcore/models/wav2vec2/ipu_layer_drop.py</div><div id='m_start'> M Start Line: 127</div><div id='m_end'> M End Line: 193</div><div id='n_start'> N Start Line: 101</div><div id='n_end'> N End Line: 144</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 Remove padded values
+        &#47&#47 Want e.g. (..., 1000, 768) -&gt; (..., 999, 768)
+        if pad_length &gt; 0:
+            hidden_states = <a id="change">hidden_states[..., 0:(-pad_length), :]</a>
+
+        if not return_dict:
+            return tuple(v for v in [hidden_states, all_hidden_states, all_self_attentions] if v is not None)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        if attention_mask is not None:
+            &#47&#47 make sure padded tokens output 0
+            expand_attention_mask = <a id="change">attention_mask.unsqueeze(-1</a><a id="change">)</a>.repeat(1, 1, hidden_states.shape[2])
+            hidden_states[~expand_attention_mask] = 0
+
+            &#47&#47 extend attention_mask
+            attention_mask = (1.0 - attention_mask[:, None, None, :].to(dtype=hidden_states.dtype)) * -10000.0
+            attention_mask = attention_mask.expand(
+                attention_mask.shape[0], 1, attention_mask.shape[-1], attention_mask.shape[-1]
+            )
+
+        position_embeddings = self.pos_conv_embed(hidden_states)
+        hidden_states = hidden_states + position_embeddings
+        hidden_states = self.layer_norm(hidden_states)
+        hidden_states = self.dropout(hidden_states)
+
+        for layer in self.layers:
+            if output_hidden_states:
+                all_hidden_states<a id="change"> = </a>all_hidden_states + (hidden_states,)
+
+            layer_outputs = layer(hidden_states, attention_mask=attention_mask, output_attentions=output_attentions)
+
+            &#47&#47 add LayerDrop (see https://arxiv.org/abs/1909.11556 for description)
+            dropout_probability = torch.rand(tuple())
+            skip_the_layer = torch.tensor(self.training) and (dropout_probability &lt; self.config.layerdrop)
+            if self.config.layerdrop &gt; 0.0:
+                hidden_states = torch.where(skip_the_layer, hidden_states, layer_outputs[0])
+            else:
+                hidden_states = layer_outputs[0]
+
+            if skip_the_layer:
+                layer_outputs = (None, None)
+
+            if output_attentions:
+                all_self_attentions = all_self_attentions + (layer_outputs[1],)
+
+        if output_hidden_states:
+            all_hidden_states<a id="change"> = </a>all_hidden_states<a id="change"> + </a>(hidden_states,)
+
+        if not return_dict:
+            return tuple(v for v in [hidden_states, all_hidden_states, all_self_attentions] if v is not None)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/huggingface/optimum-graphcore/commit/075200de7b5b118681fc46af97985bb53ce9c146#diff-78e7e62156963de0a5dbf323a0121639c4ddfcd5d6364518045269e8263e5b12L33' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 14123939</div><div id='project'> Project Name: huggingface/optimum-graphcore</div><div id='commit'> Commit Name: 075200de7b5b118681fc46af97985bb53ce9c146</div><div id='time'> Time: 2022-08-03</div><div id='author'> Author: gejinchen1996@gmail.com</div><div id='file'> File Name: optimum/graphcore/models/wav2vec2/ipu_layer_drop.py</div><div id='m_class'> M Class Name: IPUWav2Vec2Encoder</div><div id='n_method'> N Class Name: IPUWav2Vec2Encoder</div><div id='m_method'> M Method Name: forward(6)</div><div id='n_method'> N Method Name: forward(6)</div><div id='m_parent_class'> M Parent Class: Wav2Vec2Encoder</div><div id='n_parent_class'> N Parent Class: Wav2Vec2Encoder</div><div id='m_file'> M File Name: optimum/graphcore/models/wav2vec2/ipu_layer_drop.py</div><div id='n_file'> N File Name: optimum/graphcore/models/wav2vec2/ipu_layer_drop.py</div><div id='m_start'> M Start Line: 41</div><div id='m_end'> M End Line: 108</div><div id='n_start'> N Start Line: 41</div><div id='n_end'> N End Line: 83</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        dt = -1.0 / len(self.timesteps)
+
+        beta_t = self.config.beta_min + t * (self.config.beta_max - self.config.beta_min)
+        drift = -0.5 * <a id="change">beta_t[:, None, None, None]</a> * x
+        diffusion = torch.sqrt(beta_t)
+        drift = drift - diffusion[:, None, None, None] ** 2 * score
+        x_mean = x + drift * dt</code></pre><h3>After Change</h3><pre><code class='java'>
+        std = torch.sqrt(1.0 - torch.exp(2.0 * log_mean_coeff))
+        std = std.flatten()
+        while len(std.shape) &lt; len(score.shape):
+            std<a id="change"> = </a><a id="change">std.unsqueeze(-1</a><a id="change">)</a>
+        score = -score / std
+
+        &#47&#47 compute
+        dt = -1.0 / len(self.timesteps)
+
+        beta_t = self.config.beta_min + t * (self.config.beta_max - self.config.beta_min)
+        beta_t = beta_t.flatten()
+        while len(beta_t.shape) &lt; len(x.shape):
+            beta_t = beta_t.unsqueeze(-1)
+        drift = -0.5 * beta_t * x
+
+        diffusion = torch.sqrt(beta_t)
+        drift<a id="change"> = </a>drift<a id="change"> - </a>diffusion**2 * score
+        x_mean = x + drift * dt
+
+        &#47&#47 add noise</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/huggingface/diffusers/commit/bd8df2da89d99f630e5aa2ddb8f8cb45456561f1#diff-d275d32563b52fffdb3ca593aa3ec1948280b82f0b603dfe26bc1f6b03e7dcf7L50' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 14123999</div><div id='project'> Project Name: huggingface/diffusers</div><div id='commit'> Commit Name: bd8df2da89d99f630e5aa2ddb8f8cb45456561f1</div><div id='time'> Time: 2022-09-27</div><div id='author'> Author: kashif.rasul@gmail.com</div><div id='file'> File Name: src/diffusers/schedulers/scheduling_sde_vp.py</div><div id='m_class'> M Class Name: ScoreSdeVpScheduler</div><div id='n_method'> N Class Name: ScoreSdeVpScheduler</div><div id='m_method'> M Method Name: step_pred(5)</div><div id='n_method'> N Method Name: step_pred(4)</div><div id='m_parent_class'> M Parent Class: SchedulerMixin,ConfigMixin</div><div id='n_parent_class'> N Parent Class: SchedulerMixin,ConfigMixin</div><div id='m_file'> M File Name: src/diffusers/schedulers/scheduling_sde_vp.py</div><div id='n_file'> N File Name: src/diffusers/schedulers/scheduling_sde_vp.py</div><div id='m_start'> M Start Line: 61</div><div id='m_end'> M End Line: 75</div><div id='n_start'> N Start Line: 51</div><div id='n_end'> N End Line: 83</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            An instance of torch.Tensor of shape (3,) representing
+            the origin of the camera in the world frame.
+        
+        return <a id="change">cam_extrinsic[:3, -1]</a>
+
+    def generate_rays(
+        self,
+        pixel_coords: torch.Tensor,</code></pre><h3>After Change</h3><pre><code class='java'>
+            the origin of the camera in the camera frame.
+        
+        &#47&#47 ray starts from the pixel centers on the near plane
+        t_near<a id="change"> = </a><a id="change">(-(z_near) / ray_dir[:, 2]).unsqueeze(-1</a><a id="change">)</a>
+        ray_origin<a id="change"> = </a>t_near<a id="change"> * </a>ray_dir
+
+        return ray_origin
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/dvelopery0115/torch-nerf/commit/88d3df6fb638ef8cf6fae651ddfc119ed37d5239#diff-6c582fa8b87815d80106dafde86fc2ddb0a7252ba33d0c19db01b37b558fff9aL63' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 14123933</div><div id='project'> Project Name: dvelopery0115/torch-nerf</div><div id='commit'> Commit Name: 88d3df6fb638ef8cf6fae651ddfc119ed37d5239</div><div id='time'> Time: 2022-06-18</div><div id='author'> Author: dreamy1534@kaist.ac.kr</div><div id='file'> File Name: src/renderer/ray_samplers.py</div><div id='m_class'> M Class Name: RaySamplerBase</div><div id='n_method'> N Class Name: RaySamplerBase</div><div id='m_method'> M Method Name: _get_ray_origin(3)</div><div id='n_method'> N Method Name: _get_ray_origin(2)</div><div id='m_parent_class'> M Parent Class: object</div><div id='n_parent_class'> N Parent Class: object</div><div id='m_file'> M File Name: src/renderer/ray_samplers.py</div><div id='n_file'> N File Name: src/renderer/ray_samplers.py</div><div id='m_start'> M Start Line: 78</div><div id='m_end'> M End Line: 78</div><div id='n_start'> N Start Line: 65</div><div id='n_end'> N End Line: 83</div><BR>

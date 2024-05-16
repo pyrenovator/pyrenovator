@@ -1,0 +1,162 @@
+<html><h3>Pattern ID :30364
+</h3><img src='89860920.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        obs(weights)
+        qparams = obs.calculate_qparams()
+        &#47&#47 Quantize the weights to 8bits
+        qweight<a id="change"> = </a>torch.quantize_per_channel(weights, qparams[0], qparams[1], axis=0, dtype=torch.quint8)
+        qemb<a id="change"> = </a>nnq.Embedding(num_embeddings=num_embeddings, embedding_dim=embedding_dim)
+        qemb.set_weight(qweight)
+        qemb(indices)
+
+        &#47&#47 Ensure the module has the correct weights
+        <a id="change">self.assertEqual(</a>qweight, qemb.weight()<a id="change">)</a>
+
+        w_packed<a id="change"> = </a>qemb._packed_params._packed_weight
+        module_out = qemb(indices)
+
+        &#47&#47 Call the qembedding operator directly
+        ref = torch.ops.quantized.embedding_byte(w_packed, indices, pruned_weights=False)
+        self.assertEqual(module_out, ref)
+        <a id="change">self.checkEmbeddingSerialization(</a>qemb, num_embeddings, embedding_dim, indices, None<a id="change">, set_qconfig=False, is_emb_bag=False)</a>
+
+
+    @given(
+        num_embeddings=st.integers(10, 50),</code></pre><h3>After Change</h3><pre><code class='java'>
+        qparams = obs.calculate_qparams()
+
+        dtypes = [torch.quint4x2, torch.quint8]
+        embedding_funcs = <a id="change">[</a>torch.ops.quantized.embedding_4bit, torch.ops.quantized.embedding_byte<a id="change"></a>]
+
+        <a id="change">for </a>dtype, <a id="change">embedding_func</a> in zip(dtypes, embedding_funcs)<a id="change">:
+            &#47&#47 Quantize the weights
+            </a>qweight<a id="change"> = </a>torch.quantize_per_channel(weights, qparams[0], qparams[1], axis=0, dtype=dtype)
+            qemb<a id="change"> = </a>nnq.Embedding(num_embeddings=num_embeddings, embedding_dim=embedding_dim, dtype=dtype)
+            qemb.set_weight(qweight)
+            qemb(indices)
+
+            &#47&#47 Ensure the module has the correct weights
+            <a id="change">self.assertEqual(</a>qweight, qemb.weight()<a id="change">)</a>
+            w_packed<a id="change"> = </a>qemb._packed_params._packed_weight
+            module_out = qemb(indices)
+
+            &#47&#47 Call the bit qembedding operator directly
+            ref<a id="change"> = </a>embedding_func(w_packed, indices, pruned_weights=False)
+            self.assertEqual(module_out, ref)
+            <a id="change">self.checkEmbeddingSerialization(</a>qemb, num_embeddings, embedding_dim, indices, None<a id="change">, set_qconfig=False,
+                                             is_emb_bag=False, dtype=dtype)</a>
+
+    @given(
+        num_embeddings=st.integers(10, 50),
+        embedding_dim=st.integers(5, 50).filter(lambda x: x % 4 == 0),</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 13</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/pytorch/pytorch/commit/9f512e129b48a84ca742f64d1a4c742361b3300c#diff-daa03e81d706f5eb9d02e3c68221dc7735672898f9859b83de883d0a5706391fL816' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 89860920</div><div id='project'> Project Name: pytorch/pytorch</div><div id='commit'> Commit Name: 9f512e129b48a84ca742f64d1a4c742361b3300c</div><div id='time'> Time: 2021-12-18</div><div id='author'> Author: dzdang@fb.com</div><div id='file'> File Name: test/quantization/core/test_quantized_module.py</div><div id='m_class'> M Class Name: TestStaticQuantizedModule</div><div id='n_method'> N Class Name: TestStaticQuantizedModule</div><div id='m_method'> M Method Name: test_embedding_api(4)</div><div id='n_method'> N Method Name: test_embedding_api(4)</div><div id='m_parent_class'> M Parent Class: QuantizationTestCase</div><div id='n_parent_class'> N Parent Class: QuantizationTestCase</div><div id='m_file'> M File Name: test/quantization/core/test_quantized_module.py</div><div id='n_file'> N File Name: test/quantization/core/test_quantized_module.py</div><div id='m_start'> M Start Line: 816</div><div id='m_end'> M End Line: 837</div><div id='n_start'> N Start Line: 816</div><div id='n_end'> N End Line: 844</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 Get the scale and zero point for the weight tensor
+        qparams = obs.calculate_qparams()
+        &#47&#47 Quantize the weights to 8bits
+        qweight<a id="change"> = </a>torch.quantize_per_channel(weights, qparams[0], qparams[1], axis=0, dtype=torch.quint8)
+        qemb<a id="change"> = </a>nnq.EmbeddingBag(num_embeddings=num_embeddings, embedding_dim=embedding_dim,
+                                include_last_offset=True, mode=&quotsum&quot, _weight=qweight)
+        qemb(indices, offsets)
+
+        &#47&#47 Ensure the module has the correct weights
+        <a id="change">self.assertEqual(</a>qweight, qemb.weight()<a id="change">)</a>
+
+        w_packed<a id="change"> = </a>qemb._packed_params._packed_weight
+        module_out = qemb(indices, offsets)
+
+        &#47&#47 Call the qembedding_bag operator directly
+        ref = torch.ops.quantized.embedding_bag_byte(w_packed, indices, offsets, mode=0,
+                                                     per_sample_weights=None,
+                                                     include_last_offset=True)
+        self.assertEqual(module_out, ref)
+        <a id="change">self.checkEmbeddingSerialization(</a>qemb, num_embeddings, embedding_dim, indices, offsets, set_qconfig<a id="change">, is_emb_bag=True)</a>
+
+class TestDynamicQuantizedModule(QuantizationTestCase):
+    @given(
+        batch_size=st.integers(1, 5),</code></pre><h3>After Change</h3><pre><code class='java'>
+        offsets = torch.cat((offsets, torch.tensor([indices.size(0)], dtype=torch.long)), 0)
+        weights = torch.from_numpy((np.random.random_sample((num_embeddings, embedding_dim)) + 1).astype(np.float32))
+
+        <a id="change">for qdtype</a> in <a id="change">[</a>torch.quint8, torch.quint4x2<a id="change"></a>]<a id="change">:
+            </a>obs = PerChannelMinMaxObserver(dtype=qdtype, qscheme=torch.per_channel_affine_float_qparams, ch_axis=0)
+            obs(weights)
+            &#47&#47 Get the scale and zero point for the weight tensor
+            qparams = obs.calculate_qparams()
+            &#47&#47 Quantize the weights to 8bits
+            qweight<a id="change"> = </a>torch.quantize_per_channel(weights, qparams[0], qparams[1], axis=0, dtype=qdtype)
+            qemb<a id="change"> = </a>nnq.EmbeddingBag(num_embeddings=num_embeddings, embedding_dim=embedding_dim,
+                                    include_last_offset=True, mode=&quotsum&quot, _weight=qweight, dtype=qdtype)
+            qemb(indices, offsets)
+
+            &#47&#47 Ensure the module has the correct weights
+            <a id="change">self.assertEqual(</a>qweight, qemb.weight()<a id="change">)</a>
+
+            w_packed<a id="change"> = </a>qemb._packed_params._packed_weight
+            module_out = qemb(indices, offsets)
+
+            &#47&#47 Call the qembedding_bag operator directly
+            if qdtype == torch.quint8:
+                ref = torch.ops.quantized.embedding_bag_byte(w_packed, indices, offsets, mode=0,
+                                                             per_sample_weights=None,
+                                                             include_last_offset=True)
+            else:
+                ref<a id="change"> = </a>torch.ops.quantized.embedding_bag_4bit(w_packed, indices, offsets, mode=0,
+                                                             per_sample_weights=None,
+                                                             include_last_offset=True)
+
+            self.assertEqual(module_out, ref)
+            <a id="change">self.checkEmbeddingSerialization(</a>qemb, num_embeddings, embedding_dim, indices,
+                                             offsets, set_qconfig<a id="change">, is_emb_bag=True, dtype=qdtype)</a>
+
+class TestDynamicQuantizedModule(QuantizationTestCase):
+    @given(
+        batch_size=st.integers(1, 5),</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/pytorch/pytorch/commit/43dc7ef9335158fbdb124e5fc0952789e528d06e#diff-c91f488c8eccc72a49d4ea3d68aec1a2ae05463f97de9055d02ee16b24403b91L758' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 89860911</div><div id='project'> Project Name: pytorch/pytorch</div><div id='commit'> Commit Name: 43dc7ef9335158fbdb124e5fc0952789e528d06e</div><div id='time'> Time: 2020-10-06</div><div id='author'> Author: supriyar@fb.com</div><div id='file'> File Name: test/quantization/test_quantized_module.py</div><div id='m_class'> M Class Name: TestStaticQuantizedModule</div><div id='n_method'> N Class Name: TestStaticQuantizedModule</div><div id='m_method'> M Method Name: test_embedding_bag_api(5)</div><div id='n_method'> N Method Name: test_embedding_bag_api(5)</div><div id='m_parent_class'> M Parent Class: QuantizationTestCase</div><div id='n_parent_class'> N Parent Class: QuantizationTestCase</div><div id='m_file'> M File Name: test/quantization/test_quantized_module.py</div><div id='n_file'> N File Name: test/quantization/test_quantized_module.py</div><div id='m_start'> M Start Line: 771</div><div id='m_end'> M End Line: 792</div><div id='n_start'> N Start Line: 766</div><div id='n_end'> N End Line: 803</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        obs(weights)
+        qparams = obs.calculate_qparams()
+        &#47&#47 Quantize the weights to 8bits
+        qweight<a id="change"> = </a>torch.quantize_per_channel(weights, qparams[0], qparams[1], axis=0, dtype=torch.quint8)
+        qemb<a id="change"> = </a>nnq.Embedding(num_embeddings=num_embeddings, embedding_dim=embedding_dim)
+        qemb.set_weight(qweight)
+        qemb(indices)
+
+        &#47&#47 Ensure the module has the correct weights
+        <a id="change">self.assertEqual(</a>qweight, qemb.weight()<a id="change">)</a>
+
+        w_packed<a id="change"> = </a>qemb._packed_params._packed_weight
+        module_out = qemb(indices)
+
+        &#47&#47 Call the qembedding operator directly
+        ref = torch.ops.quantized.embedding_byte(w_packed, indices, pruned_weights=False)
+        self.assertEqual(module_out, ref)
+        <a id="change">self.checkEmbeddingSerialization(</a>qemb, num_embeddings, embedding_dim, indices, None<a id="change">, set_qconfig=False, is_emb_bag=False)</a>
+
+
+    @given(
+        num_embeddings=st.integers(10, 50),</code></pre><h3>After Change</h3><pre><code class='java'>
+        qparams = obs.calculate_qparams()
+
+        dtypes = [torch.quint4x2, torch.quint8]
+        embedding_funcs = <a id="change">[</a>torch.ops.quantized.embedding_4bit, torch.ops.quantized.embedding_byte<a id="change"></a>]
+
+        <a id="change">for </a>dtype, <a id="change">embedding_func</a> in zip(dtypes, embedding_funcs)<a id="change">:
+            &#47&#47 Quantize the weights
+            </a>qweight<a id="change"> = </a>torch.quantize_per_channel(weights, qparams[0], qparams[1], axis=0, dtype=dtype)
+            qemb<a id="change"> = </a>nnq.Embedding(num_embeddings=num_embeddings, embedding_dim=embedding_dim, dtype=dtype)
+            qemb.set_weight(qweight)
+            qemb(indices)
+
+            &#47&#47 Ensure the module has the correct weights
+            <a id="change">self.assertEqual(</a>qweight, qemb.weight()<a id="change">)</a>
+            w_packed<a id="change"> = </a>qemb._packed_params._packed_weight
+            module_out = qemb(indices)
+
+            &#47&#47 Call the bit qembedding operator directly
+            ref<a id="change"> = </a>embedding_func(w_packed, indices, pruned_weights=False)
+            self.assertEqual(module_out, ref)
+            <a id="change">self.checkEmbeddingSerialization(</a>qemb, num_embeddings, embedding_dim, indices, None<a id="change">, set_qconfig=False,
+                                             is_emb_bag=False, dtype=dtype)</a>
+
+    @given(
+        num_embeddings=st.integers(10, 50),
+        embedding_dim=st.integers(5, 50).filter(lambda x: x % 4 == 0),</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/pytorch/pytorch/commit/bfdf45cc8950c1f5a5e448217cdfda3591da81d0#diff-daa03e81d706f5eb9d02e3c68221dc7735672898f9859b83de883d0a5706391fL907' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 89860926</div><div id='project'> Project Name: pytorch/pytorch</div><div id='commit'> Commit Name: bfdf45cc8950c1f5a5e448217cdfda3591da81d0</div><div id='time'> Time: 2022-02-04</div><div id='author'> Author: dzdang@umich.edu</div><div id='file'> File Name: test/quantization/core/test_quantized_module.py</div><div id='m_class'> M Class Name: TestStaticQuantizedModule</div><div id='n_method'> N Class Name: TestStaticQuantizedModule</div><div id='m_method'> M Method Name: test_embedding_api(4)</div><div id='n_method'> N Method Name: test_embedding_api(4)</div><div id='m_parent_class'> M Parent Class: QuantizationTestCase</div><div id='n_parent_class'> N Parent Class: QuantizationTestCase</div><div id='m_file'> M File Name: test/quantization/core/test_quantized_module.py</div><div id='n_file'> N File Name: test/quantization/core/test_quantized_module.py</div><div id='m_start'> M Start Line: 911</div><div id='m_end'> M End Line: 932</div><div id='n_start'> N Start Line: 911</div><div id='n_end'> N End Line: 939</div><BR>

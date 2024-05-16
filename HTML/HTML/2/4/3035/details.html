@@ -1,0 +1,164 @@
+<html><h3>Pattern ID :3035
+</h3><img src='11757299.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                wandb.log({&quottrain/loss&quot: loss.item()})
+            if (i+1) % args.sample_freq == 0:
+                model.eval()
+                dec = decoder.generate(<a id="change">torch.LongTensor([args.bos_token]*len(encoded[:args.test_samples]))[:, None].to(</a>device<a id="change">)</a>, args.max_seq_len,
+                                       eos_token=args.pad_token, context=encoded.detach()[:args.test_samples])
+                pred<a id="change"> = </a>token2str(dec[:args.test_samples], dataloader.tokenizer)
+                truth = token2str(seq[&quotinput_ids&quot], dataloader.tokenizer)
+                if args.wandb:
+                    table = wandb.Table(columns=["Truth", "Prediction"])</code></pre><h3>After Change</h3><pre><code class='java'>
+    dataloader = Im2LatexDataset().load(args.data)
+    dataloader.update(**args)
+    valdataloader = Im2LatexDataset().load(args.valdata)
+    valargs<a id="change"> = </a>args.copy()
+    <a id="change">valargs.update(batchsize=args.testbatchsize, keep_smaller_batches=True)</a>
+    valdataloader.update(**valargs)
+    device = args.device
+
+    model = get_model(args)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/lukas-blecher/latex-ocr/commit/d52e43388fd9c01f33b5e03bcccbba0a0c8e51b5#diff-ed183d67207df065a11e1289f19d34cc2abbc5448dea952683cfe9728c342b95L21' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 11757299</div><div id='project'> Project Name: lukas-blecher/latex-ocr</div><div id='commit'> Commit Name: d52e43388fd9c01f33b5e03bcccbba0a0c8e51b5</div><div id='time'> Time: 2021-02-15</div><div id='author'> Author: luk.blecher@gmx.de</div><div id='file'> File Name: train.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train(1)</div><div id='n_method'> N Method Name: train(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: train.py</div><div id='n_file'> N File Name: train.py</div><div id='m_start'> M Start Line: 21</div><div id='m_end'> M End Line: 61</div><div id='n_start'> N Start Line: 24</div><div id='n_end'> N End Line: 54</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        domain_accs_D.update(domain_adv_D.domain_discriminator_accuracy, x_s.size(0))
+        domain_accs_D_0.update(domain_adv_D_0.domain_discriminator_accuracy, x_s.size(0))
+
+        labels_in_target<a id="change"> = </a><a id="change">torch.FloatTensor([c in target_idxes for c in labels_s]).to(</a>device<a id="change">)</a>
+        labels_in_target_num = labels_in_target.sum()
+        if labels_in_target_num != 0:
+            avg_importance = (weight.squeeze() * labels_in_target / labels_in_target_num).sum()
+            importance_weights.update(avg_importance.item(), int(labels_in_target_num.item()))</code></pre><h3>After Change</h3><pre><code class='java'>
+    domain_accs_D = AverageMeter(&quotDomain Acc for D&quot, &quot:3.1f&quot)
+    domain_accs_D_0 = AverageMeter(&quotDomain Acc for D_0&quot, &quot:3.1f&quot)
+    partial_classes_weights = AverageMeter(&quotPartial Weight&quot, &quot:3.2f&quot)
+    non_partial_classes_weights<a id="change"> = </a>AverageMeter(&quotNon-Partial Weight&quot, &quot:3.2f&quot)
+
+    progress = ProgressMeter(
+        args.iters_per_epoch,
+        [batch_time, data_time, losses, cls_accs, tgt_accs,
+         domain_accs_D, domain_accs_D_0, partial_classes_weights, non_partial_classes_weights],
+        prefix="Epoch: [{}]".format(epoch))
+
+    &#47&#47 switch to train mode
+    model.train()
+    domain_adv_D.train()
+    domain_adv_D_0.train()
+
+    end = time.time()
+    for i in range(args.iters_per_epoch):
+        x_s, labels_s = next(train_source_iter)
+        x_t, labels_t = next(train_target_iter)
+
+        x_s = x_s.to(device)
+        x_t = x_t.to(device)
+        labels_s = labels_s.to(device)
+        labels_t = labels_t.to(device)
+
+        &#47&#47 measure data loading time
+        data_time.update(time.time() - end)
+
+        &#47&#47 compute output
+        x = torch.cat((x_s, x_t), dim=0)
+        y, f = model(x)
+        y_s, y_t = y.chunk(2, dim=0)
+        f_s, f_t = f.chunk(2, dim=0)
+
+        &#47&#47 classification loss
+        cls_loss = F.cross_entropy(y_s, labels_s)
+
+        &#47&#47 domain adversarial loss for D
+        adv_loss_D = domain_adv_D(f_s.detach(), f_t.detach())
+
+        &#47&#47 get importance weights
+        w_s = importance_weight_module.get_importance_weight(f_s)
+        &#47&#47 domain adversarial loss for D_0
+        adv_loss_D_0 = domain_adv_D_0(f_s, f_t, w_s=w_s)
+
+        &#47&#47 entropy loss
+        y_t = F.softmax(y_t, dim=1)
+        entropy_loss = entropy(y_t, reduction=&quotmean&quot)
+
+        loss = cls_loss + 1.5 * args.trade_off * adv_loss_D + \
+               args.trade_off * adv_loss_D_0 + args.gamma * entropy_loss
+
+        &#47&#47 compute gradient and do SGD step
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+        lr_scheduler.step()
+
+        cls_acc = accuracy(y_s, labels_s)[0]
+        tgt_acc = accuracy(y_t, labels_t)[0]
+
+        losses.update(loss.item(), x_s.size(0))
+        cls_accs.update(cls_acc.item(), x_s.size(0))
+        tgt_accs.update(tgt_acc.item(), x_s.size(0))
+        domain_accs_D.update(domain_adv_D.domain_discriminator_accuracy, x_s.size(0))
+        domain_accs_D_0.update(domain_adv_D_0.domain_discriminator_accuracy, x_s.size(0))
+
+        &#47&#47 debug: output class weight averaged on the partial classes and non-partial classes respectively
+        partial_class_weight, non_partial_classes_weight = \
+            importance_weight_module.get_partial_classes_weight(w_s, labels_s)
+        partial_classes_weights.update(partial_class_weight.item(), x_s.size(0))
+        <a id="change">non_partial_classes_weights.update(</a>non_partial_classes_weight.item(), x_s.size(0)<a id="change">)</a>
+
+        batch_time.update(time.time() - end)
+        end = time.time()
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/thuml/transfer-learning-library/commit/b572f553f392040359d3e98ded8c73f97fd042a0#diff-bc4c4224e8f4ce11737c88d1b8b54741cacdfbd43a1de238909e563537532edbL170' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 11757283</div><div id='project'> Project Name: thuml/transfer-learning-library</div><div id='commit'> Commit Name: b572f553f392040359d3e98ded8c73f97fd042a0</div><div id='time'> Time: 2021-02-08</div><div id='author'> Author: 13126830206@163.com</div><div id='file'> File Name: examples-da/partial/iwan.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train(10)</div><div id='n_method'> N Method Name: train(11)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples-da/partial/iwan.py</div><div id='n_file'> N File Name: examples-da/partial/iwan.py</div><div id='m_start'> M Start Line: 171</div><div id='m_end'> M End Line: 254</div><div id='n_start'> N Start Line: 173</div><div id='n_end'> N End Line: 251</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+                &#47&#47 this following 2 lines are needed to prevent a file handler leak,
+                &#47&#47 see https://github.com/lightly-ai/lightly/pull/676
+                img<a id="change"> = </a><a id="change">img.to(</a>device<a id="change">)</a>
+                label = label.clone()
+
+                fnames += [*fname]
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        if lightly._is_prefetch_generator_available():
+            dataloader = BackgroundGenerator(dataloader, max_prefetch=3)
+        
+        pbar<a id="change"> = </a>tqdm(
+            total=len(dataloader.dataset),
+            unit=&quotimgs&quot
+        )
+
+        efficiency = 0.0
+        embeddings = []
+        labels = []
+        with torch.no_grad():
+
+            start_timepoint = time.time()
+            for (image_batch, label_batch, filename_batch) in dataloader:
+
+                batch_size = image_batch.shape[0]
+
+                &#47&#47 the following 2 lines are needed to prevent a file handler leak,
+                &#47&#47 see https://github.com/lightly-ai/lightly/pull/676
+                image_batch = image_batch.to(device)
+                label_batch = label_batch.clone()
+
+                filenames += [*filename_batch]
+
+                prepared_timepoint = time.time()
+
+                embedding_batch = self.model.backbone(image_batch)
+                embedding_batch = embedding_batch.detach().reshape(batch_size, -1)
+
+                embeddings.append(embedding_batch)
+                labels.append(label_batch)
+
+                finished_timepoint = time.time()
+
+                data_loading_time = prepared_timepoint - start_timepoint
+                inference_time = finished_timepoint - prepared_timepoint
+                total_batch_time = data_loading_time + inference_time
+
+                efficiency = inference_time / total_batch_time
+                pbar.set_description("Compute efficiency: {:.2f}".format(efficiency))
+                start_timepoint = time.time()
+
+                <a id="change">pbar.update(</a>batch_size<a id="change">)</a>
+
+            embeddings = torch.cat(embeddings, 0)
+            labels = torch.cat(labels, 0)
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lightly-ai/lightly/commit/98271181e4b5d0f80bb5ed476b906cfacfd1ef35#diff-e69dafe386ab27883de5ffa337fceede3f77166b47577e080910e2e100d8a1bfL76' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 11757294</div><div id='project'> Project Name: lightly-ai/lightly</div><div id='commit'> Commit Name: 98271181e4b5d0f80bb5ed476b906cfacfd1ef35</div><div id='time'> Time: 2022-03-24</div><div id='author'> Author: 65946090+philippmwirth@users.noreply.github.com</div><div id='file'> File Name: lightly/embedding/embedding.py</div><div id='m_class'> M Class Name: SelfSupervisedEmbedding</div><div id='n_method'> N Class Name: SelfSupervisedEmbedding</div><div id='m_method'> M Method Name: embed(3)</div><div id='n_method'> N Method Name: embed(3)</div><div id='m_parent_class'> M Parent Class: BaseEmbedding</div><div id='n_parent_class'> N Parent Class: BaseEmbedding</div><div id='m_file'> M File Name: lightly/embedding/embedding.py</div><div id='n_file'> N File Name: lightly/embedding/embedding.py</div><div id='m_start'> M Start Line: 110</div><div id='m_end'> M End Line: 162</div><div id='n_start'> N Start Line: 110</div><div id='n_end'> N End Line: 166</div><BR>

@@ -1,0 +1,64 @@
+<html><h3>Pattern ID :2382
+</h3><img src='10025362.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                        X, self.scale, self.zero_point,
+                        self.quant_min, self.quant_max, grad_factor)
+            else:
+                <a id="change">if </a>self.qscheme == torch.per_channel_symmetric or \
+                        self.qscheme == torch.per_channel_affine:
+                    X = torch.fake_quantize_per_channel_affine(
+                        X, self.scale, self.zero_point, self.ch_axis,</code></pre><h3>After Change</h3><pre><code class='java'>
+        return scale, zero_point
+
+    def forward(self, X):
+        <a id="change">if </a>self.static_enabled[0] == 1:
+            self.activation_post_process(X.detach())
+            _scale, _zero_point = self.activation_post_process.calculate_qparams()
+            _scale = _scale.to(self.scale.device)
+            _zero_point = _zero_point.to(self.zero_point.device)
+            self.scale.data.copy_(_scale)
+            self.zero_point.data.copy_(_zero_point)
+        else:
+            <a id="change">self.scale.data.clamp_(min=self.eps.item())</a>
+
+        if self.fake_quant_enabled[0] == 1:
+            if self.qscheme in (torch.per_channel_symmetric, torch.per_tensor_symmetric):
+                self.zero_point.data.zero_()</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/pytorch/pytorch/commit/0c60922fb0614132433779ad45ab8f30783db2ae#diff-32be0094f3e1d4ebc7e4ef5e1e399a646b59d75a3903d887aedc68a013f062b2L127' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 10025362</div><div id='project'> Project Name: pytorch/pytorch</div><div id='commit'> Commit Name: 0c60922fb0614132433779ad45ab8f30783db2ae</div><div id='time'> Time: 2021-02-03</div><div id='author'> Author: haichuan@fb.com</div><div id='file'> File Name: torch/quantization/_learnable_fake_quantize.py</div><div id='m_class'> M Class Name: _LearnableFakeQuantize</div><div id='n_method'> N Class Name: _LearnableFakeQuantize</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: torch.quantization.FakeQuantizeBase</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: torch/quantization/_learnable_fake_quantize.py</div><div id='n_file'> N File Name: torch/quantization/_learnable_fake_quantize.py</div><div id='m_start'> M Start Line: 302</div><div id='m_end'> M End Line: 337</div><div id='n_start'> N Start Line: 127</div><div id='n_end'> N End Line: 155</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+        &#47&#47 p2 loss reweighting
+
+        <a id="change">if </a>p2_loss_weight_gamma &gt; 0:
+            loss_weight = (self.p2_loss_weight_k + log_snr.exp()) ** -p2_loss_weight_gamma
+            losses = losses * loss_weight
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        snr = log_snr.exp()
+        maybe_clipped_snr = snr.clone()
+
+        <a id="change">if </a>exists(min_snr_gamma):
+            <a id="change">maybe_clipped_snr.clamp_(min = min_snr_gamma)</a>
+
+        if pred_objective == &quotnoise&quot:
+            loss_weight = maybe_clipped_snr / snr
+        elif pred_objective == &quotx_start&quot:</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lucidrains/imagen-pytorch/commit/7a21a3071a2026be0417079c212568f47fea6e01#diff-edef3c5fe92797a22c0b8fc6cca1d57b4b84ef03dfdfe802ed9147e21fc88109L2482' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 10025364</div><div id='project'> Project Name: lucidrains/imagen-pytorch</div><div id='commit'> Commit Name: 7a21a3071a2026be0417079c212568f47fea6e01</div><div id='time'> Time: 2023-03-18</div><div id='author'> Author: lucidrains@gmail.com</div><div id='file'> File Name: imagen_pytorch/imagen_pytorch.py</div><div id='m_class'> M Class Name: Imagen</div><div id='n_method'> N Class Name: Imagen</div><div id='m_method'> M Method Name: p_losses(4)</div><div id='n_method'> N Method Name: p_losses(4)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: imagen_pytorch/imagen_pytorch.py</div><div id='n_file'> N File Name: imagen_pytorch/imagen_pytorch.py</div><div id='m_start'> M Start Line: 2605</div><div id='m_end'> M End Line: 2609</div><div id='n_start'> N Start Line: 2606</div><div id='n_end'> N End Line: 2619</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            entropy_bonus = log_alpha.exp() * (probs * log_probs).sum(1, keepdim=True)
+        else:
+            a = a_dist.rsample()
+            <a id="change">if </a>random_process is not None:
+                a = random_process.sample(a, update_schedule=False)
+            if not use_baseline:
+                vals = critic(s_rep, a)</code></pre><h3>After Change</h3><pre><code class='java'>
+            &#47&#47 sample an action
+            a = a_dist.rsample()
+            &#47&#47 compute max ent term, if applicable
+            <a id="change">if </a>random_process is not None:
+                a = random_process.sample(a, update_schedule=False)
+                entropy_bonus = 0.0
+            else:
+                entropy_bonus = log_alpha.exp() * a_dist.log_prob(a).sum(-1, keepdim=True)
+                <a id="change">entropy_bonus.clamp_(</a>-1e4, 1e4<a id="change">)</a>
+            &#47&#47 get critic values for this action
+            if not use_baseline:
+                vals = critic(s_rep, a)
+                if popart and pop:</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/jakegrigsby/super_sac/commit/2d57bda6e85cc317dd49d7ffa3dbabedba49a3e1#diff-dea6b7142e9f5ad9ee0194d166b0845819208cf8cca3a68912153f7c95f8aac8L245' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 10025366</div><div id='project'> Project Name: jakegrigsby/super_sac</div><div id='commit'> Commit Name: 2d57bda6e85cc317dd49d7ffa3dbabedba49a3e1</div><div id='time'> Time: 2021-10-24</div><div id='author'> Author: jcg6dn@virginia.edu</div><div id='file'> File Name: super_sac/learning.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: online_actor_update(13)</div><div id='n_method'> N Method Name: online_actor_update(13)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: super_sac/learning.py</div><div id='n_file'> N File Name: super_sac/learning.py</div><div id='m_start'> M Start Line: 260</div><div id='m_end'> M End Line: 302</div><div id='n_start'> N Start Line: 292</div><div id='n_end'> N End Line: 317</div><BR>

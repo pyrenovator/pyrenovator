@@ -1,0 +1,33 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    loss = MultivariateNormalDistributionLoss()
+    target = loss.distribution_class(loc=mean, cov_diag=std**2, cov_factor=cov_factor).sample((n,))
+    if transformation in ["log", "log1p", "relu", "softplus"]:
+        target<a id="change"> = </a><a id="change">target.abs()</a>
+    target = target[:, 0]
+    normalizer = TorchNormalizer(center=center, transformation=transformation)
+    normalized_target = normalizer.fit_transform(target).view(1, -1)
+    target_scale = normalizer.get_parameters().unsqueeze(0)
+    scale = torch.ones_like(normalized_target) * normalized_target.std()
+    parameters = torch.concat(
+        [normalized_target[..., None], scale[..., None], torch.zeros((1, normalized_target.size(1), loss.rank))],
+        dim=-1,
+    )
+
+    if transformation in ["logit", "log", "log1p", "softplus", "relu", "logit"]:
+        with pytest.raises(AssertionError):
+            rescaled_parameters<a id="change"> = </a>loss.rescale_parameters(parameters, target_scale=target_scale, encoder=normalizer)
+    else:
+        rescaled_parameters = loss.rescale_parameters(parameters, target_scale=target_scale, encoder=normalizer)
+        samples = loss.sample(rescaled_parameters, 1)</code></pre><h3>After Change</h3><pre><code class='java'>
+    cov_factor = torch.tensor([[0.0], [0.0]])
+    n = 100000
+
+    <a id="change">if transformation is not None</a> and "log" in transformation:
+        mean<a id="change"> = </a>mean.log()
+        std<a id="change"> = </a>std / 1e4
+
+    loss = MultivariateNormalDistributionLoss()
+    target = loss.distribution_class(loc=mean, cov_diag=std**2, cov_factor=cov_factor).sample((n,))</code></pre>

@@ -1,0 +1,106 @@
+<html><h3>Pattern ID :8795
+</h3><img src='32467291.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            &#47&#47 Make prediction 
+            with autocast():
+                losses, _ = self._model.train_step(data, targets, evaluation=False)
+                loss_abs = sum(<a id="change">losses.values()</a>)
+
+            self._optimizer.zero_grad()
+            self._scaler.scale(loss_abs).backward()</code></pre><h3>After Change</h3><pre><code class='java'>
+            &#47&#47 Put data to gpu
+            data, mask = data.to(device=self._device), mask.to(device=self._device)
+        
+            targets = <a id="change">[]</a>
+            for item in bboxes:
+                target<a id="change"> = </a>{
+                    &quotboxes&quot: item[0].to(dtype=torch.float, device=self._device),
+                    &quotlabels&quot: item[1].to(device=self._device)
+                }
+                <a id="change">targets.append(</a>target<a id="change">)</a>
+
+            &#47&#47 Make prediction 
+            out = self._model(data, mask)
+            loss_dict = self._criterion(out, targets)
+
+            &#47&#47 Create absolute loss and mult with loss coefficient
+            loss_abs = 0
+            for loss_key, loss_val in loss_dict.items():
+                loss_abs<a id="change"> += </a>loss_val * self._config[&quotloss_coefs&quot][loss_key.split(&quot_&quot)[0]]
+
+            self._optimizer.zero_grad()
+            loss_abs.backward()</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 5</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/bwittmann/transoar/commit/d1d610ce7014a86c72c7d5625dbe82be40b2c340#diff-28ec89610fef11ba86f164936f92f63b62628c7ca9c19bc8d8bea1346cff4ec9L42' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 32467291</div><div id='project'> Project Name: bwittmann/transoar</div><div id='commit'> Commit Name: d1d610ce7014a86c72c7d5625dbe82be40b2c340</div><div id='time'> Time: 2022-06-24</div><div id='author'> Author: bastian.wittmann@tum.de</div><div id='file'> File Name: transoar/trainer.py</div><div id='m_class'> M Class Name: Trainer</div><div id='n_method'> N Class Name: Trainer</div><div id='m_method'> M Method Name: _train_one_epoch(2)</div><div id='n_method'> N Method Name: _train_one_epoch(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: transoar/trainer.py</div><div id='n_file'> N File Name: transoar/trainer.py</div><div id='m_start'> M Start Line: 46</div><div id='m_end'> M End Line: 88</div><div id='n_start'> N Start Line: 42</div><div id='n_end'> N End Line: 83</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            group_df = group_data[1]
+            sample_values = dict(group_df[dataset.features].iloc[0])
+            labels = tuple(sorted(group_df[label_name].unique()))
+            sample = pd.DataFrame.from_dict({&quotindex&quot: [labels] + list(<a id="change">sample_values.values()</a>)},
+                                            columns=[ambiguous_label_name] + list(sample_values.keys()),
+                                            orient=&quotindex&quot)
+            n_data_sample = group_df.shape[0]</code></pre><h3>After Change</h3><pre><code class='java'>
+        num_ambiguous = 0
+        ambiguous_label_name = &quotObserved Labels&quot
+        samples = []
+        display_samples = <a id="change">[]</a>
+
+        data = sorted(
+            zip(group_unique_labels, group_unique_data),
+            key=lambda x: x[0],
+            reverse=True
+        )
+
+        for num_labels, group_data in data:
+            if num_labels == 1:
+                continue
+
+            group_df = group_data[1]
+
+            n_data_sample = group_df.shape[0]
+            num_ambiguous += n_data_sample
+            samples.append(group_df.loc[:, [label_name, *features]].copy())
+
+            if context.with_display is True:
+                display_sample = dict(group_df[features].iloc[0])
+                ambiguous_labels = tuple(sorted(group_df[label_name].unique()))
+                display_sample[ambiguous_label_name]<a id="change"> = </a>ambiguous_labels
+                <a id="change">display_samples.append(</a>display_sample<a id="change">)</a>
+
+        if len(display_samples) == 0:
+            display = None
+        else:
+            display = pd.DataFrame.from_records(display_samples[:self.n_to_show])
+            display.set_index(ambiguous_label_name, inplace=True)
+            display<a id="change"> = </a>[
+                &quotEach row in the table shows an example of a data sample &quot
+                &quotand the its observed labels as found in the dataset. &quot
+                f&quotShowing top {self.n_to_show} of {display.shape[0]}&quot,</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/deepchecks/deepchecks/commit/b0bf20b9abb8067eac01dfc710851aac05ca4564#diff-f12b3d23a1ed0bbbd12a91115b30111a34beba1883c76c196032eb3cdd77a83fL51' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 32467288</div><div id='project'> Project Name: deepchecks/deepchecks</div><div id='commit'> Commit Name: b0bf20b9abb8067eac01dfc710851aac05ca4564</div><div id='time'> Time: 2022-06-29</div><div id='author'> Author: 71635444+yromanyshyn@users.noreply.github.com</div><div id='file'> File Name: deepchecks/tabular/checks/data_integrity/conflicting_labels.py</div><div id='m_class'> M Class Name: ConflictingLabels</div><div id='n_method'> N Class Name: ConflictingLabels</div><div id='m_method'> M Method Name: run_logic(3)</div><div id='n_method'> N Method Name: run_logic(3)</div><div id='m_parent_class'> M Parent Class: SingleDatasetCheck</div><div id='n_parent_class'> N Parent Class: SingleDatasetCheck</div><div id='m_file'> M File Name: deepchecks/tabular/checks/data_integrity/conflicting_labels.py</div><div id='n_file'> N File Name: deepchecks/tabular/checks/data_integrity/conflicting_labels.py</div><div id='m_start'> M Start Line: 64</div><div id='m_end'> M End Line: 103</div><div id='n_start'> N Start Line: 71</div><div id='n_end'> N End Line: 123</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            &#47&#47 Make prediction 
+            with autocast():
+                losses, predictions = self._model.train_step(data, targets, evaluation=True)
+                loss_abs = sum(<a id="change">losses.values()</a>)
+
+            loss_agg += loss_abs.item()
+            loss_bbox_agg += losses[&quotreg&quot].item()</code></pre><h3>After Change</h3><pre><code class='java'>
+            &#47&#47 Put data to gpu
+            data, mask = data.to(device=self._device), mask.to(device=self._device)
+        
+            targets = <a id="change">[]</a>
+            for item in bboxes:
+                target<a id="change"> = </a>{
+                    &quotboxes&quot: item[0].to(dtype=torch.float, device=self._device),
+                    &quotlabels&quot: item[1].to(device=self._device)
+                }
+                <a id="change">targets.append(</a>target<a id="change">)</a>
+
+            &#47&#47 Make prediction 
+            out = self._model(data, mask)
+            loss_dict = self._criterion(out, targets)
+
+            &#47&#47 Create absolute loss and mult with loss coefficient
+            loss_abs = 0
+            for loss_key, loss_val in loss_dict.items():
+                loss_abs<a id="change"> += </a>loss_val * self._config[&quotloss_coefs&quot][loss_key.split(&quot_&quot)[0]]
+
+            &#47&#47 Evaluate validation predictions based on metric
+            pred_boxes, pred_classes, pred_scores = inference(out)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/bwittmann/transoar/commit/d1d610ce7014a86c72c7d5625dbe82be40b2c340#diff-28ec89610fef11ba86f164936f92f63b62628c7ca9c19bc8d8bea1346cff4ec9L100' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 32467302</div><div id='project'> Project Name: bwittmann/transoar</div><div id='commit'> Commit Name: d1d610ce7014a86c72c7d5625dbe82be40b2c340</div><div id='time'> Time: 2022-06-24</div><div id='author'> Author: bastian.wittmann@tum.de</div><div id='file'> File Name: transoar/trainer.py</div><div id='m_class'> M Class Name: Trainer</div><div id='n_method'> N Class Name: Trainer</div><div id='m_method'> M Method Name: _validate(2)</div><div id='n_method'> N Method Name: _validate(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: transoar/trainer.py</div><div id='n_file'> N File Name: transoar/trainer.py</div><div id='m_start'> M Start Line: 105</div><div id='m_end'> M End Line: 146</div><div id='n_start'> N Start Line: 100</div><div id='n_end'> N End Line: 141</div><BR>

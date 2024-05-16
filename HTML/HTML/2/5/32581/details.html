@@ -1,0 +1,330 @@
+<html><h3>Pattern ID :32581
+</h3><img src='94782758.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        callback.on_rollout_start()
+        continue_training = True
+
+        while total_steps &lt; n_steps or <a id="change">total_episodes &lt; n_episodes</a>:
+            done = False
+            episode_reward, episode_timesteps = 0.0, 0
+
+            while not done:
+
+                if self.use_sde and self.sde_sample_freq &gt; 0 and total_steps % self.sde_sample_freq == 0:
+                    &#47&#47 Sample a new noise matrix
+                    self.actor.reset_noise()
+
+                &#47&#47 Select action randomly or according to policy
+                action, buffer_action = self._sample_action(learning_starts, action_noise)
+
+                &#47&#47 Rescale and perform action
+                new_obs, reward, done, infos = env.step(action)
+
+                self.num_timesteps += 1
+                episode_timesteps += 1
+                total_steps += 1
+
+                &#47&#47 Give access to local variables
+                callback.update_locals(locals())
+                &#47&#47 Only stop training if return value is False, not when it is None.
+                if callback.on_step() is False:
+                    return RolloutReturn(0.0, total_steps, total_episodes, continue_training=False)
+
+                episode_reward += reward
+
+                &#47&#47 Retrieve reward and episode length if using Monitor wrapper
+                self._update_info_buffer(infos, done)
+
+                &#47&#47 Store data in replay buffer
+                if replay_buffer is not None:
+                    &#47&#47 Store only the unnormalized version
+                    if self._vec_normalize_env is not None:
+                        new_obs_ = self._vec_normalize_env.get_original_obs()
+                        reward_ = self._vec_normalize_env.get_original_reward()
+                    else:
+                        &#47&#47 Avoid changing the original ones
+                        self._last_original_obs, new_obs_, reward_ = self._last_obs, new_obs, reward
+
+                    replay_buffer.add(self._last_original_obs, new_obs_, buffer_action, reward_, done)
+
+                self._last_obs = new_obs
+                &#47&#47 Save the unnormalized observation
+                if self._vec_normalize_env is not None:
+                    self._last_original_obs = new_obs_
+
+                self._update_current_progress_remaining(self.num_timesteps, self._total_timesteps)
+
+                &#47&#47 For DQN, check if the target network should be updated
+                &#47&#47 and update the exploration schedule
+                &#47&#47 For SAC/TD3, the update is done as the same time as the gradient update
+                &#47&#47 see https://github.com/hill-a/stable-baselines/issues/900
+                self._on_step()
+
+                if 0 &lt; n_steps &lt;= total_steps:
+                    break
+
+            if done:
+                total_episodes += 1
+                self._episode_num += 1
+                episode_rewards.append(episode_reward)
+                total_timesteps.append(episode_timesteps)
+
+                if action_noise is not None:
+                    action_noise.reset()
+
+                &#47&#47 Log training infos
+                if log_interval is not None and self._episode_num % log_interval == 0:
+                    self._dump_logs()
+
+        mean_reward = np.mean(episode_rewards) if total_episodes &gt; 0 else 0.0
+
+        callback.on_rollout_end()
+
+        <a id="change">return </a><a id="change">RolloutReturn(</a>mean_reward, total_steps, <a id="change">total_episodes</a>, continue_training<a id="change">)</a>
+</code></pre><h3>After Change</h3><pre><code class='java'>
+                &#47&#47 see https://github.com/hill-a/stable-baselines/issues/900
+                self._on_step()
+
+                <a id="change">if </a>not should_collect_more_steps(train_freq, num_collected_steps, num_collected_episodes):
+                    break
+
+            if done:</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/dlr-rm/stable-baselines3/commit/0c50d75ecb6287132c9de4d7070e50905c5f632d#diff-7809dfd549054549abed96b27661447862894a94e6873c67f8f96f4b6842debdL365' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 94782758</div><div id='project'> Project Name: dlr-rm/stable-baselines3</div><div id='commit'> Commit Name: 0c50d75ecb6287132c9de4d7070e50905c5f632d</div><div id='time'> Time: 2021-02-27</div><div id='author'> Author: maximilian@ernestus.de</div><div id='file'> File Name: stable_baselines3/common/off_policy_algorithm.py</div><div id='m_class'> M Class Name: OffPolicyAlgorithm</div><div id='n_method'> N Class Name: OffPolicyAlgorithm</div><div id='m_method'> M Method Name: collect_rollouts(8)</div><div id='n_method'> N Method Name: collect_rollouts(9)</div><div id='m_parent_class'> M Parent Class: BaseAlgorithm</div><div id='n_parent_class'> N Parent Class: BaseAlgorithm</div><div id='m_file'> M File Name: stable_baselines3/common/off_policy_algorithm.py</div><div id='n_file'> N File Name: stable_baselines3/common/off_policy_algorithm.py</div><div id='m_start'> M Start Line: 365</div><div id='m_end'> M End Line: 474</div><div id='n_start'> N Start Line: 432</div><div id='n_end'> N End Line: 502</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        callback.on_rollout_start()
+        continue_training = True
+
+        while total_steps &lt; n_steps or <a id="change">total_episodes &lt; n_episodes</a>:
+            done = False
+            episode_reward, episode_timesteps = 0.0, 0
+
+            while not done:
+                &#47&#47 concatenate observation and (desired) goal
+                observation = self._last_obs
+                self._last_obs = ObsDictWrapper.convert_dict(observation)
+
+                if self.model.use_sde and self.model.sde_sample_freq &gt; 0 and total_steps % self.model.sde_sample_freq == 0:
+                    &#47&#47 Sample a new noise matrix
+                    self.actor.reset_noise()
+
+                &#47&#47 Select action randomly or according to policy
+                self.model._last_obs = self._last_obs
+                action, buffer_action = self._sample_action(learning_starts, action_noise)
+
+                &#47&#47 Perform action
+                new_obs, reward, done, infos = env.step(action)
+
+                self.num_timesteps += 1
+                self.model.num_timesteps = self.num_timesteps
+                episode_timesteps += 1
+                total_steps += 1
+
+                &#47&#47 Only stop training if return value is False, not when it is None.
+                if callback.on_step() is False:
+                    return RolloutReturn(0.0, total_steps, total_episodes, continue_training=False)
+
+                episode_reward += reward
+
+                &#47&#47 Retrieve reward and episode length if using Monitor wrapper
+                self._update_info_buffer(infos, done)
+                self.model.ep_info_buffer = self.ep_info_buffer
+                self.model.ep_success_buffer = self.ep_success_buffer
+
+                &#47&#47 == Store transition in the replay buffer and/or in the episode storage ==
+
+                if self._vec_normalize_env is not None:
+                    &#47&#47 Store only the unnormalized version
+                    new_obs_ = self._vec_normalize_env.get_original_obs()
+                    reward_ = self._vec_normalize_env.get_original_reward()
+                else:
+                    &#47&#47 Avoid changing the original ones
+                    self._last_original_obs, new_obs_, reward_ = observation, new_obs, reward
+                    self.model._last_original_obs = self._last_original_obs
+
+                &#47&#47 As the VecEnv resets automatically, new_obs is already the
+                &#47&#47 first observation of the next episode
+                if done and infos[0].get("terminal_observation") is not None:
+                    &#47&#47 The saved terminal_observation is not passed through other
+                    &#47&#47 VecEnvWrapper, so no need to unnormalize
+                    &#47&#47 NOTE: this may be an issue when using other wrappers
+                    next_obs = infos[0]["terminal_observation"]
+                else:
+                    next_obs = new_obs_
+
+                if self.online_sampling:
+                    self.replay_buffer.add(self._last_original_obs, next_obs, buffer_action, reward_, done, infos)
+                else:
+                    &#47&#47 concatenate observation with (desired) goal
+                    flattened_obs = ObsDictWrapper.convert_dict(self._last_original_obs)
+                    flattened_next_obs = ObsDictWrapper.convert_dict(next_obs)
+                    &#47&#47 add to replay buffer
+                    self.replay_buffer.add(flattened_obs, flattened_next_obs, buffer_action, reward_, done)
+                    &#47&#47 add current transition to episode storage
+                    self._episode_storage.add(self._last_original_obs, next_obs, buffer_action, reward_, done, infos)
+
+                self._last_obs = new_obs
+                self.model._last_obs = self._last_obs
+
+                &#47&#47 Save the unnormalized new observation
+                if self._vec_normalize_env is not None:
+                    self._last_original_obs = new_obs_
+                    self.model._last_original_obs = self._last_original_obs
+
+                self.model._update_current_progress_remaining(self.num_timesteps, self._total_timesteps)
+
+                &#47&#47 For DQN, check if the target network should be updated
+                &#47&#47 and update the exploration schedule
+                &#47&#47 For SAC/TD3, the update is done as the same time as the gradient update
+                &#47&#47 see https://github.com/hill-a/stable-baselines/issues/900
+                self.model._on_step()
+
+                self.episode_steps += 1
+
+                if 0 &lt; n_steps &lt;= total_steps:
+                    break
+
+            if done or self.episode_steps &gt;= self.max_episode_length:
+                if self.online_sampling:
+                    self.replay_buffer.store_episode()
+                else:
+                    self._episode_storage.store_episode()
+                    &#47&#47 sample virtual transitions and store them in replay buffer
+                    self._sample_her_transitions()
+                    &#47&#47 clear storage for current episode
+                    self._episode_storage.reset()
+
+                total_episodes += 1
+                self._episode_num += 1
+                self.model._episode_num = self._episode_num
+                episode_rewards.append(episode_reward)
+                total_timesteps.append(episode_timesteps)
+
+                if action_noise is not None:
+                    action_noise.reset()
+
+                &#47&#47 Log training infos
+                if log_interval is not None and self._episode_num % log_interval == 0:
+                    self._dump_logs()
+
+                self.episode_steps = 0
+
+        mean_reward = np.mean(episode_rewards) if total_episodes &gt; 0 else 0.0
+
+        callback.on_rollout_end()
+
+        <a id="change">return </a><a id="change">RolloutReturn(</a>mean_reward, total_steps, total_episodes, continue_training<a id="change">)</a>
+
+    def _sample_her_transitions(self) -&gt; None:
+        
+        Sample additional goals and store new transitions in replay buffer</code></pre><h3>After Change</h3><pre><code class='java'>
+                if done and infos[0].get("terminal_observation") is not None:
+                    next_obs = infos[0]["terminal_observation"]
+                    &#47&#47 VecNormalize normalizes the terminal observation
+                    <a id="change">if </a>self._vec_normalize_env is not None:
+                        next_obs = self._vec_normalize_env.unnormalize_obs(next_obs)
+                else:
+                    next_obs = new_obs_</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/dlr-rm/stable-baselines3/commit/0c50d75ecb6287132c9de4d7070e50905c5f632d#diff-a60cc6514e0e4aeb283979cc3a22242e04f1dcb8127551881f095f75d668dc53L220' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 94782759</div><div id='project'> Project Name: dlr-rm/stable-baselines3</div><div id='commit'> Commit Name: 0c50d75ecb6287132c9de4d7070e50905c5f632d</div><div id='time'> Time: 2021-02-27</div><div id='author'> Author: maximilian@ernestus.de</div><div id='file'> File Name: stable_baselines3/her/her.py</div><div id='m_class'> M Class Name: HER</div><div id='n_method'> N Class Name: HER</div><div id='m_method'> M Method Name: collect_rollouts(7)</div><div id='n_method'> N Method Name: collect_rollouts(8)</div><div id='m_parent_class'> M Parent Class: BaseAlgorithm</div><div id='n_parent_class'> N Parent Class: BaseAlgorithm</div><div id='m_file'> M File Name: stable_baselines3/her/her.py</div><div id='n_file'> N File Name: stable_baselines3/her/her.py</div><div id='m_start'> M Start Line: 225</div><div id='m_end'> M End Line: 378</div><div id='n_start'> N Start Line: 256</div><div id='n_end'> N End Line: 386</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                if log_interval is not None and self._episode_num % log_interval == 0:
+                    self._dump_logs()
+
+        mean_reward = np.mean(episode_rewards) if <a id="change">num_collected_episodes &gt; 0</a> else 0.0
+
+        callback.on_rollout_end()
+
+        <a id="change">return </a><a id="change">RolloutReturn(</a>mean_reward, num_collected_steps, num_collected_episodes, continue_training<a id="change">)</a>
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        assert isinstance(env, VecEnv), "You must pass a VecEnv"
+        assert train_freq.frequency &gt; 0, "Should at least collect one step or episode."
+
+        <a id="change">if </a>env.num_envs &gt; 1:
+            assert train_freq.unit == TrainFrequencyUnit.STEP, "You must use only one env when doing episodic training."
+
+        &#47&#47 Vectorize action noise if needed</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/dlr-rm/stable-baselines3/commit/507ed1762e62bd6c4e85ea572ba166b69116b1ac#diff-7809dfd549054549abed96b27661447862894a94e6873c67f8f96f4b6842debdL512' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 94782756</div><div id='project'> Project Name: dlr-rm/stable-baselines3</div><div id='commit'> Commit Name: 507ed1762e62bd6c4e85ea572ba166b69116b1ac</div><div id='time'> Time: 2021-12-01</div><div id='author'> Author: antonin.raffin@ensta.org</div><div id='file'> File Name: stable_baselines3/common/off_policy_algorithm.py</div><div id='m_class'> M Class Name: OffPolicyAlgorithm</div><div id='n_method'> N Class Name: OffPolicyAlgorithm</div><div id='m_method'> M Method Name: collect_rollouts(8)</div><div id='n_method'> N Method Name: collect_rollouts(8)</div><div id='m_parent_class'> M Parent Class: BaseAlgorithm</div><div id='n_parent_class'> N Parent Class: BaseAlgorithm</div><div id='m_file'> M File Name: stable_baselines3/common/off_policy_algorithm.py</div><div id='n_file'> N File Name: stable_baselines3/common/off_policy_algorithm.py</div><div id='m_start'> M Start Line: 544</div><div id='m_end'> M End Line: 619</div><div id='n_start'> N Start Line: 565</div><div id='n_end'> N End Line: 628</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        callback.on_rollout_start()
+        continue_training = True
+
+        while <a id="change">total_steps &lt; n_steps</a> or total_episodes &lt; n_episodes:
+            done = False
+            episode_reward, episode_timesteps = 0.0, 0
+
+            while not done:
+
+                if self.use_sde and self.sde_sample_freq &gt; 0 and total_steps % self.sde_sample_freq == 0:
+                    &#47&#47 Sample a new noise matrix
+                    self.actor.reset_noise()
+
+                &#47&#47 Select action randomly or according to policy
+                action, buffer_action = self._sample_action(learning_starts, action_noise)
+
+                &#47&#47 Rescale and perform action
+                new_obs, reward, done, infos = env.step(action)
+
+                self.num_timesteps += 1
+                episode_timesteps += 1
+                total_steps += 1
+
+                &#47&#47 Give access to local variables
+                callback.update_locals(locals())
+                &#47&#47 Only stop training if return value is False, not when it is None.
+                if callback.on_step() is False:
+                    return RolloutReturn(0.0, total_steps, total_episodes, continue_training=False)
+
+                episode_reward += reward
+
+                &#47&#47 Retrieve reward and episode length if using Monitor wrapper
+                self._update_info_buffer(infos, done)
+
+                &#47&#47 Store data in replay buffer
+                if replay_buffer is not None:
+                    &#47&#47 Store only the unnormalized version
+                    if self._vec_normalize_env is not None:
+                        new_obs_ = self._vec_normalize_env.get_original_obs()
+                        reward_ = self._vec_normalize_env.get_original_reward()
+                    else:
+                        &#47&#47 Avoid changing the original ones
+                        self._last_original_obs, new_obs_, reward_ = self._last_obs, new_obs, reward
+
+                    replay_buffer.add(self._last_original_obs, new_obs_, buffer_action, reward_, done)
+
+                self._last_obs = new_obs
+                &#47&#47 Save the unnormalized observation
+                if self._vec_normalize_env is not None:
+                    self._last_original_obs = new_obs_
+
+                self._update_current_progress_remaining(self.num_timesteps, self._total_timesteps)
+
+                &#47&#47 For DQN, check if the target network should be updated
+                &#47&#47 and update the exploration schedule
+                &#47&#47 For SAC/TD3, the update is done as the same time as the gradient update
+                &#47&#47 see https://github.com/hill-a/stable-baselines/issues/900
+                self._on_step()
+
+                if 0 &lt; n_steps &lt;= total_steps:
+                    break
+
+            if done:
+                total_episodes += 1
+                self._episode_num += 1
+                episode_rewards.append(episode_reward)
+                total_timesteps.append(episode_timesteps)
+
+                if action_noise is not None:
+                    action_noise.reset()
+
+                &#47&#47 Log training infos
+                if log_interval is not None and self._episode_num % log_interval == 0:
+                    self._dump_logs()
+
+        mean_reward = np.mean(episode_rewards) if total_episodes &gt; 0 else 0.0
+
+        callback.on_rollout_end()
+
+        <a id="change">return </a><a id="change">RolloutReturn(</a>mean_reward, total_steps, total_episodes, continue_training<a id="change">)</a>
+</code></pre><h3>After Change</h3><pre><code class='java'>
+                &#47&#47 see https://github.com/hill-a/stable-baselines/issues/900
+                self._on_step()
+
+                <a id="change">if </a>not should_collect_more_steps(train_freq, num_collected_steps, num_collected_episodes):
+                    break
+
+            if done:</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/dlr-rm/stable-baselines3/commit/0c50d75ecb6287132c9de4d7070e50905c5f632d#diff-7809dfd549054549abed96b27661447862894a94e6873c67f8f96f4b6842debdL357' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 94782757</div><div id='project'> Project Name: dlr-rm/stable-baselines3</div><div id='commit'> Commit Name: 0c50d75ecb6287132c9de4d7070e50905c5f632d</div><div id='time'> Time: 2021-02-27</div><div id='author'> Author: maximilian@ernestus.de</div><div id='file'> File Name: stable_baselines3/common/off_policy_algorithm.py</div><div id='m_class'> M Class Name: OffPolicyAlgorithm</div><div id='n_method'> N Class Name: OffPolicyAlgorithm</div><div id='m_method'> M Method Name: collect_rollouts(8)</div><div id='n_method'> N Method Name: collect_rollouts(9)</div><div id='m_parent_class'> M Parent Class: BaseAlgorithm</div><div id='n_parent_class'> N Parent Class: BaseAlgorithm</div><div id='m_file'> M File Name: stable_baselines3/common/off_policy_algorithm.py</div><div id='n_file'> N File Name: stable_baselines3/common/off_policy_algorithm.py</div><div id='m_start'> M Start Line: 365</div><div id='m_end'> M End Line: 474</div><div id='n_start'> N Start Line: 432</div><div id='n_end'> N End Line: 502</div><BR>

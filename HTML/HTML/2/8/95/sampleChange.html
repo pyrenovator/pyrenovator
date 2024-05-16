@@ -1,0 +1,31 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 Do this before wrapping.
+        eval_dataset = dataloader.dataset
+
+        <a id="change">if is_torch_tpu_available()</a>:
+            dataloader<a id="change"> = </a><a id="change">pl.ParallelLoader(dataloader, [args.device]).per_device_loader(</a>args.device<a id="change">)</a>
+
+        if args.past_index &gt;= 0:
+            self._past = None
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        dummy_inputs = next(iter(dataloader))
+        has_labels = all(dummy_inputs.get(k) is not None for k in self.label_names)
+
+        if <a id="change">self.onnx_model_path and (has_labels == self.exported_with_loss)</a>:
+            logger.info("[INFO] Inference with given ONNX model")
+            self.onnx_model_path = Path(self.onnx_model_path).as_posix()
+            &#47&#47 Fix exported ONNX IR
+            fix_atenops_to_gather(self.onnx_model_path)
+        else:
+            onnx_model_path = Path(
+                os.path.join(self.args.output_dir, self.model.config.name_or_path.split("/")[-1] + ".onnx")
+            )
+
+            logger.info("[INFO] Exporting the model to ONNX...")
+            with_loss<a id="change"> = </a>has_labels and not self.label_smoother
+            self._export(onnx_model_path, with_loss=with_loss)
+            self.exported_with_loss = with_loss
+            self.onnx_model_path = onnx_model_path.as_posix()</code></pre>

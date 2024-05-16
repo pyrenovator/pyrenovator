@@ -1,0 +1,133 @@
+<html><h3>Pattern ID :36751
+</h3><img src='104829758.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        score = F.log_softmax(y, dim=2)
+        &#47&#47 因为是补齐了的，所以需要找到真正的 score
+        for i in range(score.shape[0]):
+            <a id="change">if i == 0</a>:
+                true_scores<a id="change"> = </a>score[i][loc_len[i] - 1].reshape(1, -1)
+            else:
+                true_scores = torch.cat(
+                    (true_scores<a id="change">, score[i][loc_len[i] - 1].reshape(1, -1)</a>), 0)
+        return true_scores
+
+    def predict(self, batch):</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 batch_size * state_len * 2 x input_size
+        out = torch.cat((hidden_state, context), 2)
+        &#47&#47 因为是补齐了的，所以需要找到真正的 out
+        origin_len<a id="change"> = </a>batch.get_origin_len(&quotcurrent_loc&quot)
+        final_out_index<a id="change"> = </a>torch.tensor(origin_len) - 1
+        final_out_index = final_out_index.reshape(final_out_index.shape[0], 1, -1)
+        final_out_index = final_out_index.repeat(1, 1, 2*self.hidden_size).to(self.device)
+        out<a id="change"> = </a>torch.gather(out, 1, final_out_index).squeeze(1)  &#47&#47 batch_size * (2*hidden_size)
+        out = self.dropout(out)
+
+        y = self.fc_final(out)  &#47&#47 batch_size * loc_size
+        score<a id="change"> = </a><a id="change">F.log_softmax(</a>y<a id="change">, dim=1)</a>
+        <a id="change">return </a>score
+
+    def predict(self, batch):
+        return self.forward(batch)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 10</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/libcity/bigscity-libcity/commit/ec61c9cd984d1c86ee715380ed3b65b4222c8d1f#diff-e952722699ca3186325fca5947706a0f1eb9b447d1d51063beaddb3480efa998L122' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 104829758</div><div id='project'> Project Name: libcity/bigscity-libcity</div><div id='commit'> Commit Name: ec61c9cd984d1c86ee715380ed3b65b4222c8d1f</div><div id='time'> Time: 2021-05-06</div><div id='author'> Author: 33283819+WenMellors@users.noreply.github.com</div><div id='file'> File Name: trafficdl/model/trajectory_loc_prediction/DeepMove.py</div><div id='m_class'> M Class Name: DeepMove</div><div id='n_method'> N Class Name: DeepMove</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: AbstractModel</div><div id='n_parent_class'> N Parent Class: AbstractModel</div><div id='m_file'> M File Name: trafficdl/model/trajectory_loc_prediction/DeepMove.py</div><div id='n_file'> N File Name: trafficdl/model/trajectory_loc_prediction/DeepMove.py</div><div id='m_start'> M Start Line: 122</div><div id='m_end'> M End Line: 175</div><div id='n_start'> N Start Line: 152</div><div id='n_end'> N End Line: 163</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 Transcription network: input-output dependency
+        TN_output = params.encoder_crdnn(feats, init_params=init_params)
+        TN_output = params.encoder_lin(TN_output, init_params)
+        <a id="change">if stage == "train"</a>:
+            _, targets, _ = y
+            targets = targets.to(params.device)
+            &#47&#47 Prediction network: output-output dependency
+            decoder_input<a id="change"> = </a>prepend_bos_token(
+                targets, bos_index=params.blank_id
+            )
+            PN_output = params.decoder_embedding(
+                decoder_input, init_params=init_params
+            )
+            PN_output, _ = params.decoder_gru(
+                PN_output, init_params=init_params
+            )
+            PN_output = params.decoder_lin(PN_output, init_params=init_params)
+            &#47&#47 Joint the networks
+            joint = params.Tjoint(
+                TN_output.unsqueeze(2),
+                PN_output.unsqueeze(1),
+                init_params=init_params,
+            )
+            &#47&#47 projection layer
+            outputs = params.output(joint, init_params=init_params)
+            outputs = params.log_softmax(outputs)
+            return outputs, lens
+        else:
+            hyps, scores = transducer_greedy_decode(
+                TN_output,
+                [
+                    params.decoder_embedding,
+                    params.decoder_gru,
+                    params.decoder_lin,
+                ],
+                params.Tjoint,
+                [params.output],
+                params.blank_id,
+            )
+            return hyps<a id="change">, scores</a>
+
+    def compute_objectives(self, predictions, targets, stage="train"):
+        ids, phns, phn_lens = targets
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        _, targets, _ = y
+        targets = targets.to(self.device)
+        &#47&#47 Prediction network: output-output dependency
+        decoder_input<a id="change"> = </a>sb.data_io.prepend_bos_token(
+            targets, bos_index=self.hparams.blank_id
+        )
+        PN_output = self.modules.emb(decoder_input)
+        PN_output, _ = self.modules.dec(PN_output)
+        PN_output<a id="change"> = </a>self.modules.dec_lin(PN_output)
+        &#47&#47 Joint the networks
+        joint = self.modules.Tjoint(
+            TN_output.unsqueeze(2), PN_output.unsqueeze(1),
+        )
+        &#47&#47 projection layer
+        outputs<a id="change"> = </a>self.modules.output(joint)
+        outputs<a id="change"> = </a><a id="change">self.hparams.log_softmax(</a>outputs<a id="change">)</a>
+        if stage == sb.Stage.TRAIN:
+            return outputs, lens
+        else:
+            hyps, scores = transducer_greedy_decode(
+                TN_output,
+                [self.modules.emb, self.modules.dec, self.modules.dec_lin],
+                self.modules.Tjoint,
+                [self.modules.output],
+                self.hparams.blank_id,
+            )
+            <a id="change">return </a>outputs, lens, hyps
+
+    def compute_objectives(self, predictions, targets, stage):
+        ids, phns, phn_lens = targets</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/speechbrain/speechbrain/commit/6f252e43bf5eaabf7c9f5fc881571c72c09321d5#diff-a20ba59faab866502f9428aec0147478b59c2092dc40dff6703f5aea0687d70aL22' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 104830013</div><div id='project'> Project Name: speechbrain/speechbrain</div><div id='commit'> Commit Name: 6f252e43bf5eaabf7c9f5fc881571c72c09321d5</div><div id='time'> Time: 2020-11-02</div><div id='author'> Author: a.heba@irit.fr</div><div id='file'> File Name: recipes/minimal_examples/neural_networks/ASR_Transducer/example_asr_transducer_experiment.py</div><div id='m_class'> M Class Name: TransducerBrain</div><div id='n_method'> N Class Name: TransducerBrain</div><div id='m_method'> M Method Name: compute_forward(4)</div><div id='n_method'> N Method Name: compute_forward(5)</div><div id='m_parent_class'> M Parent Class: sb.Brain</div><div id='n_parent_class'> N Parent Class: sb.core.Brain</div><div id='m_file'> M File Name: recipes/minimal_examples/neural_networks/ASR_Transducer/example_asr_transducer_experiment.py</div><div id='n_file'> N File Name: recipes/minimal_examples/neural_networks/ASR_Transducer/example_asr_transducer_experiment.py</div><div id='m_start'> M Start Line: 22</div><div id='m_end'> M End Line: 68</div><div id='n_start'> N Start Line: 11</div><div id='n_end'> N End Line: 45</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 因为是补齐了的，所以需要找到真正的 score
+        loc_len = batch.get_origin_len(&quotcurrent_loc&quot)
+        for i in range(score.shape[0]):
+            <a id="change">if i == 0</a>:
+                true_scores<a id="change"> = </a>score[i][loc_len[i] - 1].reshape(1, -1)
+            else:
+                true_scores = torch.cat(
+                    (true_scores<a id="change">, score[i][loc_len[i] - 1].reshape(1, -1)</a>), 0)
+        return true_scores
+
+    def predict(self, batch):</code></pre><h3>After Change</h3><pre><code class='java'>
+        out, out_len = pad_packed_sequence(out, batch_first=True)
+        &#47&#47 out = out.permute(1, 0, 2)
+        origin_len = batch.get_origin_len(&quotcurrent_loc&quot)
+        final_out_index<a id="change"> = </a>torch.tensor(origin_len) - 1
+        final_out_index<a id="change"> = </a>final_out_index.reshape(final_out_index.shape[0], 1, -1)
+        final_out_index = final_out_index.repeat(1, 1, self.hidden_size).to(self.device)
+        out<a id="change"> = </a>torch.gather(out, 1, final_out_index).squeeze(1)  &#47&#47 batch_size * hidden_size
+        out = F.selu(out)
+        out = self.dropout(out)
+
+        y = self.fc(out)
+        score<a id="change"> = </a><a id="change">F.log_softmax(</a>y<a id="change">, dim=1)</a>  &#47&#47 calculate loss by NLLoss
+        <a id="change">return </a>score
+
+    def predict(self, batch):
+        return self.forward(batch)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/libcity/bigscity-libcity/commit/ec61c9cd984d1c86ee715380ed3b65b4222c8d1f#diff-f7e6a5cf5965e29788168874ecb4a6a81ecf849824f4f08f81428bfb514f6906L60' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 104830220</div><div id='project'> Project Name: libcity/bigscity-libcity</div><div id='commit'> Commit Name: ec61c9cd984d1c86ee715380ed3b65b4222c8d1f</div><div id='time'> Time: 2021-05-06</div><div id='author'> Author: 33283819+WenMellors@users.noreply.github.com</div><div id='file'> File Name: trafficdl/model/trajectory_loc_prediction/RNN.py</div><div id='m_class'> M Class Name: RNN</div><div id='n_method'> N Class Name: RNN</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: AbstractModel</div><div id='n_parent_class'> N Parent Class: AbstractModel</div><div id='m_file'> M File Name: trafficdl/model/trajectory_loc_prediction/RNN.py</div><div id='n_file'> N File Name: trafficdl/model/trajectory_loc_prediction/RNN.py</div><div id='m_start'> M Start Line: 87</div><div id='m_end'> M End Line: 97</div><div id='n_start'> N Start Line: 84</div><div id='n_end'> N End Line: 94</div><BR>

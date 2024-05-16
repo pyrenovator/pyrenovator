@@ -1,0 +1,139 @@
+<html><h3>Pattern ID :12289
+</h3><img src='41648218.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    train_loss = 0.0
+    correct = 0
+    group=0
+    for <a id="change">id</a>,(data, target) in enumerate(train_loader):  &#47&#47 batch之前组装到data数据集里的,pytorch的MBDG统一用这种方式进行,会按序列一个个batch训练
+        &#47&#47print("id:",id)
+        optimizer.zero_accum_grad()  &#47&#47 梯度清空
+
+        &#47&#47这里执行单样本操作，但是没有参数决定是单样本，依赖这里面的数据集的组装形式（TensorDataset(data, target)），和上面的train_loader一样，默认都是一个torch一个torch来
+        &#47&#47 数据组装中torch的维度决定你想要进行多少样本的梯度训练，取决于一开始的数据组装的结构
+        for iid,(X_microbatch, y_microbatch) in enumerate(TensorDataset(data, target)):  &#47&#47这里相当于逐样本
+
+            optimizer.zero_microbatch_grad()
+            output = model(torch.unsqueeze(X_microbatch.to(torch.float32), 0))    &#47&#47这要是这里要做升维
+
+            loss = criterion(output, torch.unsqueeze(y_microbatch.to(torch.long), 0))       &#47&#47相反，这边对于的output就不用升维了
+
+            loss.backward()         &#47&#47梯度求导，这边求出梯度
+            optimizer.microbatch_step()  &#47&#47 这个step做的是每个样本的梯度裁剪和梯度累加的操作
+
+            train_loss<a id="change"> += </a><a id="change">loss.item()</a>  &#47&#47 损失累加
+            prediction = output.argmax(dim=1, keepdim=True)  &#47&#47 将one-hot输出转为单个标量
+            correct<a id="change"> += </a>prediction.eq(y_microbatch.view_as(prediction)).sum().item()  &#47&#47 比较得到准确率
+
+
+        optimizer.step()  &#47&#47 这个做的是梯度加噪和梯度平均更新下降的操作</code></pre><h3>After Change</h3><pre><code class='java'>
+    output_batch=[]
+    aa=0
+    train_acc=0.
+    i<a id="change">=</a>0
+    for <a id="change">id</a>,(data, target) in enumerate(train_loader):  &#47&#47 batch之前组装到data数据集里的,pytorch的MBDG统一用这种方式进行,会按序列一个个batch训练
+        &#47&#47print("id:",id)
+        optimizer.zero_accum_grad()  &#47&#47 梯度清空
+
+        &#47&#47这里执行单样本操作，但是没有参数决定是单样本，依赖这里面的数据集的组装形式（TensorDataset(data, target)），和上面的train_loader一样，默认都是一个torch一个torch来
+        &#47&#47 数据组装中torch的维度决定你想要进行多少样本的梯度训练，取决于一开始的数据组装的结构
+        for iid,(X_microbatch, y_microbatch) in enumerate(TensorDataset(data, target)):  &#47&#47这里相当于逐样本
+
+            optimizer.zero_microbatch_grad()
+            output = model(torch.unsqueeze(X_microbatch.to(torch.float32), 0))    &#47&#47这要是这里要做升维
+            loss = criterion(output, torch.unsqueeze(y_microbatch, 0))
+
+            loss.backward()         &#47&#47梯度求导，这边求出梯度
+            optimizer.microbatch_step()  &#47&#47 这个step做的是每个样本的梯度裁剪和梯度累加的操作
+
+        optimizer.step()  &#47&#47 这个做的是梯度加噪和梯度平均更新下降的操作
+
+        &#47&#47训练集测试损失值和准确率
+        train_output=model(<a id="change">data.to(</a>torch.float32<a id="change">)</a>)
+        train_loss<a id="change">=</a>criterion(train_output,target).item()
+        prediction = train_output.argmax(dim=1, keepdim=True)  &#47&#47 将one-hot输出转为单个标量
+        correct = prediction.eq(target.view_as(prediction)).sum().item()  &#47&#47 比较得到准确率
+        train_acc=100. * correct/len(data)
+        i<a id="change">+=</a>1
+
+        &#47&#47 print(f&quotbatch: {i}, &quotf&quotTrain set: loss: {train_loss:.4f}, &quot
+        &#47&#47       f&quotAccuracy: {correct}/{len(data)} ({train_acc:.2f}%)&quot)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 7</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/jefffffu/awesome-differential-privacy-and-meachine-learning/commit/2ebbe536f3de4fe260e92dfa2a45dd3bab30a414#diff-aecaebc49c1330d797ceb7c3e3b703c3d28e5366804cbea249ee3aca40cfbd58L10' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 41648218</div><div id='project'> Project Name: jefffffu/awesome-differential-privacy-and-meachine-learning</div><div id='commit'> Commit Name: 2ebbe536f3de4fe260e92dfa2a45dd3bab30a414</div><div id='time'> Time: 2022-12-06</div><div id='author'> Author: 1193147851@qq.com</div><div id='file'> File Name: train_and_validation/train_with_dp.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train_dynamic_add_noise(4)</div><div id='n_method'> N Method Name: train_dynamic_add_noise(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: train_and_validation/train_with_dp.py</div><div id='n_file'> N File Name: train_and_validation/train_with_dp.py</div><div id='m_start'> M Start Line: 10</div><div id='m_end'> M End Line: 40</div><div id='n_start'> N Start Line: 13</div><div id='n_end'> N End Line: 45</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        self.model.eval()
+        with torch.no_grad():
+            &#47&#47 similar to epoch() but model is in evaluation mode and no backprop
+            for <a id="change">batch</a> in iterator:
+                text = batch.word
+                true_tags = batch.tag
+                pred_tags = self.model(text)
+                pred_tags = pred_tags.view(-1, pred_tags.shape[-1])
+                true_tags = true_tags.view(-1)
+                batch_loss<a id="change"> = </a>self.loss_fn(pred_tags, true_tags)
+                batch_acc = self.accuracy(pred_tags, true_tags)
+                epoch_loss += batch_loss.item()
+                epoch_acc<a id="change"> += </a><a id="change">batch_acc.item()</a>
+        return epoch_loss / len(iterator), epoch_acc / len(iterator)
+
+    def train(self, n_epochs):
+        for epoch in range(n_epochs):</code></pre><h3>After Change</h3><pre><code class='java'>
+    def evaluate(self, iterator, full_report=False):
+        epoch_loss = 0
+        true_tags_epoch = []
+        pred_tags_epoch<a id="change"> = </a>[]
+        self.model.eval()
+        with torch.no_grad():
+            &#47&#47 similar to epoch() but model is in evaluation mode and no backprop
+            for <a id="change">batch</a> in iterator:
+                words = batch.word.to(self.device)
+                chars<a id="change"> = </a><a id="change">batch.char.to(</a>self.device<a id="change">)</a>
+                true_tags = batch.tag.to(self.device)
+                pred_tags, batch_loss = self.model(words, chars, true_tags)
+                pred_tags_epoch<a id="change"> += </a>pred_tags
+                true_tags_epoch += [
+                    [tag for tag in sent_tag if tag != self.data.tag_pad_idx]
+                    for sent_tag in true_tags.permute(1, 0).tolist()</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/yoseflaw/nerindo/commit/a70e55e7c0489cba1290ebd51512a9e878c6e0ed#diff-8cab4f44e154e1111c4ee01fed014cbc93efbaa697c98a0f44a624cd8e8f013fL53' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 41648233</div><div id='project'> Project Name: yoseflaw/nerindo</div><div id='commit'> Commit Name: a70e55e7c0489cba1290ebd51512a9e878c6e0ed</div><div id='time'> Time: 2020-08-09</div><div id='author'> Author: yosefardhitowin@gmail.com</div><div id='file'> File Name: nerindo/trainer.py</div><div id='m_class'> M Class Name: Trainer</div><div id='n_method'> N Class Name: Trainer</div><div id='m_method'> M Method Name: evaluate(3)</div><div id='n_method'> N Method Name: evaluate(2)</div><div id='m_parent_class'> M Parent Class: object</div><div id='n_parent_class'> N Parent Class: object</div><div id='m_file'> M File Name: nerindo/trainer.py</div><div id='n_file'> N File Name: nerindo/trainer.py</div><div id='m_start'> M Start Line: 55</div><div id='m_end'> M End Line: 69</div><div id='n_start'> N Start Line: 85</div><div id='n_end'> N End Line: 104</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        epoch_loss = 0
+        epoch_acc = 0
+        self.model.train()
+        for <a id="change">batch</a> in self.data.train_iter:
+            &#47&#47 text = [sent len, batch size]
+            text = batch.word
+            &#47&#47 tags = [sent len, batch size]
+            true_tags = batch.tag
+            self.optimizer.zero_grad()
+            pred_tags = self.model(text)
+            &#47&#47 to calculate the loss and accuracy, we flatten both prediction and true tags
+            &#47&#47 flatten pred_tags to [sent len, batch size, output dim]
+            pred_tags = pred_tags.view(-1, pred_tags.shape[-1])
+            &#47&#47 flatten true_tags to [sent len * batch size]
+            true_tags = true_tags.view(-1)
+            batch_loss<a id="change"> = </a>self.loss_fn(pred_tags, true_tags)
+            batch_acc = self.accuracy(pred_tags, true_tags)
+            batch_loss.backward()
+            self.optimizer.step()
+            epoch_loss += batch_loss.item()
+            epoch_acc<a id="change"> += </a><a id="change">batch_acc.item()</a>
+        return epoch_loss / len(self.data.train_iter), epoch_acc / len(self.data.train_iter)
+
+    def evaluate(self, iterator):
+        epoch_loss = 0</code></pre><h3>After Change</h3><pre><code class='java'>
+    def epoch(self):
+        epoch_loss = 0
+        true_tags_epoch = []
+        pred_tags_epoch<a id="change"> = </a>[]
+        self.model.train()
+        for <a id="change">batch</a> in self.data.train_iter:
+            &#47&#47 words = [sent len, batch size]
+            words = batch.word.to(self.device)
+            &#47&#47 chars = [batch size, sent len, char len]
+            chars = batch.char.to(self.device)
+            &#47&#47 tags = [sent len, batch size]
+            true_tags = <a id="change">batch.tag.to(</a>self.device<a id="change">)</a>
+            self.optimizer.zero_grad()
+            pred_tags_list, batch_loss = self.model(words, chars, true_tags)
+            pred_tags_epoch<a id="change"> += </a>pred_tags_list
+            &#47&#47 to calculate the loss and f1, we flatten true tags
+            true_tags_epoch<a id="change"> += </a>[
+                [tag for tag in sent_tag if tag != self.data.tag_pad_idx]
+                for sent_tag in true_tags.permute(1, 0).tolist()
+            ]</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/yoseflaw/nerindo/commit/a70e55e7c0489cba1290ebd51512a9e878c6e0ed#diff-8cab4f44e154e1111c4ee01fed014cbc93efbaa697c98a0f44a624cd8e8f013fL29' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 41648222</div><div id='project'> Project Name: yoseflaw/nerindo</div><div id='commit'> Commit Name: a70e55e7c0489cba1290ebd51512a9e878c6e0ed</div><div id='time'> Time: 2020-08-09</div><div id='author'> Author: yosefardhitowin@gmail.com</div><div id='file'> File Name: nerindo/trainer.py</div><div id='m_class'> M Class Name: Trainer</div><div id='n_method'> N Class Name: Trainer</div><div id='m_method'> M Method Name: epoch(1)</div><div id='n_method'> N Method Name: epoch(1)</div><div id='m_parent_class'> M Parent Class: object</div><div id='n_parent_class'> N Parent Class: object</div><div id='m_file'> M File Name: nerindo/trainer.py</div><div id='n_file'> N File Name: nerindo/trainer.py</div><div id='m_start'> M Start Line: 31</div><div id='m_end'> M End Line: 51</div><div id='n_start'> N Start Line: 61</div><div id='n_end'> N End Line: 83</div><BR>

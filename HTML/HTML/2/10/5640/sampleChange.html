@@ -1,0 +1,22 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            &#47&#47 not saving keys to rpc_info since user did not request any uid
+
+        cache_bytes_left = max(0, backend.memory_cache.max_size_bytes - backend.memory_cache.current_size_bytes)
+        <a id="change">if CACHE_TOKENS_AVAILABLE in rpc_info</a>:
+            <a id="change">raise </a><a id="change">RuntimeError(</a>f"Block rpc_info dict has a reserved field {CACHE_TOKENS_AVAILABLE} : {rpc_info}"<a id="change">)</a>
+        rpc_info[CACHE_TOKENS_AVAILABLE] = cache_bytes_left // max(backend.cache_bytes_per_token.values())
+        return runtime_pb2.ExpertInfo(serialized_info=MSGPackSerializer.dumps(rpc_info))
+
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        if request.uid:
+            block_info = self.module_backends[request.uid].get_info()
+            <a id="change">common_keys</a><a id="change"> = </a>set(result.keys()) & set(<a id="change">block_info.keys()</a>)
+            <a id="change">if common_keys</a>:
+                <a id="change">raise </a>RuntimeError(f"The block&quots rpc_info has keys reserved for the server&quots rpc_info: {common_keys}")
+            result.update(block_info)
+
+        return runtime_pb2.ExpertInfo(serialized_info=MSGPackSerializer.dumps(result))</code></pre>

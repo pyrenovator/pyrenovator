@@ -1,0 +1,19 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    x,y = ctx.saved_tensors
+    grad_x = binary_op(&quota*b&quot, y, grad_output, Buffer(grad_output.shape))
+    grad_y = binary_op(&quota*b&quot, x, grad_output, Buffer(grad_output.shape))
+    return <a id="change">unbroadcast(</a>grad_x, x.shape<a id="change">), unbroadcast(grad_y, y.shape)</a>
+
+class Pow(Function):
+  def forward(ctx, x, y):
+    ctx.save_for_backward(x, y)</code></pre><h3>After Change</h3><pre><code class='java'>
+  def backward(ctx, grad_output):
+    x,y = ctx.saved_tensors
+    tmp = Buffer(grad_output.shape)
+    grad_x = <a id="change">unbroadcast(</a>binary_op(&quota*b&quot, y, grad_output, tmp), x.shape<a id="change">) if </a><a id="change">ctx.needs_input_grad[0] else </a>None
+    grad_y = unbroadcast(binary_op(&quota*b&quot, x, grad_output, tmp), y.shape) if ctx.needs_input_grad[1] else None
+    return grad_x, grad_y
+</code></pre>

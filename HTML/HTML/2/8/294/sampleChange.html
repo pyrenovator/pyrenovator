@@ -1,0 +1,25 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            self.pool = SelectAdaptivePool2d(pool_type=global_pool)
+            &#47&#47 NOTE when cl_norm_layer != norm_layer we could flatten here and use cl, but makes no performance diff
+            self.norm = norm_layer(self.num_features)
+            self.head = nn.Linear(self.num_features, num_classes)<a id="change"> if num_classes &gt; 0</a><a id="change"> else </a><a id="change">nn.Identity()</a>
+
+        named_apply(partial(_init_weights, head_init_scale=head_init_scale), self)
+
+    def get_classifier(self):</code></pre><h3>After Change</h3><pre><code class='java'>
+        else:
+            &#47&#47 pool -&gt; norm -&gt; fc, the default ConvNeXt ordering (pretrained FB weights)
+            self.norm_pre = nn.Identity()
+            self.head = <a id="change">nn.Sequential(</a>OrderedDict([
+                (&quotglobal_pool&quot, SelectAdaptivePool2d(pool_type=global_pool)),
+                (&quotnorm&quot, norm_layer(self.num_features)),
+                (&quotflatten&quot, nn.Flatten(1) if global_pool else nn.Identity()),
+                (&quotfc&quot, nn.Linear(self.num_features, num_classes)<a id="change"> if num_classes &gt; 0</a><a id="change"> else </a><a id="change">nn.Identity()</a>)
+            ])<a id="change">)</a>
+
+        named_apply(partial(_init_weights, head_init_scale=head_init_scale), self)
+
+    def get_classifier(self):</code></pre>

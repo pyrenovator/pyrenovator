@@ -1,0 +1,184 @@
+<html><h3>Pattern ID :27559
+</h3><img src='81877633.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+@pytest.mark.e2e_cpu
+def test_group_updates() -&gt; None:
+    group_name<a id="change"> = </a>get_random_string()
+    det_cmd(["user-group", "create", group_name], check=True)
+
+    &#47&#47 Adds admin and determined to our group then remove determined.
+    det_cmd(["user-group", "add-user", group_name, "admin,determined"], check=True)
+    det_cmd(["user-group", "remove-user", group_name, "determined"], check=True)
+
+    group_desc = det_cmd_json(["user-group", "describe", group_name, "--json"])
+    assert group_desc["name"] == group_name
+    assert len(group_desc["users"]) == 1
+    assert group_desc["users"][0]["username"] == "admin"
+
+    &#47&#47 Rename our group.
+    new_group_name = get_random_string()
+    <a id="change">det_cmd(</a>["user-group", "change-name", group_name, new_group_name]<a id="change">, check=True)</a>
+
+    &#47&#47 Old name is gone.
+    <a id="change">det_cmd_expect_error(</a>["user-group", "describe", group_name, "--json"], "not find"<a id="change">)</a>
+
+    &#47&#47 New name is here.
+    group_desc = det_cmd_json(["user-group", "describe", new_group_name, "--json"])
+    assert group_desc["name"] == new_group_name</code></pre><h3>After Change</h3><pre><code class='java'>
+
+@pytest.mark.e2e_cpu
+def test_group_updates() -&gt; None:
+    <a id="change">with </a><a id="change">logged_in_user(ADMIN_CREDENTIALS):
+        </a>group_name<a id="change"> = </a>get_random_string()
+        det_cmd(["user-group", "create", group_name], check=True)
+
+        &#47&#47 Adds admin and determined to our group then remove determined.
+        det_cmd(["user-group", "add-user", group_name, "admin,determined"], check=True)
+        det_cmd(["user-group", "remove-user", group_name, "determined"], check=True)
+
+        group_desc = det_cmd_json(["user-group", "describe", group_name, "--json"])
+        assert group_desc["name"] == group_name
+        assert len(group_desc["users"]) == 1
+        assert group_desc["users"][0]["username"] == "admin"
+
+        &#47&#47 Rename our group.
+        new_group_name = get_random_string()
+        <a id="change">det_cmd(</a>["user-group", "change-name", group_name, new_group_name]<a id="change">, check=True)</a>
+
+        &#47&#47 Old name is gone.
+        <a id="change">det_cmd_expect_error(</a>["user-group", "describe", group_name, "--json"], "not find"<a id="change">)</a>
+
+        &#47&#47 New name is here.
+        group_desc = det_cmd_json(["user-group", "describe", new_group_name, "--json"])
+        assert group_desc["name"] == new_group_name</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 9</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/determined-ai/determined/commit/106e2313e7dd143138eab3ee0a106f5777239083#diff-0172bab533310a3fc419872e91d881070315e014b574923adf5419e875c55c8aL70' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 81877633</div><div id='project'> Project Name: determined-ai/determined</div><div id='commit'> Commit Name: 106e2313e7dd143138eab3ee0a106f5777239083</div><div id='time'> Time: 2022-10-06</div><div id='author'> Author: 31023784+eecsliu@users.noreply.github.com</div><div id='file'> File Name: e2e_tests/tests/cluster/test_groups.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: test_group_updates(0)</div><div id='n_method'> N Method Name: test_group_updates(0)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: e2e_tests/tests/cluster/test_groups.py</div><div id='n_file'> N File Name: e2e_tests/tests/cluster/test_groups.py</div><div id='m_start'> M Start Line: 70</div><div id='m_end'> M End Line: 93</div><div id='n_start'> N Start Line: 78</div><div id='n_end'> N End Line: 104</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+@pytest.mark.e2e_cpu
+@pytest.mark.parametrize("add_users", [[], ["admin", "determined"]])
+def test_group_creation(add_users: List[str]) -&gt; None:
+    group_name<a id="change"> = </a>get_random_string()
+    create_group_cmd = ["user-group", "create", group_name]
+    for add_user in add_users:
+        create_group_cmd += ["--add-user", add_user]
+    <a id="change">det_cmd(</a>create_group_cmd<a id="change">, check=True)</a>
+
+    &#47&#47 Can view through list.
+    group_list = det_cmd_json(["user-group", "list", "--json"])
+    assert (
+        len([group for group in group_list["groups"] if group["group"]["name"] == group_name]) == 1
+    )
+
+    &#47&#47 Can view through list with userID filter.
+    for add_user in add_users:
+        group_list = det_cmd_json(
+            ["user-group", "list", "--json", "--groups-user-belongs-to", add_user]
+        )
+        assert (
+            len([group for group in group_list["groups"] if group["group"]["name"] == group_name])
+            == 1
+        )
+
+    &#47&#47 Can describe properly.
+    group_desc = det_cmd_json(["user-group", "describe", group_name, "--json"])
+    assert group_desc["name"] == group_name
+    for add_user in add_users:
+        assert len([u for u in group_desc["users"] if u["username"] == add_user]) == 1
+
+    &#47&#47 Can delete.
+    det_cmd(["user-group", "delete", group_name, "--yes"], check=True)
+    <a id="change">det_cmd_expect_error(</a>["user-group", "describe", group_name], "not find"<a id="change">)</a>
+
+
+@pytest.mark.e2e_cpu
+def test_group_updates() -&gt; None:</code></pre><h3>After Change</h3><pre><code class='java'>
+@pytest.mark.e2e_cpu
+@pytest.mark.parametrize("add_users", [[], ["admin", "determined"]])
+def test_group_creation(add_users: List[str]) -&gt; None:
+    <a id="change">with </a><a id="change">logged_in_user(ADMIN_CREDENTIALS):
+        </a>group_name<a id="change"> = </a>get_random_string()
+        create_group_cmd = ["user-group", "create", group_name]
+        for add_user in add_users:
+            create_group_cmd += ["--add-user", add_user]
+        <a id="change">det_cmd(</a>create_group_cmd<a id="change">, check=True)</a>
+
+        &#47&#47 Can view through list.
+        group_list = det_cmd_json(["user-group", "list", "--json"])
+        assert (
+            len([group for group in group_list["groups"] if group["group"]["name"] == group_name])
+            == 1
+        )
+
+        &#47&#47 Can view through list with userID filter.
+        for add_user in add_users:
+            group_list = det_cmd_json(
+                ["user-group", "list", "--json", "--groups-user-belongs-to", add_user]
+            )
+            assert (
+                len(
+                    [
+                        group
+                        for group in group_list["groups"]
+                        if group["group"]["name"] == group_name
+                    ]
+                )
+                == 1
+            )
+
+        &#47&#47 Can describe properly.
+        group_desc = det_cmd_json(["user-group", "describe", group_name, "--json"])
+        assert group_desc["name"] == group_name
+        for add_user in add_users:
+            assert len([u for u in group_desc["users"] if u["username"] == add_user]) == 1
+
+        &#47&#47 Can delete.
+        det_cmd(["user-group", "delete", group_name, "--yes"], check=True)
+        <a id="change">det_cmd_expect_error(</a>["user-group", "describe", group_name], "not find"<a id="change">)</a>
+
+
+@pytest.mark.e2e_cpu
+def test_group_updates() -&gt; None:</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/determined-ai/determined/commit/106e2313e7dd143138eab3ee0a106f5777239083#diff-0172bab533310a3fc419872e91d881070315e014b574923adf5419e875c55c8aL34' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 81877632</div><div id='project'> Project Name: determined-ai/determined</div><div id='commit'> Commit Name: 106e2313e7dd143138eab3ee0a106f5777239083</div><div id='time'> Time: 2022-10-06</div><div id='author'> Author: 31023784+eecsliu@users.noreply.github.com</div><div id='file'> File Name: e2e_tests/tests/cluster/test_groups.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: test_group_creation(1)</div><div id='n_method'> N Method Name: test_group_creation(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: e2e_tests/tests/cluster/test_groups.py</div><div id='n_file'> N File Name: e2e_tests/tests/cluster/test_groups.py</div><div id='m_start'> M Start Line: 35</div><div id='m_end'> M End Line: 65</div><div id='n_start'> N Start Line: 35</div><div id='n_end'> N End Line: 75</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+@pytest.mark.e2e_cpu
+def test_group_errors() -&gt; None:
+    fake_group = get_random_string()
+    group_name<a id="change"> = </a>get_random_string()
+    <a id="change">det_cmd(</a>["user-group", "create", group_name]<a id="change">, check=True)</a>
+
+    &#47&#47 Creating group with same name.
+    det_cmd_expect_error(["user-group", "create", group_name], "already exists")
+
+    &#47&#47 Adding non existent users to groups.
+    fake_user = get_random_string()
+    det_cmd_expect_error(["user-group", "create", fake_group, "--add-user", fake_user], "not find")
+    det_cmd_expect_error(["user-group", "add-user", group_name, fake_user], "not find")
+
+    &#47&#47 Removing a non existent user from group.
+    <a id="change">det_cmd_expect_error(</a>["user-group", "remove-user", group_name, fake_user], "not find"<a id="change">)</a>
+
+    &#47&#47 Removing a user not in a group.
+    det_cmd_expect_error(["user-group", "remove-user", group_name, "admin"], "NotFound")
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+@pytest.mark.e2e_cpu
+def test_group_errors() -&gt; None:
+    <a id="change">with </a><a id="change">logged_in_user(ADMIN_CREDENTIALS):
+        </a>fake_group = get_random_string()
+        group_name<a id="change"> = </a>get_random_string()
+        <a id="change">det_cmd(</a>["user-group", "create", group_name]<a id="change">, check=True)</a>
+
+        &#47&#47 Creating group with same name.
+        det_cmd_expect_error(["user-group", "create", group_name], "already exists")
+
+        &#47&#47 Adding non existent users to groups.
+        fake_user = get_random_string()
+        det_cmd_expect_error(
+            ["user-group", "create", fake_group, "--add-user", fake_user], "not find"
+        )
+        det_cmd_expect_error(["user-group", "add-user", group_name, fake_user], "not find")
+
+        &#47&#47 Removing a non existent user from group.
+        <a id="change">det_cmd_expect_error(</a>["user-group", "remove-user", group_name, fake_user], "not find"<a id="change">)</a>
+
+        &#47&#47 Removing a user not in a group.
+        det_cmd_expect_error(["user-group", "remove-user", group_name, "admin"], "NotFound")
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/determined-ai/determined/commit/106e2313e7dd143138eab3ee0a106f5777239083#diff-0172bab533310a3fc419872e91d881070315e014b574923adf5419e875c55c8aL118' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 81877637</div><div id='project'> Project Name: determined-ai/determined</div><div id='commit'> Commit Name: 106e2313e7dd143138eab3ee0a106f5777239083</div><div id='time'> Time: 2022-10-06</div><div id='author'> Author: 31023784+eecsliu@users.noreply.github.com</div><div id='file'> File Name: e2e_tests/tests/cluster/test_groups.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: test_group_errors(0)</div><div id='n_method'> N Method Name: test_group_errors(0)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: e2e_tests/tests/cluster/test_groups.py</div><div id='n_file'> N File Name: e2e_tests/tests/cluster/test_groups.py</div><div id='m_start'> M Start Line: 119</div><div id='m_end'> M End Line: 138</div><div id='n_start'> N Start Line: 130</div><div id='n_end'> N End Line: 152</div><BR>

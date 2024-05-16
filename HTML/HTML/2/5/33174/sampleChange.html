@@ -1,0 +1,41 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 Cal PSNR
+        total_psnr += 10. * torch.log10(1. / torch.mean((sr_tensor_y - hr_tensor_y) ** 2))
+
+        sr_image_y = <a id="change">sr_tensor_y.mul_(255.0).cpu()</a>.squeeze_(0).squeeze_(0).numpy()
+        sr_image = np.array([sr_image_y, bic_ycbcr[..., 1], bic_ycbcr[..., 2]]).transpose([1, 2, 0])
+        sr_image = np.clip(imgproc.convert_ycbcr_to_rgb(sr_image), 0.0, 255.0).astype(np.uint8)
+        sr_image = Image.fromarray(sr_image)</code></pre><h3>After Change</h3><pre><code class='java'>
+        hr_image = Image.open(hr_image_path).convert("RGB")
+        hr_image_width = hr_image.width // config.upscale_factor * config.upscale_factor
+        hr_image_height = hr_image.height // config.upscale_factor * config.upscale_factor
+        hr_image<a id="change"> = </a>hr_image.resize([hr_image_width, hr_image_height], Image.BICUBIC)
+
+        lr_image = hr_image.resize([hr_image.width // config.upscale_factor, hr_image.height // config.upscale_factor], Image.BICUBIC)
+        bic_image = lr_image.resize([hr_image.width, hr_image.height], Image.BICUBIC)
+
+        &#47&#47 Extract Y channel lr image data.
+        lr_image = np.array(lr_image).astype(np.float32)
+        lr_ycbcr = imgproc.convert_rgb_to_ycbcr(lr_image)
+        lr_y_image = lr_ycbcr[..., 0]
+        lr_y_image /= 255.
+        lr_y_tensor = torch.from_numpy(lr_y_image).to(config.device).unsqueeze(0).unsqueeze(0)
+        lr_y_tensor<a id="change"> = </a><a id="change">lr_y_tensor.half()</a>
+
+        &#47&#47 Extract Y channel bicubic image data.
+        bic_image = np.array(bic_image).astype(np.float32)
+        bic_ycbcr = imgproc.convert_rgb_to_ycbcr(bic_image)
+
+        &#47&#47 Extract Y channel hr image data.
+        hr_image = np.array(hr_image).astype(np.float32)
+        hr_ycbcr = imgproc.convert_rgb_to_ycbcr(hr_image)
+        hr_y_image = hr_ycbcr[..., 0]
+        hr_y_image /= 255.
+        hr_y_tensor = torch.from_numpy(hr_y_image).to(config.device).unsqueeze(0).unsqueeze(0)
+        hr_y_tensor<a id="change"> = </a>hr_y_tensor.half()
+
+        &#47&#47 Only reconstruct the Y channel image data.
+        with torch.no_grad():</code></pre>

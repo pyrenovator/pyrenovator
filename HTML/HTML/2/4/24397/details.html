@@ -1,0 +1,67 @@
+<html><h3>Pattern ID :24397
+</h3><img src='75718211.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        if self.output_layer.bias is not None:
+            new_bias = torch.empty(n_classes_to_add)
+            fan_in, _ = nn.init._calculate_fan_in_and_fan_out(self.output_layer.weight)
+            bound = 1<a id="change"> / </a><a id="change">math.sqrt(</a>fan_in<a id="change">)</a> if fan_in &gt; 0 else 0
+            nn.init.uniform_(new_bias, -bound, bound)
+            self.output_layer.bias = nn.parameter.Parameter(
+                torch.cat([self.output_layer.bias, new_bias], axis=0)</code></pre><h3>After Change</h3><pre><code class='java'>
+        )
+
+        if self.output_layer.bias is not None:
+            new_bias = <a id="change">torch.mean(</a>self.output_layer.bias<a id="change">)</a>.unsqueeze(1).T
+            if n_classes_to_add &gt; 1:
+                new_bias<a id="change"> = </a>new_bias.unsqueeze(1).T.repeat(1, n_classes_to_add, 1).squeeze()
+            self.output_layer.bias = nn.parameter.Parameter(
+                torch.cat([self.output_layer.bias, new_bias], axis=0)
+            )</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/online-ml/river-torch/commit/27f914a787bc844de5af4720487e2314f206960d#diff-b7b3dc93db412db0f1b244453a944c127c40d624ca0330c220405196365d357aL300' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 75718211</div><div id='project'> Project Name: online-ml/river-torch</div><div id='commit'> Commit Name: 27f914a787bc844de5af4720487e2314f206960d</div><div id='time'> Time: 2022-09-26</div><div id='author'> Author: cedric.kulbach@googlemail.com</div><div id='file'> File Name: river_torch/classification/classifier.py</div><div id='m_class'> M Class Name: Classifier</div><div id='n_method'> N Class Name: Classifier</div><div id='m_method'> M Method Name: _add_output_features(2)</div><div id='n_method'> N Method Name: _add_output_features(2)</div><div id='m_parent_class'> M Parent Class: DeepEstimator,base.Classifier</div><div id='n_parent_class'> N Parent Class: DeepEstimator,base.Classifier</div><div id='m_file'> M File Name: river_torch/classification/classifier.py</div><div id='n_file'> N File Name: river_torch/classification/classifier.py</div><div id='m_start'> M Start Line: 300</div><div id='m_end'> M End Line: 310</div><div id='n_start'> N Start Line: 300</div><div id='n_end'> N End Line: 311</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        objPts_w_cent = self.objPts.reshape((self.n, 3)) - center_objPts
+        u, s, vh = np.linalg.svd(np.matmul(objPts_w_cent.T, objPts_w_cent), full_matrices=True)
+        contPts_w_2 = contPts_w_1 + np.sqrt(s[0])*vh[0]
+        contPts_w_3 = contPts_w_1 + <a id="change">np.sqrt(</a>s[1]<a id="change">)*</a>vh[1]
+        contPts_w_4 = contPts_w_1 + np.sqrt(s[2])*vh[2]
+
+        return np.array([contPts_w_1, contPts_w_2, contPts_w_3, contPts_w_4]).reshape(4, 3)</code></pre><h3>After Change</h3><pre><code class='java'>
+        Inputs are batched, with first dimension being the batch size.
+        
+        &#47&#47 Select the center of mass to be the first control point
+        center = <a id="change">objPts.mean(axis=1)</a>
+        
+        &#47&#47 Use distance to center to select the other three control points
+        &#47&#47 svd
+        objPts_w_cent = objPts - center.unsqueeze(1)  &#47&#47 center the object points, 1 is for boardcasting
+
+        full_svd = vmap(partial(torch.linalg.svd, full_matrices=True))
+        u, s, vh = full_svd(torch.bmm(objPts_w_cent.transpose(-1, -2), objPts_w_cent))
+
+        &#47&#47 produce points TODO: change to batch implementation
+        res = []
+        res.append(center)
+        for i in range(3):
+            another_pt<a id="change"> = </a>center + torch.sqrt(s[:, i])*vh[:, i]
+            res.append(another_pt)
+
+        return torch.stack(res, dim=1)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/pypose/pypose/commit/762381a1eb57de9a7b7ffad5293e3bb33c859006#diff-052b8dfcb4f5d16ac2df9676fd039e877588b354a969db2f245a098529fc6d31L106' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 75718195</div><div id='project'> Project Name: pypose/pypose</div><div id='commit'> Commit Name: 762381a1eb57de9a7b7ffad5293e3bb33c859006</div><div id='time'> Time: 2023-02-24</div><div id='author'> Author: ztzhan1108@gmail.com</div><div id='file'> File Name: pypose/module/pnp.py</div><div id='m_class'> M Class Name: EPnP</div><div id='n_method'> N Class Name: EPnP</div><div id='m_method'> M Method Name: select_control_points(2)</div><div id='n_method'> N Method Name: select_control_points(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: pypose/module/pnp.py</div><div id='n_file'> N File Name: pypose/module/pnp.py</div><div id='m_start'> M Start Line: 108</div><div id='m_end'> M End Line: 118</div><div id='n_start'> N Start Line: 104</div><div id='n_end'> N End Line: 125</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    set1_centre = set1.mean(-1).view(-1, 1)
+    set2_centre = set2.mean(-1).view(1, -1)
+    distance = (set1_centre - set2_centre).pow(2).pow(0.5).max(-1)[0].max(-1)[0]
+    delta_list = [distance / <a id="change">np.sqrt(</a>2 * (i + 1)<a id="change">)</a> for i in range(kernel_num)]
+    bandwidth_list = [((2 * delta<a id="change"> ** </a>2)).detach() for delta in delta_list]
+    return bandwidth_list
+
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+def calc_bandwidth(first_kernel, third_kernel, kernel_num=20, max_scale=2.0, min_scale=0.1):
+    &#47&#47 * kernel: [batch_size, particle_num, particle_num]
+    kernel_mean = <a id="change">torch.cat([first_kernel, third_kernel], dim=-1).mean(</a>-1<a id="change">)</a>.max(-1)[0]
+    particle_num = first_kernel.size(-1)
+    kernel_num
+    scale_list = list(np.linspace(min_scale, max_scale, num=kernel_num))
+    bandwidth_list<a id="change"> = </a>[(kernel_mean * scale).view(-1, 1, 1).detach() for scale in scale_list]
+    first_items = 0
+    third_items = 0
+    for h in bandwidth_list:</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/deligentfool/dqn_zoo/commit/1ac00bac8d92870064cdcf754b6e29278f14ae79#diff-a3e85498ee9bd41175d1c0b181ebc32feaa59a654db95d7021e3167b795c0a05L32' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 75718210</div><div id='project'> Project Name: deligentfool/dqn_zoo</div><div id='commit'> Commit Name: 1ac00bac8d92870064cdcf754b6e29278f14ae79</div><div id='time'> Time: 2020-11-04</div><div id='author'> Author: 1027660817@qq.com</div><div id='file'> File Name: MMD_DQN/mmd_dqn.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: calc_bandwidth(5)</div><div id='n_method'> N Method Name: calc_bandwidth(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: MMD_DQN/mmd_dqn.py</div><div id='n_file'> N File Name: MMD_DQN/mmd_dqn.py</div><div id='m_start'> M Start Line: 33</div><div id='m_end'> M End Line: 40</div><div id='n_start'> N Start Line: 18</div><div id='n_end'> N End Line: 33</div><BR>

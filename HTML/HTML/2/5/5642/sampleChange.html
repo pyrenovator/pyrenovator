@@ -1,0 +1,26 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1))
+
+        self.trainer.my_loss = loss.item()
+        self.trainer.my_epoch_loss = <a id="change">loss.item()</a>
+        self.log("lr", self.trainer.my_lr, prog_bar=True, on_step=True)
+        self.log("loss", self.trainer.my_epoch_loss, prog_bar=True, on_step=True)
+
+        return L2Wrap.apply(loss, logits)</code></pre><h3>After Change</h3><pre><code class='java'>
+        loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1))
+
+        if self.trainer.global_rank == 0:
+            t_now<a id="change"> = </a>time.time_ns()
+            try:
+                t_cost = (t_now - self.trainer.my_time_ns) / 1e9
+                self.log("REAL it/s", 1.0 / t_cost, prog_bar=True, on_step=True)
+                <a id="change">self.log("token/s"</a>, args.ctx_len * float(args.devices) * args.micro_bsz / t_cost<a id="change">, prog_bar=True, on_step=True)</a>
+            except:
+                pass
+            self.trainer.my_time_ns<a id="change"> = </a>t_now
+            self.trainer.my_loss = loss.item()
+            self.trainer.my_loss_sum += self.trainer.my_loss
+            self.trainer.my_loss_count += 1</code></pre>

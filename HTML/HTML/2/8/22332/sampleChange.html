@@ -1,0 +1,73 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+def describe_trial(args: Namespace) -&gt; None:
+    q = api.GraphQLQuery(args.master)
+    trial = q.op.trials_by_pk(id=args.trial_id)
+    <a id="change">trial.end_time()</a>
+    trial.experiment_id()
+    trial.hparams()
+    <a id="change">trial.start_time()</a>
+    <a id="change">trial.state()</a>
+
+    steps = trial.steps(order_by=[gql.steps_order_by(id=gql.order_by.asc)])
+    steps.metrics()
+    steps.id()</code></pre><h3>After Change</h3><pre><code class='java'>
+    else:
+        r = api.get(args.master, "trials/{}".format(args.trial_id))
+
+    <a id="change">trial</a> = <a id="change">r.json()</a>
+
+    if args.json:
+        print(json.dumps(trial, indent=4))
+        return
+
+    &#47&#47 Print information about the trial itself.
+    headers = [
+        "Experiment ID",
+        "State",
+        "H-Params",
+        "Start Time",
+        "End Time",
+    ]
+    values = [
+        [
+            trial["experiment_id"],
+            trial["state"],
+            json.dumps(trial["hparams"], indent=4),
+            render.format_time(trial["start_time"]),
+            render.format_time(trial["end_time"]),
+        ]
+    ]
+    render.tabulate_or_csv(headers, values, args.csv)
+
+    &#47&#47 Print information about individual steps.
+    headers = [
+        "Step &#47&#47",
+        "State",
+        "Start Time",
+        "End Time",
+        "Checkpoint",
+        "Checkpoint UUID",
+        "Validation",
+        "Validation Metrics",
+    ]
+    if args.metrics:
+        headers.append("Step Metrics")
+
+    values = [
+        [
+            s["id"],
+            s["state"],
+            render.format_time(s["start_time"]),
+            render.format_time(s["end_time"]),
+            *format_checkpoint(s["checkpoint"]),
+            *format_validation(s["validation"]),
+            *([json.dumps(s["metrics"], indent=4)] if args.metrics else []),
+        ]
+        for s in <a id="change">trial["steps"]</a>
+    ]
+
+    print()
+    print("Steps:")</code></pre>

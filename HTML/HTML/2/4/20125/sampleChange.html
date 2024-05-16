@@ -1,0 +1,34 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    def enqueue(self, num_batches):
+        batch_size = self.batch_size
+
+        <a id="change">for </a>i in range(num_batches)<a id="change">:
+            </a>if self.pt + batch_size &lt; len(self.arrays[0]):
+                iter_ret = []
+                for j, a in enumerate(self.arrays):
+                    if self.shuffle:</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    def enqueue(self, num_batches):
+        for batch in itertools.islice(self.input_iter, num_batches):
+            flatten_args, tree = <a id="change">jax.tree_flatten(</a>batch<a id="change">)</a>
+
+            &#47&#47 Cache meta info
+            if self.first_iter:
+                self.first_iter = False
+                self.avals = [
+                    ShapedArray(a.shape, a.dtype) for a in flatten_args
+                ]
+                self.indices = [
+                    tuple(spec.indices(aval.shape))
+                    for spec, aval in zip(self.sharding_specs, self.avals)
+                ]
+
+            new_args = self.physical_mesh.shard_args_to_arrays(
+                self.avals, self.indices, self.sharding_specs, flatten_args)
+            self.queue.append(<a id="change">jax.tree_unflatten(</a>tree, new_args<a id="change">)</a>)
+
+    def __iter__(self):
+        if self.prefetch_size:</code></pre>

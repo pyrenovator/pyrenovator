@@ -1,0 +1,38 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        advantage_lst.reverse()
+        advantage_ = torch.tensor(advantage_lst, dtype=torch.float).to(self.device)
+        returns_ = advantage_ + old_value_
+        advantage_ = (advantage_ - <a id="change">advantage_.mean()</a>)/(advantage_.std()+1e-3)
+        for i in range(self.K_epoch):
+            for state,action,reward,next_state,done_mask,old_log_prob,advantage,return_,old_value \
+            in self.data.choose_mini_batch(self.minibatch_size ,state_, action_, reward_, next_state_, done_mask_, \</code></pre><h3>After Change</h3><pre><code class='java'>
+        data = self.data.sample(self.T_horizon)
+        states, actions, rewards, next_states, done_masks, old_log_probs = data[&quotstate&quot], data[&quotaction&quot], data[&quotreward&quot], data[&quotnext_state&quot], data[&quotdone&quot], data[&quotlog_prob&quot]
+        
+        states<a id="change"> = </a><a id="change">torch.tensor(</a>states<a id="change">)</a>.float()
+        actions = torch.tensor(actions).float()
+        rewards = torch.tensor(rewards).float()
+        next_states = torch.tensor(next_states).float()
+        done_masks = torch.tensor(done_masks).float()
+        old_log_probs = torch.tensor(old_log_probs).float()
+        
+        old_values = self.v(states).detach()
+        td_target = rewards + self.gamma * self.v(next_states) * done_masks
+        delta = td_target - old_values
+        delta = delta.detach().cpu().numpy()
+        advantage_lst = []
+        advantage = 0.0
+        for idx in reversed(range(len(delta))):
+            if done_masks[idx] == 0:
+                advantage = 0.0
+            advantage = self.gamma * self.lmbda * advantage + delta[idx][0]
+            advantage_lst.append([advantage])
+        advantage_lst.reverse()
+        advantages = torch.tensor(advantage_lst, dtype=torch.float).to(self.device)
+        returns<a id="change"> = </a>advantages + old_values
+        advantages = (advantages - advantages.mean())/(advantages.std()+1e-3)
+        for i in range(self.K_epoch):
+            for state,action,reward,next_state,done_mask,old_log_prob,advantage,return_,old_value \</code></pre>

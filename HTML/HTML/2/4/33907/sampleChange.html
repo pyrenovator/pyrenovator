@@ -1,0 +1,18 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 --- draw H_wisdom from H_desc with attention --- &#47&#47
+        H_k_ = self.H_k(H_all)  &#47&#47 (N, L, H) -&gt; (N, K, H)
+        H_k = torch.einsum("nkh-&gt;nhk", H_k_)
+        H_wisdom<a id="change"> = </a><a id="change">self.pooler(H_k).squeeze()</a>  &#47&#47 (N, K, H) -pooling-&gt; (N, H, 1) -&gt; (N, H)
+        &#47&#47 --- now compare H_wisdom with all the wisdoms --- &#47&#47
+        S_wisdom_figurative = torch.einsum("nh,wh-&gt;nw", H_wisdom, wisdom_embeddings)  &#47&#47 (N, H) * (W, H) -&gt; (N, W)
+        return S_wisdom_figurative</code></pre><h3>After Change</h3><pre><code class='java'>
+        H_cls = H_all[:, 0]  &#47&#47 (N, H)
+        H_desc = self.H_desc(H_all)  &#47&#47 (N, D, H)
+        scores = torch.einsum("nh,ndh-&gt;nd", H_cls, H_desc)  &#47&#47 (N, D)
+        attentions<a id="change"> = </a><a id="change">torch.softmax(</a>scores<a id="change">, dim=1)</a>  &#47&#47 over D
+        H_wisdom = torch.einsum("nd,ndh-&gt;nh", attentions, H_desc)  &#47&#47 -&gt; (N, H)
+        &#47&#47 --- now compare H_wisdom with all the wisdoms --- &#47&#47
+        S_wisdom_figurative = torch.einsum("nh,wh-&gt;nw", H_wisdom, wisdom_embeddings)  &#47&#47 (N, H) * (W, H) -&gt; (N, W)</code></pre>

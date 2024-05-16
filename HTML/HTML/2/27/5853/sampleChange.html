@@ -1,0 +1,82 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+def run_joint_q(config_dict, common_config, env_dict, stop):
+    algorithm = config_dict["algorithm"]
+    episode_limit = env_dict["episode_limit"]
+    train_batch_episode = <a id="change">config_dict["algo_args"]</a>["batch_episode"]
+    lr = <a id="change">config_dict["algo_args"]</a>["lr"]
+    buffer_size = <a id="change">config_dict["algo_args"]</a>["buffer_size"]
+    target_network_update_frequency = <a id="change">config_dict["algo_args"]</a>["target_network_update_freq"]
+    final_epsilon = <a id="change">config_dict["algo_args"]</a>["final_epsilon"]
+    epsilon_timesteps = config_dict["algo_args"]["epsilon_timesteps"]
+    reward_standardize = <a id="change">config_dict["algo_args"]</a>["reward_standardize"]
+    optimizer = <a id="change">config_dict["algo_args"]</a>["optimizer"]
+
+    mixer_dict = {
+        "qmix": "qmix",</code></pre><h3>After Change</h3><pre><code class='java'>
+
+def run_joint_q(config_dict, common_config, env_dict, stop):
+
+    _param<a id="change"> = </a><a id="change">AlgVar(config_dict</a><a id="change">)</a>
+
+    algorithm = config_dict["algorithm"]
+    episode_limit = env_dict["episode_limit"]
+    train_batch_episode = _param["batch_episode"]
+    lr = _param["lr"]
+    buffer_size = _param["buffer_size"]
+    target_network_update_frequency = _param["target_network_update_freq"]
+    final_epsilon = _param["final_epsilon"]
+    epsilon_timesteps = _param["epsilon_timesteps"]
+    reward_standardize = _param["reward_standardize"]
+    optimizer = _param["optimizer"]
+
+    mixer_dict = {
+        "qmix": "qmix",
+        "vdn": "vdn",
+        "iql": None
+    }
+
+    config = {
+        "model": {
+            "max_seq_len": episode_limit,  &#47&#47 dynamic
+            "custom_model_config": merge_dicts(config_dict, env_dict),
+        },
+    }
+
+    config.update(common_config)
+
+    JointQ_Config.update(
+        {
+            "rollout_fragment_length": 1,
+            "buffer_size": buffer_size * episode_limit,  &#47&#47 in timesteps
+            "train_batch_size": train_batch_episode,  &#47&#47 in sequence
+            "target_network_update_freq": episode_limit * target_network_update_frequency,  &#47&#47 in timesteps
+            "learning_starts": episode_limit * train_batch_episode,
+            "lr": lr,  &#47&#47 default
+            "exploration_config": {
+                "type": "EpsilonGreedy",
+                "initial_epsilon": 1.0,
+                "final_epsilon": final_epsilon,
+                "epsilon_timesteps": epsilon_timesteps,
+            },
+            "mixer": mixer_dict[algorithm]
+        })
+
+    JointQ_Config["reward_standardize"] = reward_standardize  &#47&#47 this may affect the final performance if you turn it on
+    JointQ_Config["optimizer"] = optimizer
+    JointQ_Config["training_intensity"] = None
+
+    Trainer = JointQTrainer.with_updates(
+        name=algorithm.upper(),
+        default_config=JointQ_Config
+    )
+
+    map_name = <a id="change">config_dict["env_args"]["map_name"]</a>
+    arch<a id="change"> = config_dict["model_arch_args"]["core_arch"]</a>
+    RUNNING_NAME<a id="change"> = &quot_&quot</a><a id="change">.join([</a>algorithm, arch, map_name<a id="change"></a>]<a id="change">)</a>
+
+    results = tune.run(Trainer,
+                       name=RUNNING_NAME,
+                       stop=stop,</code></pre>

@@ -1,0 +1,36 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    os.makedirs(image_dir)
+
+    file_names = os.listdir(args.inputs_dir)
+    <a id="change">for </a><a id="change">file_name</a> in <a id="change">tqdm(</a>file_names<a id="change">, total=len(file_names)):
+        &#47&#47 Use PIL to read high-resolution image
+        </a>image = Image.open(f"{args.inputs_dir}/{file_name}").convert("RGB")
+
+        if image.width &gt;= args.image_size and image.height &gt;= args.image_size:
+            index = 1
+            <a id="change">for </a><a id="change">pos_x</a> in <a id="change">range(0</a>, image<a id="change">.width - args.image_size + 1</a>, args.step<a id="change">):
+                </a><a id="change">for pos_y</a> in <a id="change">range(0</a>, image<a id="change">.height - args.image_size + 1</a>, args.step<a id="change">)</a><a id="change">:
+                    </a>crop_image<a id="change"> = image.crop(</a><a id="change">[pos_x</a>, <a id="change">pos_y</a>, <a id="change">pos_x</a><a id="change"> + </a>args.image_size, <a id="change">pos_y</a><a id="change"> + </a>args.image_size<a id="change"></a>]<a id="change">)</a>
+                    &#47&#47 Save all images
+                    <a id="change">crop_image.save(f"{image_dir}/{file_name.split(&quot.&quot)[-2]}_{index:04d}.{file_name.split(&quot.&quot)[-1]}"</a><a id="change">)</a>
+                index += 1
+    print("Data split successful.")
+
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    image_file_names = os.listdir(args.images_dir)
+
+    &#47&#47 Splitting images with multiple threads
+    progress_bar<a id="change"> = </a><a id="change">tqdm(total=len(image_file_names), unit="image", desc="Split")</a>
+    workers_pool = Pool(args.num_workers)
+    for image_file_name in image_file_names:
+        workers_pool.apply_async(worker, args=(image_file_name, args), callback=lambda arg: progress_bar.update(1))
+    workers_pool.close()
+    workers_pool.join()
+    <a id="change">progress_bar.close()</a>
+
+
+def worker(image_file_name, args) -&gt; None:
+    image = Image.open(f"{args.images_dir}/{image_file_name}").convert("RGB")</code></pre>

@@ -1,0 +1,54 @@
+<html><h3>Pattern ID :10067
+</h3><img src='35817794.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        if incremental_state is None or len(incremental_state) == 0:
+            return
+        prev_hiddens, prev_cells, input_feed = self.get_cached_state(incremental_state)
+        cached_state = (prev_hiddens<a id="change">, prev_cells, [input_feed]</a>)
+        new_state = [self.reorder_state(state, new_order) for state in cached_state]
+        prev_hiddens_tensor = torch.stack(<a id="change">new_state[0]</a>)
+        prev_cells_tensor = torch.stack(new_state[1])
+        cached_state_new = torch.jit.annotate(
+            Dict[str, Optional[Tensor]],</code></pre><h3>After Change</h3><pre><code class='java'>
+        if incremental_state is None or len(incremental_state) == 0:
+            return
+        prev_hiddens, prev_cells, input_feed = self.get_cached_state(incremental_state)
+        prev_hiddens = [<a id="change">p.index_select(0</a>, new_order<a id="change">)</a> for p in prev_hiddens]
+        prev_cells = [p.index_select(0, new_order) for p in prev_cells]
+        if input_feed is not None:
+            input_feed = input_feed.index_select(0, new_order)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/kssteven418/i-bert/commit/d0ccc3e02e1a9015d05cade8dfc61896948275c7#diff-6ce7c0d4f0fb1f8f34940039a8bb42a6d902a8894dd18517bee43dac3fc09971L568' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 35817794</div><div id='project'> Project Name: kssteven418/i-bert</div><div id='commit'> Commit Name: d0ccc3e02e1a9015d05cade8dfc61896948275c7</div><div id='time'> Time: 2020-06-22</div><div id='author'> Author: myleott@fb.com</div><div id='file'> File Name: fairseq/models/lstm.py</div><div id='m_class'> M Class Name: LSTMDecoder</div><div id='n_method'> N Class Name: LSTMDecoder</div><div id='m_method'> M Method Name: reorder_incremental_state(3)</div><div id='n_method'> N Method Name: reorder_incremental_state(3)</div><div id='m_parent_class'> M Parent Class: FairseqIncrementalDecoder</div><div id='n_parent_class'> N Parent Class: FairseqIncrementalDecoder</div><div id='m_file'> M File Name: fairseq/models/lstm.py</div><div id='n_file'> N File Name: fairseq/models/lstm.py</div><div id='m_start'> M Start Line: 568</div><div id='m_end'> M End Line: 580</div><div id='n_start'> N Start Line: 573</div><div id='n_end'> N End Line: 591</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    def reorder_encoder_out(self, encoder_out: Dict[str, Tuple[Tensor, Tensor, Tensor]], new_order):
+        encoder_out[&quotencoder_out&quot] = (
+                encoder_out[&quotencoder_out&quot][0].index_select(1, new_order)<a id="change">,
+                encoder_out[&quotencoder_out&quot][1].index_select(1, new_order),
+                encoder_out[&quotencoder_out&quot][2].index_select(1, new_order)</a>)
+        if encoder_out[&quotencoder_padding_mask&quot][0] is not None:
+            <a id="change">encoder_out[&quotencoder_padding_mask&quot]</a> = (
+                encoder_out[&quotencoder_padding_mask&quot][0].index_select(1, new_order),
+                encoder_out[&quotencoder_padding_mask&quot][1],
+                encoder_out[&quotencoder_padding_mask&quot][2])</code></pre><h3>After Change</h3><pre><code class='java'>
+        return tuple((
+            encoder_out[0].index_select(1, new_order),
+            encoder_out[1].index_select(1, new_order),
+            <a id="change">encoder_out[2].index_select(1</a>, new_order<a id="change">)</a>,
+            encoder_out[3].index_select(1, new_order),
+        ))
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/kssteven418/i-bert/commit/d502958b4d3356c19e217bee834167b99a945423#diff-6ce7c0d4f0fb1f8f34940039a8bb42a6d902a8894dd18517bee43dac3fc09971L285' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 35817798</div><div id='project'> Project Name: kssteven418/i-bert</div><div id='commit'> Commit Name: d502958b4d3356c19e217bee834167b99a945423</div><div id='time'> Time: 2020-04-21</div><div id='author'> Author: myleott@fb.com</div><div id='file'> File Name: fairseq/models/lstm.py</div><div id='m_class'> M Class Name: LSTMEncoder</div><div id='n_method'> N Class Name: LSTMEncoder</div><div id='m_method'> M Method Name: reorder_encoder_out(3)</div><div id='n_method'> N Method Name: reorder_encoder_out(3)</div><div id='m_parent_class'> M Parent Class: FairseqEncoder</div><div id='n_parent_class'> N Parent Class: FairseqEncoder</div><div id='m_file'> M File Name: fairseq/models/lstm.py</div><div id='n_file'> N File Name: fairseq/models/lstm.py</div><div id='m_start'> M Start Line: 285</div><div id='m_end'> M End Line: 295</div><div id='n_start'> N Start Line: 286</div><div id='n_end'> N End Line: 292</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        Calculate the loss on each embedding by taking softmax.
+        return torch.stack([
+            torch.stack([
+                -<a id="change">F.log_softmax(cos_sim_matrix[j, i], 0)[j]</a>
+                for i in range(dvecs.size(1))
+            ])
+            for j in range(dvecs.size(0))
+        ])</code></pre><h3>After Change</h3><pre><code class='java'>
+        n_spkr, n_uttr, _ = dvecs.size()
+        indices = _indices_to_replace(n_spkr, n_uttr)
+        losses = -F.log_softmax(cos_sim_matrix, 2)
+        return <a id="change">losses.flatten().index_select(0</a>, indices<a id="change">)</a>.view(n_spkr, n_uttr)
+
+    def embed_loss_contrast(self, dvecs, cos_sim_matrix):
+        Calculate the loss on each embedding by contrast loss.</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/yistlin/dvector/commit/d51af9c774e037c25a50279326fc1893a042047e#diff-95e5aa853bf89fbd2e1b49f0180d433e5de6fb2794ed5730dc6017da060af525L57' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 35817790</div><div id='project'> Project Name: yistlin/dvector</div><div id='commit'> Commit Name: d51af9c774e037c25a50279326fc1893a042047e</div><div id='time'> Time: 2020-04-05</div><div id='author'> Author: yishen992@gmail.com</div><div id='file'> File Name: modules/ge2e.py</div><div id='m_class'> M Class Name: GE2ELoss</div><div id='n_method'> N Class Name: GE2ELoss</div><div id='m_method'> M Method Name: embed_loss_softmax(3)</div><div id='n_method'> N Method Name: embed_loss_softmax(3)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: modules/ge2e.py</div><div id='n_file'> N File Name: modules/ge2e.py</div><div id='m_start'> M Start Line: 59</div><div id='m_end'> M End Line: 65</div><div id='n_start'> N Start Line: 59</div><div id='n_end'> N End Line: 62</div><BR>

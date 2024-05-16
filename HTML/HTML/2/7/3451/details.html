@@ -1,0 +1,99 @@
+<html><h3>Pattern ID :3451
+</h3><img src='13362123.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+    dataset = datasets.__dict__[args.data]
+    partial_dataset = partial(dataset)
+    train_source_dataset<a id="change"> = </a>dataset(root=args.root, task=args.source, download=True, transform=train_transform)
+    train_source_loader = DataLoader(train_source_dataset, batch_size=args.batch_size,
+                                     shuffle=True, num_workers=args.workers, drop_last=True)
+    val_dataset = partial_dataset(root=args.root, task=args.target, download=True, transform=val_transform)
+    val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
+    if args.data == &quotDomainNet&quot:
+        test_dataset = partial_dataset(root=args.root, task=args.target, split=&quottest&quot, download=True, transform=val_transform)
+        test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
+    else:
+        test_loader = val_loader
+
+    train_source_iter = ForeverDataIterator(train_source_loader)
+
+    &#47&#47 create model
+    print("=&gt; using pre-trained model &quot{}&quot".format(args.arch))
+    backbone = models.__dict__[args.arch](pretrained=True)
+    num_classes = train_source_dataset.num_classes
+    if args.data == &quotImageNetCaltech&quot:
+        classifier<a id="change"> = Classifier(</a><a id="change">backbone, num_classes, head=backbone.copy_head()).to(</a>device<a id="change">)</a>
+    else:
+        classifier = Classifier(backbone, num_classes).to(device)
+
+    &#47&#47 define optimizer and lr scheduler</code></pre><h3>After Change</h3><pre><code class='java'>
+    cudnn.benchmark = True
+
+    &#47&#47 Data loading code
+    train_transform = <a id="change">utils.get_train_transform(</a>args.train_resizing<a id="change">, random_horizontal_flip=True, random_color_jitter=False)</a>
+    val_transform = utils.get_val_transform(args.val_resizing)
+    <a id="change">print("train_transform: "</a>, train_transform<a id="change">)</a>
+    print("val_transform: ", val_transform)
+
+    train_source_dataset, _, val_dataset, test_dataset, num_classes, args.class_names = \
+        utils.get_dataset(args.data, args.root, args.source, args.target, train_transform, val_transform)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 6</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/thuml/transfer-learning-library/commit/1d780e2bcc7b08075283ebaf2160f7f2b09dabef#diff-44a7b2d04f3ac3a16ba2bf561d87b80398fc966e3fb0d923d9f5cdea6daefa59L48' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 13362123</div><div id='project'> Project Name: thuml/transfer-learning-library</div><div id='commit'> Commit Name: 1d780e2bcc7b08075283ebaf2160f7f2b09dabef</div><div id='time'> Time: 2021-08-11</div><div id='author'> Author: 13126830206@163.com</div><div id='file'> File Name: examples/domain_adaptation/partial/source_only.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(1)</div><div id='n_method'> N Method Name: main(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples/domain_adaptation/partial/source_only.py</div><div id='n_file'> N File Name: examples/domain_adaptation/partial/source_only.py</div><div id='m_start'> M Start Line: 49</div><div id='m_end'> M End Line: 139</div><div id='n_start'> N Start Line: 48</div><div id='n_end'> N End Line: 120</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    &#47&#47 create model
+    print("=&gt; using pre-trained model &quot{}&quot".format(args.arch))
+    num_classes<a id="change"> = </a>train_dataset.num_classes
+    backbone_q = models.__dict__[args.arch](pretrained=True)
+    if args.pretrained:
+        print("=&gt; loading pre-trained backbone from &quot{}&quot".format(args.pretrained))
+        pretrained_dict = torch.load(args.pretrained)
+        backbone_q.load_state_dict(pretrained_dict, strict=False)
+    classifier_q = Classifier(backbone_q, num_classes, projection_dim=args.projection_dim)
+    if args.pretrained_fc:
+        print("=&gt; loading pre-trained fc from &quot{}&quot".format(args.pretrained_fc))
+        pretrained_fc_dict = torch.load(args.pretrained_fc)
+        classifier_q.projector.load_state_dict(pretrained_fc_dict, strict=False)
+    classifier_q = classifier_q.to(device)
+    backbone_k = models.__dict__[args.arch](pretrained=True)
+    classifier_k<a id="change"> = Classifier(</a><a id="change">backbone_k, num_classes).to(</a>device<a id="change">)</a>
+
+    bituning = Bituning(classifier_q, classifier_k, num_classes, K=args.K, m=args.m, T=args.T)
+
+    &#47&#47 define optimizer and lr scheduler</code></pre><h3>After Change</h3><pre><code class='java'>
+    cudnn.benchmark = True
+
+    &#47&#47 Data loading code
+    train_augmentation = <a id="change">utils.get_train_transform(</a>args.train_resizing, not args.no_hflip, args.color_jitter<a id="change">)</a>
+    val_transform = utils.get_val_transform(args.val_resizing)
+    train_transform = MultipleApply([train_augmentation, train_augmentation])
+    <a id="change">print("train_transform: "</a>, train_transform<a id="change">)</a>
+    print("val_transform: ", val_transform)
+
+    train_dataset, val_dataset, num_classes = utils.get_dataset(args.data, args.root, train_transform,
+                                                                val_transform, args.sample_rate, args.sample_size)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/thuml/transfer-learning-library/commit/052625393790ff6b5ffcffb9f29a68670054ea93#diff-8c5c5b3600e42580065fc93ec76aaca26a3f9349717e61f761d9ebfd327cfb9bL28' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 13362122</div><div id='project'> Project Name: thuml/transfer-learning-library</div><div id='commit'> Commit Name: 052625393790ff6b5ffcffb9f29a68670054ea93</div><div id='time'> Time: 2021-08-01</div><div id='author'> Author: 13126830206@163.com</div><div id='file'> File Name: examples/finetune/image_classification/bi_tuning.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(1)</div><div id='n_method'> N Method Name: main(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples/finetune/image_classification/bi_tuning.py</div><div id='n_file'> N File Name: examples/finetune/image_classification/bi_tuning.py</div><div id='m_start'> M Start Line: 45</div><div id='m_end'> M End Line: 84</div><div id='n_start'> N Start Line: 45</div><div id='n_end'> N End Line: 95</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    &#47&#47 create model
+    print("=&gt; using pre-trained model &quot{}&quot".format(args.arch))
+    backbone<a id="change"> = </a>models.__dict__[args.arch](pretrained=True)
+    backbone_source = models.__dict__[args.arch](pretrained=True)
+    if args.pretrained:
+        print("=&gt; loading pre-trained model from &quot{}&quot".format(args.pretrained))
+        pretrained_dict = torch.load(args.pretrained)
+        backbone.load_state_dict(pretrained_dict, strict=False)
+        backbone_source.load_state_dict(pretrained_dict, strict=False)
+    num_classes = train_dataset.num_classes
+    classifier<a id="change"> = Classifier(</a><a id="change">backbone, num_classes).to(</a>device<a id="change">)</a>
+    source_classifier = Classifier(backbone_source, head=backbone_source.copy_head(), num_classes=backbone_source.fc.out_features).to(device)
+    for param in source_classifier.parameters():
+        param.requires_grad = False
+    source_classifier.eval()</code></pre><h3>After Change</h3><pre><code class='java'>
+    cudnn.benchmark = True
+
+    &#47&#47 Data loading code
+    train_transform = <a id="change">utils.get_train_transform(</a>args.train_resizing, not args.no_hflip, args.color_jitter<a id="change">)</a>
+    val_transform = utils.get_val_transform(args.val_resizing)
+    <a id="change">print("train_transform: "</a>, train_transform<a id="change">)</a>
+    print("val_transform: ", val_transform)
+
+    train_dataset, val_dataset, num_classes = utils.get_dataset(args.data, args.root, train_transform,
+                                                                val_transform, args.sample_rate, args.sample_size)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/thuml/transfer-learning-library/commit/052625393790ff6b5ffcffb9f29a68670054ea93#diff-2fd5d90333299cac2e34d9c5718fbf48e7d8d1b0697d80ab4bdfe3f24f58aeebL32' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 13362125</div><div id='project'> Project Name: thuml/transfer-learning-library</div><div id='commit'> Commit Name: 052625393790ff6b5ffcffb9f29a68670054ea93</div><div id='time'> Time: 2021-08-01</div><div id='author'> Author: 13126830206@163.com</div><div id='file'> File Name: examples/finetune/image_classification/delta.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(1)</div><div id='n_method'> N Method Name: main(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples/finetune/image_classification/delta.py</div><div id='n_file'> N File Name: examples/finetune/image_classification/delta.py</div><div id='m_start'> M Start Line: 49</div><div id='m_end'> M End Line: 82</div><div id='n_start'> N Start Line: 48</div><div id='n_end'> N End Line: 125</div><BR>

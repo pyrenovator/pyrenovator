@@ -1,0 +1,350 @@
+<html><h3>Pattern ID :24374
+</h3><img src='75714627.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            steps_completed = epoch * len(train_loader)
+
+            &#47&#47 NEW: Pass op into train() and test().
+            <a id="change">train(</a>args, model, device, train_loader, optimizer, core_context, epoch, <a id="change">op</a><a id="change">)</a>
+            test_loss = test(args, model, device, test_loader, core_context, steps_completed, op)
+
+            scheduler.step()
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        epochs_completed = 0
+    else:
+        with core_context.checkpoint.restore_path(latest_checkpoint) as path:
+            model<a id="change">, epochs_completed</a> = load_state(path, info.trial.trial_id)
+
+    torch.manual_seed(args.seed)
+
+    if use_cuda:
+        device = torch.device("cuda")
+    elif use_mps:
+        device = torch.device("mps")
+    else:
+        device = torch.device("cpu")
+
+    train_kwargs = {"batch_size": args.batch_size}
+    test_kwargs = {"batch_size": args.test_batch_size}
+    if use_cuda:
+        cuda_kwargs = {"num_workers": 1, "pin_memory": True, "shuffle": True}
+        train_kwargs.update(cuda_kwargs)
+        test_kwargs.update(cuda_kwargs)
+
+    transform = transforms.Compose(
+        [transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))]
+    )
+    dataset1 = datasets.MNIST("../data", train=True, download=True, transform=transform)
+    dataset2 = datasets.MNIST("../data", train=False, transform=transform)
+    train_loader = torch.utils.data.DataLoader(dataset1, **train_kwargs)
+    test_loader = torch.utils.data.DataLoader(dataset2, **test_kwargs)
+
+    &#47&#47 NEW: Get hparams chosen for this trial from cluster info object.
+    hparams = info.trial.hparams
+
+    &#47&#47 NEW: Pass relevant hparams to model and optimizer.
+    model = Net(hparams).to(device)
+    optimizer = optim.Adadelta(model.parameters(), lr=hparams["learning_rate"])
+
+    scheduler = StepLR(optimizer, step_size=1, gamma=args.gamma)
+
+    &#47&#47 NEW: Iterate through the core_context.searcher.operations() to decide how long to train for.
+    &#47&#47 Start with the number of epochs completed, in case of pausing and resuming the experiment.
+    epoch_idx = epochs_completed
+    last_checkpoint_batch = None
+
+    for op in core_context.searcher.operations():
+
+        &#47&#47 NEW: Use a while loop for easier accounting of absolute lengths.
+        while epoch_idx &lt; op.length:
+
+            &#47&#47 NEW: Pass op into train() and test().
+            <a id="change">train(</a>args, model, device, train_loader, optimizer, core_context, epoch_idx, <a id="change">op</a><a id="change">)</a>
+            epochs_completed<a id="change"> = </a>epoch_idx + 1
+            steps_completed = epochs_completed * len(train_loader)
+            test_loss = test(args, model, device, test_loader, core_context, steps_completed, op)
+
+            scheduler.step()
+
+            checkpoint_metadata_dict = {
+                "steps_completed": steps_completed,
+            }
+
+            epoch_idx += 1
+
+            with core_context.checkpoint.store_path(checkpoint_metadata_dict) as (path, storage_id):
+                torch.save(model.state_dict(), path / "checkpoint.pt")
+                <a id="change">with path.joinpath("state").open("w"</a><a id="change">) as f:
+                    f.write(f"{epochs_completed},{info.trial.trial_id}"</a><a id="change">)</a>
+
+            if core_context.preempt.should_preempt():
+                return
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 9</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/determined-ai/determined/commit/5dc80c5220388d5c30b71066b2edd42f56262294#diff-00554a4eaef62dfa30cd28ab53381fd708872f818e3b680e4cf42e10878c8ee4L169' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 75714627</div><div id='project'> Project Name: determined-ai/determined</div><div id='commit'> Commit Name: 5dc80c5220388d5c30b71066b2edd42f56262294</div><div id='time'> Time: 2023-04-06</div><div id='author'> Author: isha.ghodgaonkar@hpe.com</div><div id='file'> File Name: examples/tutorials/core_api_pytorch_mnist/model_def_adaptive.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(1)</div><div id='n_method'> N Method Name: main(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples/tutorials/core_api_pytorch_mnist/model_def_adaptive.py</div><div id='n_file'> N File Name: examples/tutorials/core_api_pytorch_mnist/model_def_adaptive.py</div><div id='m_start'> M Start Line: 169</div><div id='m_end'> M End Line: 234</div><div id='n_start'> N Start Line: 180</div><div id='n_end'> N End Line: 255</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    epoch = starting_epoch
+    last_checkpoint_batch = None
+
+    for <a id="change">op</a> in core_context.searcher.operations():
+
+        &#47&#47 NEW: Use a while loop for easier accounting of absolute lengths.
+        while epoch &lt; op.length:
+            steps_completed = epoch * len(train_loader)
+
+            &#47&#47 NEW: Pass op into train() and test().
+            <a id="change">train(</a>args, model, device, train_loader, optimizer, core_context, epoch, op<a id="change">)</a>
+            test_loss = test(args, model, device, test_loader, core_context, steps_completed, op)
+
+            scheduler.step()
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    if latest_checkpoint is None:
+        epochs_completed = 0
+    else:
+        with core_context.checkpoint.restore_path(latest_checkpoint) as <a id="change">path</a>:
+            model<a id="change">, epochs_completed</a> = load_state(path, info.trial.trial_id)
+
+    torch.manual_seed(args.seed)
+
+    if use_cuda:
+        device = torch.device("cuda")
+    elif use_mps:
+        device = torch.device("mps")
+    else:
+        device = torch.device("cpu")
+
+    train_kwargs = {"batch_size": args.batch_size}
+    test_kwargs = {"batch_size": args.test_batch_size}
+    if use_cuda:
+        cuda_kwargs = {"num_workers": 1, "pin_memory": True, "shuffle": True}
+        train_kwargs.update(cuda_kwargs)
+        test_kwargs.update(cuda_kwargs)
+
+    transform = transforms.Compose(
+        [transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))]
+    )
+    dataset1 = datasets.MNIST("../data", train=True, download=True, transform=transform)
+    dataset2 = datasets.MNIST("../data", train=False, transform=transform)
+    train_loader = torch.utils.data.DataLoader(dataset1, **train_kwargs)
+    test_loader = torch.utils.data.DataLoader(dataset2, **test_kwargs)
+
+    &#47&#47 NEW: Get hparams chosen for this trial from cluster info object.
+    hparams = info.trial.hparams
+
+    &#47&#47 NEW: Pass relevant hparams to model and optimizer.
+    model = Net(hparams).to(device)
+    optimizer = optim.Adadelta(model.parameters(), lr=hparams["learning_rate"])
+
+    scheduler = StepLR(optimizer, step_size=1, gamma=args.gamma)
+
+    &#47&#47 NEW: Iterate through the core_context.searcher.operations() to decide how long to train for.
+    &#47&#47 Start with the number of epochs completed, in case of pausing and resuming the experiment.
+    epoch_idx = epochs_completed
+    last_checkpoint_batch = None
+
+    for <a id="change">op</a> in core_context.searcher.operations():
+
+        &#47&#47 NEW: Use a while loop for easier accounting of absolute lengths.
+        while epoch_idx &lt; op.length:
+
+            &#47&#47 NEW: Pass op into train() and test().
+            <a id="change">train(</a>args, model, device, train_loader, optimizer, core_context, epoch_idx, op<a id="change">)</a>
+            epochs_completed = epoch_idx + 1
+            steps_completed = epochs_completed * len(train_loader)
+            test_loss = test(args, model, device, test_loader, core_context, steps_completed, op)
+
+            scheduler.step()
+
+            checkpoint_metadata_dict = {
+                "steps_completed": steps_completed,
+            }
+
+            epoch_idx<a id="change"> += </a>1
+
+            with core_context.checkpoint.store_path(checkpoint_metadata_dict) as (path, storage_id):
+                torch.save(model.state_dict(), path / "checkpoint.pt")
+                <a id="change">with path.joinpath("state").open("w"</a><a id="change">) as f:
+                    f.write(f"{epochs_completed},{info.trial.trial_id}"</a><a id="change">)</a>
+
+            if core_context.preempt.should_preempt():
+                return
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/determined-ai/determined/commit/5dc80c5220388d5c30b71066b2edd42f56262294#diff-00554a4eaef62dfa30cd28ab53381fd708872f818e3b680e4cf42e10878c8ee4L117' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 75714626</div><div id='project'> Project Name: determined-ai/determined</div><div id='commit'> Commit Name: 5dc80c5220388d5c30b71066b2edd42f56262294</div><div id='time'> Time: 2023-04-06</div><div id='author'> Author: isha.ghodgaonkar@hpe.com</div><div id='file'> File Name: examples/tutorials/core_api_pytorch_mnist/model_def_adaptive.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(1)</div><div id='n_method'> N Method Name: main(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples/tutorials/core_api_pytorch_mnist/model_def_adaptive.py</div><div id='n_file'> N File Name: examples/tutorials/core_api_pytorch_mnist/model_def_adaptive.py</div><div id='m_start'> M Start Line: 169</div><div id='m_end'> M End Line: 234</div><div id='n_start'> N Start Line: 180</div><div id='n_end'> N End Line: 255</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    epoch = starting_epoch
+    last_checkpoint_batch = None
+
+    for <a id="change">op</a> in core_context.searcher.operations():
+
+        while epoch &lt; op.length:
+            steps_completed = epoch * len(train_loader)
+            <a id="change">train(</a>args, model, device, train_loader, optimizer, core_context, epoch, op<a id="change">)</a>
+            test_loss = test(args, model, device, test_loader, core_context, steps_completed, op)
+
+            scheduler.step()
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    if latest_checkpoint is None:
+        epochs_completed = 0
+    else:
+        with core_context.checkpoint.restore_path(latest_checkpoint) as <a id="change">path</a>:
+            model<a id="change">, epochs_completed</a> = load_state(path, info.trial.trial_id)
+
+    torch.manual_seed(args.seed)
+
+    if use_cuda:
+        &#47&#47 NEW: Change selected device to the one with index of local_rank.
+        device = torch.device(core_context.distributed.local_rank)
+    elif use_mps:
+        device = torch.device("mps")
+    else:
+        device = torch.device("cpu")
+
+    train_kwargs = {"batch_size": args.batch_size}
+    test_kwargs = {"batch_size": args.test_batch_size}
+    if use_cuda:
+        &#47&#47 NEW: Remove DataLoader shuffle argument since it is mutually exlusive
+        &#47&#47 with DistributedSampler shuffle, set shuffle=True there instead.
+        cuda_kwargs = {"num_workers": 1, "pin_memory": True}
+        train_kwargs.update(cuda_kwargs)
+        test_kwargs.update(cuda_kwargs)
+
+    transform = transforms.Compose(
+        [transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))]
+    )
+
+    dataset1 = datasets.MNIST("../data", train=True, download=True, transform=transform)
+    dataset2 = datasets.MNIST("../data", train=False, transform=transform)
+
+    &#47&#47 NEW: Create DistributedSampler object for sharding data into core_context.distributed.size parts.
+    sampler1 = DistributedSampler(
+        dataset1,
+        num_replicas=core_context.distributed.size,
+        rank=core_context.distributed.rank,
+        shuffle=True,
+    )
+    sampler2 = DistributedSampler(
+        dataset2,
+        num_replicas=core_context.distributed.size,
+        rank=core_context.distributed.rank,
+        shuffle=True,
+    )
+
+    &#47&#47 NEW: Shard data.
+    train_loader = torch.utils.data.DataLoader(dataset1, sampler=sampler1, **train_kwargs)
+    test_loader = torch.utils.data.DataLoader(dataset2, sampler=sampler2, **test_kwargs)
+
+    hparams = info.trial.hparams
+
+    model = Net(hparams).to(device)
+    &#47&#47 NEW: Wrap model with DDP. Aggregates gradients and synchronizes model training across slots.
+    model = DDP(model, device_ids=[device], output_device=device)
+
+    optimizer = optim.Adadelta(model.parameters(), lr=hparams["learning_rate"])
+    scheduler = StepLR(optimizer, step_size=1, gamma=args.gamma)
+
+    epoch_idx = epochs_completed
+    last_checkpoint_batch = None
+
+    for <a id="change">op</a> in core_context.searcher.operations():
+
+        while epoch_idx &lt; op.length:
+            <a id="change">train(</a>args, model, device, train_loader, optimizer, core_context, epoch_idx, op<a id="change">)</a>
+            epochs_completed = epoch_idx + 1
+            steps_completed = epochs_completed * len(train_loader)
+            test_loss = test(args, model, device, test_loader, core_context, steps_completed, op)
+
+            scheduler.step()
+
+            checkpoint_metadata_dict = {
+                "steps_completed": steps_completed,
+            }
+
+            epoch_idx<a id="change"> += </a>1
+
+            &#47&#47 Store checkpoints only on rank 0.
+            if core_context.distributed.rank == 0:
+                with core_context.checkpoint.store_path(checkpoint_metadata_dict) as (
+                    path,
+                    storage_id,
+                ):
+                    torch.save(model.state_dict(), path / "checkpoint.pt")
+                    <a id="change">with path.joinpath("state").open("w"</a><a id="change">) as f:
+                        f.write(f"{epochs_completed},{info.trial.trial_id}"</a><a id="change">)</a>
+
+            if core_context.preempt.should_preempt():
+                return
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/determined-ai/determined/commit/5dc80c5220388d5c30b71066b2edd42f56262294#diff-7527109564ac72eaaf4df758cc33f9562f4fd4769ea211dc60cd30c8abc51f3cL121' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 75714631</div><div id='project'> Project Name: determined-ai/determined</div><div id='commit'> Commit Name: 5dc80c5220388d5c30b71066b2edd42f56262294</div><div id='time'> Time: 2023-04-06</div><div id='author'> Author: isha.ghodgaonkar@hpe.com</div><div id='file'> File Name: examples/tutorials/core_api_pytorch_mnist/model_def_distributed.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(1)</div><div id='n_method'> N Method Name: main(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples/tutorials/core_api_pytorch_mnist/model_def_distributed.py</div><div id='n_file'> N File Name: examples/tutorials/core_api_pytorch_mnist/model_def_distributed.py</div><div id='m_start'> M Start Line: 173</div><div id='m_end'> M End Line: 254</div><div id='n_start'> N Start Line: 184</div><div id='n_end'> N End Line: 279</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    optimizer = optim.Adadelta(model.parameters(), lr=args.lr)
+
+    scheduler = StepLR(optimizer, step_size=1, gamma=args.gamma)
+    for <a id="change">epoch</a> in range(1, args.epochs + 1):
+
+        steps_completed = epoch * len(train_loader)
+
+        <a id="change">train(</a>args, model, device, train_loader, optimizer, epoch, core_context<a id="change">)</a>
+        test(args, model, device, test_loader, epoch, core_context, steps_completed=steps_completed)
+
+        scheduler.step()
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    if latest_checkpoint is None:
+        epochs_completed = 0
+    else:
+        with core_context.checkpoint.restore_path(latest_checkpoint) as <a id="change">path</a>:
+            model<a id="change">, epochs_completed</a> = load_state(path, info.trial.trial_id)
+
+    torch.manual_seed(args.seed)
+
+    if use_cuda:
+        device = torch.device("cuda")
+    elif use_mps:
+        device = torch.device("mps")
+    else:
+        device = torch.device("cpu")
+
+    train_kwargs = {"batch_size": args.batch_size}
+    test_kwargs = {"batch_size": args.test_batch_size}
+    if use_cuda:
+        cuda_kwargs = {"num_workers": 1, "pin_memory": True, "shuffle": True}
+        train_kwargs.update(cuda_kwargs)
+        test_kwargs.update(cuda_kwargs)
+
+    transform = transforms.Compose(
+        [transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))]
+    )
+    dataset1 = datasets.MNIST("../data", train=True, download=True, transform=transform)
+    dataset2 = datasets.MNIST("../data", train=False, transform=transform)
+    train_loader = torch.utils.data.DataLoader(dataset1, **train_kwargs)
+    test_loader = torch.utils.data.DataLoader(dataset2, **test_kwargs)
+
+    model = Net().to(device)
+    optimizer = optim.Adadelta(model.parameters(), lr=args.lr)
+
+    scheduler = StepLR(optimizer, step_size=1, gamma=args.gamma)
+
+    &#47&#47 NEW: Resume training from epochs_completed. This is useful in the case of pausing and resuming an experiment.
+    for <a id="change">epoch_idx</a> in range(epochs_completed, args.epochs):
+
+        <a id="change">train(</a>args, model, device, train_loader, optimizer, epoch_idx, core_context<a id="change">)</a>
+        epochs_completed<a id="change"> = </a>epoch_idx + 1
+        steps_completed = epochs_completed * len(train_loader)
+        test(
+            args,
+            model,
+            device,
+            test_loader,
+            epoch_idx,
+            core_context,
+            steps_completed=steps_completed,
+        )
+
+        scheduler.step()
+
+        &#47&#47 NEW: Save checkpoint.
+        checkpoint_metadata_dict = {"steps_completed": steps_completed}
+
+        &#47&#47 NEW: Here we are saving multiple files to our checkpoint directory. 1) a model state file and 2) a file includes information
+        &#47&#47 about the training loop state.
+        with core_context.checkpoint.store_path(checkpoint_metadata_dict) as (path, storage_id):
+            torch.save(model.state_dict(), path / "checkpoint.pt")
+            <a id="change">with path.joinpath("state").open("w"</a><a id="change">) as f:
+                f.write(f"{epochs_completed},{info.trial.trial_id}"</a><a id="change">)</a>
+
+        &#47&#47 NEW: Detect when the experiment is paused by the WebUI.
+        if core_context.preempt.should_preempt():
+            return</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/determined-ai/determined/commit/5dc80c5220388d5c30b71066b2edd42f56262294#diff-503505bfd6e27c537861aa1e1e66f835d4ff317c4e021d94fe44d3dcc4187632L107' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 75714633</div><div id='project'> Project Name: determined-ai/determined</div><div id='commit'> Commit Name: 5dc80c5220388d5c30b71066b2edd42f56262294</div><div id='time'> Time: 2023-04-06</div><div id='author'> Author: isha.ghodgaonkar@hpe.com</div><div id='file'> File Name: examples/tutorials/core_api_pytorch_mnist/model_def_checkpoints.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(1)</div><div id='n_method'> N Method Name: main(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples/tutorials/core_api_pytorch_mnist/model_def_checkpoints.py</div><div id='n_file'> N File Name: examples/tutorials/core_api_pytorch_mnist/model_def_checkpoints.py</div><div id='m_start'> M Start Line: 159</div><div id='m_end'> M End Line: 203</div><div id='n_start'> N Start Line: 171</div><div id='n_end'> N End Line: 243</div><BR>

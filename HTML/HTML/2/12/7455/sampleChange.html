@@ -1,0 +1,31 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    else:
+        loss = F.mse_loss(Y_hat, y, reduction="none")
+
+    <a id="change">if </a>not is_sum_over_tasks:
+        n_tasks = prod(Y_hat[0<a id="change">, 0, ...</a>].shape)
+        loss = loss / n_tasks  &#47&#47 takes an average over tasks
+
+    batch_size = loss.size(0)</code></pre><h3>After Change</h3><pre><code class='java'>
+    loss = loss.view(batch_size, Y_dim, -1).mean(keepdim=False, dim=1)
+
+    &#47&#47 shape = [batch_size, 1]
+    <a id="change">if agg_over_tasks == "mean"</a>:
+        loss = loss.mean(keepdim=True, dim=1)
+    elif agg_over_tasks == "max":
+        loss<a id="change"> = </a>loss.max(keepdim=True, dim=1)[0]
+    elif agg_over_tasks == "sum":
+        loss = loss.sum(keepdim=True, dim=1)
+    elif agg_over_tasks == "std":
+        loss = loss.std(keepdim=True, dim=1)
+    elif <a id="change">agg_over_tasks is None</a>:
+        loss<a id="change"> = </a>loss  &#47&#47 shape = [batch_size, n_tasks]
+    else:
+        <a id="change">raise </a><a id="change">ValueError(f"Unkown agg_over_tasks={agg_over_tasks}."</a><a id="change">)</a>
+
+    return loss
+
+</code></pre>

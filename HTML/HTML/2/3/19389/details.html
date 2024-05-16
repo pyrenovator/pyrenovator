@@ -1,0 +1,70 @@
+<html><h3>Pattern ID :19389
+</h3><img src='63310446.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    backend = cfg.main.backend
+
+    print(f"initializing `{backend}` process group")
+    <a id="change">dist.init_process_group(
+        backend=backend,
+        init_method=f"tcp://{master_addr}:{master_port}",
+        rank=rank,
+        world_size=world_size,
+    )</a>
+    print("successfully initialized process group")
+
+    rank = dist.get_rank()
+    world_size = dist.get_world_size()</code></pre><h3>After Change</h3><pre><code class='java'>
+
+def compute_world_size(cfg: DictConfig) -&gt; int:
+    &#47&#47 required env vars for initializing pg with the default init_method (env://)
+    <a id="change">os.environ["RANK"]</a> = str(cfg.main.rank)
+    os.environ["WORLD_SIZE"] = str(cfg.main.world_size)
+    os.environ["MASTER_ADDR"] = cfg.main.master_addr
+    os.environ["MASTER_PORT"] = str(cfg.main.master_port)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 2</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/pytorch/torchx/commit/a9ca56eb424c08ee7baedd322d9b172242c2162f#diff-ed2e525ee63f885f43861d0a8412107c11c5b317d4f690dff4294a264a602521L17' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 63310446</div><div id='project'> Project Name: pytorch/torchx</div><div id='commit'> Commit Name: a9ca56eb424c08ee7baedd322d9b172242c2162f</div><div id='time'> Time: 2023-04-16</div><div id='author'> Author: 43595115+kiukchung@users.noreply.github.com</div><div id='file'> File Name: torchx/examples/apps/compute_world_size/module/util.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: compute_world_size(1)</div><div id='n_method'> N Method Name: compute_world_size(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: torchx/examples/apps/compute_world_size/module/util.py</div><div id='n_file'> N File Name: torchx/examples/apps/compute_world_size/module/util.py</div><div id='m_start'> M Start Line: 17</div><div id='m_end'> M End Line: 29</div><div id='n_start'> N Start Line: 18</div><div id='n_end'> N End Line: 26</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        print(&quotrank = &quot, local_rank)
+        num_gpus = torch.cuda.device_count()
+        torch.cuda.set_device(local_rank % num_gpus)
+        <a id="change">dist.init_process_group(backend=&quotnccl&quot)</a>
+        train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
+        train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=cfg.device.batchsize_per_gpu,
+                                                       num_workers=cfg.device.workers_per_gpu, pin_memory=True,
+                                                       collate_fn=collate_function, sampler=train_sampler,</code></pre><h3>After Change</h3><pre><code class='java'>
+            warnings.warn(&quotWarning! Old .pth checkpoint is deprecated. &quot
+                          &quotConvert the checkpoint with tools/convert_old_checkpoint.py &quot)
+            ckpt = convert_old_model(ckpt)
+        task.load_state_dict(<a id="change">ckpt[&quotstate_dict&quot]</a>)
+
+    model_resume_path = os.path.join(cfg.save_dir, &quotmodel_last.ckpt&quot) if &quotresume&quot in cfg.schedule else None
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/rangilyu/nanodet/commit/6c7dd670c9bc0311a26bfe0ebb775726902db779#diff-7fc3906bb14652119559420a7b84aac995bfa36f9a7b0f00e215b9f0b6301d9bL41' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 63310452</div><div id='project'> Project Name: rangilyu/nanodet</div><div id='commit'> Commit Name: 6c7dd670c9bc0311a26bfe0ebb775726902db779</div><div id='time'> Time: 2021-04-11</div><div id='author'> Author: lyuchqi@gmail.com</div><div id='file'> File Name: tools/train.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(1)</div><div id='n_method'> N Method Name: main(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: tools/train.py</div><div id='n_file'> N File Name: tools/train.py</div><div id='m_start'> M Start Line: 43</div><div id='m_end'> M End Line: 87</div><div id='n_start'> N Start Line: 51</div><div id='n_end'> N End Line: 91</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    torch.cuda.set_device(args.gpu)
+    args.dist_backend = "nccl"
+    print(f"| distributed init (rank {args.rank}): {args.dist_url}", flush=True)
+    <a id="change">torch.distributed.init_process_group(
+        backend=args.dist_backend, init_method=args.dist_url, world_size=args.world_size, rank=args.rank
+    )</a>
+    torch.distributed.barrier()
+    setup_for_distributed(args.rank == 0)</code></pre><h3>After Change</h3><pre><code class='java'>
+        args[&quotgpu&quot] = args.rank % torch.cuda.device_count()
+    else:
+        print("Not using distributed mode")
+        <a id="change">args[&quotdistributed&quot]</a> = False
+        return
+
+    args.distributed = True</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/sovit-123/fastercnn-pytorch-training-pipeline/commit/577b961dc31a8900285ae649cf3f491cffbb38aa#diff-1eb7110eb1fc93ab238e1538265632d89d961e57e1aef391ab65af5e922589c5L262' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 63310444</div><div id='project'> Project Name: sovit-123/fastercnn-pytorch-training-pipeline</div><div id='commit'> Commit Name: 577b961dc31a8900285ae649cf3f491cffbb38aa</div><div id='time'> Time: 2022-10-24</div><div id='author'> Author: sovitrath6@gmail.com</div><div id='file'> File Name: torch_utils/utils.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: init_distributed_mode(1)</div><div id='n_method'> N Method Name: init_distributed_mode(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: torch_utils/utils.py</div><div id='n_file'> N File Name: torch_utils/utils.py</div><div id='m_start'> M Start Line: 264</div><div id='m_end'> M End Line: 284</div><div id='n_start'> N Start Line: 264</div><div id='n_end'> N End Line: 284</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    &#47&#47 1. 分布式初始化，对于每一个进程都需要进行初始化，所以定义在 main_worker中
+    cudnn.benchmark = True
+    <a id="change">dist.init_process_group(backend=&quotnccl&quot)</a>
+
+    &#47&#47 2. 基本定义，模型-损失函数-优化器
+    model = resnet18()  &#47&#47 定义模型，将对应进程放到对应的GPU上， .cuda(local_rank) / .set_device(local_rank)
+    torch.cuda.set_device(local_rank)</code></pre><h3>After Change</h3><pre><code class='java'>
+                print(
+                    &quotTraining Epoch: {epoch} [{trained_samples}/{total_samples}]\tLoss: {:0.4f}\tLR: {:0.6f}&quot.format(
+                        reduced_loss,
+                        <a id="change">optimizer.param_groups[0][&quotlr&quot]</a>,
+                        epoch=epoch,
+                        trained_samples=step * args.batch_size + len(images),
+                        total_samples=len(train_loader.dataset)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/rentainhe/pytorch-distributed-training/commit/924a65892510a4cf1352ee408d6186344043f3a4#diff-f080c66d54726c9df3b2a7a496310425104eddad5c79eb4dc09c30d7d71f0a50L56' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 63310443</div><div id='project'> Project Name: rentainhe/pytorch-distributed-training</div><div id='commit'> Commit Name: 924a65892510a4cf1352ee408d6186344043f3a4</div><div id='time'> Time: 2021-01-05</div><div id='author'> Author: 596106517@qq.com</div><div id='file'> File Name: distributed.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main_worker(3)</div><div id='n_method'> N Method Name: main_worker(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: distributed.py</div><div id='n_file'> N File Name: distributed.py</div><div id='m_start'> M Start Line: 60</div><div id='m_end'> M End Line: 111</div><div id='n_start'> N Start Line: 41</div><div id='n_end'> N End Line: 110</div><BR>

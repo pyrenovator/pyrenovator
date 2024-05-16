@@ -1,0 +1,35 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            for i in range(4):
+                test_result = render_image(fine_net, test_cam_tf[i * 10], 200, test_focal, near_t, far_t, fine_sample_pnum)
+                test_results.append(test_result)
+                test_loss<a id="change"> += </a>loss_func(test_result, <a id="change">testset[i * 10].cuda()</a>)
+            render_timer.toc()
+            eval_timer.toc()
+            writer.add_scalar(&quotTest Loss&quot, loss, test_cnt)</code></pre><h3>After Change</h3><pre><code class='java'>
+    train_focal = fov2Focal(cam_fov_train, 200)
+    test_focal = fov2Focal(cam_fov_test, 200)
+    test_cam_tf = test_cam_tf.cuda()
+    train_images = <a id="change">train_images[0].unsqueeze(0</a><a id="change">)</a>
+
+    &#47&#47 ====== tensorboard summary writer ======
+    writer = getSummaryWriter(epochs, del_dir)
+
+    &#47&#47 有如下两处可以修改：（1）默认训练方式是每次迭代随机选择一张图，从一张图中随机选择光线 （2）使用centercorp（初始化阶段，希望获得更多的图像信息，以免学习到无效信息引起梯度偏移）
+
+    train_cnt, test_cnt = 0, 0
+    train_timer, eval_timer, epoch_timer, render_timer = Timer(5), Timer(5), Timer(3), Timer(4)
+    torch.cuda.empty_cache()
+    for ep in range(epochs):
+        epoch_timer.tic()
+        coarse_net.train()
+        fine_net.train()
+        for i in range(train_per_epoch):
+            train_timer.tic()
+            now_crop = (center_crop if train_cnt &lt; center_crop_iter else 1.)
+            valid_pixels<a id="change">, valid_coords, img_idx = </a>randomFromOneImage(train_images, now_crop)
+            coarse_samples, coarse_lengths, rgb_targets, coarse_cam_rays = validSampler(
+                valid_pixels, valid_coords, train_cam_tf[img_idx], sample_ray_num, coarse_sample_pnum, 200, 200, train_focal, near_t, far_t
+            )</code></pre>

@@ -1,0 +1,45 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                    assert dy.shape == pos.shape
+
+                    assert conf["partial_charges"].attrs["units"] == "e"
+                    pq<a id="change"> = </a><a id="change">pt.tensor(</a>conf["partial_charges"]<a id="change">, dtype=pt.float32)</a>
+                    assert pq.shape == z.shape
+
+                    assert conf["dipole_moment"].attrs["units"] == "e*Å"
+                    dp = pt.tensor(conf["dipole_moment"], dtype=pt.float32)</code></pre><h3>After Change</h3><pre><code class='java'>
+
+            &#47&#47 Iterate over the molecules
+            for i_mol, (mol_id, mol) in tqdm(
+                <a id="change">enumerate(</a>mols<a id="change">)</a>,
+                desc="Molecules",
+                total=len(mols),
+                leave=False,
+            ):
+
+                &#47&#47 Subsample molecules
+                if i_mol % self.subsample_molecules != 0:
+                    continue
+
+                z = pt.tensor(mol["atomic_numbers"], dtype=pt.long)
+                fq = pt.tensor(mol["formal_charges"], dtype=pt.long)
+                q = fq.sum()
+
+                for pos, y, neg_dy, pq, dp in load_confs(mol, n_atoms=len(z)):
+
+                    &#47&#47 Skip samples with large forces
+                    if self.max_gradient:
+                        if neg_dy.norm(dim=1).max() &gt; float(self.max_gradient):
+                            continue
+
+                    &#47&#47 Create a sample
+                    args = dict(
+                        z=z, pos=pos, y=y.view(1, 1), neg_dy=neg_dy, q=q, pq=pq, dp=dp
+                    )
+                    if mol_ids:
+                        args["mol_id"]<a id="change"> = </a>mol_id
+                    data = Data(**args)
+
+                    if self.pre_filter is not None and not self.pre_filter(data):</code></pre>

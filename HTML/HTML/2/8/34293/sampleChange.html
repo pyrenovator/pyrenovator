@@ -1,0 +1,48 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                p_bar.update()
+
+    _threshold_number = int(_number_all_funds * threshold)
+    calendar<a id="change"> = </a><a id="change">[date for date in _list_all_date if _list_all_date[date] &gt;= _threshold_number]</a>
+
+    return calendar
+
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    logger.info(f"get calendar list from {source_dir} by threshold = {threshold}......")
+
+    source_dir = Path(source_dir).expanduser()
+    file_list = list(<a id="change">source_dir.glob(</a>"*.csv"<a id="change">)</a>)
+
+    _number_all_funds = len(file_list)
+
+    logger.info(f"count how many funds trade in this day......")
+    _dict_count_trade = dict() &#47&#47 dict{date:count}
+    _fun = partial(return_date_list, source_dir, date_field_name)
+    with tqdm(total=_number_all_funds) as p_bar:
+        with ProcessPoolExecutor(max_workers=max_workers) as executor:
+            for date_list in executor.map(_fun, file_list[:_number_all_funds]):
+                for date in date_list:
+                    if date not in _dict_count_trade.keys():
+                        _dict_count_trade[date] = 0
+
+                    _dict_count_trade[date] += 1
+
+                p_bar.update()
+    
+    logger.info(f"count how many funds have founded in this day......")
+    _dict_count_founding = {date:_number_all_funds for date in _dict_count_trade.keys()}   &#47&#47 dict{date:count}
+    with tqdm(total=_number_all_funds) as p_bar:
+        with ProcessPoolExecutor(max_workers=max_workers) as executor:
+            for date_list in executor.map(_fun, file_list[:_number_all_funds]):
+                oldest_date = sorted(date_list)[0]  &#47&#47 this fund haven&quott found before this day
+                for date in _dict_count_founding.keys():
+                    <a id="change">if </a>date &lt; oldest_date:
+                        _dict_count_founding[date] -= 1
+
+    calendar<a id="change"> = [date for date in _dict_count_trade if _dict_count_trade[date] &gt;= max(int(_dict_count_founding[date] * threshold), minimum_count)]</a>
+
+    return calendar
+
+</code></pre>

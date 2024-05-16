@@ -1,0 +1,231 @@
+<html><h3>Pattern ID :13955
+</h3><img src='46445765.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            if len(predicted.shape) &gt; 2:
+                predicted = predicted.T.reshape(
+                    predicted.shape[0] * predicted.shape[2] * predicted.shape[3],
+                    <a id="change">predicted.shape[1]</a>,
+                )
+                labels = labels.T.reshape(
+                    labels.shape[0] * labels.shape[2] * labels.shape[3], labels.shape[1]</code></pre><h3>After Change</h3><pre><code class='java'>
+    def evaluate_model(
+        self, dataloader, criterion=None, description="testing on validation set",
+    ):
+        <a id="change">labels_total</a><a id="change"> = </a>[]
+        predicted_total = <a id="change">[]</a>
+        iou_labels_total = torch.zeros([1, self.num_classes], dtype=torch.float64)
+
+        
+        Evaluates the current model against the specified dataloader for the specified metrics
+        :param dataloader:
+        :param metrics: list of metric keys to calculate
+        :criterion: Criterion to calculate loss
+        :description: What to show in the progress bar
+        :return: tuple of (metrics, y_true, y_pred)
+        
+        self.model.eval()
+
+        &#47&#47 initialize loss if applicable
+        total_loss = 0.0
+
+        for inputs, outputs, labels in self.predict_output_per_batch(
+            dataloader, description
+        ):
+            if criterion:
+                batch_loss = criterion(outputs, labels)
+                total_loss += batch_loss.item() * inputs.size(0)
+
+            predicted_probs, predicted = self.get_predicted(outputs)
+
+            labels_total += list(labels.cpu().detach().numpy())
+            predicted_total += list(predicted.cpu().detach().numpy())
+
+            &#47&#47print(labels, predicted)
+
+            &#47&#47 if segmentation reshape the predictions and labels
+            &#47&#47if len(predicted.shape) &gt; 2:
+            &#47&#47    iou_labels_total += iou_pytorch(predicted.type(torch.int), labels.type(torch.int))
+
+            if (
+                len(labels.shape) == 1
+            ):  &#47&#47 if it is multiclass, then we need one hot encoding for the predictions
+                &#47&#47print(labels.size(0), self.num_classes)
+                one_hot = torch.zeros(labels.size(0), self.num_classes)
+                predicted = predicted.reshape(predicted.size(0))
+                one_hot[torch.arange(labels.size(0)), predicted.type(torch.long)] = 1
+                predicted = one_hot
+                predicted = predicted.to(self.device)
+                &#47&#47print(&quotLabels: &quot, labels.type(torch.uint8), &quotPredicted: &quot, predicted.type(torch.uint8))
+
+            self.running_metrics.update(
+                labels.type(torch.uint8), predicted.type(torch.uint8)
+            )
+
+        if criterion:
+            total_loss = total_loss / len(dataloader.dataset)
+
+        <a id="change">predicted_total = </a>[int(i) for i in predicted_total]
+
+        &#47&#47print(labels_total, predicted_total)
+
+        <a id="change">print(</a>&quotMetrika macro: &quot, <a id="change">f1_score(labels_total</a>, <a id="change">predicted_total</a><a id="change">, average=&quotmacro&quot))</a>
+        print(&quotMetrika micro: &quot, <a id="change">f1_score(labels_total</a>, <a id="change">predicted_total</a><a id="change">, average=&quotmicro&quot)</a>)
+        <a id="change">print(</a>&quotMetrika weighted: &quot, <a id="change">f1_score(labels_total</a>, <a id="change">predicted_total</a><a id="change">, average=&quotweighted&quot)</a><a id="change">)</a>
+
+
+        &#47&#47print(self.running_metrics.get_f1score())
+        &#47&#47print(&quotRezultat: &quot, iou_labels_total / len(dataloader.dataset))</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 9</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/biasvariancelabs/aitlas/commit/91b0085c154780bb7c833f1ecca31419c87ea510#diff-8c90d9e0305520faf5687b35e4d44d83709cb7e5160a7973610665e9a7133487L221' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 46445765</div><div id='project'> Project Name: biasvariancelabs/aitlas</div><div id='commit'> Commit Name: 91b0085c154780bb7c833f1ecca31419c87ea510</div><div id='time'> Time: 2021-04-26</div><div id='author'> Author: ivica.dimitrovski@yahoo.com</div><div id='file'> File Name: aitlas/base/models.py</div><div id='m_class'> M Class Name: BaseModel</div><div id='n_method'> N Class Name: BaseModel</div><div id='m_method'> M Method Name: evaluate_model(4)</div><div id='n_method'> N Method Name: evaluate_model(4)</div><div id='m_parent_class'> M Parent Class: nn.Module,Configurable</div><div id='n_parent_class'> N Parent Class: nn.Module,Configurable</div><div id='m_file'> M File Name: aitlas/base/models.py</div><div id='n_file'> N File Name: aitlas/base/models.py</div><div id='m_start'> M Start Line: 233</div><div id='m_end'> M End Line: 251</div><div id='n_start'> N Start Line: 221</div><div id='n_end'> N End Line: 280</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+      a = nn.Softmax()(outs)
+    for ii in range(len(outs)):
+      total += 1
+      if outs[ii].tolist().index(max(outs[ii])) == <a id="change">y_batch[ii]</a>:
+        correct += 1
+      pts.append([a[ii][1], y_batch[ii]])
+  print((float(correct)/total))</code></pre><h3>After Change</h3><pre><code class='java'>
+
+def test_MFM(model, test_dataloader, auprc=False, task="classification"):
+  pred=[]
+  true=<a id="change">[]</a>
+  pts = []
+  for j in test_dataloader:
+    xes = [x.float().cuda() for x in j[:-1]]
+    y_batch = j[-1].cuda()
+    with torch.no_grad():
+      _, outs = model(xes, training=False)
+      if task=="classification":
+        a = nn.Softmax()(outs)
+    for ii in range(len(outs)):
+      pts.append([a[ii][1], y_batch[ii]])
+    if task == "classification":
+      pred.append(torch.argmax(outs, 1))
+    elif task == "multilabel":
+      pred.append(torch.sigmoid(outs).round())
+    true.append(j[-1])
+  if pred:
+    <a id="change">pred</a><a id="change"> = </a>torch.cat(pred, 0).cpu().numpy()
+  <a id="change">true = </a>torch.cat(true, 0).cpu().numpy()
+  if auprc:
+    print(AUPRC(pts))
+  if task == "classification":
+    <a id="change">print(</a>"acc: "+str(accuracy_score(true, pred))<a id="change">)</a>
+    return accuracy_score(true, pred)
+  elif task == "multilabel":
+    <a id="change">print(</a>" f1_micro: "+str(<a id="change">f1_score(</a>true, pred<a id="change">, average="micro")</a>)+\
+        " f1_macro: "+str(<a id="change">f1_score(</a>true, pred<a id="change">, average="macro")</a>)<a id="change">)</a>
+    return f1_score(true, pred, average="micro"), <a id="change">f1_score(</a>true, pred<a id="change">, average="macro")</a>
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/pliang279/multibench/commit/e8df377596458671f3a074b2f5d41a118b3fe6ae#diff-328705d89964545233518bba0c6d09aacc4a473df36c6e5b9b3f14e0d2c24af5L84' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 46445894</div><div id='project'> Project Name: pliang279/multibench</div><div id='commit'> Commit Name: e8df377596458671f3a074b2f5d41a118b3fe6ae</div><div id='time'> Time: 2021-06-06</div><div id='author'> Author: ztwu_nil@zju.edu.cn</div><div id='file'> File Name: training_structures/MFM.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: test_MFM(4)</div><div id='n_method'> N Method Name: test_MFM(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: training_structures/MFM.py</div><div id='n_file'> N File Name: training_structures/MFM.py</div><div id='m_start'> M Start Line: 85</div><div id='m_end'> M End Line: 103</div><div id='n_start'> N Start Line: 115</div><div id='n_end'> N End Line: 144</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            &#47&#47 if segmentation reshape the predictions and labels
+            if len(predicted.shape) &gt; 2:
+                predicted = predicted.T.reshape(
+                    <a id="change">predicted.shape[0]</a> * predicted.shape[2] * predicted.shape[3],
+                    predicted.shape[1],
+                )
+                labels = labels.T.reshape(</code></pre><h3>After Change</h3><pre><code class='java'>
+    def evaluate_model(
+        self, dataloader, criterion=None, description="testing on validation set",
+    ):
+        <a id="change">labels_total</a><a id="change"> = </a>[]
+        predicted_total = <a id="change">[]</a>
+        iou_labels_total = torch.zeros([1, self.num_classes], dtype=torch.float64)
+
+        
+        Evaluates the current model against the specified dataloader for the specified metrics
+        :param dataloader:
+        :param metrics: list of metric keys to calculate
+        :criterion: Criterion to calculate loss
+        :description: What to show in the progress bar
+        :return: tuple of (metrics, y_true, y_pred)
+        
+        self.model.eval()
+
+        &#47&#47 initialize loss if applicable
+        total_loss = 0.0
+
+        for inputs, outputs, labels in self.predict_output_per_batch(
+            dataloader, description
+        ):
+            if criterion:
+                batch_loss = criterion(outputs, labels)
+                total_loss += batch_loss.item() * inputs.size(0)
+
+            predicted_probs, predicted = self.get_predicted(outputs)
+
+            labels_total += list(labels.cpu().detach().numpy())
+            predicted_total += list(predicted.cpu().detach().numpy())
+
+            &#47&#47print(labels, predicted)
+
+            &#47&#47 if segmentation reshape the predictions and labels
+            &#47&#47if len(predicted.shape) &gt; 2:
+            &#47&#47    iou_labels_total += iou_pytorch(predicted.type(torch.int), labels.type(torch.int))
+
+            if (
+                len(labels.shape) == 1
+            ):  &#47&#47 if it is multiclass, then we need one hot encoding for the predictions
+                &#47&#47print(labels.size(0), self.num_classes)
+                one_hot = torch.zeros(labels.size(0), self.num_classes)
+                predicted = predicted.reshape(predicted.size(0))
+                one_hot[torch.arange(labels.size(0)), predicted.type(torch.long)] = 1
+                predicted = one_hot
+                predicted = predicted.to(self.device)
+                &#47&#47print(&quotLabels: &quot, labels.type(torch.uint8), &quotPredicted: &quot, predicted.type(torch.uint8))
+
+            self.running_metrics.update(
+                labels.type(torch.uint8), predicted.type(torch.uint8)
+            )
+
+        if criterion:
+            total_loss = total_loss / len(dataloader.dataset)
+
+        <a id="change">predicted_total = </a>[int(i) for i in predicted_total]
+
+        &#47&#47print(labels_total, predicted_total)
+
+        print(&quotMetrika macro: &quot, <a id="change">f1_score(</a>labels_total, predicted_total<a id="change">, average=&quotmacro&quot)</a>)
+        <a id="change">print(</a>&quotMetrika micro: &quot, <a id="change">f1_score(</a>labels_total, predicted_total<a id="change">, average=&quotmicro&quot))</a>
+        <a id="change">print(</a>&quotMetrika weighted: &quot, <a id="change">f1_score(</a>labels_total, predicted_total<a id="change">, average=&quotweighted&quot)</a><a id="change">)</a>
+
+
+        &#47&#47print(self.running_metrics.get_f1score())
+        &#47&#47print(&quotRezultat: &quot, iou_labels_total / len(dataloader.dataset))</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/biasvariancelabs/aitlas/commit/91b0085c154780bb7c833f1ecca31419c87ea510#diff-8c90d9e0305520faf5687b35e4d44d83709cb7e5160a7973610665e9a7133487L217' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 46445890</div><div id='project'> Project Name: biasvariancelabs/aitlas</div><div id='commit'> Commit Name: 91b0085c154780bb7c833f1ecca31419c87ea510</div><div id='time'> Time: 2021-04-26</div><div id='author'> Author: ivica.dimitrovski@yahoo.com</div><div id='file'> File Name: aitlas/base/models.py</div><div id='m_class'> M Class Name: BaseModel</div><div id='n_method'> N Class Name: BaseModel</div><div id='m_method'> M Method Name: evaluate_model(4)</div><div id='n_method'> N Method Name: evaluate_model(4)</div><div id='m_parent_class'> M Parent Class: nn.Module,Configurable</div><div id='n_parent_class'> N Parent Class: nn.Module,Configurable</div><div id='m_file'> M File Name: aitlas/base/models.py</div><div id='n_file'> N File Name: aitlas/base/models.py</div><div id='m_start'> M Start Line: 233</div><div id='m_end'> M End Line: 251</div><div id='n_start'> N Start Line: 221</div><div id='n_end'> N End Line: 280</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+      a = nn.Softmax()(outs)
+    for ii in range(len(outs)):
+      total += 1
+      if outs[ii].tolist().index(max(outs[ii])) == <a id="change">y_batch[ii]</a>:
+        correct += 1
+      pts.append([a[ii][1], y_batch[ii]])
+  print((float(correct)/total))</code></pre><h3>After Change</h3><pre><code class='java'>
+
+def test_MFM(model, test_dataloader, auprc=False, task="classification"):
+  pred=[]
+  true=<a id="change">[]</a>
+  pts = []
+  for j in test_dataloader:
+    xes = [x.float().cuda() for x in j[:-1]]
+    y_batch = j[-1].cuda()
+    with torch.no_grad():
+      _, outs = model(xes, training=False)
+      if task=="classification":
+        a = nn.Softmax()(outs)
+    for ii in range(len(outs)):
+      pts.append([a[ii][1], y_batch[ii]])
+    if task == "classification":
+      pred.append(torch.argmax(outs, 1))
+    elif task == "multilabel":
+      pred.append(torch.sigmoid(outs).round())
+    true.append(j[-1])
+  if pred:
+    <a id="change">pred</a><a id="change"> = </a>torch.cat(pred, 0).cpu().numpy()
+  <a id="change">true = </a>torch.cat(true, 0).cpu().numpy()
+  if auprc:
+    print(AUPRC(pts))
+  if task == "classification":
+    <a id="change">print(</a>"acc: "+str(accuracy_score(true, pred))<a id="change">)</a>
+    return accuracy_score(true, pred)
+  elif task == "multilabel":
+    <a id="change">print(</a>" f1_micro: "+str(<a id="change">f1_score(</a>true, pred<a id="change">, average="micro")</a>)+\
+        " f1_macro: "+str(<a id="change">f1_score(</a>true, pred<a id="change">, average="macro")</a>)<a id="change">)</a>
+    return <a id="change">f1_score(</a>true, pred<a id="change">, average="micro")</a>, f1_score(true, pred, average="macro")
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/pliang279/multibench/commit/08e57215227c5575c74f7942e287340eb5e50eb7#diff-328705d89964545233518bba0c6d09aacc4a473df36c6e5b9b3f14e0d2c24af5L84' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 46445763</div><div id='project'> Project Name: pliang279/multibench</div><div id='commit'> Commit Name: 08e57215227c5575c74f7942e287340eb5e50eb7</div><div id='time'> Time: 2021-06-06</div><div id='author'> Author: ztwu_nil@zju.edu.cn</div><div id='file'> File Name: training_structures/MFM.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: test_MFM(4)</div><div id='n_method'> N Method Name: test_MFM(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: training_structures/MFM.py</div><div id='n_file'> N File Name: training_structures/MFM.py</div><div id='m_start'> M Start Line: 85</div><div id='m_end'> M End Line: 103</div><div id='n_start'> N Start Line: 115</div><div id='n_end'> N End Line: 144</div><BR>

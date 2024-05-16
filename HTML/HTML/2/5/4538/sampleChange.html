@@ -1,0 +1,29 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            writer.add_scalar(&quotTop5/val&quot, val_top5, epoch + 1)
+    if args.local_rank == 0:
+        writer.close()
+    <a id="change">return</a>
+
+
+class DataPrefetcher():
+    </code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 remember best prec@1 and save checkpoint
+        &#47&#47 since all GPUs on curr node will produce output
+        &#47&#47 only allow GPU0 to print training states
+        <a id="change">if </a>args.local_rank == 0:
+            is_best = val_top1 &gt; best_prec1
+            best_prec1 = max(val_top1, best_prec1)
+            save_checkpoint({
+                &quotepoch&quot: epoch + 1,
+                &quotarch&quot: args.arch,
+                &quotstate_dict&quot: model.state_dict(),
+                &quotbest_prec1&quot: best_prec1,
+                &quotoptimizer&quot: optimizer.state_dict(),
+            }, is_best)
+            if <a id="change">torch.distributed.get_rank() == 0</a>:
+                &#47&#47 log train and val states to tensorboard
+                writer.add_scalar(&quotThroughput/train&quot, train_throughput, epoch + 1)
+                writer.add_scalar(&quotThroughput/val&quot, val_throughput, epoch + 1)</code></pre>

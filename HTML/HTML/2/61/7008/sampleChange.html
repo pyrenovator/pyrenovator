@@ -1,0 +1,68 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+def validate(model, valid_dataloader, epoch, writer) -&gt; float:
+    &#47&#47 Calculate how many iterations there are under Epoch.
+    batches = <a id="change">len(</a>valid_dataloader<a id="change">)</a>
+    &#47&#47 Put the generator in verification mode.
+    model.eval()
+    &#47&#47 Initialize the evaluation index.
+    <a id="change">total_psnr</a><a id="change"> = 0.0</a>
+
+    with torch.no_grad():
+        for index, (lr, hr) in enumerate(valid_dataloader):
+            lr = lr.to(config.device, non_blocking=True)
+            hr = hr.to(config.device, non_blocking=True)
+            &#47&#47 Calculate the PSNR evaluation index.
+            sr<a id="change"> = model(lr</a><a id="change">).clamp_(0.0</a>, <a id="change">1.0</a><a id="change">)</a>
+            psnr = 10. * torch.log10(1. / torch.mean((sr - lr) ** 2))
+            total_psnr<a id="change"> += </a>psnr
+
+        avg_psnr<a id="change"> = total_psnr</a><a id="change"> / </a>batches
+        &#47&#47 Write the value of each round of verification indicators into Tensorboard.
+        writer.add_scalar("Valid/PSNR", avg_psnr, epoch + 1)
+        &#47&#47 Print evaluation indicators.</code></pre><h3>After Change</h3><pre><code class='java'>
+
+
+def validate(model, valid_dataloader, criterion, epoch, writer) -&gt; float:
+    <a id="change">batch_time = </a><a id="change">AverageMeter("Time"</a>, <a id="change">":6.3f"</a><a id="change">)</a>
+    <a id="change">losses = AverageMeter("Loss"</a>, <a id="change">":6.6f"</a><a id="change">)</a>
+    <a id="change">psnres</a><a id="change"> = </a><a id="change">AverageMeter("PSNR"</a>, <a id="change">":4.2f"</a><a id="change">)</a>
+    progress = <a id="change">ProgressMeter(len(</a>valid_dataloader<a id="change">)</a>, <a id="change">[batch_time</a>, <a id="change">losses</a>, <a id="change">psnres</a>]<a id="change">, prefix="Valid: ")</a>
+
+    &#47&#47 Put the generator in verification mode.
+    model.eval()
+
+    with torch.no_grad():
+        end<a id="change"> = time</a><a id="change">.time()</a>
+        for index, (lr, hr) in enumerate(valid_dataloader):
+            <a id="change">lr</a> = lr.to(config.device, non_blocking=True)
+            hr = hr.to(config.device, non_blocking=True)
+
+            &#47&#47 Mixed precision
+            <a id="change">with amp.autocast()</a><a id="change">:
+                </a>sr<a id="change"> = model(lr</a><a id="change">)</a>
+                loss<a id="change"> = </a>criterion(sr, hr)
+
+            &#47&#47 measure accuracy and record loss
+            psnr = 10. * torch.log10(1. / torch.mean((sr - hr) ** 2))
+            <a id="change">losses.update(</a><a id="change">loss.item()</a>, <a id="change">lr.size(0</a><a id="change">)</a><a id="change">)</a>
+            <a id="change">psnres.update(</a><a id="change">psnr.item()</a>, <a id="change">lr.size(0</a><a id="change">)</a><a id="change">)</a>
+
+            &#47&#47 measure elapsed time
+            <a id="change">batch_time.update(time</a><a id="change">.time()</a><a id="change"> - </a>end<a id="change">)</a>
+            end<a id="change"> = time</a><a id="change">.time()</a>
+
+            <a id="change">if index % config.print_frequency == 0</a>:
+                <a id="change">progress.display(index</a><a id="change">)</a>
+
+        writer.add_scalar("Valid/PSNR", psnres.avg, epoch + 1)
+        &#47&#47 Print evaluation indicators.
+        print(f"* PSNR: {psnres.avg:4.2f}.\n")
+
+    <a id="change">return </a>psnres.avg
+
+
+class AverageMeter(object):</code></pre>

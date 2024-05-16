@@ -1,0 +1,31 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        channel_axis = ctx.channel_axis
+
+        dequantize_grad = delta * grad
+        mask_tensor = Variable(<a id="change">mask_tensor.type_as(</a>dequantize_grad.data<a id="change">)</a>)
+
+        tensor_grad = grad * mask_tensor
+        scale_grad = (clamp_out + offset - tensor * mask_tensor / delta) * grad
+        offset_grad = dequantize_grad * (1 - mask_tensor)
+
+        dim = list(range(len(tensor.shape)))
+        if len(delta) &gt; 1 and len(tensor.shape) &gt; 1:
+            dim.pop(channel_axis)
+
+        intermediate_term1<a id="change"> = </a>scale_grad.sum(dim=dim) / steps
+        intermediate_term2 = steps / (encoding_max - encoding_min) ** 2 * offset_grad.sum(dim=dim)
+
+        tensor_encoding_min_grad<a id="change"> = </a>-intermediate_term1 + encoding_max * intermediate_term2
+        tensor_encoding_max_grad = intermediate_term1 - encoding_min * intermediate_term2
+
+        return tensor_grad, tensor_encoding_min_grad, tensor_encoding_max_grad, None</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        intermediate_result = IntermediateResult(clamp_out, encoding_min, encoding_max, delta, offset, mask_tensor, steps)
+
+        tensor_grad<a id="change">, tensor_encoding_min_grad, tensor_encoding_max_grad</a> = \
+            grad_fn.calculate_gradients(tensor, grad, intermediate_result, channel_axis)
+
+        return tensor_grad, tensor_encoding_min_grad, tensor_encoding_max_grad, None</code></pre>

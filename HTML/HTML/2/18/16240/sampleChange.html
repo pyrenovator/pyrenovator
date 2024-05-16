@@ -1,0 +1,43 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    tstart = train_set_size
+    tend = train_set_size+NUM_TEST_EMBEDDINGS
+
+    for embt, <a id="change">embi</a> in <a id="change">zip(</a><a id="change">text_reader(batch_size=NUM_TEST_EMBEDDINGS, start=tstart, end=tend)</a>, 
+            <a id="change">image_reader(batch_size=NUM_TEST_EMBEDDINGS, start=tstart, end=tend)</a><a id="change">)</a>:
+       &#47&#47 make a copy of the text embeddings for shuffling
+       text_embed = <a id="change">torch.tensor(</a><a id="change">embt[0])</a>.to(device)
+       text_embed_shuffled = text_embed.clone()
+        &#47&#47 roll the text embeddings to simulate "unrelated" captions
+       rolled_idx = torch.roll(torch.arange(NUM_TEST_EMBEDDINGS), 1)
+       text_embed_shuffled = text_embed_shuffled[rolled_idx]
+       text_embed_shuffled = text_embed_shuffled / \
+           text_embed_shuffled.norm(dim=1, keepdim=True)
+       test_text_shuffled_cond = dict(text_embed=text_embed_shuffled)
+        &#47&#47 prepare the text embedding
+       text_embed = text_embed / text_embed.norm(dim=1, keepdim=True)
+       test_text_cond = dict(text_embed=text_embed)
+        &#47&#47 prepare image embeddings
+       test_image_embeddings = <a id="change">torch.tensor(embi[0]</a><a id="change">)</a>.to(device)
+       test_image_embeddings = test_image_embeddings / \
+           test_image_embeddings.norm(dim=1, keepdim=True)
+        &#47&#47 predict on the unshuffled text embeddings</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    cos = nn.CosineSimilarity(dim=1, eps=1e-6)
+
+    for test_image_embeddings, text_data in <a id="change">tqdm(</a>dataloader<a id="change">)</a>:
+
+        &#47&#47 we are text conditioned, we produce an embedding from the tokenized text
+        <a id="change">if text_conditioned</a>:
+            text_embedding, text_encodings, text_mask = diffusion_prior.clip.embed_text(
+                text_data)
+            text_cond<a id="change"> = dict(text_embed=text_embedding,
+                             text_encodings=text_encodings, mask=text_mask)</a>
+        else:
+            text_embedding = text_data
+            text_cond<a id="change"> = </a>dict(text_embed=text_embedding)
+
+        &#47&#47 make a copy of the text embeddings for shuffling
+        text_embed_shuffled = text_embedding.clone()</code></pre>

@@ -1,0 +1,37 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 Load the container.
+        with open(os.path.join(location, constants.SAVE_LOAD_CONTAINER_PATH), "rb") as file:
+            container = dill.load(file)
+        <a id="change">assert </a>container is not None, "Failed to load the model container."
+
+        &#47&#47 Setup the container.
+        ctx = tvm.cpu() if container._ctx == "cpu" else tvm.gpu</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 Load the container.
+        with open(os.path.join(location, constants.SAVE_LOAD_CONTAINER_PATH), "rb") as file:
+            container = dill.load(file)
+        <a id="change">if container is None</a>:
+            shutil.rmtree(location)
+            <a id="change">raise RuntimeError(</a>"Failed to load the model container."<a id="change">)</a>
+
+        &#47&#47 Setup the container.
+        ctx = tvm.cpu() if container._ctx == "cpu" else tvm.gpu
+        container._model = graph_runtime.create(graph, lib, ctx)
+        container._model.set_input(**params)
+
+        container._extra_config[constants.TVM_GRAPH] = graph
+        container._extra_config[constants.TVM_LIB] = lib
+        container._extra_config[constants.TVM_PARAMS] = params
+        container._extra_config[constants.TVM_CONTEXT] = ctx
+        container._ctx = ctx
+        container._tvm_tensors = {name: container._to_tvm_array(np.array([])) for name in container._input_names}
+
+        &#47&#47 Need to set the number of threads to use as set in the original container.
+        os.environ["TVM_NUM_THREADS"] = str(container._n_threads)
+        <a id="change">shutil.rmtree(</a>location<a id="change">)</a>
+
+        return container
+
+    def _predict_common(self, output_index, *inputs):</code></pre>

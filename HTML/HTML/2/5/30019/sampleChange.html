@@ -1,0 +1,31 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    @cast_torch_tensor
+    @imagen_sample_in_chunks
+    def sample(self, *args, **kwargs):
+        <a id="change">if </a><a id="change">kwargs.pop(&quotuse_non_ema&quot, False) or not self.use_ema</a>:
+            return self.imagen.sample(*args, **kwargs)
+
+        self.reset_ema_unets_all_one_device()
+        self.imagen.reset_unets_all_one_device()
+
+        self.unets.eval()
+
+        device = self.steps.device
+        trainable_unets = self.imagen.unets
+        self.imagen.unets = self.unets                  &#47&#47 swap in exponential moving averaged unets for sampling
+
+        output<a id="change"> = </a>self.imagen.sample(*args, device = device, **kwargs)
+
+        self.imagen.unets = trainable_unets             &#47&#47 restore original training unets
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    def sample(self, *args, **kwargs):
+        context = nullcontext if  kwargs.pop(&quotuse_non_ema&quot, False) else self.use_ema_unets
+
+        <a id="change">with </a>context<a id="change">():
+            </a>output<a id="change"> = </a>self.imagen.sample(*args, device = self.device, **kwargs)
+
+        return output
+</code></pre>

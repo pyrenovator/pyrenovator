@@ -1,0 +1,40 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            labels += [torch.as_tensor(label)]
+            pointer += server_payload[&quotdata&quot].classes
+            pointer = pointer % len(self.dataloader.dataset)
+        data = <a id="change">torch.stack(data).to(**self.setup)</a>
+        labels = torch.stack(labels).to(device=self.setup[&quotdevice&quot])
+
+        &#47&#47 Compute local updates
+        shared_grads = []
+        shared_buffers = []
+        for query in range(self.num_user_queries):
+            payload = server_payload[&quotqueries&quot][query]
+            parameters = payload[&quotparameters&quot]
+            buffers = payload[&quotbuffers&quot]
+
+            with torch.no_grad():
+                for param, server_state in zip(self.model.parameters(), parameters):
+                    param.copy_(server_state.to(**self.setup))
+                for buffer, server_state in zip(self.model.buffers(), buffers):
+                    buffer.copy_(server_state.to(**self.setup))
+
+            &#47&#47 Compute the forward pass
+            outputs = self.model(data)
+            loss = self.loss(outputs, labels)
+
+            shared_grads<a id="change"> += </a>[torch.autograd.grad(loss, self.model.parameters())]
+            shared_buffers += [[b.clone().detach() for b in self.model.buffers()]]
+
+        shared_data = dict(gradients=shared_grads, buffers=shared_buffers,</code></pre><h3>After Change</h3><pre><code class='java'>
+                &#47&#47 Compute the forward pass
+                outputs = self.model(data)
+                loss = self.loss(outputs, labels)
+                <a id="change">loss.backward()</a>
+                optimizer.step()
+
+            &#47&#47 Share differential to server version:
+            &#47&#47 This is equivalent to sending the new stuff and letting the server do it, but in line</code></pre>

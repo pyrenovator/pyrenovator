@@ -1,0 +1,67 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        (service_to_process_cmd). After calling the method of a phase of all
+        ProcessModels the runtime service is informed about completion. The
+        loop ends when the STOP command is received.
+        <a id="change">while </a>True<a id="change">:
+            &#47&#47 Probe if there is a new command from the runtime service
+            </a>if self.service_to_process_cmd.probe():
+                phase = self.service_to_process_cmd.recv()
+                if np.array_equal(phase, MGMT_COMMAND.STOP):
+                    self.process_to_service_ack.send(MGMT_RESPONSE.TERMINATED)</code></pre><h3>After Change</h3><pre><code class='java'>
+        loop ends when the STOP command is received.
+        selector = CspSelector()
+        action = &quotcmd&quot
+        <a id="change">while </a>True<a id="change">:
+            </a>if action == &quotcmd&quot:
+                phase = self.service_to_process_cmd.recv()
+                if enum_equal(phase, MGMT_COMMAND.STOP):
+                    self.process_to_service_ack.send(MGMT_RESPONSE.TERMINATED)
+                    self.join()
+                    return
+                &#47&#47 Spiking phase - increase time step
+                if enum_equal(phase, PyLoihiProcessModel.Phase.SPK):
+                    self.current_ts += 1
+                    self.run_spk()
+                    self.process_to_service_ack.send(MGMT_RESPONSE.DONE)
+                &#47&#47 Pre-management phase
+                elif enum_equal(phase, PyLoihiProcessModel.Phase.PRE_MGMT):
+                    &#47&#47 Enable via guard method
+                    if self.pre_guard():
+                        self.run_pre_mgmt()
+                    self.process_to_service_ack.send(MGMT_RESPONSE.DONE)
+                &#47&#47 Learning phase
+                elif enum_equal(phase, PyLoihiProcessModel.Phase.LRN):
+                    &#47&#47 Enable via guard method
+                    if self.lrn_guard():
+                        self.run_lrn()
+                    self.process_to_service_ack.send(MGMT_RESPONSE.DONE)
+                &#47&#47 Post-management phase
+                elif enum_equal(phase, PyLoihiProcessModel.Phase.POST_MGMT):
+                    &#47&#47 Enable via guard method
+                    if self.post_guard():
+                        self.run_post_mgmt()
+                    self.process_to_service_ack.send(MGMT_RESPONSE.DONE)
+                &#47&#47 Host phase - called at the last time step before STOP
+                elif enum_equal(phase, PyLoihiProcessModel.Phase.HOST):
+                    pass
+                else:
+                    raise ValueError(f"Wrong Phase Info Received : {phase}")
+            elif action == &quotreq&quot:
+                &#47&#47 Handle get/set Var requests from runtime service
+                self._handle_get_set_var()
+            else:
+                &#47&#47 Handle VarPort requests from RefPorts
+                self._handle_var_port(action)
+
+            channel_actions = [(self.service_to_process_cmd, lambda: &quotcmd&quot)]
+            if enum_equal(phase, PyLoihiProcessModel.Phase.PRE_MGMT) or \
+                    enum_equal(phase, PyLoihiProcessModel.Phase.POST_MGMT):
+                for var_port in self.var_ports:
+                    for csp_port in var_port.csp_ports:
+                        <a id="change">if </a><a id="change">isinstance(</a>csp_port, CspRecvPort<a id="change">)</a>:
+                            channel_actions.append((csp_port, lambda: var_port))
+            elif enum_equal(phase, PyLoihiProcessModel.Phase.HOST):
+                channel_actions.append((self.service_to_process_req,</code></pre>

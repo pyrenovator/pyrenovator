@@ -1,0 +1,25 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        return loss
+
+    def allreduce_gradients(self, bucket_size=MEMORY_OPT_ALLREDUCE_SIZE):
+        <a id="change">if </a><a id="change">self.is_gradient_accumulation_boundary()</a>:
+            self.buffered_allreduce_fallback(elements_per_buffer=bucket_size)
+
+    def backward(self, loss, allreduce_gradients=True):</code></pre><h3>After Change</h3><pre><code class='java'>
+        return loss
+
+    def allreduce_gradients(self, bucket_size=MEMORY_OPT_ALLREDUCE_SIZE):
+        <a id="change">if </a><a id="change">self.is_gradient_accumulation_boundary()</a>:
+            if self.zero_optimization_stage() == ZERO_OPTIMIZATION_OPTIMIZER_STATES:
+                assert self.zero_reduce_scatter()
+                self.optimizer.reduce_scatter_gradients(
+                    postscale_gradients=self.postscale_gradients(),
+                    gradient_predivide_factor=self.gradient_predivide_factor,
+                    gradient_average=self.gradient_average)
+            elif <a id="change"></a>self.zero_optimization_partition_gradients():
+                self.optimizer.overlapping_partition_gradients_reduce_epilogue()
+            else:
+                self.buffered_allreduce_fallback(elements_per_buffer=bucket_size)</code></pre>

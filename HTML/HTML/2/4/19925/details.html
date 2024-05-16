@@ -1,0 +1,61 @@
+<html><h3>Pattern ID :19925
+</h3><img src='64835256.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        if self.mode == 1:
+            return self.extractor(wavs)
+        elif self.mode == 2:
+            feats = <a id="change">[]</a>
+            for wav in wavs:
+                feat = self.extractor.extract_features(wav.unsqueeze(0), None)[
+                    0
+                ].squeeze(0)</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        elif self.mode == 2:
+            wav_lens = [len(wav) for wav in wavs]
+            wavs<a id="change"> = </a><a id="change">pad_sequence(</a>wavs<a id="change">, batch_first=True)</a>
+            padding_mask = [
+                torch.arange(wavs.size(1)) &gt;= wav_len for wav_len in wav_lens
+            ]
+            padding_mask<a id="change"> = </a>torch.stack(padding_mask).to(self.device)
+
+            feats = self.extractor.extract_features(wavs, padding_mask)["x"]
+            feats = [f for f in feats]</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/ga642381/robust-vc/commit/26399d6990737b2aa2afb010573a5e04d0804bb0#diff-f3934326cc6756b24891b2884192bc0f7f13a14f3ce6ad1107045bd8cbcf2358L76' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 64835256</div><div id='project'> Project Name: ga642381/robust-vc</div><div id='commit'> Commit Name: 26399d6990737b2aa2afb010573a5e04d0804bb0</div><div id='time'> Time: 2021-10-12</div><div id='author'> Author: ga642381@gmail.com</div><div id='file'> File Name: S2VC/S2VC-robust/data/feature_extract.py</div><div id='m_class'> M Class Name: FeatureExtractor</div><div id='n_method'> N Class Name: FeatureExtractor</div><div id='m_method'> M Method Name: get_feature(2)</div><div id='n_method'> N Method Name: get_feature(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: S2VC/S2VC-robust/data/feature_extract.py</div><div id='n_file'> N File Name: S2VC/S2VC-robust/data/feature_extract.py</div><div id='m_start'> M Start Line: 76</div><div id='m_end'> M End Line: 86</div><div id='n_start'> N Start Line: 76</div><div id='n_end'> N End Line: 92</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        wav_lens = [mel_len * self.hop_len for mel_len in mel_lens]
+        max_mel_len = max(mel_lens)
+
+        mel_embs = <a id="change">[]</a>
+
+        for mel in mels:
+            mel = mel.unsqueeze(0)
+            mel_emb, _ = self.mel_rnn(mel)</code></pre><h3>After Change</h3><pre><code class='java'>
+        max_mel_len = max(mel_lens)
+        max_wav_len = max_mel_len * self.hop_len
+
+        pad_mels<a id="change"> = </a><a id="change">pad_sequence(</a>mels<a id="change">, batch_first=True)</a>
+        pack_mels = pack_padded_sequence(
+            pad_mels, torch.tensor(mel_lens), batch_first=True, enforce_sorted=False
+        )
+        pack_mel_embs<a id="change">, _ = </a>self.mel_rnn(pack_mels)
+        mel_embs, _ = pad_packed_sequence(pack_mel_embs, batch_first=True)
+
+        &#47&#47 mel_embs: (batch, emb_dim, max_mel_len)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/yistlin/universal-vocoder/commit/decd133f652564aab54717a4e8df0316421e35c0#diff-0b303f21197833211aecf17dfcb415a3d2172623cfededbfc805892f128cd01eL63' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 64835237</div><div id='project'> Project Name: yistlin/universal-vocoder</div><div id='commit'> Commit Name: decd133f652564aab54717a4e8df0316421e35c0</div><div id='time'> Time: 2020-10-07</div><div id='author'> Author: yishen992@gmail.com</div><div id='file'> File Name: models/universal_vocoder.py</div><div id='m_class'> M Class Name: UniversalVocoder</div><div id='n_method'> N Class Name: UniversalVocoder</div><div id='m_method'> M Method Name: generate(2)</div><div id='n_method'> N Method Name: generate(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: models/universal_vocoder.py</div><div id='n_file'> N File Name: models/universal_vocoder.py</div><div id='m_start'> M Start Line: 78</div><div id='m_end'> M End Line: 108</div><div id='n_start'> N Start Line: 77</div><div id='n_end'> N End Line: 106</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+def perplexity(sentence):
+    with torch.no_grad():
+        tokenize_input = tokenizer.tokenize(sentence)
+        tensor_input = torch.tensor(<a id="change">[
+            </a>[tokenizer.eos_token_id] + 
+            tokenizer.convert_tokens_to_ids(tokenize_input)<a id="change"></a>
+        ])
+        loss, logits, *_  = model(tensor_input, labels=tensor_input)
+        
+        </code></pre><h3>After Change</h3><pre><code class='java'>
+            torch.tensor([tokenizer.eos_token_id] + tokenizer.convert_tokens_to_ids(tokenizer.tokenize(sentence)))
+            for sentence in sentences
+        ]
+        padded_tokens<a id="change"> = </a><a id="change">pad_sequence(</a>token_ids<a id="change">, batch_first=True)</a>
+        tensor_input<a id="change"> = </a>padded_tokens.to(device)
+        loss, logits, *_  = model(tensor_input, labels=tensor_input, **fwd_args)
+        
+    lp = 0</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/turtlesoupy/this-word-does-not-exist/commit/713d6187b1eb4b6bb9c532708d1cd2ebce5eba31#diff-439ce4dc9ee3ae3ec37167a388e3857b749176a760eb102abd254c551455808dL142' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 64835233</div><div id='project'> Project Name: turtlesoupy/this-word-does-not-exist</div><div id='commit'> Commit Name: 713d6187b1eb4b6bb9c532708d1cd2ebce5eba31</div><div id='time'> Time: 2020-03-08</div><div id='author'> Author: tdimson@gmail.com</div><div id='file'> File Name: wiki_article.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: perplexity(4)</div><div id='n_method'> N Method Name: perplexity(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: wiki_article.py</div><div id='n_file'> N File Name: wiki_article.py</div><div id='m_start'> M Start Line: 142</div><div id='m_end'> M End Line: 164</div><div id='n_start'> N Start Line: 139</div><div id='n_end'> N End Line: 147</div><BR>

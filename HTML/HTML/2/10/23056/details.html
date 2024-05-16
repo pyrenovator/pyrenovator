@@ -1,0 +1,131 @@
+<html><h3>Pattern ID :23056
+</h3><img src='73048123.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+            sequence_length_padding_divisor = 4
+            &#47&#47 Pad attention mask to more divisible length
+            remainder<a id="change"> = </a><a id="change">attention_mask.size(-1</a><a id="change">)</a> % sequence_length_padding_divisor
+
+            if remainder != 0:
+                pad_length = sequence_length_padding_divisor - remainder</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        if attention_mask is not None:
+            &#47&#47 make sure padded tokens output 0
+            expand_attention_mask<a id="change"> = </a><a id="change">attention_mask.unsqueeze(-1).repeat(1</a>, <a id="change">1</a>, hidden_states.shape[2]<a id="change">)</a>
+            hidden_states[~expand_attention_mask] = 0
+
+            &#47&#47 extend attention_mask
+            attention_mask = (1.0 - attention_mask[:, None, None, :].to(dtype=hidden_states.dtype)) * -10000.0
+            attention_mask = attention_mask.expand(
+                attention_mask.shape[0], 1, attention_mask.shape[-1], attention_mask.shape[-1]
+            )
+
+        position_embeddings = self.pos_conv_embed(hidden_states)
+        hidden_states = hidden_states + position_embeddings
+        hidden_states = self.layer_norm(hidden_states)
+        hidden_states = self.dropout(hidden_states)
+
+        for layer in self.layers:
+            if output_hidden_states:
+                all_hidden_states = all_hidden_states + (hidden_states,)
+
+            layer_outputs = layer(hidden_states, attention_mask=attention_mask, output_attentions=output_attentions)
+
+            &#47&#47 add LayerDrop (see https://arxiv.org/abs/1909.11556 for description)
+            dropout_probability = torch.rand(tuple())
+            skip_the_layer = torch.tensor(self.training) and (dropout_probability &lt; self.config.layerdrop)
+            if self.config.layerdrop &gt; 0.0:
+                hidden_states = torch.where(skip_the_layer, hidden_states, layer_outputs[0])
+            else:
+                hidden_states = layer_outputs[0]
+
+            if skip_the_layer:
+                layer_outputs = (None, None)
+
+            if output_attentions:
+                all_self_attentions = all_self_attentions + (layer_outputs[1],)
+
+        if output_hidden_states:
+            all_hidden_states = all_hidden_states<a id="change"> + </a>(hidden_states,)
+
+        if not return_dict:
+            return tuple(v for v in [hidden_states, all_hidden_states, all_self_attentions] if v is not None)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 6</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/huggingface/optimum-graphcore/commit/075200de7b5b118681fc46af97985bb53ce9c146#diff-78e7e62156963de0a5dbf323a0121639c4ddfcd5d6364518045269e8263e5b12L41' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 73048123</div><div id='project'> Project Name: huggingface/optimum-graphcore</div><div id='commit'> Commit Name: 075200de7b5b118681fc46af97985bb53ce9c146</div><div id='time'> Time: 2022-08-03</div><div id='author'> Author: gejinchen1996@gmail.com</div><div id='file'> File Name: optimum/graphcore/models/wav2vec2/ipu_layer_drop.py</div><div id='m_class'> M Class Name: IPUWav2Vec2Encoder</div><div id='n_method'> N Class Name: IPUWav2Vec2Encoder</div><div id='m_method'> M Method Name: forward(6)</div><div id='n_method'> N Method Name: forward(6)</div><div id='m_parent_class'> M Parent Class: Wav2Vec2Encoder</div><div id='n_parent_class'> N Parent Class: Wav2Vec2Encoder</div><div id='m_file'> M File Name: optimum/graphcore/models/wav2vec2/ipu_layer_drop.py</div><div id='n_file'> N File Name: optimum/graphcore/models/wav2vec2/ipu_layer_drop.py</div><div id='m_start'> M Start Line: 41</div><div id='m_end'> M End Line: 108</div><div id='n_start'> N Start Line: 41</div><div id='n_end'> N End Line: 83</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+            sequence_length_padding_divisor = 4
+            &#47&#47 Pad attention mask to more divisible length
+            remainder<a id="change"> = </a><a id="change">attention_mask.size(-1</a><a id="change">)</a> % sequence_length_padding_divisor
+
+            if remainder != 0:
+                pad_length = sequence_length_padding_divisor - remainder</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        if attention_mask is not None:
+            &#47&#47 make sure padded tokens are not attended to
+            expand_attention_mask<a id="change"> = </a><a id="change">attention_mask.unsqueeze(-1).repeat(1</a>, <a id="change">1</a>, hidden_states.shape[2]<a id="change">)</a>
+            hidden_states[~expand_attention_mask] = 0
+
+            &#47&#47 extend attention_mask
+            attention_mask = (1.0 - attention_mask[:, None, None, :].to(dtype=hidden_states.dtype)) * -10000.0
+            attention_mask = attention_mask.expand(
+                attention_mask.shape[0], 1, attention_mask.shape[-1], attention_mask.shape[-1]
+            )
+
+        position_embeddings = self.pos_conv_embed(hidden_states)
+        hidden_states = hidden_states + position_embeddings
+        hidden_states = self.dropout(hidden_states)
+
+        for layer in self.layers:
+            if output_hidden_states:
+                all_hidden_states = all_hidden_states + (hidden_states,)
+
+            layer_outputs = layer(hidden_states, attention_mask=attention_mask, output_attentions=output_attentions)
+
+            &#47&#47 add LayerDrop (see https://arxiv.org/abs/1909.11556 for description)
+            dropout_probability = torch.rand(tuple())
+            skip_the_layer = torch.tensor(self.training) and (dropout_probability &lt; self.config.layerdrop)
+            if self.config.layerdrop &gt; 0.0:
+                hidden_states = torch.where(skip_the_layer, hidden_states, layer_outputs[0])
+            else:
+                hidden_states = layer_outputs[0]
+
+            if skip_the_layer:
+                layer_outputs = (None, None)
+
+            if output_attentions:
+                all_self_attentions = all_self_attentions<a id="change"> + </a>(layer_outputs[1],)
+
+        hidden_states = self.layer_norm(hidden_states)
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/huggingface/optimum-graphcore/commit/075200de7b5b118681fc46af97985bb53ce9c146#diff-78e7e62156963de0a5dbf323a0121639c4ddfcd5d6364518045269e8263e5b12L119' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 73048121</div><div id='project'> Project Name: huggingface/optimum-graphcore</div><div id='commit'> Commit Name: 075200de7b5b118681fc46af97985bb53ce9c146</div><div id='time'> Time: 2022-08-03</div><div id='author'> Author: gejinchen1996@gmail.com</div><div id='file'> File Name: optimum/graphcore/models/wav2vec2/ipu_layer_drop.py</div><div id='m_class'> M Class Name: IPUWav2Vec2EncoderStableLayerNorm</div><div id='n_method'> N Class Name: IPUWav2Vec2EncoderStableLayerNorm</div><div id='m_method'> M Method Name: forward(6)</div><div id='n_method'> N Method Name: forward(6)</div><div id='m_parent_class'> M Parent Class: Wav2Vec2EncoderStableLayerNorm</div><div id='n_parent_class'> N Parent Class: Wav2Vec2EncoderStableLayerNorm</div><div id='m_file'> M File Name: optimum/graphcore/models/wav2vec2/ipu_layer_drop.py</div><div id='n_file'> N File Name: optimum/graphcore/models/wav2vec2/ipu_layer_drop.py</div><div id='m_start'> M Start Line: 127</div><div id='m_end'> M End Line: 193</div><div id='n_start'> N Start Line: 101</div><div id='n_end'> N End Line: 144</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        output_audio, _ = self.RNNs[1](X_audio)
+        output_visual, _ = self.RNNs[2](X_visual)
+
+        batch_size = <a id="change">output_text.size(0</a><a id="change">)</a>
+
+        &#47&#47 (batch, num_directions * hidden_size)
+        output_text = output_text[:, -1, :]
+        output_audio = output_audio[:, -1, :]
+        output_visual = output_visual[:, -1, :]
+
+        &#47&#47 (num_classes, 300)
+        text_emo_vecs = self.textEmoEmbs(torch.LongTensor(list(range(self.num_classes))))
+        visual_emo_vecs = self.affineVisual(text_emo_vecs)
+        audio_emo_vecs = self.affineAudio(text_emo_vecs)
+
+        text_emo_vecs = text_emo_vecs.unsqueeze(0).repeat(batch_size, 1, 1)
+        visual_emo_vecs = visual_emo_vecs.unsqueeze(0).repeat(batch_size, 1, 1)
+        audio_emo_vecs = audio_emo_vecs.unsqueeze(0).repeat(batch_size, 1, 1)
+
+        text_attn_feature<a id="change"> = </a>self.attention(output_text, text_emo_vecs)
+        visual_attn_feature = self.attention(output_visual, visual_emo_vecs)
+        audio_attn_feature = self.attention(output_audio, audio_emo_vecs)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            output_text, _ = self.RNNs[0](X_text)
+            output_text = output_text[:, -1, :]
+            text_emo_vecs_origin = self.textEmoEmbs(torch.LongTensor(list(range(self.num_classes))).to(self.device))
+            text_emo_vecs = <a id="change">text_emo_vecs_origin.unsqueeze(0).repeat(</a>batch_size, <a id="change">1</a>, <a id="change">1</a><a id="change">)</a>
+            text_attn_weights<a id="change"> = </a>self.attention(output_text, text_emo_vecs)
+            logits = text_attn_weights if logits is None else logits<a id="change"> + </a>text_attn_weights
+
+        if &quota&quot in self.modalities:
+            output_audio, _ = self.RNNs[1](X_audio)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/wenliangdai/modality-transferable-mer/commit/b0e565d11d6b3bf9f65fb1dcbdc8c641a2bc8054#diff-9dca09e4df72ee7b751c74b7ea8c66a06c2d78f76fef6a3bdb604dc6680fd2efL51' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 73048117</div><div id='project'> Project Name: wenliangdai/modality-transferable-mer</div><div id='commit'> Commit Name: b0e565d11d6b3bf9f65fb1dcbdc8c641a2bc8054</div><div id='time'> Time: 2020-06-10</div><div id='author'> Author: wenliang.dai.1995@gmail.com</div><div id='file'> File Name: src/models/temp.py</div><div id='m_class'> M Class Name: EmotionEmbAttnModel</div><div id='n_method'> N Class Name: EmotionEmbAttnModel</div><div id='m_method'> M Method Name: forward(4)</div><div id='n_method'> N Method Name: forward(4)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: src/models/temp.py</div><div id='n_file'> N File Name: src/models/temp.py</div><div id='m_start'> M Start Line: 53</div><div id='m_end'> M End Line: 79</div><div id='n_start'> N Start Line: 70</div><div id='n_end'> N End Line: 96</div><BR>

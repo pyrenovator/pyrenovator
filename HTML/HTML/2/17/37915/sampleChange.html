@@ -1,0 +1,52 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                reward = discriminator_out.reshape(self.batch_size, self.monte_carlo_num).mean(dim = 1) &#47&#47 b
+            
+            self.train()
+            mask = <a id="change">(word_t != self.pad_idx) & </a><a id="change">(word_t != self.end_idx)</a>
+            <a id="change">reward</a> = reward * P_t * mask
+            reward = <a id="change">reward[reward.nonzero(as_tuple = True)]</a>
+            if <a id="change">(reward.shape[0])</a>:
+                rewards += <a id="change">reward.mean()</a>
+    
+        return -rewards
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            output, (h_prev, o_prev) = self.LSTM(X, (h_prev, o_prev))
+            logits = self.vocab_projection(output).squeeze(0) &#47&#47 b * v
+            P = F.log_softmax(logits, dim = -1) &#47&#47 b * v
+            <a id="change">word_t</a> = fake_samples[ : , t] &#47&#47 b
+            P_t = torch.gather(P, 1, word_t.unsqueeze(1)).squeeze(1) &#47&#47 b
+            X = self.word_embedding(word_t).unsqueeze(0) &#47&#47 1 * b * e
+
+            self.eval()
+            with torch.no_grad():
+                monte_carlo_X = word_t.repeat_interleave(self.monte_carlo_num) &#47&#47 (b * M)
+                monte_carlo_X = self.word_embedding(monte_carlo_X).unsqueeze(0) &#47&#47 1 * (b * M) * e
+                monte_carlo_h_prev = h_prev.clone().detach().repeat_interleave(self.monte_carlo_num, dim = 1) &#47&#47 1 * (b * M) * h
+                monte_carlo_o_prev = o_prev.clone().detach().repeat_interleave(self.monte_carlo_num, dim = 1) &#47&#47 1 * (b * M) * h
+                monte_carlo_output = torch.zeros(self.max_length, self.batch_size * self.monte_carlo_num, dtype = torch.long, device = self.device) &#47&#47 len * (b * M)
+
+                for i in range(self.max_length - t - 1):
+                    output, (monte_carlo_h_prev, monte_carlo_o_prev) = self.LSTM(monte_carlo_X, (monte_carlo_h_prev, monte_carlo_o_prev))
+                    P = F.softmax(self.vocab_projection(output), dim = -1).squeeze(0) &#47&#47 (b * M) * v
+                    for j in range(P.shape[0]):
+                        monte_carlo_output[i + t + 1][j] = torch.multinomial(P[j], 1)[0]
+                    monte_carlo_X = self.word_embedding(monte_carlo_output[i + t + 1]).unsqueeze(0) &#47&#47 1 * (b * M) * e
+
+                monte_carlo_output = monte_carlo_output.permute(1, 0) &#47&#47 (b * M) * len
+                monte_carlo_output[ : , : t + 1] = fake_samples[ : , : t + 1].repeat_interleave(self.monte_carlo_num, dim = 0)
+
+                discriminator_out = discriminator_func(monte_carlo_output) &#47&#47 (b * M)
+                reward = discriminator_out.reshape(self.batch_size, self.monte_carlo_num).mean(dim = 1) &#47&#47 b
+
+            self.train()
+            mask = <a id="change">word_t != self.pad_idx</a>
+            reward = reward * P_t * mask
+            <a id="change">mask_sum</a> = <a id="change">mask.sum()</a>
+            if (<a id="change">mask_sum</a>):
+                rewards += <a id="change">reward.sum()</a><a id="change"> / mask_sum</a>
+    
+        return -rewards
+</code></pre>

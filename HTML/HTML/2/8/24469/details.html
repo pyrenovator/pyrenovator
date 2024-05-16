@@ -1,0 +1,113 @@
+<html><h3>Pattern ID :24469
+</h3><img src='76022024.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        device = x.get_device()
+        dic_z = self.dic.to(device)
+        prior = self.prior.to(device)
+        <a id="change">if len(proposals) == 2</a>:
+            proposals1 = <a id="change">proposals[0].bbox.size(</a>0<a id="change">)</a>
+            proposals2 = <a id="change">proposals[1].bbox.size(</a>0<a id="change">)</a>
+
+            x1 = x[:proposals1]
+            x2 = x[proposals1:]
+
+
+            xz1, attn1 = self.z_dic(x1, dic_z, prior)
+            xz2, attn2 = self.z_dic(x2, dic_z, prior)
+
+            &#47&#47 a1 = self.causal_score(xz1)
+            &#47&#47 a2 = self.causal_score(xz2)
+            &#47&#47 if torch.isnan(a1).sum() or torch.isnan(a2).sum():
+            &#47&#47     print(xz1)
+            &#47&#47     print(xz2)
+            causal_logits_list = [self.causal_score(xz1), self.causal_score(xz2)]
+            attn_list = [attn1, attn2]
+
+        else:
+            xz<a id="change">, attn = </a>self.z_dic(x, dic_z, prior)
+            causal_logits_list = [self.causal_score(xz)]
+
+            attn_list = [attn]</code></pre><h3>After Change</h3><pre><code class='java'>
+        prior = self.prior.to(device)
+
+        box_size_list = [proposal.bbox.size(0) for proposal in proposals]
+        feature_split = <a id="change">x.split(</a>box_size_list<a id="change">)</a>
+        xzs<a id="change"> = </a>[self.z_dic(feature_pre_obj, dic_z, prior) for feature_pre_obj in feature_split]
+
+        causal_logits_list = [self.causal_score(xz) for xz in xzs]
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 7</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/wangt-cn/vc-r-cnn/commit/51a882a36e8777715669773236cd8285b0d38986#diff-be62d5533104d4c97b3017be21afc11ab8aaaf90848ecea92447a04acbbb4e06L91' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 76022024</div><div id='project'> Project Name: wangt-cn/vc-r-cnn</div><div id='commit'> Commit Name: 51a882a36e8777715669773236cd8285b0d38986</div><div id='time'> Time: 2020-02-21</div><div id='author'> Author: wangt97@hotmail.com</div><div id='file'> File Name: vc_rcnn/vc_rcnn/modeling/roi_heads/box_head/roi_box_predictors.py</div><div id='m_class'> M Class Name: CausalPredictor</div><div id='n_method'> N Class Name: CausalPredictor</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: vc_rcnn/vc_rcnn/modeling/roi_heads/box_head/roi_box_predictors.py</div><div id='n_file'> N File Name: vc_rcnn/vc_rcnn/modeling/roi_heads/box_head/roi_box_predictors.py</div><div id='m_start'> M Start Line: 96</div><div id='m_end'> M End Line: 123</div><div id='n_start'> N Start Line: 91</div><div id='n_end'> N End Line: 101</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        :param features:
+        :return:
+        
+        <a id="change">if p.size(1) &gt; 1</a>:
+            raise ValueError("Not Supported shape for propbabilty.")
+        p = p.cpu().clone()
+        features = features.cpu().clone()
+
+        with mp.Pool(processes=self.num_workers) as pool:
+            &#47&#47 p to list
+            p_list = torch.unbind(p.cpu(), 0)
+            &#47&#47 f to list
+            feat_list = torch.unbind(features.cpu(), 0)
+
+            &#47&#47 itertools map p and f
+            args<a id="change"> = </a>iter.zip_longest(p_list, feat_list, [self.match_dims], [self.clusterer], [self.p_aggregation])
+
+            results = pool.starmap(self._cluster_single_frame, args)
+
+        p_out_ = []
+        feat_out_ = []
+        for i in range(p.size(0)):
+            p_out_.append(results[i][0])
+            feat_out_.append(results[i][1])
+
+        p_out = torch.stack(p_out_, dim=0)
+        feat_out = torch.stack(feat_out_, dim=0)
+
+        return p_out.reshape(<a id="change">p.size()</a>), feat_out.reshape(<a id="change">features.size()</a>)
+
+    def forward_(self, p, features):
+        </code></pre><h3>After Change</h3><pre><code class='java'>
+        batch_size = p.size(0)
+
+        &#47&#47 split the tensors into smaller batches and multi-process them
+        p_split = <a id="change">torch.split(</a>p, math.ceil(batch_size / self.num_workers)<a id="change">)</a>
+        feat_split = torch.split(features, math.ceil(batch_size / self.num_workers))
+
+        with mp.Pool(processes=self.num_workers) as pool:
+
+            &#47&#47 itertools map p and f
+            args<a id="change"> = </a>iter.zip_longest(p_split, feat_split, [self.clusterer], [self.p_aggregation], [self.match_dims], [self.ax_th])
+            results = pool.starmap_async(self._cluster_batch_functional, args)
+            results = results.get()
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/turagalab/decode/commit/6dc5f8a1489142594a36e7e4f6865ea8f0e309d4#diff-63f00a6429878da59333cfbdc4bbe5321829eca14dc36376f4d5baca1c407be1L474' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 76022025</div><div id='project'> Project Name: turagalab/decode</div><div id='commit'> Commit Name: 6dc5f8a1489142594a36e7e4f6865ea8f0e309d4</div><div id='time'> Time: 2019-09-11</div><div id='author'> Author: gitdev@LRM.photo</div><div id='file'> File Name: deepsmlm/neuralfitter/post_processing.py</div><div id='m_class'> M Class Name: ConsistencyPostprocessing</div><div id='n_method'> N Class Name: ConsistencyPostprocessing</div><div id='m_method'> M Method Name: _cluster_mp(3)</div><div id='n_method'> N Method Name: _cluster_mp(3)</div><div id='m_parent_class'> M Parent Class: PostProcessing</div><div id='n_parent_class'> N Parent Class: PostProcessing</div><div id='m_file'> M File Name: deepsmlm/neuralfitter/post_processing.py</div><div id='n_file'> N File Name: deepsmlm/neuralfitter/post_processing.py</div><div id='m_start'> M Start Line: 481</div><div id='m_end'> M End Line: 506</div><div id='n_start'> N Start Line: 468</div><div id='n_end'> N End Line: 492</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 create output
+        block_predictions = torch.cat([block_backcasts.detach(), block_forecasts.detach()], dim=1)
+
+        <a id="change">if forecast.size(2) &gt; 1</a>:  &#47&#47 multi-output
+            n_outputs = <a id="change">forecast.size(</a>2<a id="change">)</a>
+            forecast = [forecast[:, :, i] for i in range(n_outputs)]
+            backcast = [encoder_y[:, :, i] - backcast[:, :, i] for i in range(n_outputs)]
+
+            n_blocks = <a id="change">block_predictions.size(</a>3<a id="change">)</a>
+            block_predictions = [block_predictions[:, :, i] for i in range(n_outputs)]
+            block_predictions = tuple(
+                self.transform_output([b[..., block] for b in block_predictions], target_scale=x["target_scale"])
+                for block in range(n_blocks)
+            )
+        else:
+            block_predictions<a id="change"> = </a>tuple(
+                self.transform_output(block_predictions[..., i], target_scale=x["target_scale"])
+                for i in range(block_predictions[0].size(-1))
+            )</code></pre><h3>After Change</h3><pre><code class='java'>
+                self.transform_output(block.squeeze(3).split(1, dim=2), target_scale=x["target_scale"])
+                for block in block_backcasts.split(1, dim=3)
+            )
+            block_forecasts<a id="change"> = </a>tuple(
+                self.transform_output(
+                    <a id="change">block.squeeze(3).split(</a>self.hparams.output_size<a id="change">, dim=2)</a>, target_scale=x["target_scale"]
+                )
+                for block in block_forecasts.split(1, dim=3)
+            )</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/jdb78/pytorch-forecasting/commit/e7175c98af01f4c8f9aadb90c53aa4f0d1540931#diff-372ac5871df5799f296dfbb7219a29e486e7b0252796f56e8f40c24b4f0a8bbeL230' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 76022043</div><div id='project'> Project Name: jdb78/pytorch-forecasting</div><div id='commit'> Commit Name: e7175c98af01f4c8f9aadb90c53aa4f0d1540931</div><div id='time'> Time: 2022-03-30</div><div id='author'> Author: beitner.jan@bcg.com</div><div id='file'> File Name: pytorch_forecasting/models/nhits/__init__.py</div><div id='m_class'> M Class Name: NHiTS</div><div id='n_method'> N Class Name: NHiTS</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: BaseModelWithCovariates</div><div id='n_parent_class'> N Parent Class: BaseModelWithCovariates</div><div id='m_file'> M File Name: pytorch_forecasting/models/nhits/__init__.py</div><div id='n_file'> N File Name: pytorch_forecasting/models/nhits/__init__.py</div><div id='m_start'> M Start Line: 261</div><div id='m_end'> M End Line: 290</div><div id='n_start'> N Start Line: 268</div><div id='n_end'> N End Line: 297</div><BR>

@@ -1,0 +1,120 @@
+<html><h3>Pattern ID :35416
+</h3><img src='100610559.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 For each allocation made by the operations in the pipeline
+        for op_id, memory_allocation in memory_allocations.items():
+            &#47&#47 If the operation didn&quott make a query we stop here
+            <a id="change">if memory_allocation is None</a>:
+                memory_buffers[op_id]<a id="change"> = </a>None
+            else:
+                &#47&#47 We compute the total amount of memory needed for this
+                &#47&#47 operation
+                final_shape = [batches_ahead,
+                               batch_size, *memory_allocation.shape]
+                if isinstance(memory_allocation.dtype, ch.dtype):
+                    result = []
+                    for _ in range(final_shape[0]):
+                        partial<a id="change"> = </a>ch.empty(*final_shape[1:],
+                                          dtype=memory_allocation.dtype,
+                                          device=memory_allocation.device)
+                        try:
+                            partial = partial.pin_memory()
+                        except:
+                            pass
+                        result.append(partial)
+                else:
+                    ch_dtype<a id="change"> = </a>ch.from_numpy(np.empty(0, dtype=memory_allocation.dtype)).dtype
+                    result = ch.empty(*final_shape,
+                                      dtype=ch_dtype)
+                    try:
+                        result<a id="change"> = </a>result.pin_memory()
+                    except:
+                        pass
+                    result = result.numpy()</code></pre><h3>After Change</h3><pre><code class='java'>
+                allocated_buffer = self.allocate_query(memory_allocation,
+                                                            batch_size,
+                                                            batches_ahead)
+            elif <a id="change"></a>isinstance(memory_allocation, Sequence):
+                allocated_buffer<a id="change"> = </a><a id="change">tuple(
+                    </a>self<a id="change">.allocate_query(q, batch_size, batches_ahead) for q in memory_allocation
+                )</a>
+
+            memory_buffers[op_id] = allocated_buffer
+
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 10</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/libffcv/ffcv/commit/1e28d9884436db64131ee02d545d2c5374f19dc9#diff-e775b66b9cf24bfa0524d7edbf465b5ca12846f195123573855b4d62e63670e3L70' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 100610559</div><div id='project'> Project Name: libffcv/ffcv</div><div id='commit'> Commit Name: 1e28d9884436db64131ee02d545d2c5374f19dc9</div><div id='time'> Time: 2021-11-13</div><div id='author'> Author: leclerc@mit.edu</div><div id='file'> File Name: ffcv/pipeline/pipeline.py</div><div id='m_class'> M Class Name: Pipeline</div><div id='n_method'> N Class Name: Pipeline</div><div id='m_method'> M Method Name: allocate_memory(3)</div><div id='n_method'> N Method Name: allocate_memory(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: ffcv/pipeline/pipeline.py</div><div id='n_file'> N File Name: ffcv/pipeline/pipeline.py</div><div id='m_start'> M Start Line: 70</div><div id='m_end'> M End Line: 105</div><div id='n_start'> N Start Line: 100</div><div id='n_end'> N End Line: 112</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 create output
+        block_predictions = torch.cat([block_backcasts.detach(), block_forecasts.detach()], dim=1)
+
+        <a id="change">if forecast.size(2) &gt; 1</a>:  &#47&#47 multi-output
+            n_outputs = forecast.size(2)
+            forecast<a id="change"> = </a>[forecast[:, :, i] for i in range(n_outputs)]
+            backcast<a id="change"> = </a>[encoder_y[:, :, i] - backcast[:, :, i] for i in range(n_outputs)]
+
+            n_blocks<a id="change"> = </a>block_predictions.size(3)
+            block_predictions<a id="change"> = </a>[block_predictions[:, :, i] for i in range(n_outputs)]
+            block_predictions = tuple(
+                self.transform_output([b[..., block] for b in block_predictions], target_scale=x["target_scale"])
+                for block in range(n_blocks)</code></pre><h3>After Change</h3><pre><code class='java'>
+        block_backcasts = block_backcasts.detach()
+        block_forecasts = block_forecasts.detach()
+
+        <a id="change">if </a>isinstance(self.hparams.output_size, (tuple, list)):
+            forecast = forecast.split(self.hparams.output_size, dim=2)
+            backcast = backcast.split(1, dim=2)
+            block_backcasts = tuple(
+                self.transform_output(block.squeeze(3).split(1, dim=2), target_scale=x["target_scale"])
+                for block in block_backcasts.split(1, dim=3)
+            )
+            block_forecasts = tuple(
+                self.transform_output(
+                    block.squeeze(3).split(self.hparams.output_size, dim=2), target_scale=x["target_scale"]
+                )
+                for block in block_forecasts.split(1, dim=3)
+            )
+        else:
+            block_backcasts<a id="change"> = </a><a id="change">tuple(
+                </a>self<a id="change">.transform_output(block.squeeze(3), target_scale=x["target_scale"])
+                for block in block_backcasts.split(1, dim=3)
+            )</a>
+            block_forecasts = tuple(
+                self.transform_output(block.squeeze(3), target_scale=x["target_scale"])
+                for block in block_forecasts.split(1, dim=3)
+            )</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/jdb78/pytorch-forecasting/commit/e7175c98af01f4c8f9aadb90c53aa4f0d1540931#diff-372ac5871df5799f296dfbb7219a29e486e7b0252796f56e8f40c24b4f0a8bbeL230' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 100609033</div><div id='project'> Project Name: jdb78/pytorch-forecasting</div><div id='commit'> Commit Name: e7175c98af01f4c8f9aadb90c53aa4f0d1540931</div><div id='time'> Time: 2022-03-30</div><div id='author'> Author: beitner.jan@bcg.com</div><div id='file'> File Name: pytorch_forecasting/models/nhits/__init__.py</div><div id='m_class'> M Class Name: NHiTS</div><div id='n_method'> N Class Name: NHiTS</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: BaseModelWithCovariates</div><div id='n_parent_class'> N Parent Class: BaseModelWithCovariates</div><div id='m_file'> M File Name: pytorch_forecasting/models/nhits/__init__.py</div><div id='n_file'> N File Name: pytorch_forecasting/models/nhits/__init__.py</div><div id='m_start'> M Start Line: 261</div><div id='m_end'> M End Line: 290</div><div id='n_start'> N Start Line: 268</div><div id='n_end'> N End Line: 297</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        batch_size = self.batch_size
+
+        for i in range(num_batches):
+            <a id="change">if self.pt + batch_size &lt; len(self.arrays[0])</a>:
+                iter_ret<a id="change"> = </a>[]
+                for j, a in enumerate(self.arrays):
+                    if self.shuffle:
+                        batch<a id="change"> = </a>a[self.perm[self.pt:self.pt + batch_size]]
+                    else:
+                        batch<a id="change"> = </a>a[self.pt:self.pt + batch_size]
+
+                    iter_ret.append(
+                        self.shard_func(batch, self.avals[j],
+                                        self.sharding_specs[j],
+                                        self.indices[j]))
+
+                self.queue.append(iter_ret)
+
+                self.pt<a id="change"> += </a>batch_size
+
+    def __iter__(self):
+        self.pt = 0</code></pre><h3>After Change</h3><pre><code class='java'>
+            flatten_args, tree = jax.tree_flatten(batch)
+
+            &#47&#47 Cache meta info
+            <a id="change">if </a>self.first_iter:
+                self.first_iter = False
+                self.avals = [
+                    ShapedArray(a.shape, a.dtype) <a id="change">for</a> a in flatten_args
+                ]
+                self.indices<a id="change"> = </a>[
+                    <a id="change">tuple(</a>spec.indices(aval.shape)<a id="change">)</a>
+                    for spec, aval in zip(self.sharding_specs, self.avals)
+                ]
+
+            new_args = self.physical_mesh.shard_args_to_arrays(</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/alpa-projects/alpa/commit/eb156b60a22df5fdc6a06d5c7833d4075002746d#diff-1c06e34c32f327f460c74a4e04faa9d8e072ea955f761b1bc10cefcb85ea86bbL67' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 100609025</div><div id='project'> Project Name: alpa-projects/alpa</div><div id='commit'> Commit Name: eb156b60a22df5fdc6a06d5c7833d4075002746d</div><div id='time'> Time: 2022-02-25</div><div id='author'> Author: lianminzheng@gmail.com</div><div id='file'> File Name: alpa/data_loader.py</div><div id='m_class'> M Class Name: DataLoader</div><div id='n_method'> N Class Name: DataLoader</div><div id='m_method'> M Method Name: enqueue(2)</div><div id='n_method'> N Method Name: enqueue(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: alpa/data_loader.py</div><div id='n_file'> N File Name: alpa/data_loader.py</div><div id='m_start'> M Start Line: 68</div><div id='m_end'> M End Line: 88</div><div id='n_start'> N Start Line: 33</div><div id='n_end'> N End Line: 51</div><BR>

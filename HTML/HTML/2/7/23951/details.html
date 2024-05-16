@@ -1,0 +1,58 @@
+<html><h3>Pattern ID :23951
+</h3><img src='74510473.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        request_objects = self.comm_handler.recv_gradients(g, batch_idx)
+
+        &#47&#47 recv for bwd
+        <a id="change">for </a>obj in request_objects<a id="change">:
+            while </a><a id="change">not obj.is_completed():
+                </a><a id="change">pass</a>
+                &#47&#47 obj.wait()
+
+        &#47&#47 TODO: maybe a different fix for gradients?
+        g = self.comm_handler.fix_after_recv(g)</code></pre><h3>After Change</h3><pre><code class='java'>
+            self.bwd_rcev_buffers.create()
+
+        recved_all = False
+        <a id="change">if </a>self.recv_all_bwd or self.bwd_rcev_buffers.first_rcv_after_created or self.bwd_rcev_buffers.max_buffers == 1:
+            self.recv_all_bwd = False
+            self.bwd_rcev_buffers.recv_all(batch_idx, num_batches)
+            recved_all = True</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 6</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/saareliad/ftpipe/commit/c5d99022b6a12748aff63f8f1a3931050b7a1d1a#diff-5e076251e3138c824f1e98c9223b2f4507d35059d327da1d43d1ec4e31c68bd3L247' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 74510473</div><div id='project'> Project Name: saareliad/ftpipe</div><div id='commit'> Commit Name: c5d99022b6a12748aff63f8f1a3931050b7a1d1a</div><div id='time'> Time: 2020-01-09</div><div id='author'> Author: saareliad@campus.technion.ac.il</div><div id='file'> File Name: pipeline/partition_manager.py</div><div id='m_class'> M Class Name: SinglePartitionManager</div><div id='n_method'> N Class Name: SinglePartitionManager</div><div id='m_method'> M Method Name: run_batch_backward(3)</div><div id='n_method'> N Method Name: run_batch_backward(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: pipeline/partition_manager.py</div><div id='n_file'> N File Name: pipeline/partition_manager.py</div><div id='m_start'> M Start Line: 247</div><div id='m_end'> M End Line: 310</div><div id='n_start'> N Start Line: 247</div><div id='n_end'> N End Line: 315</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    def wait_first(self):
+         Wait for the first Irecv_fn to finish 
+        request_objects = self.handlers.popleft()
+        <a id="change">for </a><a id="change">obj</a> in request_objects<a id="change">:
+            &#47&#47 obj.wait()
+            while </a><a id="change">not obj.is_completed():
+                </a><a id="change">pass</a>
+
+        res = self.buffers[self.pointer]
+        self.pointer = (self.pointer + 1) % self.max_buffers
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+                for obj, v in zip(request_objects, bres):
+                    obj.wait()
+                    <a id="change">if </a>isinstance(v, torch.Tensor):
+                        res.append(v.clone())
+                    else:
+                        res.append(v)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/saareliad/ftpipe/commit/4221f185909e9f45ceb9591563d4967ccbbd6df6#diff-ab85c0672e3e0834535b4a257f3ce6e4b4835d2aeef049e4b1270bed1c7e1106L81' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 74510474</div><div id='project'> Project Name: saareliad/ftpipe</div><div id='commit'> Commit Name: 4221f185909e9f45ceb9591563d4967ccbbd6df6</div><div id='time'> Time: 2021-05-02</div><div id='author'> Author: saareliad@campus.technion.ac.il</div><div id='file'> File Name: pipe/pipeline/communication/buffer.py</div><div id='m_class'> M Class Name: Buffers</div><div id='n_method'> N Class Name: Buffers</div><div id='m_method'> M Method Name: wait_first(1)</div><div id='n_method'> N Method Name: wait_first(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: pipe/pipeline/communication/buffer.py</div><div id='n_file'> N File Name: pipe/pipeline/communication/buffer.py</div><div id='m_start'> M Start Line: 83</div><div id='m_end'> M End Line: 95</div><div id='n_start'> N Start Line: 84</div><div id='n_end'> N End Line: 99</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            request_objects = self.comm_handler.recv_activations(x, batch_idx)
+
+            &#47&#47 recv for fwd
+            <a id="change">for </a><a id="change">obj</a> in request_objects<a id="change">:
+                &#47&#47 print(f"-I- {self.stage} waiting on rcv")
+                while</a><a id="change">(not obj.is_completed()):
+                    </a><a id="change">pass</a>
+                    &#47&#47 obj.wait()
+                &#47&#47 print(f"-I- {self.stage} DONE waiting on rcv")
+
+            &#47&#47 For comm handler with chunks we have to fix. For others its no-op.</code></pre><h3>After Change</h3><pre><code class='java'>
+                self.fwd_rcev_buffers.create()
+
+            recved_all = False
+            <a id="change">if </a>self.fwd_rcev_buffers.first_rcv_after_created or self.fwd_rcev_buffers.max_buffers == 1:
+                self.fwd_rcev_buffers.recv_all(batch_idx, num_batches)
+                recved_all = True
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/saareliad/ftpipe/commit/c5d99022b6a12748aff63f8f1a3931050b7a1d1a#diff-5e076251e3138c824f1e98c9223b2f4507d35059d327da1d43d1ec4e31c68bd3L118' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 74510476</div><div id='project'> Project Name: saareliad/ftpipe</div><div id='commit'> Commit Name: c5d99022b6a12748aff63f8f1a3931050b7a1d1a</div><div id='time'> Time: 2020-01-09</div><div id='author'> Author: saareliad@campus.technion.ac.il</div><div id='file'> File Name: pipeline/partition_manager.py</div><div id='m_class'> M Class Name: SinglePartitionManager</div><div id='n_method'> N Class Name: SinglePartitionManager</div><div id='m_method'> M Method Name: run_batch_forward(4)</div><div id='n_method'> N Method Name: run_batch_forward(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: pipeline/partition_manager.py</div><div id='n_file'> N File Name: pipeline/partition_manager.py</div><div id='m_start'> M Start Line: 156</div><div id='m_end'> M End Line: 172</div><div id='n_start'> N Start Line: 157</div><div id='n_end'> N End Line: 177</div><BR>

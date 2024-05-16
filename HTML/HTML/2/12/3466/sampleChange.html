@@ -1,0 +1,31 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+    def evaluate(self, dataloader: Union[DataLoader, DataModule] = None):
+        self.to_stage(TrainerStage.val)
+        <a id="change">if dataloader is None</a>:
+            <a id="change">dataloader = </a>self.val_dataloader
+        <a id="change">if isinstance(dataloader</a>, DataModule<a id="change">)</a>:
+            <a id="change">dataloader.idataloader(</a>self.params, TrainerStage.val, self.initial.val_dataloader<a id="change">)</a>
+            self.initial.val_dataloader<a id="change"> = </a>True
+            dataloader<a id="change"> = </a>dataloader.val_dataloader
+        if dataloader is None:
+            return TrainerResult(TrainerStage.val, 1, &quotno eval_dataloader&quot)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    def evaluate(self, dataloader: Union[DataLoader, DataModule] = None):
+        self.to_stage(TrainerStage.val)
+        dataloader<a id="change"> = </a><a id="change">self._prepare_dataloader(</a>TrainerStage.val, dataloader<a id="change">)</a>
+        if dataloader is None:
+            return TrainerResult(TrainerStage.val, 1, &quotno eval_dataloader&quot)
+
+        self._check_dist_environ(dataloader)
+        with torch.no_grad():
+            avg = AvgMeter()
+            for idx, batch in to_device_enumrate(dataloader, self.device_arg_kwargs):
+                self.params.idx<a id="change"> = </a>idx
+                meter = self.evaluate_step(idx, batch, self.params)
+                avg.update(self._wrap_result(meter))
+        return TrainerResult(TrainerStage.val, 0)</code></pre>

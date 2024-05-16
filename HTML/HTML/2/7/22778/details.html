@@ -1,0 +1,64 @@
+<html><h3>Pattern ID :22778
+</h3><img src='72281866.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    adj_mat = torch.zeros(seqs.shape[0], seqs.shape[1]*14, seqs.shape[1]*14)
+    &#47&#47 not needed to device since it&quots only for indices.
+    scaff = torch.zeros(seqs.shape[1], 14)
+    <a id="change">scaff[:, 0]</a> = 1
+    idxs<a id="change"> = </a>torch.nonzero(scaff).reshape(-1)
+
+    for s,seq in enumerate(seqs): 
+        for i,idx in enumerate(idxs):</code></pre><h3>After Change</h3><pre><code class='java'>
+            &#47&#47 offset by pos in chain ( intra-aa bonds + with next aa )
+            aa_bonds = constants.AA_DATA[VOCAB._int2char[seq[i]]][&quotbonds&quot]
+            next_aa = max(aa_bonds, key=lambda x: max(x))[-1]
+            bonds<a id="change"> = </a>next_idx + torch.tensor( aa_bonds<a id="change"> + </a>[<a id="change">[</a>2, next_aa<a id="change"></a>]] ).t()
+            next_idx += next_aa
+            &#47&#47 delete link with next if final AA in seq
+            if i == idxs.shape[0]-1:</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 6</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/lucidrains/alphafold2/commit/e361277a48c9514d016c333185d83e63a882c0c2#diff-f9b2e05be1f80257f9a80ec7cc1290e3337a54fcc62aeee31b23a4cb827f12efL500' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 72281866</div><div id='project'> Project Name: lucidrains/alphafold2</div><div id='commit'> Commit Name: e361277a48c9514d016c333185d83e63a882c0c2</div><div id='time'> Time: 2021-05-16</div><div id='author'> Author: ericalcaide1@gmail.com</div><div id='file'> File Name: alphafold2_pytorch/utils.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: prot_covalent_bond(4)</div><div id='n_method'> N Method Name: prot_covalent_bond(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: alphafold2_pytorch/utils.py</div><div id='n_file'> N File Name: alphafold2_pytorch/utils.py</div><div id='m_start'> M Start Line: 500</div><div id='m_end'> M End Line: 525</div><div id='n_start'> N Start Line: 500</div><div id='n_end'> N End Line: 526</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+        bg_delta = torch.nn.functional.smooth_l1_loss(
+            qs_pred[:, 0] * (1 - obs["fg_mask"].float()),
+            <a id="change">torch.zeros_like(qs_pred)[:, 0]</a>,
+            reduction="none",
+        ).mean(dim=(1, 2))
+        bg_loss = (bg_delta * sampling_weigths).mean()
+
+        loss<a id="change"> = </a>q_loss + bg_loss
+
+        loss.backward()
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        q_loss = (q_delta * sampling_weigths).mean()
+
+        bg_mask = 1 - obs["fg_mask"]
+        q_bg_pred = <a id="change">[]</a>
+        for b in range(bg_mask.shape[0]):
+            y, x = torch.where(bg_mask[b])
+            i = torch.randint(low=0, high=len(y), size=()).item()
+            q_bg_pred.append(qs_pred[b, 0, y[i], x[i]])
+        q_bg_pred = torch.stack(q_bg_pred)
+        q_bg_delta = torch.nn.functional.smooth_l1_loss(
+            q_bg_pred,
+            torch.zeros_like(q_bg_pred),
+            reduction="none",
+        )
+        q_bg_loss<a id="change"> = </a>(q_bg_delta<a id="change"> * </a>sampling_weigths).mean()
+
+        loss = q_loss + q_bg_loss
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/wkentaro/safepicking/commit/c0652660c3e748a3405e22a324ef4e518d03c096#diff-3a019c87efc0a2b3b3b7b4fc42dbe7ba183756b75362d92dbc72eab8953b42c6L123' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 72281851</div><div id='project'> Project Name: wkentaro/safepicking</div><div id='commit'> Commit Name: c0652660c3e748a3405e22a324ef4e518d03c096</div><div id='time'> Time: 2021-05-05</div><div id='author'> Author: www.kentaro.wada@gmail.com</div><div id='file'> File Name: examples/grasp_with_intent/agent.py</div><div id='m_class'> M Class Name: DqnAgent</div><div id='n_method'> N Class Name: DqnAgent</div><div id='m_method'> M Method Name: _update_q(2)</div><div id='n_method'> N Method Name: _update_q(2)</div><div id='m_parent_class'> M Parent Class: Agent</div><div id='n_parent_class'> N Parent Class: Agent</div><div id='m_file'> M File Name: examples/grasp_with_intent/agent.py</div><div id='n_file'> N File Name: examples/grasp_with_intent/agent.py</div><div id='m_start'> M Start Line: 132</div><div id='m_end'> M End Line: 178</div><div id='n_start'> N Start Line: 132</div><div id='n_end'> N End Line: 185</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        ) in enumerate(iterator):
+            all_tokens = torch.cat([input_tokens, decoder_tokens])
+            &#47&#47 Select next token
+            next_token<a id="change"> = </a>next_token_chooser(all_tokens, <a id="change">logits.unsqueeze(0)[:, -1]</a>)
+
+            &#47&#47 Append next token to decoder tokens
+            decoder_tokens = torch.cat([decoder_tokens, next_token.squeeze(1)])</code></pre><h3>After Change</h3><pre><code class='java'>
+                output_text = self.tokenizer.decode(token_ids, skip_special_tokens=True)
+                tokens = self.tokenizer.batch_decode(token_ids)
+                &#47&#47 Add NaN for the bos token
+                logprobs<a id="change"> = </a><a id="change">[</a>float("nan")<a id="change"></a>]<a id="change"> + </a>decoder_logprobs[
+                    -new_decoder_input_length:
+                ].tolist()
+                &#47&#47 Add to the list of finished generations with the original request</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/huggingface/text-generation-inference/commit/32a253063dae768e71a0b0aa099cfbbe962032d1#diff-5f73de5207b539d091eab9836962b8a5516a93798467b3a1870ddac878757681L364' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 72281865</div><div id='project'> Project Name: huggingface/text-generation-inference</div><div id='commit'> Commit Name: 32a253063dae768e71a0b0aa099cfbbe962032d1</div><div id='time'> Time: 2022-12-15</div><div id='author'> Author: olivier@huggingface.co</div><div id='file'> File Name: server/text_generation/models/seq2seq_lm.py</div><div id='m_class'> M Class Name: Seq2SeqLM</div><div id='n_method'> N Class Name: Seq2SeqLM</div><div id='m_method'> M Method Name: generate_token(2)</div><div id='n_method'> N Method Name: generate_token(2)</div><div id='m_parent_class'> M Parent Class: Model</div><div id='n_parent_class'> N Parent Class: Model</div><div id='m_file'> M File Name: server/text_generation/models/seq2seq_lm.py</div><div id='n_file'> N File Name: server/text_generation/models/seq2seq_lm.py</div><div id='m_start'> M Start Line: 420</div><div id='m_end'> M End Line: 443</div><div id='n_start'> N Start Line: 395</div><div id='n_end'> N End Line: 474</div><BR>

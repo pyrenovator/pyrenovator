@@ -1,0 +1,146 @@
+<html><h3>Pattern ID :7701
+</h3><img src='25598790.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            return self.trainer.max_steps
+
+        dataset_size = (
+            self.trainer.limit_train_batches<a id="change">
+            if </a>self.trainer.limit_train_batches != 0<a id="change">
+            else </a>len(self.trainer.datamodule.train_dataloader())
+        )
+
+        num_devices = max(1, self.trainer.num_gpus, self.trainer.num_processes)</code></pre><h3>After Change</h3><pre><code class='java'>
+        if self.trainer.max_steps:
+            return self.trainer.max_steps
+
+        <a id="change">if </a><a id="change">isinstance(</a>self.trainer.limit_train_batches, int<a id="change">)</a> and self.trainer.limit_train_batches != 0:
+            dataset_size<a id="change"> = </a>self.trainer.limit_train_batches
+        elif <a id="change"></a>isinstance(self.trainer.limit_train_batches, float):
+            &#47&#47 limit_train_batches is a percentage of batches
+            dataset_size<a id="change"> = </a>len(self.trainer.datamodule.train_dataloader())
+            dataset_size<a id="change"> = </a>int(dataset_size * self.trainer.limit_train_batches)
+        else:
+            dataset_size<a id="change"> = </a>len(self.trainer.datamodule.train_dataloader())
+
+        num_devices = max(1, self.trainer.num_gpus, self.trainer.num_processes)
+        if self.trainer.tpu_cores:</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 8</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/lightning-ai/lightning-transformers/commit/57627d0dcaf7b0797d7dbee32bbf3b6e6c865c5c#diff-6af8a64873868b45d513e92928c1508b697be12eebb472b8bf9c1d417e8aab9fL39' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 25598790</div><div id='project'> Project Name: lightning-ai/lightning-transformers</div><div id='commit'> Commit Name: 57627d0dcaf7b0797d7dbee32bbf3b6e6c865c5c</div><div id='time'> Time: 2021-01-14</div><div id='author'> Author: sean.narenthiran@gmail.com</div><div id='file'> File Name: lightning_transformers/core/model.py</div><div id='m_class'> M Class Name: LitTransformer</div><div id='n_method'> N Class Name: LitTransformer</div><div id='m_method'> M Method Name: num_training_steps(1)</div><div id='n_method'> N Method Name: num_training_steps(1)</div><div id='m_parent_class'> M Parent Class: pl.LightningModule</div><div id='n_parent_class'> N Parent Class: pl.LightningModule</div><div id='m_file'> M File Name: lightning_transformers/core/model.py</div><div id='n_file'> N File Name: lightning_transformers/core/model.py</div><div id='m_start'> M Start Line: 40</div><div id='m_end'> M End Line: 43</div><div id='n_start'> N Start Line: 39</div><div id='n_end'> N End Line: 48</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            has_ellipses = Ellipsis in unique_args
+
+            _unique_type = (
+                sanitized_type(args[0], primitive_only=no_nested_container, nested=True)<a id="change">
+                if </a>len<a id="change">(unique_args) == 1 or (len(unique_args) == 2 and has_ellipses)
+                else </a>Any
+            )
+            if has_ellipses:
+                return Tuple[_unique_type, ...]  &#47&#47 type: ignore</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    if origin is not None:
+
+        <a id="change">if </a><a id="change">isinstance(</a>type_, _AnnotatedAlias<a id="change">)</a>:
+            return sanitized_type(
+                origin,
+                primitive_only=primitive_only,
+                wrap_optional=wrap_optional,
+                nested=nested,
+            )
+
+        if primitive_only:  &#47&#47 pragma: no cover
+            return Any
+
+        args = get_args(type_)
+        if origin is Union:
+            &#47&#47 Hydra only supports Optional[&lt;type&gt;] unions
+            if len(args) != 2 or NoneType not in args:
+                &#47&#47 isn&quott Optional[&lt;type&gt;]
+                return Any
+
+            args = cast(Tuple[type, type], args)
+
+            optional_type, none_type = args
+            if none_type is not NoneType:
+                optional_type = none_type
+            optional_type: Optional[Any]
+            optional_type = sanitized_type(optional_type)
+
+            if optional_type is Any:  &#47&#47 Union[Any, T] is just Any
+                return Any
+            return Union[optional_type, NoneType]  &#47&#47 type: ignore
+
+        if origin is list or origin is List:
+            return List[sanitized_type(args[0], primitive_only=no_nested_container, nested=True)] if args else type_  &#47&#47 type: ignore
+
+        if origin is dict or origin is Dict:
+            return (
+                Dict[
+                    sanitized_type(args[0], primitive_only=True, nested=True),  &#47&#47 type: ignore
+                    sanitized_type(args[1], primitive_only=no_nested_container, nested=True),  &#47&#47 type: ignore
+                ]
+                if args
+                else type_
+            )
+
+        if (origin is tuple or origin is Tuple) and not nested:
+            &#47&#47 hydra silently supports tuples of homogenous types
+            &#47&#47 It has some weird behavior. It treats `Tuple[t1, t2, ...]` as `List[t1]`
+            &#47&#47 It isn&quott clear that we want to perpetrate this on our end..
+            &#47&#47 So we deal with inhomogeneous types as e.g. `Tuple[str, int]` -&gt; `Tuple[Any, Any]`.
+            &#47&#47
+            &#47&#47 Otherwise we preserve the annotation as accurately as possible
+            if not args:
+                return Any  &#47&#47 bare Tuple not supported by hydra
+            args = cast(Tuple[type, ...], args)
+            unique_args = set(args)
+            has_ellipses = Ellipsis in unique_args
+            has_variadic_unpack = any(get_origin(tp) is Unpack for tp in unique_args)
+
+            if len(unique_args) == 1 or (len(unique_args) == 2 and has_ellipses):
+                &#47&#47 E.g. Tuple[int, int, int] or Tuple[int, ...]
+                _unique_type<a id="change"> = </a>sanitized_type(
+                    args[0], primitive_only=no_nested_container, nested=True
+                )
+            elif <a id="change"></a>len(unique_args) == 2 and has_variadic_unpack:
+                &#47&#47 E.g. Tuple[int, *Ts]
+                _a<a id="change"> = </a>Any
+                for item in args:
+                    if get_origin(item) is not Unpack:
+                        _a = item
+                        break
+                _unique_type<a id="change"> = </a>sanitized_type(
+                    _a, primitive_only=no_nested_container, nested=True
+                )
+                del _a
+            else:
+                _unique_type<a id="change"> = </a>Any
+
+            if has_ellipses or has_variadic_unpack:
+                return Tuple[_unique_type, ...]  &#47&#47 type: ignore</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/mit-ll-responsible-ai/hydra-zen/commit/616746ec193238af851b2de607f0130f4e382607#diff-ebabcec16e3caeb48b89ee03d3cc3fe9a4577145e5a820380e9becef136f956eL276' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 25598788</div><div id='project'> Project Name: mit-ll-responsible-ai/hydra-zen</div><div id='commit'> Commit Name: 616746ec193238af851b2de607f0130f4e382607</div><div id='time'> Time: 2022-06-14</div><div id='author'> Author: ry26099@mit.edu</div><div id='file'> File Name: src/hydra_zen/structured_configs/_utils.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: sanitized_type(0)</div><div id='n_method'> N Method Name: sanitized_type(0)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/hydra_zen/structured_configs/_utils.py</div><div id='n_file'> N File Name: src/hydra_zen/structured_configs/_utils.py</div><div id='m_start'> M Start Line: 359</div><div id='m_end'> M End Line: 366</div><div id='n_start'> N Start Line: 313</div><div id='n_end'> N End Line: 419</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    assert n_train &gt;= 1
+
+    split_idx_train = n_train + n_lags + n_forecasts - 1
+    split_idx_val = split_idx_train - n_lags<a id="change"> if </a>inputs_overbleed<a id="change"> else </a>split_idx_train
+    df_train = df.copy(deep=True).iloc[:split_idx_train].reset_index(drop=True)
+    df_val = df.copy(deep=True).iloc[split_idx_val:].reset_index(drop=True)
+    log.debug("{} n_train, {} n_eval".format(n_train, n_samples - n_train))</code></pre><h3>After Change</h3><pre><code class='java'>
+        df_train (pd.DataFrame or list of pd.Dataframe):  training data
+        df_val (pd.DataFrame or list of pd.Dataframe): validation data
+    
+    <a id="change">if </a><a id="change">isinstance(</a>df, list<a id="change">)</a>:
+        df_list = df.copy()
+        df_train_list = list()
+        df_val_list = list()
+        <a id="change">if </a>local_modeling:
+            for df in df_list:
+                df_train<a id="change">, df_val = </a>single_split_df(df, n_lags, n_forecasts, valid_p, inputs_overbleed)
+                df_train_list.append(df_train)
+                df_val_list.append(df_val)
+            df_train, df_val = df_train_list, df_val_list
+        else:
+            threshold_time_stamp<a id="change"> = </a>find_time_threshold(df_list, n_lags, valid_p, inputs_overbleed)
+            df_train<a id="change">, df_val = </a>split_considering_timestamp(df_list, threshold_time_stamp)
+    else:
+        df_train<a id="change">, df_val = </a>single_split_df(df, n_lags, n_forecasts, valid_p, inputs_overbleed)
+    return df_train, df_val
+
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/ourownstory/neural_prophet/commit/d07b79568ef37904de81ba00248764233fbaa8c8#diff-cb8ae2d50e5d5d245ed6fcc8cadf2baf7294fa9ac5c63e819fbfe34f0e4c2552L280' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 25598725</div><div id='project'> Project Name: ourownstory/neural_prophet</div><div id='commit'> Commit Name: d07b79568ef37904de81ba00248764233fbaa8c8</div><div id='time'> Time: 2021-10-07</div><div id='author'> Author: ourownstory@users.noreply.github.com</div><div id='file'> File Name: neuralprophet/df_utils.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: split_df(6)</div><div id='n_method'> N Method Name: split_df(5)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: neuralprophet/df_utils.py</div><div id='n_file'> N File Name: neuralprophet/df_utils.py</div><div id='m_start'> M Start Line: 297</div><div id='m_end'> M End Line: 312</div><div id='n_start'> N Start Line: 506</div><div id='n_end'> N End Line: 539</div><BR>

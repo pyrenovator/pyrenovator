@@ -1,0 +1,62 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                 f&quotLoad with pandas.read_csv().&quot)
+    DataFrame(results.evaluation).to_csv(eval_file)
+    &#47&#47 Save ground-truth and predicted classes for further performance analysis
+    <a id="change">logging.info(f&quotSaving ground truth (y_true) and predicted (y_pred) &quot
+                 f&quotlabels (from training/validation) to {classes_file}... &quot
+                 f&quotLoad with numpy.load().&quot</a><a id="change">)</a>
+    np.savez(classes_file,
+             y_train_true=results.y_train_true,
+             y_train_pred=results.y_train_pred,
+             y_val_true=results.y_val_true,</code></pre><h3>After Change</h3><pre><code class='java'>
+    from deepnog.learning import fit
+    from deepnog.utils import get_logger
+
+    <a id="change">logger = </a><a id="change">get_logger(</a>__name__<a id="change">, verbose=args.verbose)</a>
+
+    if args.n_epochs &lt;= 0:
+        raise ValueError(f&quotNumber of epochs must be greater than or equal &quot
+                         f&quotone. Got n_epochs = {args.n_epochs} instead.&quot)
+    out_dir = Path(args.out)
+    <a id="change">logger.info(f&quotOutput directory: {out_dir} (creating, if necessary)&quot</a><a id="change">)</a>
+    out_dir.mkdir(parents=True, exist_ok=True)
+    &#47&#47 Add random letters to files to avoid name collisions
+    while True:
+        random_letters = &quot&quot.join(random.sample(string.ascii_letters, 4))
+        if not any([random_letters in str(f) for f in out_dir.iterdir()]):
+            break  &#47&#47 if these letters were not used previously
+    experiment_name = f&quotdeepnog_custom_model_{args.database}_{args.tax}_{random_letters}&quot
+    model_file = out_dir/f&quot{experiment_name}_model.pt&quot
+    eval_file = out_dir/f&quot{experiment_name}_eval.csv&quot
+    classes_file = out_dir/f&quot{experiment_name}_labels.npz&quot
+
+    results = fit(architecture=args.architecture,
+                  training_sequences=args.training_sequences,
+                  validation_sequences=args.validation_sequences,
+                  data_loader_params={&quotbatch_size&quot: args.batch_size,
+                                      &quotnum_workers&quot: args.num_workers},
+                  learning_rate=args.learning_rate,
+                  labels=args.labels,
+                  device=args.device,
+                  verbose=args.verbose,
+                  n_epochs=args.n_epochs,
+                  shuffle=args.shuffle,
+                  random_seed=args.random_seed,
+                  &#47&#47 TODO add the rest of the parameters to the client
+                  )
+
+    &#47&#47 Save model to output dir
+    logger.info(f&quotSaving model to {model_file}...&quot)
+    torch.save({&quotclasses&quot: results.training_dataset.label_encoder.classes_,
+                &quotmodel_state_dict&quot: results.model.state_dict()},
+               model_file)
+    &#47&#47 Save a dataframe of several training/validation statistics
+    <a id="change">logger.info(f&quotSaving evaluation statistics to {eval_file}... &quot
+                f&quotLoad with pandas.read_csv().&quot</a><a id="change">)</a>
+    DataFrame(results.evaluation).to_csv(eval_file)
+    &#47&#47 Save ground-truth and predicted classes for further performance analysis
+    logger.info(f&quotSaving ground truth (y_true) and predicted (y_pred) &quot
+                f&quotlabels (from training/validation) to {classes_file}... &quot</code></pre>

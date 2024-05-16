@@ -1,0 +1,117 @@
+<html><h3>Pattern ID :14800
+</h3><img src='48792488.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    present_col = max(n_present_col[i], 1)  &#47&#47 One col even if all are padded.
+    cost_m = cost[i : i + 1, :, :present_col]  &#47&#47 Slicing should avoid a copy.
+    indices = matching_fn(cost_m)[0]
+    row, col = <a id="change">indices[0]</a>, <a id="change">indices[1]</a>
+
+    &#47&#47 Add padded matches (if padding was done correctly these can be random).
+    unmatched_row = np.where(~eye[row].max(axis=0))[0]  &#47&#47 Faster than setdiff1d.
+    unmatched_col = np.arange(present_col, n_col)</code></pre><h3>After Change</h3><pre><code class='java'>
+  batch_shape = cost.shape[:-2]
+  cost = cost.reshape(-1, *cost.shape[-2:])
+
+  <a id="change">if n_present_col is None</a>:
+    matches<a id="change"> = </a>np.stack(<a id="change">[matching_fn(c) for c in cost]</a>)
+    return matches.reshape(*batch_shape, *matches.shape[1:])
+
+  n_present_col = n_present_col.reshape(-1)
+  assert cost.shape[:1] == n_present_col.shape, (
+      cost.shape,
+      n_present_col.shape,
+  )
+
+  batch, n_row, n_col = cost.shape
+  if n_row &lt; n_col:
+    raise ValueError(
+        f&quotSlicer requires that n_row ({n_row}) &gt;= n_col ({n_col}).&quot)
+
+  eye = np.eye(n_row, dtype=bool)
+  matches = []
+  for i in range(batch):
+    present_col = max(n_present_col[i], 1)  &#47&#47 One col even if all are padded.
+    cost_m = cost[i, :, :present_col]  &#47&#47 Slicing should avoid a copy.
+
+    row, col = matching_fn(cost_m)
+
+    &#47&#47 Add padded matches (if padding was done correctly these can be random).
+    unmatched_row = np.where(~eye[row].max(axis=0))[0]  &#47&#47 Faster than setdiff1d.
+    unmatched_row = unmatched_row.astype(np.int32)
+    unmatched_col = np.arange(present_col, n_col, dtype=np.int32)
+
+    &#47&#47 Assume n_row &gt;= n_col &gt;= n_present_col.
+    n_common = n_col - present_col
+    unmatched_row = unmatched_row[:n_common]
+
+    &#47&#47 Reconstruct the matching.
+    row = np.concatenate([row, unmatched_row], axis=0)
+    col = np.concatenate([col, unmatched_col], axis=0)
+
+    matches.append(np.stack([row, col], axis=0))
+
+  matches<a id="change"> = </a>np.stack(matches)
+
+  return matches.reshape(*batch_shape, *matches.shape[1:])
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 8</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/google-research/scenic/commit/72a73023a3e1b5c9914f78e1b004758a095cc0b8#diff-3db2c8d21e03842f86769d38dd15868297a1fad5269f4fd5d040a0801c9b0a4bL38' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 48792488</div><div id='project'> Project Name: google-research/scenic</div><div id='commit'> Commit Name: 72a73023a3e1b5c9914f78e1b004758a095cc0b8</div><div id='time'> Time: 2023-02-06</div><div id='author'> Author: mjlm@google.com</div><div id='file'> File Name: scenic/model_lib/matchers/common.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: slicer(3)</div><div id='n_method'> N Method Name: slicer(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: scenic/model_lib/matchers/common.py</div><div id='n_file'> N File Name: scenic/model_lib/matchers/common.py</div><div id='m_start'> M Start Line: 43</div><div id='m_end'> M End Line: 64</div><div id='n_start'> N Start Line: 38</div><div id='n_end'> N End Line: 81</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    def get_box_img(img, bbox, box_format, box_source):
+        if len(img.shape) != 3:
+            raise Exception(&quotThe image size should be 3&quot)
+        <a id="change">bbox</a> = Box.box2box(bbox, in_format=box_format, to_format=Box.BoxFormat.XYXY, in_source=box_source,
+                           to_source=Box.BoxSource.Numpy, return_int=True)
+        img_part = img[bbox[0]:bbox[2], <a id="change">bbox[1]</a>:<a id="change">bbox[3]</a>]
+        return img_part
+
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        img_part = []
+        if bbox is not None and len(bbox) == 0:
+            pass
+        elif <a id="change">type(bbox[0]) in [tuple, list, np.ndarray]</a>:
+            img_part<a id="change"> = </a><a id="change">[Box._get_box_img(img, b, box_format, box_source) for b in bbox]</a>
+        else:
+            img_part<a id="change"> = </a>Box._get_box_img(img, bbox, box_format, box_source)
+        return img_part
+
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/pooya-mohammadi/deep_utils/commit/6066216424278bb2d9e617af756036fd175a0b8b#diff-3ceb9fa0303b3f44b715ed4c9b696a70081baf0d12eb4c7fc08d14514519f85aL152' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 48792480</div><div id='project'> Project Name: pooya-mohammadi/deep_utils</div><div id='commit'> Commit Name: 6066216424278bb2d9e617af756036fd175a0b8b</div><div id='time'> Time: 2021-07-15</div><div id='author'> Author: practical.ai.programming@gmail.com</div><div id='file'> File Name: deep_utils/utils/box_utils/boxes.py</div><div id='m_class'> M Class Name: Box</div><div id='n_method'> N Class Name: Box</div><div id='m_method'> M Method Name: get_box_img(4)</div><div id='n_method'> N Method Name: get_box_img(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: deep_utils/utils/box_utils/boxes.py</div><div id='n_file'> N File Name: deep_utils/utils/box_utils/boxes.py</div><div id='m_start'> M Start Line: 155</div><div id='m_end'> M End Line: 157</div><div id='n_start'> N Start Line: 163</div><div id='n_end'> N End Line: 170</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+  for i in range(batch):
+    present_col = max(n_present_col[i], 1)  &#47&#47 One col even if all are padded.
+    cost_m = cost[i : i + 1, :, :present_col]  &#47&#47 Slicing should avoid a copy.
+    <a id="change">indices</a> = matching_fn(cost_m)[0]
+    row, col = <a id="change">indices[0]</a>, <a id="change">indices[1]</a>
+
+    &#47&#47 Add padded matches (if padding was done correctly these can be random).
+    unmatched_row = np.where(~eye[row].max(axis=0))[0]  &#47&#47 Faster than setdiff1d.
+    unmatched_col = np.arange(present_col, n_col)</code></pre><h3>After Change</h3><pre><code class='java'>
+  batch_shape = cost.shape[:-2]
+  cost = cost.reshape(-1, *cost.shape[-2:])
+
+  <a id="change">if n_present_col is None</a>:
+    matches<a id="change"> = </a>np.stack(<a id="change">[matching_fn(c) for c in cost]</a>)
+    return matches.reshape(*batch_shape, *matches.shape[1:])
+
+  n_present_col<a id="change"> = </a>n_present_col.reshape(-1)
+  assert cost.shape[:1] == n_present_col.shape, (
+      cost.shape,
+      n_present_col.shape,</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/google-research/scenic/commit/72a73023a3e1b5c9914f78e1b004758a095cc0b8#diff-3db2c8d21e03842f86769d38dd15868297a1fad5269f4fd5d040a0801c9b0a4bL23' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 48792464</div><div id='project'> Project Name: google-research/scenic</div><div id='commit'> Commit Name: 72a73023a3e1b5c9914f78e1b004758a095cc0b8</div><div id='time'> Time: 2023-02-06</div><div id='author'> Author: mjlm@google.com</div><div id='file'> File Name: scenic/model_lib/matchers/common.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: slicer(3)</div><div id='n_method'> N Method Name: slicer(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: scenic/model_lib/matchers/common.py</div><div id='n_file'> N File Name: scenic/model_lib/matchers/common.py</div><div id='m_start'> M Start Line: 43</div><div id='m_end'> M End Line: 64</div><div id='n_start'> N Start Line: 38</div><div id='n_end'> N End Line: 81</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    def __init__(self, data_dir, vid_type:tuple, num_frames=8, step=1, allow_overlap=True):
+        super(SynpickVideoDataset, self).__init__()
+
+        self.is_mask = "mask" in <a id="change">vid_type[0]</a>
+        self.is_colorized_mask = self.is_mask and <a id="change">vid_type[1]</a> == 3
+        self.data_ids = sorted(os.listdir(data_dir))
+        self.data_fps = [os.path.join(data_dir, image_id) for image_id in self.data_ids]
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        self.image_ids = sorted(os.listdir(images_dir))
+        self.mask_ids = sorted(os.listdir(masks_dir))
+        for a, b in zip(self.image_ids, self.mask_ids):
+            <a id="change">if a[:-4] != b[:-4]</a>:
+                print(a, b)
+                raise ValueError("image filenames are mask filenames do not match!")
+        self.image_fps<a id="change"> = </a>[os.path.join(images_dir, image_id) for image_id in self.image_ids]
+        self.mask_fps<a id="change"> = </a><a id="change">[os.path.join(masks_dir, mask_id) for mask_id in self.mask_ids]</a>
+
+        self.total_len = len(self.image_ids)
+        self.step = step  &#47&#47 if &gt;1, (step - 1) frames are skipped between each frame
+        self.sequence_length = (num_frames - 1) * self.step + 1  &#47&#47 num_frames also includes prediction horizon</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/ais-bonn/vp-suite/commit/12f06dedbeb7683194c69214a6c984951ddd53a5#diff-11bb3b632c84e01e0bf1b576e72c513fd062811e900ebcb5f22df0eac7d3b0d9L56' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 48792487</div><div id='project'> Project Name: ais-bonn/vp-suite</div><div id='commit'> Commit Name: 12f06dedbeb7683194c69214a6c984951ddd53a5</div><div id='time'> Time: 2021-08-02</div><div id='author'> Author: boltres@ais.uni-bonn.de</div><div id='file'> File Name: dataset.py</div><div id='m_class'> M Class Name: SynpickVideoDataset</div><div id='n_method'> N Class Name: SynpickVideoDataset</div><div id='m_method'> M Method Name: __init__(5)</div><div id='n_method'> N Method Name: __init__(6)</div><div id='m_parent_class'> M Parent Class: Dataset</div><div id='n_parent_class'> N Parent Class: Dataset</div><div id='m_file'> M File Name: dataset.py</div><div id='n_file'> N File Name: dataset.py</div><div id='m_start'> M Start Line: 56</div><div id='m_end'> M End Line: 62</div><div id='n_start'> N Start Line: 59</div><div id='n_end'> N End Line: 68</div><BR>

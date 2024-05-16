@@ -1,0 +1,51 @@
+<html><h3>Pattern ID :8804
+</h3><img src='32474303.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        mask = x.abs() &gt; 0.0
+        num_elements = mask.sum(dim=2, keepdim=True).detach()
+        x_mean = x.sum(dim=2, keepdim=True).detach() / num_elements
+        numerator = <a id="change">(x - x_mean).pow(2).sum(dim=2, keepdim=True)</a>.detach()
+        x_std = (numerator / num_elements).sqrt()
+        &#47&#47 make sure x_std is not zero
+        x_std += self.div_guard</code></pre><h3>After Change</h3><pre><code class='java'>
+        
+        &#47&#47 https://github.com/pytorch/pytorch/issues/45208
+        &#47&#47 https://github.com/pytorch/pytorch/issues/44768
+        <a id="change">with torch</a><a id="change">.no_grad():
+            </a>mask = x.abs() &gt; 0.0
+            return normalize_tensor(x, mask, div_guard=self.div_guard)
+
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 5</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/scart97/thunder-speech/commit/03fe277cc84be5cbcd6ee18db71068cb291c505f#diff-988ed1d06de8e388e1233174fd2b1ea861767922c675cfb84ba40ead641dfdf0L76' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 32474303</div><div id='project'> Project Name: scart97/thunder-speech</div><div id='commit'> Commit Name: 03fe277cc84be5cbcd6ee18db71068cb291c505f</div><div id='time'> Time: 2021-11-30</div><div id='author'> Author: scart.lucas@gmail.com</div><div id='file'> File Name: src/thunder/quartznet/transform.py</div><div id='m_class'> M Class Name: FeatureBatchNormalizer</div><div id='n_method'> N Class Name: FeatureBatchNormalizer</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: src/thunder/quartznet/transform.py</div><div id='n_file'> N File Name: src/thunder/quartznet/transform.py</div><div id='m_start'> M Start Line: 76</div><div id='m_end'> M End Line: 84</div><div id='n_start'> N Start Line: 77</div><div id='n_end'> N End Line: 81</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            &#47&#47 get per-coordinate sum of edges endpoints of each panel
+            &#47&#47 should be close to sum of the equvalent number of pading values (since all of coords are shifted due to normalization\standardization)
+            &#47&#47 (in case of panels, padding for edge coords should be zero, but I&quotm using a more generic solution here JIC)
+            panel_coords_sum = <a id="change">(predicted_panels[el_id][:seq_len, :2] - self.pad_tenzor[:2]).sum(axis=0)</a>
+
+
+        &#47&#47 batch mean of squared norms of per-panel final points:
+        return F.mse_loss(predicted_panels, chosen_panels)</code></pre><h3>After Change</h3><pre><code class='java'>
+        
+        chosen_panels = []
+        &#47&#47 choose the closest version of original panel for each predicted panel
+        <a id="change">with torch</a><a id="change">.no_grad():
+            </a>for el_id in range(predicted_panels.shape[0]):
+                num_edges = panel_len_from_padded(gt_panels[el_id], empty_template=self.empty_panel_template)
+
+                &#47&#47 all rotations of GT</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/maria-korosteleva/garment-pattern-estimation/commit/d5249e2d1149a36a28f875d31d10930c53b178d0#diff-66aae7ec57f079963bb4847ebb79bfda4004ba832ee23e11911a14908193967cL222' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 32474302</div><div id='project'> Project Name: maria-korosteleva/garment-pattern-estimation</div><div id='commit'> Commit Name: d5249e2d1149a36a28f875d31d10930c53b178d0</div><div id='time'> Time: 2021-04-13</div><div id='author'> Author: mariako@kaist.ac.kr</div><div id='file'> File Name: nn/metrics.py</div><div id='m_class'> M Class Name: PanelShapeOriginAgnosticLoss</div><div id='n_method'> N Class Name: PanelShapeOriginAgnosticLoss</div><div id='m_method'> M Method Name: __call__(3)</div><div id='n_method'> N Method Name: __call__(3)</div><div id='m_parent_class'> M Parent Class: PanelLoopLoss</div><div id='n_parent_class'> N Parent Class: PanelLoopLoss</div><div id='m_file'> M File Name: nn/metrics.py</div><div id='n_file'> N File Name: nn/metrics.py</div><div id='m_start'> M Start Line: 229</div><div id='m_end'> M End Line: 245</div><div id='n_start'> N Start Line: 228</div><div id='n_end'> N End Line: 261</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            val_baseline = (probs * vals).sum(1, keepdim=True)
+            &#47&#47 vals = A(s, a) = Q(s, a) - V(s)
+            vals -= val_baseline
+        actor_loss = <a id="change">(probs * (log_alpha.exp() * log_probs - vals)).sum(</a>1<a id="change">)</a>.mean()
+    else:
+        a = a_dist.rsample()
+        if not use_baseline:</code></pre><h3>After Change</h3><pre><code class='java'>
+    if discrete:
+        probs = a_dist.probs
+        log_probs = torch.log_softmax(a_dist.logits, dim=1)
+        <a id="change">with torch</a><a id="change">.no_grad():
+            </a>vals = torch.stack([q(s_rep) for q in agent.critics], dim=0).min(0).values
+        vals = (probs * vals).sum(1, keepdim=True)
+        entropy_bonus = log_alpha.exp() * (probs * log_probs).sum(1, keepdim=True)
+    else:</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/jakegrigsby/super_sac/commit/59feb0087b573d3c49f8443c5b5758b0f192ca3b#diff-ed592a42afa845d29a0da80d3c28fc31230301bf13d0d27e271c158cb7728875L196' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 32474301</div><div id='project'> Project Name: jakegrigsby/super_sac</div><div id='commit'> Commit Name: 59feb0087b573d3c49f8443c5b5758b0f192ca3b</div><div id='time'> Time: 2021-10-04</div><div id='author'> Author: jcg6dn@virginia.edu</div><div id='file'> File Name: uafbc/learning.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: online_actor_update(11)</div><div id='n_method'> N Method Name: online_actor_update(11)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: uafbc/learning.py</div><div id='n_file'> N File Name: uafbc/learning.py</div><div id='m_start'> M Start Line: 219</div><div id='m_end'> M End Line: 238</div><div id='n_start'> N Start Line: 219</div><div id='n_end'> N End Line: 236</div><BR>

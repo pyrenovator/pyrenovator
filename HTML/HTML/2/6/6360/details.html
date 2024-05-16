@@ -1,0 +1,166 @@
+<html><h3>Pattern ID :6360
+</h3><img src='22199938.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        dump(clf, self.serving_model_dir)
+
+        &#47&#47 for model agnostic evaluator
+        test_results<a id="change"> = </a>self.test_fn(clf, X_eval, y_eval)
+        <a id="change">trainer_utils.save_test_results(</a>test_results, self.test_results<a id="change">)</a>
+
+    def input_fn(self,
+                 file_pattern: List[Text],
+                 tf_transform_output: tft.TFTransformOutput):</code></pre><h3>After Change</h3><pre><code class='java'>
+        dump(clf, self.serving_model_dir)
+
+        &#47&#47 for model agnostic evaluator
+        <a id="change">if split_mapping[trainer_utils.TEST_SPLITS]</a>:
+            for split in split_mapping[trainer_utils.TEST_SPLITS]:
+                pattern = self.input_patterns[split]
+                X_test, y_test = self.input_fn([pattern])
+                test_results<a id="change"> = </a>self.test_fn(clf, X_test, y_test)
+                <a id="change">trainer_utils.save_test_results(</a>test_results,
+                                                self.output_patterns[split]<a id="change">)</a>
+
+    def input_fn(self,
+                 file_pattern: List[Text]):
+        </code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 6</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/maiot-io/zenml/commit/9123f2c0c7eed9f8f01f3d5fbc2cd46c3937d478#diff-352617ae1ef824c479d2e6f406229baf7515f872619c5df8cbc2e6286c72f7d2L47' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 22199938</div><div id='project'> Project Name: maiot-io/zenml</div><div id='commit'> Commit Name: 9123f2c0c7eed9f8f01f3d5fbc2cd46c3937d478</div><div id='time'> Time: 2021-03-29</div><div id='author'> Author: bariscandurak@hotmail.com</div><div id='file'> File Name: examples/scikit/step/trainer.py</div><div id='m_class'> M Class Name: MyScikitTrainer</div><div id='n_method'> N Class Name: MyScikitTrainer</div><div id='m_method'> M Method Name: run_fn(1)</div><div id='n_method'> N Method Name: run_fn(1)</div><div id='m_parent_class'> M Parent Class: BaseTrainerStep</div><div id='n_parent_class'> N Parent Class: BaseTrainerStep</div><div id='m_file'> M File Name: examples/scikit/step/trainer.py</div><div id='n_file'> N File Name: examples/scikit/step/trainer.py</div><div id='m_start'> M Start Line: 48</div><div id='m_end'> M End Line: 68</div><div id='n_start'> N Start Line: 47</div><div id='n_end'> N End Line: 83</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                os.path.join(self.serving_model_dir, &quotmodel.ckpt&quot))
+
+        &#47&#47 test fn for evaluator
+        test_results<a id="change"> = </a>self.test_fn(model, eval_dataset)
+        <a id="change">utils.save_test_results(</a>test_results, self.test_results<a id="change">)</a>
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    
+
+    def run_fn(self):
+        <a id="change">split_mapping</a> = utils.fill_split_mapping_w_defaults(
+            mapping=self.split_mapping,
+            splits=list(self.input_patterns.keys()))
+
+        train_split_patterns = [self.input_patterns[split]
+                                for split in split_mapping[utils.TRAIN_SPLITS]]
+        train_dataset = self.input_fn(train_split_patterns)
+
+        eval_split_patterns = [self.input_patterns[split]
+                               for split in split_mapping[utils.TEST_SPLITS]]
+        eval_dataset = self.input_fn(eval_split_patterns)
+
+        class LitModel(pl.LightningModule):
+            def __init__(self):
+                super().__init__()
+                self.l1 = torch.nn.Linear(8, 64)
+                self.layer_out = torch.nn.Linear(64, 1)
+
+            def forward(self, x):
+                x = torch.relu(self.l1(x))
+                x = self.layer_out(x)
+                return x
+
+            def training_step(self, batch, batch_idx):
+                x, y, z = batch
+                x_batch = torch.cat(list(x.values()), dim=-1)
+                y_t = torch.cat(list(y.values()), dim=-1)
+                y_hat = self(x_batch)
+                loss = F.binary_cross_entropy_with_logits(y_hat, y_t)
+                tensorboard_logs = {&quottrain_loss&quot: loss}
+                return {&quotloss&quot: loss, &quotlog&quot: tensorboard_logs}
+
+            def configure_optimizers(self):
+                return torch.optim.Adam(self.parameters(), lr=0.001)
+
+            def train_dataloader(self):
+                return train_dataset
+
+            def validation_step(self, batch, batch_idx):
+                x, y, z = batch
+                x_batch = torch.cat(list(x.values()), dim=-1)
+                y_t = torch.cat(list(y.values()), dim=-1)
+                y_hat = self(x_batch)
+                return {
+                    &quotval_loss&quot: F.binary_cross_entropy_with_logits(y_hat, y_t)}
+
+            def validation_epoch_end(self, outputs):
+                avg_loss = torch.stack([x[&quotval_loss&quot] for x in outputs]).mean()
+                tensorboard_logs = {&quotval_loss&quot: avg_loss}
+                return {&quotavg_val_loss&quot: avg_loss, &quotlog&quot: tensorboard_logs}
+
+            def val_dataloader(self):
+                return eval_dataset
+
+        model = LitModel()
+
+        &#47&#47 most basic trainer, uses good defaults
+        trainer = Trainer(
+            default_root_dir=self.log_dir,
+            max_epochs=self.epochs,
+        )
+        trainer.fit(model)
+
+        path_utils.create_dir_if_not_exists(self.serving_model_dir)
+        if path_utils.is_remote(self.serving_model_dir):
+            temp_model_dir = &quot__temp_model_dir__&quot
+            temp_path = os.path.join(os.getcwd(), temp_model_dir)
+            if path_utils.is_dir(temp_path):
+                raise PermissionError(&quot{} is used as a temp path but it &quot
+                                      &quotalready exists. Please remove it to &quot
+                                      &quotcontinue.&quot)
+            trainer.save_checkpoint(os.path.join(temp_path, &quotmodel.cpkt&quot))
+            path_utils.copy_dir(temp_path, self.serving_model_dir)
+            path_utils.rm_dir(temp_path)
+        else:
+            trainer.save_checkpoint(
+                os.path.join(self.serving_model_dir, &quotmodel.ckpt&quot))
+
+        &#47&#47 test
+        <a id="change">if </a>split_mapping[utils.TEST_SPLITS]:
+            for split in split_mapping[utils.TEST_SPLITS]:
+                pattern = self.input_patterns[split]
+                test_dataset = self.input_fn([pattern])
+                test_results<a id="change"> = </a>self.test_fn(model, test_dataset)
+                <a id="change">utils.save_test_results(</a>test_results,
+                                        self.output_patterns[split]<a id="change">)</a></code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/maiot-io/zenml/commit/536e5051dd438dda4ae8d95e0225ab1666f8e31f#diff-7f8c3e3293eccc30c9954c5ce250d2f85355dd08636e45ffa0298bfeda6d4f33L32' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 22199937</div><div id='project'> Project Name: maiot-io/zenml</div><div id='commit'> Commit Name: 536e5051dd438dda4ae8d95e0225ab1666f8e31f</div><div id='time'> Time: 2021-03-29</div><div id='author'> Author: bariscandurak@hotmail.com</div><div id='file'> File Name: examples/pytorch_lightning/step/trainer.py</div><div id='m_class'> M Class Name: MyPyTorchLightningTrainer</div><div id='n_method'> N Class Name: MyPyTorchLightningTrainer</div><div id='m_method'> M Method Name: run_fn(1)</div><div id='n_method'> N Method Name: run_fn(1)</div><div id='m_parent_class'> M Parent Class: TorchFeedForwardTrainer</div><div id='n_parent_class'> N Parent Class: TorchFeedForwardTrainer</div><div id='m_file'> M File Name: examples/pytorch_lightning/step/trainer.py</div><div id='n_file'> N File Name: examples/pytorch_lightning/step/trainer.py</div><div id='m_start'> M Start Line: 33</div><div id='m_end'> M End Line: 107</div><div id='n_start'> N Start Line: 33</div><div id='n_end'> N End Line: 118</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                  f&quot{epoch_acc / step_count:.3f}&quot)
+
+        &#47&#47 test
+        test_results<a id="change"> = </a>self.test_fn(model, eval_dataset)
+        <a id="change">utils.save_test_results(</a>test_results, self.test_results<a id="change">)</a>
+
+        path_utils.create_dir_if_not_exists(self.serving_model_dir)
+        if path_utils.is_remote(self.serving_model_dir):
+            temp_model_dir = &quot__temp_model_dir__&quot</code></pre><h3>After Change</h3><pre><code class='java'>
+                  f&quot{epoch_acc / step_count:.3f}&quot)
+
+        &#47&#47 test
+        <a id="change">test_datasets</a> = self.input_fn(self.test_files,
+                                      self.schema,
+                                      combine_splits=False)
+
+        <a id="change">if </a>test_datasets:
+            test_results<a id="change"> = </a>self.test_fn(model, eval_dataset)
+            <a id="change">utils.save_test_results(</a>test_results, self.test_results<a id="change">)</a>
+
+        path_utils.create_dir_if_not_exists(self.serving_model_dir)
+        if path_utils.is_remote(self.serving_model_dir):
+            temp_model_dir = &quot__temp_model_dir__&quot</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/maiot-io/zenml/commit/a678456f2da1ec5dd05d8a00e36dba4d05b98668#diff-742173dc23a69c16083a811ff3e72a82edca3cc48946a7d03b794f1cab96889cL156' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 22199940</div><div id='project'> Project Name: maiot-io/zenml</div><div id='commit'> Commit Name: a678456f2da1ec5dd05d8a00e36dba4d05b98668</div><div id='time'> Time: 2021-03-23</div><div id='author'> Author: bariscandurak@hotmail.com</div><div id='file'> File Name: zenml/steps/trainer/pytorch_trainers/torch_ff_trainer.py</div><div id='m_class'> M Class Name: FeedForwardTrainer</div><div id='n_method'> N Class Name: FeedForwardTrainer</div><div id='m_method'> M Method Name: run_fn(1)</div><div id='n_method'> N Method Name: run_fn(1)</div><div id='m_parent_class'> M Parent Class: TorchBaseTrainerStep</div><div id='n_parent_class'> N Parent Class: TorchBaseTrainerStep</div><div id='m_file'> M File Name: zenml/steps/trainer/pytorch_trainers/torch_ff_trainer.py</div><div id='n_file'> N File Name: zenml/steps/trainer/pytorch_trainers/torch_ff_trainer.py</div><div id='m_start'> M Start Line: 210</div><div id='m_end'> M End Line: 211</div><div id='n_start'> N Start Line: 229</div><div id='n_end'> N End Line: 237</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        model = self.model_fn(train_dataset=train_dataset,
+                              eval_dataset=eval_dataset)
+
+        test_results<a id="change"> = </a>self.test_fn(model, eval_dataset)
+        <a id="change">utils.save_test_results(</a>test_results, self.test_results<a id="change">)</a>
+
+        signatures = {
+            &quotserving_default&quot:
+                self._get_serve_tf_examples_fn(</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        test_split_patterns = [self.split_patterns[split]
+                               for split in self.split_mapping[&quottest&quot]]
+        <a id="change">if </a><a id="change">test_split_patterns</a>:
+            test_dataset = self.input_fn(test_split_patterns)
+            test_results<a id="change"> = </a>self.test_fn(model, test_dataset)
+            <a id="change">utils.save_test_results(</a>test_results, self.test_results_dir<a id="change">)</a>
+
+        signatures = {
+            &quotserving_default&quot:
+                self._get_serve_tf_examples_fn(</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/maiot-io/zenml/commit/304c723aea623e22e60bcee3acb417d4b6b1264d#diff-c429febb83e0d6f65ae929447c7a435f835969efa933a786e951c35424b3a15bL127' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 22199934</div><div id='project'> Project Name: maiot-io/zenml</div><div id='commit'> Commit Name: 304c723aea623e22e60bcee3acb417d4b6b1264d</div><div id='time'> Time: 2021-03-26</div><div id='author'> Author: bariscandurak@hotmail.com</div><div id='file'> File Name: zenml/steps/trainer/tensorflow_trainers/tf_ff_trainer.py</div><div id='m_class'> M Class Name: FeedForwardTrainer</div><div id='n_method'> N Class Name: FeedForwardTrainer</div><div id='m_method'> M Method Name: run_fn(1)</div><div id='n_method'> N Method Name: run_fn(1)</div><div id='m_parent_class'> M Parent Class: TFBaseTrainerStep</div><div id='n_parent_class'> N Parent Class: TFBaseTrainerStep</div><div id='m_file'> M File Name: zenml/steps/trainer/tensorflow_trainers/tf_ff_trainer.py</div><div id='n_file'> N File Name: zenml/steps/trainer/tensorflow_trainers/tf_ff_trainer.py</div><div id='m_start'> M Start Line: 128</div><div id='m_end'> M End Line: 150</div><div id='n_start'> N Start Line: 127</div><div id='n_end'> N End Line: 156</div><BR>

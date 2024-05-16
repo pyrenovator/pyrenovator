@@ -1,0 +1,55 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        feature, order0 = feature
+        label, order1 = label
+        feature = torch.cat([f.to(device) for f in feature])
+        label = torch.cat([<a id="change">l.to(</a>device<a id="change">)</a> for l in label])
+        origin_feature = torch.empty_like(feature)
+        origin_label = torch.empty_like(label)
+        origin_feature[order0] = feature</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    total_loss = total_correct = 0
+    w.turn_on(&quotsample&quot)
+    t0 = <a id="change">time.time()</a>
+    torch.set_num_threads(5)
+    samples = [sample for sample in train_loader]
+    run_barrier()
+    for n_id, batch_size, adjs in samples:
+        &#47&#47 `adjs` holds a list of `(edge_index, e_id, size)` tuples.
+        &#47&#47 w1.tick(&quotprepro&quot)
+        w.turn_off(&quotsample&quot)
+        w.turn_on(&quottrain&quot)
+        adjs = [adj.to(device) for adj in adjs]
+        feature = x[n_id].to(device)
+        label = y[n_id[:batch_size]].to(device)
+        &#47&#47 feature, order0 = feature
+        &#47&#47 label, order1 = label
+        &#47&#47 feature = torch.cat([f.to(device) for f in feature])
+        &#47&#47 label = torch.cat([l.to(device) for l in label])
+        &#47&#47 origin_feature = torch.empty_like(feature)
+        &#47&#47 origin_label = torch.empty_like(label)
+        &#47&#47 origin_feature[order0] = feature
+        &#47&#47 origin_label[order1] = label
+
+        optimizer.zero_grad()
+        out = model(feature, adjs)
+        loss = F.nll_loss(out, label)
+        loss.backward()
+        optimizer.step()
+        &#47&#47 w1.tick(&quottrain&quot)
+
+        total_loss += float(loss)
+        total_correct += int(out.argmax(dim=-1).eq(label).sum())
+        &#47&#47 pbar.update(batch_size)
+        torch.cuda.synchronize(0)
+        w.turn_on(&quotsample&quot)
+        w.turn_off(&quottrain&quot)
+        &#47&#47 if args.rank == 0:
+        &#47&#47     print(f&quotone step took {time.time() - t0}&quot)
+        t0<a id="change"> = time</a><a id="change">.time()</a>
+
+    &#47&#47 pbar.close()
+    w.turn_off(&quotsample&quot)
+    loss = total_loss / len(train_loader)</code></pre>

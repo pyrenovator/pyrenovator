@@ -1,0 +1,99 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        :param nlu_fallback_action: nlu fallback configured for bot
+        :return: number of successful conversations
+        
+        client<a id="change"> = </a>HistoryProcessor.get_mongo_connection()
+        message = None
+        <a id="change">with </a><a id="change">client as client:
+            </a>db<a id="change"> = </a>client.get_database()
+            conversations<a id="change"> = </a>db.get_collection(collection)
+            total<a id="change"> = </a>[]
+            fallback_count<a id="change"> = </a>[]
+            <a id="change">try:
+                </a>total<a id="change"> = </a>list(
+                    conversations.aggregate([<a id="change">{</a>"$unwind": <a id="change">{</a>"path": "$events", "includeArrayIndex": "arrayIndex"<a id="change">}}</a>,
+                                             {"$match": {"events.timestamp": {
+                                                 "$gte": Utility.get_timestamp_previous_month(month)}}},
+                                             <a id="change">{</a>"$group": <a id="change">{</a>"_id": "$sender_id"<a id="change">}}</a>,
+                                             {"$group": {"_id": None, "count": {"$sum": 1}}},
+                                             {"$project": {"_id": 0, "count": 1}}
+                                             ]))
+            <a id="change">except </a>Exception as e:
+                logger.error(e)
+                message = str(e)
+
+            <a id="change">try:
+                </a>fallback_count<a id="change"> = </a>list(
+                    conversations.aggregate([
+                        <a id="change">{</a>"$unwind": <a id="change">{</a>"path": "$events", "includeArrayIndex": "arrayIndex"<a id="change">}}</a>,
+                        {"$match": {"events.timestamp": {"$gte": Utility.get_timestamp_previous_month(month)}}},
+                        <a id="change">{</a>"$match": <a id="change">{</a>&quot$or&quot: <a id="change">[{</a>"events.name": fallback_action<a id="change">}</a>, <a id="change">{</a>"events.name": nlu_fallback_action<a id="change">}</a>]<a id="change">}}</a>,
+                        <a id="change">{</a>"$group": <a id="change">{</a>"_id": "$sender_id"<a id="change">}}</a>,
+                        {"$group": {"_id": None, "count": {"$sum": 1}}},
+                        {"$project": {"_id": 0, "count": 1}}
+                    ]))
+
+            <a id="change">except </a>Exception as e:
+                <a id="change">logger.error(e</a><a id="change">)</a>
+                <a id="change">if message</a>:
+                    message<a id="change"> = </a><a id="change">&quot\n&quot.join(</a><a id="change">[message</a>, <a id="change">str(e</a><a id="change">)</a>]<a id="change">)</a>
+                else:
+                    message<a id="change"> = </a><a id="change">str(e</a><a id="change">)</a>
+
+            <a id="change">if </a>not total:
+                total_count = 0
+            else:
+                total_count = total[0][&quotcount&quot] if total[0][&quotcount&quot] else 0
+
+            <a id="change">if </a>not fallback_count:
+                fallbacks_count = 0
+            else:
+                fallbacks_count = fallback_count[0][&quotcount&quot] if fallback_count[0][&quotcount&quot] else 0</code></pre><h3>After Change</h3><pre><code class='java'>
+        :param nlu_fallback_action: nlu fallback configured for bot
+        :return: number of successful conversations
+        
+        total<a id="change"> = </a>[]
+        fallback_count<a id="change"> = </a>[]
+        <a id="change">try:
+            </a>client<a id="change"> = </a>HistoryProcessor.get_mongo_connection()
+            message = None
+            <a id="change">with client</a><a id="change"> as client:
+                </a>db<a id="change"> = </a>client.get_database()
+                conversations<a id="change"> = </a>db.get_collection(collection)
+                total<a id="change"> = </a>list(
+                    conversations.aggregate([{"$match": {
+                                                        "event.timestamp": {"$gte": Utility.get_timestamp_previous_month(month)},
+                                                        "event.event": "user"
+                                                        }
+                                             },
+                                             {"$group": {"_id": None, "count": {"$sum": 1}}},
+                                             {"$project": {"_id": 0, "count": 1}}
+                                             ]))
+
+                fallback_count<a id="change"> = </a>list(
+                    conversations.aggregate([
+                        {"$match": {
+                            "event.timestamp": {"$gte": Utility.get_timestamp_previous_month(month)},
+                            "event.name": <a id="change">{</a>"$in": <a id="change">[</a>fallback_action, nlu_fallback_action<a id="change"></a>]<a id="change">}</a>
+                        }
+                        },
+                        {"$group": {"_id": None, "count": {"$sum": 1}}},
+                        {"$project": {"_id": 0, "count": 1}}
+                    ]))
+
+        <a id="change">except </a>Exception as e:
+            logger.error(e)
+            message = str(e)
+
+        <a id="change">if </a>not total:
+            total_count = 0
+        else:
+            total_count = total[0][&quotcount&quot] if total[0][&quotcount&quot] else 0
+
+        <a id="change">if </a>not fallback_count:
+            fallbacks_count = 0
+        else:
+            fallbacks_count = fallback_count[0][&quotcount&quot] if fallback_count[0][&quotcount&quot] else 0</code></pre>

@@ -1,0 +1,75 @@
+<html><h3>Pattern ID :39697
+</h3><img src='113004892.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+    def forward(self, x, valid_len, time_step_len):
+        &#47&#47 cosntruct the fully connected graph(s)
+        edge_index = <a id="change">[]</a>
+        for graph_id in range(len(valid_len)):
+            <a id="change">for </a><a id="change">edge</a> in permutations([i for i in <a id="change">range(</a>time_step_len<a id="change">)</a>], 2)<a id="change">:
+                </a><a id="change">if </a><a id="change">edge[0] &lt; valid_len[graph_id] and edge[1] &lt; valid_len[graph_id]</a>:
+                    <a id="change">edge_index.append(</a>[edge[0]<a id="change"> + </a>graph_id*time_step_len, edge[1] + graph_id*time_step_len]<a id="change">)</a>
+        edge_index = torch.tensor(edge_index).transpose(1, 0)
+        edge_index, _ = add_self_loops(edge_index, num_nodes=x.size(0))
+
+        x = x.view(-1, time_step_len, self.in_channels)</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 cosntruct the fully connected graph(s)
+        edge_index = torch.Tensor([]).to(self.device)
+        for graph_id in range(len(valid_len)):
+            node_list = torch.Tensor(<a id="change">[i for i in range(valid_len[graph_id])]</a>).to(self.device) + graph_id*time_step_len
+            edge_index<a id="change"> = </a>torch.cat((edge_index, torch.combinations(node_list, 2)), 0)
+        edge_index = edge_index.transpose(1, 0).long()
+        edge_index, _ = add_self_loops(edge_index, num_nodes=x.size(0))
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 13</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/henry1iu/tnt-trajectory-prediction/commit/d5d6d744a19e4a69c600bacf0dea23a00fc624c5#diff-bd24ef8819c89b1625b56e34744b51851008aad60a754b2883dccb9d99515997L58' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 113004892</div><div id='project'> Project Name: henry1iu/tnt-trajectory-prediction</div><div id='commit'> Commit Name: d5d6d744a19e4a69c600bacf0dea23a00fc624c5</div><div id='time'> Time: 2021-01-15</div><div id='author'> Author: liu.jb.henry@gmail.com</div><div id='file'> File Name: core/model/layers/global_graph.py</div><div id='m_class'> M Class Name: SelfAttentionLayer</div><div id='n_method'> N Class Name: SelfAttentionLayer</div><div id='m_method'> M Method Name: forward(4)</div><div id='n_method'> N Method Name: forward(4)</div><div id='m_parent_class'> M Parent Class: MessagePassing</div><div id='n_parent_class'> N Parent Class: MessagePassing</div><div id='m_file'> M File Name: core/model/layers/global_graph.py</div><div id='n_file'> N File Name: core/model/layers/global_graph.py</div><div id='m_start'> M Start Line: 58</div><div id='m_end'> M End Line: 63</div><div id='n_start'> N Start Line: 75</div><div id='n_end'> N End Line: 79</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    else:
+        raise ValueError("unkown padding type.")
+
+    row_indices = <a id="change">[]</a>
+    column_indices = []
+    values = []
+    for <a id="change">column</a> in range(0, input_rows):
+        <a id="change">for </a><a id="change">row</a> in <a id="change">range(</a>0, filter_length<a id="change">)</a><a id="change">:
+            </a>check_row = column + row
+            <a id="change">if </a><a id="change">(check_row &gt;= start_row) and (check_row &lt;= stop_row)</a>:
+                <a id="change">row_indices.append(</a>row<a id="change"> + column - </a>start_row<a id="change">)</a>
+                column_indices.append(column)
+                values.append(filter[row])
+    indices = torch.tensor(
+        np.stack([row_indices, column_indices]), device=filter.device</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    product_lst = [
+        (row, col)
+        for col, row in product(<a id="change">range(</a>input_rows<a id="change">)</a>, range(filter_length))
+        if row + col in range(start_row, stop_row + 1)
+    ]
+
+    row_indices = torch.tensor(
+        [row + col - start_row for row, col in product_lst], device=filter.device
+    )
+    col_indices = torch.tensor([col for row, col in product_lst], device=filter.device)
+    indices = torch.stack([row_indices, col_indices])
+    values<a id="change"> = </a>torch.stack(<a id="change">[filter[row] for row, col in product_lst]</a>)
+
+    return torch.sparse_coo_tensor(
+        indices, values, device=filter.device, dtype=filter.dtype</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/v0lta/pytorch-wavelet-toolbox/commit/623deeb220e325f65bd2a0ad576cd2ebfedc7cce#diff-4cf3e41efbfc338d0b6af6fd66d51bf77a37adf3814121abe1d2f6fc7040efa8L330' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 113004877</div><div id='project'> Project Name: v0lta/pytorch-wavelet-toolbox</div><div id='commit'> Commit Name: 623deeb220e325f65bd2a0ad576cd2ebfedc7cce</div><div id='time'> Time: 2023-02-20</div><div id='author'> Author: felix.blanke@scai.fraunhofer.de</div><div id='file'> File Name: src/ptwt/sparse_math.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: construct_conv_matrix(3)</div><div id='n_method'> N Method Name: construct_conv_matrix(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/ptwt/sparse_math.py</div><div id='n_file'> N File Name: src/ptwt/sparse_math.py</div><div id='m_start'> M Start Line: 354</div><div id='m_end'> M End Line: 385</div><div id='n_start'> N Start Line: 354</div><div id='n_end'> N End Line: 384</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    def forward(self, x, valid_len, time_step_len):
+        &#47&#47 cosntruct the fully connected graph(s)
+        edge_index = <a id="change">[]</a>
+        for <a id="change">graph_id</a> in range(len(valid_len)):
+            <a id="change">for </a><a id="change">edge</a> in permutations([i for i in <a id="change">range(</a>time_step_len<a id="change">)</a>], 2)<a id="change">:
+                </a><a id="change">if edge[0] &lt; valid_len[graph_id]</a><a id="change"> and edge[1] &lt; valid_len[graph_id]</a>:
+                    <a id="change">edge_index.append(</a>[edge[0]<a id="change"> + </a>graph_id*time_step_len, edge[1] + graph_id*time_step_len]<a id="change">)</a>
+        edge_index = torch.tensor(edge_index).transpose(1, 0)
+        edge_index, _ = add_self_loops(edge_index, num_nodes=x.size(0))
+
+        x = x.view(-1, time_step_len, self.in_channels)</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 cosntruct the fully connected graph(s)
+        edge_index = torch.Tensor([]).to(self.device)
+        for graph_id in range(len(valid_len)):
+            node_list<a id="change"> = </a>torch.Tensor(<a id="change">[i for i in range(valid_len[graph_id])]</a>).to(self.device) + graph_id*time_step_len
+            edge_index = torch.cat((edge_index, torch.combinations(node_list, 2)), 0)
+        edge_index = edge_index.transpose(1, 0).long()
+        edge_index, _ = add_self_loops(edge_index, num_nodes=x.size(0))</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/henry1iu/tnt-trajectory-prediction/commit/d5d6d744a19e4a69c600bacf0dea23a00fc624c5#diff-bd24ef8819c89b1625b56e34744b51851008aad60a754b2883dccb9d99515997L56' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 113004895</div><div id='project'> Project Name: henry1iu/tnt-trajectory-prediction</div><div id='commit'> Commit Name: d5d6d744a19e4a69c600bacf0dea23a00fc624c5</div><div id='time'> Time: 2021-01-15</div><div id='author'> Author: liu.jb.henry@gmail.com</div><div id='file'> File Name: core/model/layers/global_graph.py</div><div id='m_class'> M Class Name: SelfAttentionLayer</div><div id='n_method'> N Class Name: SelfAttentionLayer</div><div id='m_method'> M Method Name: forward(4)</div><div id='n_method'> N Method Name: forward(4)</div><div id='m_parent_class'> M Parent Class: MessagePassing</div><div id='n_parent_class'> N Parent Class: MessagePassing</div><div id='m_file'> M File Name: core/model/layers/global_graph.py</div><div id='n_file'> N File Name: core/model/layers/global_graph.py</div><div id='m_start'> M Start Line: 58</div><div id='m_end'> M End Line: 63</div><div id='n_start'> N Start Line: 75</div><div id='n_end'> N End Line: 79</div><BR>

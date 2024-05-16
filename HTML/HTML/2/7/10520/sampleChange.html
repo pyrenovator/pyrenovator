@@ -1,0 +1,27 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+    &#47&#47 create model
+    print("=&gt; using pre-trained model &quot{}&quot".format(args.arch))
+    backbone<a id="change"> = </a>models.__dict__[args.arch](pretrained=True)
+    backbone_source = models.__dict__[args.arch](pretrained=True)
+    if args.pretrained:
+        print("=&gt; loading pre-trained model from &quot{}&quot".format(args.pretrained))
+        pretrained_dict = torch.load(args.pretrained)
+        backbone.load_state_dict(pretrained_dict, strict=False)
+        backbone_source.load_state_dict(pretrained_dict, strict=False)
+    num_classes = train_dataset.num_classes
+    classifier<a id="change"> = Classifier(</a><a id="change">backbone, num_classes).to(</a>device<a id="change">)</a>
+    source_classifier = Classifier(backbone_source, head=backbone_source.copy_head(), num_classes=backbone_source.fc.out_features).to(device)
+    for param in source_classifier.parameters():
+        param.requires_grad = False
+    source_classifier.eval()</code></pre><h3>After Change</h3><pre><code class='java'>
+    print("=&gt; using pre-trained model &quot{}&quot".format(args.arch))
+    backbone = utils.get_model(args.arch, args.pretrained)
+    backbone_source = utils.get_model(args.arch, args.pretrained)
+    pool_layer = <a id="change">nn.Identity()</a><a id="change"> if args.no_pool</a><a id="change"> else </a>None
+    classifier = Classifier(backbone, num_classes, pool_layer=pool_layer, finetune=args.finetune).to(device)
+    source_classifier = Classifier(backbone_source, num_classes=backbone_source.fc.out_features,
+                                   head=backbone_source.copy_head(), pool_layer=pool_layer).to(device)</code></pre>

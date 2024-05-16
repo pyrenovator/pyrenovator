@@ -1,0 +1,29 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            executor = self.executor
+        else:
+            &#47&#47 use passed in executor
+            executor<a id="change"> = </a><a id="change">kwargs.pop("executor"</a><a id="change">)</a>
+
+        return (
+            executor.submit(self._run, *args, **kwargs)  &#47&#47 Non-Blocking call
+            if executor and not self.use_dynamic_batch()</code></pre><h3>After Change</h3><pre><code class='java'>
+        batches = self.split_engine_inputs(engine_inputs, self._batch_size)
+
+        &#47&#47 submit to engine
+        futures = <a id="change">[
+            self.executor.submit(self.engine_forward, batch) for batch in batches
+        ]</a>
+        wait(futures)
+
+        &#47&#47 join together the batches of size `self._batch_size`
+        engine_outputs = self.join_engine_outputs(
+            [future.result() for future in futures]
+        )
+
+        pipeline_outputs<a id="change"> = </a>self.process_engine_outputs(
+            engine_outputs, **postprocess_kwargs
+        )
+        if not isinstance(pipeline_outputs, self.output_schema):</code></pre>

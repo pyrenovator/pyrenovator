@@ -1,0 +1,29 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        if self.pos_emb is not None:
+            tensor += self.pos_emb(tensor).type(tensor.type())
+
+        <a id="change">for </a>layer in self.layers<a id="change">:
+            </a>module = layer[0]
+            norm<a id="change"> = layer[1]</a>
+
+            before_module_tensor = <a id="change">tensor.clone().detach()</a>
+            if self.checkpoint_level == "C1" or self.checkpoint_level == "C2":
+                tensor = checkpoint(module, tensor)
+            else:
+                tensor = module(tensor, **kwargs)
+            tensor<a id="change"> += </a>before_module_tensor
+            tensor<a id="change"> = </a>norm(tensor)
+
+        return tensor
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        assert c == self.channels, "This tensor is of the wrong size. Dimension 2 has to match the `channels` flag"
+        assert self.checkpoint_level == "C0" if kwargs else True, "Cannot run checkpointing when visualizing. Please set the checkpoint level to `C0`"
+
+        <a id="change">for </a>layer in self.seq<a id="change">:
+            </a>if self.checkpoint_level != "C0":
+                tensor = checkpoint(layer, tensor)
+            else:
+                tensor = layer(tensor, **kwargs)</code></pre>

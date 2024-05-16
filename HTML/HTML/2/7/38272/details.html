@@ -1,0 +1,83 @@
+<html><h3>Pattern ID :38272
+</h3><img src='109537831.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    &#47&#47 p4 ─&gt; p4p5 ─&gt; pan_out1
+    &#47&#47         ↓         ↑
+    &#47&#47 p3 ─&gt; pan_out2 ───┘
+    csp_depth = <a id="change">max(</a>round(depth_mul<a id="change"> * 2</a>), <a id="change">1</a><a id="change">)</a>
+    p3, p4, p5 = features  &#47&#47 p3: [64, 64, 256], p4: [32, 32, 512], p5: [16, 16, 512]
+    p3 = conv_dw_pw_block(p3, p3.shape[-1] // 2, kernel_size=1, activation=activation, name=name + "p3_down_")  &#47&#47 [64, 64, 128]
+    p4 = conv_dw_pw_block(p4, p4.shape[-1] // 2, kernel_size=1, activation=activation, name=name + "p4_down_")  &#47&#47 [32, 32, 256]
+
+    &#47&#47 p4p5: [32, 32, 256]
+    p4p5<a id="change"> = </a>upsample_merge([p4, p5], csp_depth, use_depthwise_conv=use_depthwise_conv, activation=activation, name=name + "p4p5_")
+    &#47&#47 pan_out2: [64, 64, 128]
+    pan_out2 = upsample_merge([p3, p4p5], csp_depth, use_depthwise_conv=use_depthwise_conv, activation=activation, name=name + "p3p4p5_")
+    &#47&#47 pan_out1: [32, 32, 256]</code></pre><h3>After Change</h3><pre><code class='java'>
+        nn = upsample_merge([nn, upsamples[-1]], fpn_depth, use_depthwise_conv=use_depthwise_conv, activation=activation, name=name + p_name)
+        upsamples.append(nn)
+
+    downsamples = [<a id="change">upsamples[-1]</a>]
+    &#47&#47 downsamples: [p3p4p5], upsamples[:-1][::-1]: [p4p5, p5] -&gt; [p5, p4p5, p3p4p5]
+    for id, ii in enumerate(upsamples[:-1][::-1]):
+        cur_name = name + "c3n{}_".format(id + 3)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/leondgarse/keras_cv_attention_models/commit/bef44f2c07106cb7cf251facb6581ef6220cde48#diff-cf00589dd78a70f206aa03291605956bb50216e6496978d3ad26c6a07d1405bcL139' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 109537831</div><div id='project'> Project Name: leondgarse/keras_cv_attention_models</div><div id='commit'> Commit Name: bef44f2c07106cb7cf251facb6581ef6220cde48</div><div id='time'> Time: 2022-03-18</div><div id='author'> Author: leondgarse@gmail.com</div><div id='file'> File Name: keras_cv_attention_models/yolor/yolor.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: path_aggregation_fpn(5)</div><div id='n_method'> N Method Name: path_aggregation_fpn(5)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: keras_cv_attention_models/yolor/yolor.py</div><div id='n_file'> N File Name: keras_cv_attention_models/yolor/yolor.py</div><div id='m_start'> M Start Line: 139</div><div id='m_end'> M End Line: 152</div><div id='n_start'> N Start Line: 204</div><div id='n_end'> N End Line: 220</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    def __getitem__(self, idx):
+        &#47&#47 get index data
+        data = self.data.iloc[self.data_index.index_start.iloc[idx] : self.data_index.index_end.iloc[idx]<a id="change"> + 1</a>].copy()
+
+        &#47&#47 todo: handle missings -&gt; fill them up with strategy
+        &#47&#47 determine data window
+        sequence_length = len(data)
+        max_prediction_length = self.max_prediction_length
+        if self.randomize_length is not None:
+            &#47&#47 modify sequence length
+            sequence_length_prob, encode_length_probability = Beta(*self.randomize_length).sample(torch.Size([2]))
+            sequence_length = int(max(1, Binomial(sequence_length, sequence_length_prob).sample()))
+            max_prediction_length = int(max(1, Binomial(max_prediction_length, encode_length_probability).sample()))
+            if sequence_length &lt; len(data):
+                data = data.iloc[-sequence_length:]  &#47&#47 select subset of sequence
+
+        encode_length<a id="change"> = </a>min(<a id="change">max(0</a>, sequence_length - max_prediction_length<a id="change">)</a>, self.max_encode_length)
+        decode_length = sequence_length - encode_length
+
+        &#47&#47 extract data</code></pre><h3>After Change</h3><pre><code class='java'>
+        assert sequence_length &gt;= self.min_prediction_length
+        &#47&#47 determine prediction/decode length and encode length
+        decode_length = min(
+            <a id="change">data.iloc[-1]</a>["__time_idx__"] - (self.min_prediction_idx - 1), self.max_prediction_length, sequence_length
+        )
+        encode_length = sequence_length - decode_length
+        assert decode_length &gt;= self.min_prediction_length</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/jdb78/pytorch-forecasting/commit/79cfec0818dbe78d8773534e6ce8f5fd578c3c3a#diff-e34740341caadea4baf7d22baa64e7e6ec9f8c5df41233e6a11682dc68310a89L147' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 109537830</div><div id='project'> Project Name: jdb78/pytorch-forecasting</div><div id='commit'> Commit Name: 79cfec0818dbe78d8773534e6ce8f5fd578c3c3a</div><div id='time'> Time: 2020-06-22</div><div id='author'> Author: beitner.jan@bcg.com</div><div id='file'> File Name: temporal_fusion_transformer_pytorch/data.py</div><div id='m_class'> M Class Name: TimeSeriesDataSet</div><div id='n_method'> N Class Name: TimeSeriesDataSet</div><div id='m_method'> M Method Name: __getitem__(2)</div><div id='n_method'> N Method Name: __getitem__(2)</div><div id='m_parent_class'> M Parent Class: Dataset</div><div id='n_parent_class'> N Parent Class: Dataset</div><div id='m_file'> M File Name: temporal_fusion_transformer_pytorch/data.py</div><div id='n_file'> N File Name: temporal_fusion_transformer_pytorch/data.py</div><div id='m_start'> M Start Line: 149</div><div id='m_end'> M End Line: 164</div><div id='n_start'> N Start Line: 186</div><div id='n_end'> N End Line: 220</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    length = resp.getheader(&quotcontent-length&quot)
+    if length:
+        length = int(length)
+        blocksize<a id="change"> = </a><a id="change">max(4096</a>, length<a id="change"> // 100</a><a id="change">)</a>
+    else:
+        blocksize = 1000000  &#47&#47 just made something up
+
+    buf = io.BytesIO()</code></pre><h3>After Change</h3><pre><code class='java'>
+
+
+def download(url, path):
+    file_name = os.path.join(path, <a id="change">url.split("/")[-1]</a>)
+
+    if os.path.exists(file_name):
+        print(f"Dataset already downloaded at {file_name}.")</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/continvvm/continuum/commit/21c44f320830e89c7754209a9c98affafb0932c8#diff-25b5e494ed7669996260965822bf8b7569efb732db0fb1e8b76ad4f54d3bf865L6' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 109537827</div><div id='project'> Project Name: continvvm/continuum</div><div id='commit'> Commit Name: 21c44f320830e89c7754209a9c98affafb0932c8</div><div id='time'> Time: 2020-06-17</div><div id='author'> Author: ar.douillard@gmail.com</div><div id='file'> File Name: continuum/download.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: download(2)</div><div id='n_method'> N Method Name: download(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: continuum/download.py</div><div id='n_file'> N File Name: continuum/download.py</div><div id='m_start'> M Start Line: 6</div><div id='m_end'> M End Line: 36</div><div id='n_start'> N Start Line: 7</div><div id='n_end'> N End Line: 17</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        nn = conv_dw_pw_block(nn, channel, 3, strides=2, use_depthwise_conv=use_depthwise_conv, activation=activation, name=stack_name + "downsample_")
+        nn = csp_stack(nn, depth, use_depthwise_conv=use_depthwise_conv, activation=activation, name=stack_name)
+        if use_spp:
+            ssp_depth<a id="change"> = </a><a id="change">max(</a>round(depth_mul<a id="change"> * 2</a>), <a id="change">1</a><a id="change">)</a>
+            nn = res_spatial_pyramid_pooling(nn, ssp_depth, activation=activation, name=stack_name + "spp_")
+        features.append(nn)
+
+    nn = [features[ii] for ii in out_features]</code></pre><h3>After Change</h3><pre><code class='java'>
+    inputs = keras.layers.Input(input_shape)
+
+     Stem 
+    stem_width = stem_width if stem_width &gt; 0 else <a id="change">channels[0]</a> // 2
+    if use_focus_stem:
+        nn = focus_stem(inputs, stem_width, activation=activation, name="stem_")
+    else:</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/leondgarse/keras_cv_attention_models/commit/bef44f2c07106cb7cf251facb6581ef6220cde48#diff-cf00589dd78a70f206aa03291605956bb50216e6496978d3ad26c6a07d1405bcL83' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 109537825</div><div id='project'> Project Name: leondgarse/keras_cv_attention_models</div><div id='commit'> Commit Name: bef44f2c07106cb7cf251facb6581ef6220cde48</div><div id='time'> Time: 2022-03-18</div><div id='author'> Author: leondgarse@gmail.com</div><div id='file'> File Name: keras_cv_attention_models/yolor/yolor.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: CSPDarknet(12)</div><div id='n_method'> N Method Name: CSPDarknet(7)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: keras_cv_attention_models/yolor/yolor.py</div><div id='n_file'> N File Name: keras_cv_attention_models/yolor/yolor.py</div><div id='m_start'> M Start Line: 84</div><div id='m_end'> M End Line: 102</div><div id='n_start'> N Start Line: 109</div><div id='n_end'> N End Line: 141</div><BR>

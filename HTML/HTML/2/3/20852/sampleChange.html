@@ -1,0 +1,37 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+
+def predict(network):
+	t0_spikes = <a id="change">[]</a>
+	hh_encoder = None
+	for t in range(n_encoder_steps):
+		x = t0[:, t]
+		x, hh_encoder = spikes_encoder(x, hh_encoder)</code></pre><h3>After Change</h3><pre><code class='java'>
+	&#47&#47 	t0_spikes.append(x)
+	&#47&#47 t0_spikes = torch.stack(t0_spikes, dim=1)
+	&#47&#47 t0_decode = spikes_decoder(t0_spikes)
+	t0_spikes = <a id="change">spikes_auto_encoder.encode(</a>t0<a id="change">)</a>
+	
+	spikes_preds = []
+	x, hh = None, None
+	for t in range(n_encoder_steps):
+		x = t0_spikes[:, t]
+		x, hh = network(x, hh)
+		&#47&#47 spikes_preds.append(x)
+	
+	for t in range((ws_ts.n_time_steps - 1) * n_encoder_steps):
+		&#47&#47 x = spikes_preds[-1]
+		x, hh = network(x, hh)
+		spikes_preds.append(x)
+	spikes_preds = torch.stack(spikes_preds, dim=1)
+	
+	&#47&#47 ts_decode = spikes_decoder(torch.stack(spikes_preds, dim=1)[:, n_encoder_steps:])
+	spikes_preds = torch.concat([t0_spikes, spikes_preds], dim=1)
+	&#47&#47 preds = spikes_decoder(torch.stack(spikes_preds, dim=1))
+	preds<a id="change"> = </a>spikes_auto_encoder.decode(spikes_preds)
+	return preds
+
+</code></pre>

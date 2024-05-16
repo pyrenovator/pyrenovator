@@ -1,0 +1,68 @@
+<html><h3>Pattern ID :14311
+</h3><img src='47384467.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    device = torch.device(&quotcuda&quot if backend == &quotnccl&quot else &quotcpu&quot)
+
+    if backend == &quotnccl&quot:
+        world_size<a id="change"> = </a><a id="change">get_world_size()</a>
+        total_size = len(bytearray(nncore.dumps(data))) * world_size
+
+        pynvml.nvmlInit()
+        for i in range(world_size):
+            handle = pynvml.nvmlDeviceGetHandleByIndex(i)
+            meminfo = pynvml.nvmlDeviceGetMemoryInfo(handle)
+            <a id="change">if </a>meminfo.free &lt; total_size:
+                group = dist.new_group(backend=&quotgloo&quot)
+                device<a id="change"> = </a>&quotcpu&quot
+                break
+
+    buffer = nncore.dumps(data)</code></pre><h3>After Change</h3><pre><code class='java'>
+    storage = torch.ByteStorage.from_buffer(buffer)
+    data_tensor = torch.ByteTensor(storage, device=device)
+    size_tensor = torch.LongTensor([data_tensor.numel()], device=device)
+    <a id="change">return </a>data_tensor, size_tensor
+
+
+def _pad_tensor(data_tensor, pad_size):</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 5</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/yeliudev/nncore/commit/7b1c1711f2805cd55f6fdd396743454017170d76#diff-fdf562e6b578fc92f4c74e59141f61b874fc8722e8eb5d843ef38c4c81d99321L38' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 47384467</div><div id='project'> Project Name: yeliudev/nncore</div><div id='commit'> Commit Name: 7b1c1711f2805cd55f6fdd396743454017170d76</div><div id='time'> Time: 2021-04-28</div><div id='author'> Author: yeliudev@outlook.com</div><div id='file'> File Name: nncore/engine/comm.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: _serialize_to_tensor(2)</div><div id='n_method'> N Method Name: _serialize_to_tensor(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: nncore/engine/comm.py</div><div id='n_file'> N File Name: nncore/engine/comm.py</div><div id='m_start'> M Start Line: 38</div><div id='m_end'> M End Line: 59</div><div id='n_start'> N Start Line: 43</div><div id='n_end'> N End Line: 46</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    Returns:
+        collected (list[data]): a list of data gathered from each rank
+    
+    world_size<a id="change"> = </a><a id="change">get_world_size()</a>
+    total_size = len(bytearray(nncore.dumps(data))) * world_size
+
+    pynvml.nvmlInit()
+    matched = False
+    for i in range(world_size):
+        handle = pynvml.nvmlDeviceGetHandleByIndex(i)
+        meminfo = pynvml.nvmlDeviceGetMemoryInfo(handle)
+        <a id="change">if </a>meminfo.free &lt; total_size:
+            matched<a id="change"> = </a>True
+            break
+
+    if matched:</code></pre><h3>After Change</h3><pre><code class='java'>
+        buffer = tensor.cpu().numpy().tobytes()[:size]
+        gathered.append(nncore.loads(buffer))
+
+    <a id="change">return </a>gathered
+
+
+def gather(data, dst=0, group=dist.group.WORLD):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/yeliudev/nncore/commit/c60692996f4316b5befe701efbc18a9ad7cc7ac1#diff-fdf562e6b578fc92f4c74e59141f61b874fc8722e8eb5d843ef38c4c81d99321L47' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 47384473</div><div id='project'> Project Name: yeliudev/nncore</div><div id='commit'> Commit Name: c60692996f4316b5befe701efbc18a9ad7cc7ac1</div><div id='time'> Time: 2020-03-11</div><div id='author'> Author: goolhanrry@gmail.com</div><div id='file'> File Name: nncore/engine/comm.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: all_gather(2)</div><div id='n_method'> N Method Name: all_gather(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: nncore/engine/comm.py</div><div id='n_file'> N File Name: nncore/engine/comm.py</div><div id='m_start'> M Start Line: 47</div><div id='m_end'> M End Line: 78</div><div id='n_start'> N Start Line: 86</div><div id='n_end'> N End Line: 112</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    @staticmethod
+    def forward(ctx: Any, group: dist.ProcessGroup, input: Tensor):
+        ctx.group = group
+        world_size<a id="change"> = </a><a id="change">get_world_size(</a>group<a id="change">)</a>
+        <a id="change">if </a>world_size &lt;= 1:
+            return input
+        input<a id="change"> = </a>input.contiguous()
+        output = torch.empty_like(input)
+        if AllToAllStatus.algo:
+            AllToAllStatus.init(group, 1, -1, input)</code></pre><h3>After Change</h3><pre><code class='java'>
+    @staticmethod
+    def forward(ctx: Any, group: dist.ProcessGroup, input: Tensor):
+        ctx.group = group
+        <a id="change">return </a>all_to_all_single(input, group)
+
+    @staticmethod
+    def backward(ctx: Any, grad_output: Tensor):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/microsoft/tutel/commit/f9ca1a9820bbcb75873b8759e70cacaf0a4a8ba4#diff-97cb6b6b4a46f907579b92c457a8eaec4a13ed75c520b40ae8911d4a59440021L156' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 47384478</div><div id='project'> Project Name: microsoft/tutel</div><div id='commit'> Commit Name: f9ca1a9820bbcb75873b8759e70cacaf0a4a8ba4</div><div id='time'> Time: 2022-02-18</div><div id='author'> Author: ghostplant@qq.com</div><div id='file'> File Name: tutel/impls/communicate.py</div><div id='m_class'> M Class Name: AllToAll</div><div id='n_method'> N Class Name: AllToAll</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: torch.autograd.Function</div><div id='n_parent_class'> N Parent Class: torch.autograd.Function</div><div id='m_file'> M File Name: tutel/impls/communicate.py</div><div id='n_file'> N File Name: tutel/impls/communicate.py</div><div id='m_start'> M Start Line: 158</div><div id='m_end'> M End Line: 168</div><div id='n_start'> N Start Line: 172</div><div id='n_end'> N End Line: 172</div><BR>

@@ -1,0 +1,90 @@
+<html><h3>Pattern ID :34760
+</h3><img src='99756466.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                    rsps = self._get_pm_resp()
+                    for rsp in rsps:
+                        if not enum_equal(rsp, MGMT_RESPONSE.PAUSED):
+                            <a id="change">raise </a>ValueError(f"Wrong Response Received : {rsp}")
+                    &#47&#47 Inform the runtime about successful pausing
+                    self.service_to_runtime.send(MGMT_RESPONSE.PAUSED)
+                    break</code></pre><h3>After Change</h3><pre><code class='java'>
+                                                command)
+                        &#47&#47 Advance to the next phase
+                        phase = self._next_phase(is_last_ts)
+                        if <a id="change">enum_equal(</a>phase, MGMT_COMMAND.STOP<a id="change">)</a>:
+                            self.service_to_runtime.send(MGMT_RESPONSE.REQ_STOP)
+                            break
+                        if enum_equal(phase, MGMT_COMMAND.PAUSE):
+                            self.service_to_runtime.send(
+                                MGMT_RESPONSE.REQ_PAUSE)
+                            break
+                        &#47&#47 Increase time step if spiking phase
+                        if enum_equal(phase, LoihiPyRuntimeService.Phase.SPK):
+                            curr_time_step += 1
+                        &#47&#47 Inform ProcessModels about current phase
+                        self._send_pm_cmd(phase)
+                        &#47&#47 ProcessModels respond with DONE if not HOST phase
+                        if not enum_equal(
+                                phase, LoihiPyRuntimeService.Phase.HOST):
+                            self._get_pm_resp()
+                            if self._error:
+                                &#47&#47 Forward error to runtime
+                                self.service_to_runtime.send(
+                                    MGMT_RESPONSE.ERROR)
+                                &#47&#47 stop all other pm
+                                self._send_pm_cmd(MGMT_COMMAND.STOP)
+                                return
+                        &#47&#47 Check if pause or stop received from Runtime
+                        &#47&#47 TODO: Do we actualy need to wait for PMs to be in
+                        &#47&#47 HOST or MGMT phase to stop or pause them?
+                        if self.runtime_to_service.probe():
+                            cmd = self.runtime_to_service.peek()
+                            if enum_equal(cmd, MGMT_COMMAND.STOP):
+                                self.runtime_to_service.recv()
+                                self._handle_stop()
+                                return
+                            if enum_equal(cmd, MGMT_COMMAND.PAUSE):
+                                self.runtime_to_service.recv()
+                                self._handle_pause()
+                                self.paused<a id="change"> = </a>True
+                                break
+
+                        &#47&#47 If HOST phase (last time step ended) break the loop</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/lava-nc/lava/commit/4956db0191ef2d0b51c026fb9c1bb50ea57e6c90#diff-92a2d9166185e8fd9185c65d0c6ed303a14113cdb72e19495a3a2f4fe32d2978L207' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 99756466</div><div id='project'> Project Name: lava-nc/lava</div><div id='commit'> Commit Name: 4956db0191ef2d0b51c026fb9c1bb50ea57e6c90</div><div id='time'> Time: 2022-02-17</div><div id='author'> Author: yashwardhan.singh@intel.com</div><div id='file'> File Name: src/lava/magma/runtime/runtime_service.py</div><div id='m_class'> M Class Name: LoihiPyRuntimeService</div><div id='n_method'> N Class Name: LoihiPyRuntimeService</div><div id='m_method'> M Method Name: run(1)</div><div id='n_method'> N Method Name: run(1)</div><div id='m_parent_class'> M Parent Class: PyRuntimeService</div><div id='n_parent_class'> N Parent Class: PyRuntimeService</div><div id='m_file'> M File Name: src/lava/magma/runtime/runtime_service.py</div><div id='n_file'> N File Name: src/lava/magma/runtime/runtime_service.py</div><div id='m_start'> M Start Line: 207</div><div id='m_end'> M End Line: 266</div><div id='n_start'> N Start Line: 296</div><div id='n_end'> N End Line: 360</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    def pause(self):
+        Pauses the execution
+        <a id="change">raise </a>NotImplementedError
+
+    def stop(self):
+        Stops an ongoing or paused run.</code></pre><h3>After Change</h3><pre><code class='java'>
+            for recv_port in self.service_to_runtime:
+                data = recv_port.recv()
+                if not enum_equal(data, MGMT_RESPONSE.PAUSED):
+                    if <a id="change">enum_equal(</a>data, MGMT_RESPONSE.ERROR<a id="change">)</a>:
+                        &#47&#47 Receive all errors from the ProcessModels
+                        error_cnt = 0
+                        for actors in \
+                                self._messaging_infrastructure.actors:
+                            actors.join()
+                            if actors.exception:
+                                _<a id="change">, traceback = </a>actors.exception
+                                print(traceback)
+                                error_cnt += 1
+                        self.stop()</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lava-nc/lava/commit/4956db0191ef2d0b51c026fb9c1bb50ea57e6c90#diff-c65c489aca051f74137b2f1f1e8c67e393132ddb0fefa29aafc5d4cec47b7ceeL325' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 99756458</div><div id='project'> Project Name: lava-nc/lava</div><div id='commit'> Commit Name: 4956db0191ef2d0b51c026fb9c1bb50ea57e6c90</div><div id='time'> Time: 2022-02-17</div><div id='author'> Author: yashwardhan.singh@intel.com</div><div id='file'> File Name: src/lava/magma/runtime/runtime.py</div><div id='m_class'> M Class Name: Runtime</div><div id='n_method'> N Class Name: Runtime</div><div id='m_method'> M Method Name: pause(1)</div><div id='n_method'> N Method Name: pause(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/lava/magma/runtime/runtime.py</div><div id='n_file'> N File Name: src/lava/magma/runtime/runtime.py</div><div id='m_start'> M Start Line: 327</div><div id='m_end'> M End Line: 327</div><div id='n_start'> N Start Line: 345</div><div id='n_end'> N End Line: 367</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                    elif enum_equal(phase, PyLoihiProcessModel.Phase.HOST):
+                        pass
+                    else:
+                        <a id="change">raise </a>ValueError(f"Wrong Phase Info Received : {phase}")
+                except Exception as inst:
+                    &#47&#47 Inform runtime service about termination
+                    self.process_to_service_ack.send(MGMT_RESPONSE.ERROR)</code></pre><h3>After Change</h3><pre><code class='java'>
+                            self.run_post_mgmt()
+                        self.process_to_service.send(MGMT_RESPONSE.DONE)
+                    &#47&#47 Host phase - called at the last time step before STOP
+                    elif <a id="change">enum_equal(</a>cmd, PyLoihiProcessModel.Phase.HOST<a id="change">)</a>:
+                        phase<a id="change"> = </a>PyLoihiProcessModel.Phase.HOST
+                        pass
+                    elif enum_equal(cmd, MGMT_COMMAND.GET_DATA) and \
+                            enum_equal(phase, PyLoihiProcessModel.Phase.HOST):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lava-nc/lava/commit/62b2f0780c42beb4063695fb881b4fc8b5adede5#diff-7139b79a62cfae58ae9c7223148b62c98773436033c5e0938e2fc7aac075e3a4L112' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 99756463</div><div id='project'> Project Name: lava-nc/lava</div><div id='commit'> Commit Name: 62b2f0780c42beb4063695fb881b4fc8b5adede5</div><div id='time'> Time: 2022-01-05</div><div id='author'> Author: yashwardhan.singh@intel.com</div><div id='file'> File Name: src/lava/magma/core/model/py/model.py</div><div id='m_class'> M Class Name: PyLoihiProcessModel</div><div id='n_method'> N Class Name: PyLoihiProcessModel</div><div id='m_method'> M Method Name: run(1)</div><div id='n_method'> N Method Name: run(1)</div><div id='m_parent_class'> M Parent Class: AbstractPyProcessModel</div><div id='n_parent_class'> N Parent Class: AbstractPyProcessModel</div><div id='m_file'> M File Name: src/lava/magma/core/model/py/model.py</div><div id='n_file'> N File Name: src/lava/magma/core/model/py/model.py</div><div id='m_start'> M Start Line: 120</div><div id='m_end'> M End Line: 179</div><div id='n_start'> N Start Line: 111</div><div id='n_end'> N End Line: 173</div><BR>

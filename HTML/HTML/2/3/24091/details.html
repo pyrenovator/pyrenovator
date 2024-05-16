@@ -1,0 +1,51 @@
+<html><h3>Pattern ID :24091
+</h3><img src='74803189.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    &#47&#47 Need to average total_norm across different GPUs due to the presence of moe params
+    pg = groups.get_data_parallel_group()
+    scaled_norm = total_norm * 1.0 / float(dist.get_world_size(group=pg))
+    scaled_norm_tensor = <a id="change">torch.tensor(</a>scaled_norm<a id="change">,
+                                      device=self.fp32_groups_flat[i].device,
+                                      dtype=torch.float)</a>
+    dist.all_reduce(scaled_norm_tensor, group=pg)
+    total_norm = scaled_norm_tensor.item()
+
+    clip_coef = max_norm / (total_norm + 1e-6)</code></pre><h3>After Change</h3><pre><code class='java'>
+                    param_norm = p.grad.data.norm(norm_type)
+                    total_norm += param_norm.item()**norm_type
+            else:
+                param_norm = <a id="change">p.grad.data.float()</a>.norm(norm_type)
+                total_norm += param_norm.item()<a id="change">**</a>norm_type
+
+        &#47&#47 Sum across all model parallel GPUs.
+        total_norm_cuda = torch.cuda.FloatTensor([float(total_norm)])</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/microsoft/deepspeed/commit/ddffbae021fef24bf64945d45ace9bac7e08508d#diff-6a2c29272a4f62bf59569ba619eb9a79a758a4786879cc55991b5ea739b37a49L282' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 74803189</div><div id='project'> Project Name: microsoft/deepspeed</div><div id='commit'> Commit Name: ddffbae021fef24bf64945d45ace9bac7e08508d</div><div id='time'> Time: 2021-08-30</div><div id='author'> Author: ammar.awan@microsoft.com</div><div id='file'> File Name: deepspeed/runtime/utils.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: clip_grad_norm_(4)</div><div id='n_method'> N Method Name: clip_grad_norm_(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: deepspeed/runtime/utils.py</div><div id='n_file'> N File Name: deepspeed/runtime/utils.py</div><div id='m_start'> M Start Line: 294</div><div id='m_end'> M End Line: 311</div><div id='n_start'> N Start Line: 282</div><div id='n_end'> N End Line: 316</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    correct = pred.eq(target.reshape(1, -1).expand_as(pred))
+    return [
+        correct[:k].reshape(-1).float().sum(0) * 100. / batch_size
+        if k &lt;= maxk else <a id="change">torch.tensor(</a>100.<a id="change">)</a> for k in topk
+    ]
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    _, pred = output.topk(maxk, 1, True, True)
+    pred = pred.t()
+    correct = pred.eq(target.reshape(1, -1).expand_as(pred))
+    return [<a id="change">correct[:min(k, maxk)].reshape(-1).float().sum(0) * 100. / </a>batch_size for k in topk]
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/feng-lab/pytorch-image-models/commit/d667351eac57da2b07a50c07482652103a7839ee#diff-6fc9ad68cc874dd96310c66553e10c1fd6c27526b219836ea30e72a2cab8b30dL26' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 74803199</div><div id='project'> Project Name: feng-lab/pytorch-image-models</div><div id='commit'> Commit Name: d667351eac57da2b07a50c07482652103a7839ee</div><div id='time'> Time: 2021-08-19</div><div id='author'> Author: rwightman@gmail.com</div><div id='file'> File Name: timm/utils/metrics.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: accuracy(3)</div><div id='n_method'> N Method Name: accuracy(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: timm/utils/metrics.py</div><div id='n_file'> N File Name: timm/utils/metrics.py</div><div id='m_start'> M Start Line: 28</div><div id='m_end'> M End Line: 35</div><div id='n_start'> N Start Line: 27</div><div id='n_end'> N End Line: 32</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        see http://fisica.ciens.ucv.ve/~svincenz/TISPISGIMR.pdf 3.326 2.10 page 337
+        &quot&quot&quot
+        beta = 2*self.bas_exp
+        nfact = <a id="change">torch.tensor(</a>[np.math.factorial(n) for n in self.bas_n]<a id="change">,dtype=torch.float)</a>
+        twonfact = torch.tensor([np.math.factorial(2*n) for n in self.bas_n],dtype=torch.float)
+        return torch.sqrt(2 * nfact / twonfact * ( 4*beta )**self.bas_n * torch.sqrt(beta/np.pi))
+
+    def _norm_gaussian_cart(self):</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        A = self.bas_exp**exp1
+        B = 2**(2.*bas_n+3./2)
+        C = <a id="change">torch.tensor(f2(2*bas_n.int()-1)*np.pi**0.5).float()</a>
+        
+        return torch.sqrt(B<a id="change">/</a>C)*A
+
+
+    def _radial_slater(self,R):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/nlesc-jcer/qmctorch/commit/a885e8302df57b83cefdd6158a611be050ab5e48#diff-8b2313613728ddd088459e3904235faa254437bb4831fb10581e4d965e45f361L81' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 74803193</div><div id='project'> Project Name: nlesc-jcer/qmctorch</div><div id='commit'> Commit Name: a885e8302df57b83cefdd6158a611be050ab5e48</div><div id='time'> Time: 2019-10-28</div><div id='author'> Author: nicolas.gm.renaud@gmail.com</div><div id='file'> File Name: deepqmc/wavefunction/atomic_orbitals.py</div><div id='m_class'> M Class Name: AtomicOrbitals</div><div id='n_method'> N Class Name: AtomicOrbitals</div><div id='m_method'> M Method Name: _norm_gaussian(1)</div><div id='n_method'> N Method Name: _norm_gaussian(1)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: deepqmc/wavefunction/atomic_orbitals.py</div><div id='n_file'> N File Name: deepqmc/wavefunction/atomic_orbitals.py</div><div id='m_start'> M Start Line: 86</div><div id='m_end'> M End Line: 89</div><div id='n_start'> N Start Line: 114</div><div id='n_end'> N End Line: 121</div><BR>

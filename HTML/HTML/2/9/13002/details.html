@@ -1,0 +1,74 @@
+<html><h3>Pattern ID :13002
+</h3><img src='44004509.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            feature_mask = (feature_seq != 0).float()
+            &#47&#47 set the padding as zero
+            feature_mask = feature_mask.unsqueeze(-1).expand_as(feature_emb)
+            feature_emb<a id="change"> = </a><a id="change">(feature_emb * feature_mask).sum(dim=-2)</a>  &#47&#47 [B Len H]
+
+        input_concat = torch.cat((item_emb, feature_emb), -1)  &#47&#47 [B 2*H]
+        &#47&#47 TODO whether need layer_norm drouout</code></pre><h3>After Change</h3><pre><code class='java'>
+        sparse_embedding, dense_embedding = self.embed_input_fields(item_seq)
+
+        &#47&#47 concat the sparse embedding and float embedding
+        feature_table = <a id="change">[]</a>
+        if sparse_embedding is not None:
+            feature_table.append(sparse_embedding)
+        if dense_embedding is not None:
+            feature_table.append(dense_embedding)
+
+        feature_table<a id="change"> = </a><a id="change">torch.cat(</a>feature_table<a id="change">, dim=1)</a>
+        table_shape<a id="change"> = </a>feature_table.shape
+
+        feat_num, embedding_size = table_shape[-2], table_shape[-1]
+        feature_emb<a id="change"> = </a>feature_table.view(table_shape[:-2]<a id="change"> + </a>(feat_num<a id="change"> * </a>embedding_size,))
+
+        input_concat = torch.cat((item_emb, feature_emb), -1)  &#47&#47 [B 1+field_num*H]
+        &#47&#47 TODO whether need layer_norm drouout</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 9</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/rucaibox/recbole/commit/619d44ed4f00621dd9299c98c28f8d38b90e7ecb#diff-fdb02c00f9b271adab6e04d4cd6ef252ca7a9d5187c419a7a907ecf2406f3a91L101' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 44004509</div><div id='project'> Project Name: rucaibox/recbole</div><div id='commit'> Commit Name: 619d44ed4f00621dd9299c98c28f8d38b90e7ecb</div><div id='time'> Time: 2020-10-10</div><div id='author'> Author: 838803621@qq.com</div><div id='file'> File Name: recbox/model/sequential_recommender/sasrecf.py</div><div id='m_class'> M Class Name: SASRecF</div><div id='n_method'> N Class Name: SASRecF</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: SequentialRecommender</div><div id='n_parent_class'> N Parent Class: SequentialRecommender</div><div id='m_file'> M File Name: recbox/model/sequential_recommender/sasrecf.py</div><div id='n_file'> N File Name: recbox/model/sequential_recommender/sasrecf.py</div><div id='m_start'> M Start Line: 101</div><div id='m_end'> M End Line: 122</div><div id='n_start'> N Start Line: 299</div><div id='n_end'> N End Line: 320</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            loss = loss.mean()
+        elif self.contrastive_loss_type == &quotsoftmax&quot:
+            distance_matrix /= self.temperature
+            loss<a id="change"> = </a>- <a id="change">F.log_softmax(distance_matrix).sum()</a>
+        else:
+            raise ValueError(f"Contrastive loss type {self.contrastive_loss_type} not supported")
+
+        return loss</code></pre><h3>After Change</h3><pre><code class='java'>
+            distance_matrix /= self.temperature
+            positive_examples_1 = torch.diag(distance_matrix, self.batch_size)
+            positive_examples_2 = torch.diag(distance_matrix, -self.batch_size)
+            positive_examples<a id="change"> = </a><a id="change">torch.cat([</a>positive_examples_1, positive_examples_2<a id="change"></a>]<a id="change">, dim=0)</a>
+            mask = <a id="change">(~torch.eye(self.batch_size * 2, self.batch_size * 2, dtype=torch.bool))</a>.to(self.device)
+            numerator<a id="change"> = </a>torch.exp(positive_examples)
+            denominator = (mask * torch.exp(distance_matrix)).sum(dim=1)
+            softmax = numerator<a id="change"> / </a>denominator
+            loss<a id="change"> = </a>- torch.log(softmax)
+            loss = loss.mean()
+        else:
+            raise ValueError(f"Contrastive loss type {self.contrastive_loss_type} not supported")</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/aditeyabaral/calbert/commit/b2c6c9c898a60942ede94ec997b82d864b7fdabb#diff-c5d564f2cef1b4ccb616debc061094ec690897fab99bdb0052355dcd83f3ace6L132' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 44003994</div><div id='project'> Project Name: aditeyabaral/calbert</div><div id='commit'> Commit Name: b2c6c9c898a60942ede94ec997b82d864b7fdabb</div><div id='time'> Time: 2022-07-21</div><div id='author'> Author: aditeya.baral@gmail.com</div><div id='file'> File Name: calbert/SiamesePreTrainer.py</div><div id='m_class'> M Class Name: SiamesePreTrainer</div><div id='n_method'> N Class Name: SiamesePreTrainer</div><div id='m_method'> M Method Name: calculate_contrastive_loss(4)</div><div id='n_method'> N Method Name: calculate_contrastive_loss(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: calbert/SiamesePreTrainer.py</div><div id='n_file'> N File Name: calbert/SiamesePreTrainer.py</div><div id='m_start'> M Start Line: 153</div><div id='m_end'> M End Line: 157</div><div id='n_start'> N Start Line: 153</div><div id='n_end'> N End Line: 165</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            feature_mask = (feature_seq != 0).float()
+            &#47&#47 set the padding as zero
+            feature_mask = feature_mask.unsqueeze(-1).expand_as(feature_emb)
+            feature_emb<a id="change"> = </a><a id="change">(feature_emb * feature_mask).sum(dim=-2)</a> &#47&#47 [B Len H]
+
+
+        item_emb = self.dropout(item_emb)</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        sparse_embedding, dense_embedding = self.embed_input_fields(item_seq)
+        &#47&#47 concat the sparse embedding and float embedding
+        feature_table = <a id="change">[]</a>
+        if sparse_embedding is not None:
+            feature_table.append(sparse_embedding)
+        if dense_embedding is not None:
+            feature_table.append(dense_embedding)
+
+        feature_table<a id="change"> = </a><a id="change">torch.cat(</a>feature_table<a id="change">, dim=1)</a>
+        &#47&#47 [batch len num_features hidden_size]
+        table_shape<a id="change"> = </a>feature_table.shape
+
+        feat_num, embedding_size = table_shape[-2], table_shape[-1]
+        feature_emb<a id="change"> = </a>feature_table.view(table_shape[:-2]<a id="change"> + </a>(feat_num<a id="change"> * </a>embedding_size,))
+        feature_gru_output, _ = self.feature_gru_layers(feature_emb) &#47&#47 [B Len H]
+
+        output_concat = torch.cat((item_gru_output, feature_gru_output), -1)  &#47&#47 [B Len 2*H]</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/rucaibox/recbole/commit/566d8d4555427201b4d3ec3f12d0b943a2e20d83#diff-e16a62f3f143ee9b15142b28970d9d3325554080019f65d007faa043a4beff5fL98' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 44004370</div><div id='project'> Project Name: rucaibox/recbole</div><div id='commit'> Commit Name: 566d8d4555427201b4d3ec3f12d0b943a2e20d83</div><div id='time'> Time: 2020-10-11</div><div id='author'> Author: 838803621@qq.com</div><div id='file'> File Name: recbox/model/sequential_recommender/gru4recf.py</div><div id='m_class'> M Class Name: GRU4RecF</div><div id='n_method'> N Class Name: GRU4RecF</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: SequentialRecommender</div><div id='n_parent_class'> N Parent Class: SequentialRecommender</div><div id='m_file'> M File Name: recbox/model/sequential_recommender/gru4recf.py</div><div id='n_file'> N File Name: recbox/model/sequential_recommender/gru4recf.py</div><div id='m_start'> M Start Line: 99</div><div id='m_end'> M End Line: 118</div><div id='n_start'> N Start Line: 301</div><div id='n_end'> N End Line: 319</div><BR>

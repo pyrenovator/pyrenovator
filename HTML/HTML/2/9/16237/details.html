@@ -1,0 +1,93 @@
+<html><h3>Pattern ID :16237
+</h3><img src='54246634.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+    def __getitem__(self, idx):
+        &#47&#47 get index data
+        data = self.data.iloc[self.data_index.index_start.iloc[idx] : self.data_index.index_end.iloc[idx]<a id="change"> + 1</a>].copy()
+
+        &#47&#47 todo: handle missings -&gt; fill them up with strategy
+        &#47&#47 determine data window
+        sequence_length = len(data)
+        max_prediction_length = self.max_prediction_length
+        if self.randomize_length is not None:
+            &#47&#47 modify sequence length
+            sequence_length_prob, encode_length_probability = Beta(*self.randomize_length).sample(torch.Size([2]))
+            sequence_length = int(max(1, Binomial(sequence_length, sequence_length_prob).sample()))
+            max_prediction_length = int(max(1, Binomial(max_prediction_length, encode_length_probability).sample()))
+            if sequence_length &lt; len(data):
+                data = data.iloc[-sequence_length:]  &#47&#47 select subset of sequence
+
+        encode_length<a id="change"> = </a>min(<a id="change">max(0</a>, sequence_length<a id="change"> - </a>max_prediction_length<a id="change">)</a>, self.max_encode_length)
+        decode_length = sequence_length - encode_length
+
+        &#47&#47 extract data</code></pre><h3>After Change</h3><pre><code class='java'>
+                max(self.min_prediction_length, Binomial(decode_length, encode_length_probability).sample()),
+            )
+            &#47&#47 select subset of sequence of new sequence
+            <a id="change">if </a>new_encode_length + new_decode_length &lt; len(data):
+                data = data.iloc[encode_length - new_encode_length : encode_length + new_decode_length]
+                encode_length<a id="change"> = </a>new_encode_length
+                decode_length<a id="change"> = </a>new_decode_length
+
+        assert decode_length &gt; 0
+        assert encode_length &gt;= 0</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 7</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/jdb78/pytorch-forecasting/commit/79cfec0818dbe78d8773534e6ce8f5fd578c3c3a#diff-e34740341caadea4baf7d22baa64e7e6ec9f8c5df41233e6a11682dc68310a89L149' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 54246634</div><div id='project'> Project Name: jdb78/pytorch-forecasting</div><div id='commit'> Commit Name: 79cfec0818dbe78d8773534e6ce8f5fd578c3c3a</div><div id='time'> Time: 2020-06-22</div><div id='author'> Author: beitner.jan@bcg.com</div><div id='file'> File Name: temporal_fusion_transformer_pytorch/data.py</div><div id='m_class'> M Class Name: TimeSeriesDataSet</div><div id='n_method'> N Class Name: TimeSeriesDataSet</div><div id='m_method'> M Method Name: __getitem__(2)</div><div id='n_method'> N Method Name: __getitem__(2)</div><div id='m_parent_class'> M Parent Class: Dataset</div><div id='n_parent_class'> N Parent Class: Dataset</div><div id='m_file'> M File Name: temporal_fusion_transformer_pytorch/data.py</div><div id='n_file'> N File Name: temporal_fusion_transformer_pytorch/data.py</div><div id='m_start'> M Start Line: 149</div><div id='m_end'> M End Line: 164</div><div id='n_start'> N Start Line: 186</div><div id='n_end'> N End Line: 220</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 derive shift of loc towards smaller value with respect to seasonality
+        max_period = max(self.period, self.seasonality)
+        self.time_delta = 1/max_period
+        self.level_smoothing_alpha<a id="change"> = </a><a id="change">max(1</a>, 5<a id="change"> - 0.01</a><a id="change"> * </a>max_period<a id="change">)</a>
+        self.slope_smoothing_alpha = max(1, 5 - 0.01 * max_period)
+        &#47&#47 penalize less for seasonality
+        self.seasonality_smoothing_alpha = max(1, 5 - 0.01 * (max_period/self.seasonality))
+        self.level_smoothing_max = 1.0</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 self.seasonality_smoothing_max = 1.0
+        &#47&#47 shape: the greater the more concentrate
+        &#47&#47 loc: mode of the pdf
+        <a id="change">if </a>self.regressor_col is None:
+            self.level_smoothing_loc = 0.3
+            self.slope_smoothing_loc = 0.3
+            self.seasonality_smoothing_loc = 0.3
+            self.level_smoothing_shape = 1.0
+            self.slope_smoothing_shape = 1.0
+            self.seasonality_smoothing_shape<a id="change"> = </a>1.0
+        else:
+            &#47&#47 TODO: consider condition on initial adj. R-Squared
+            self.level_smoothing_loc = 0.1
+            self.slope_smoothing_loc<a id="change"> = </a>0.1
+            self.seasonality_smoothing_loc = 0.1
+            self.level_smoothing_shape = 5.0
+            self.slope_smoothing_shape = 5.0</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/uber/orbit/commit/d2383d94fe0b5f5de729b9cb5dd0cf8496c345bc#diff-0e11465c4a9092f3ff2bf96db51523d824f435a500c2c32b54564c263a5fb11fL192' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 54246632</div><div id='project'> Project Name: uber/orbit</div><div id='commit'> Commit Name: d2383d94fe0b5f5de729b9cb5dd0cf8496c345bc</div><div id='time'> Time: 2020-06-07</div><div id='author'> Author: edwinng@uber.com</div><div id='file'> File Name: orbit/lgt.py</div><div id='m_class'> M Class Name: LGT</div><div id='n_method'> N Class Name: LGT</div><div id='m_method'> M Method Name: _setup_computed_smoothing_params(1)</div><div id='n_method'> N Method Name: _setup_computed_smoothing_params(1)</div><div id='m_parent_class'> M Parent Class: Estimator</div><div id='n_parent_class'> N Parent Class: Estimator</div><div id='m_file'> M File Name: orbit/lgt.py</div><div id='n_file'> N File Name: orbit/lgt.py</div><div id='m_start'> M Start Line: 195</div><div id='m_end'> M End Line: 203</div><div id='n_start'> N Start Line: 205</div><div id='n_end'> N End Line: 221</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        df_train (pd.DataFrame):  training data
+        df_val (pd.DataFrame): validation data
+    
+    n_samples = len<a id="change">(df) - n_lags + 2</a><a id="change"> - </a>(2 * n_forecasts)
+    n_samples = n_samples if inputs_overbleed else n_samples - n_lags
+    if 0.0 &lt; valid_p &lt; 1.0:
+        n_valid<a id="change"> = </a><a id="change">max(1</a>, int(n_samples * valid_p)<a id="change">)</a>
+    else:
+        assert valid_p &gt;= 1
+        assert type(valid_p) == int
+        n_valid = valid_p</code></pre><h3>After Change</h3><pre><code class='java'>
+        df_train (pd.DataFrame or list of pd.Dataframe):  training data
+        df_val (pd.DataFrame or list of pd.Dataframe): validation data
+    
+    <a id="change">if </a>isinstance(df, list):
+        df_list = df.copy()
+        df_train_list<a id="change"> = </a>list()
+        df_val_list = list()
+        if local_modeling:
+            for df in df_list:
+                df_train, df_val = single_split_df(df, n_lags, n_forecasts, valid_p, inputs_overbleed)
+                df_train_list.append(df_train)
+                df_val_list.append(df_val)
+            df_train, df_val = df_train_list, df_val_list
+        else:
+            threshold_time_stamp = find_time_threshold(df_list, n_lags, valid_p, inputs_overbleed)
+            df_train, df_val = split_considering_timestamp(df_list, threshold_time_stamp)
+    else:
+        df_train<a id="change">, df_val = </a>single_split_df(df, n_lags, n_forecasts, valid_p, inputs_overbleed)
+    return df_train, df_val
+
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/ourownstory/neural_prophet/commit/d07b79568ef37904de81ba00248764233fbaa8c8#diff-cb8ae2d50e5d5d245ed6fcc8cadf2baf7294fa9ac5c63e819fbfe34f0e4c2552L280' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 54246638</div><div id='project'> Project Name: ourownstory/neural_prophet</div><div id='commit'> Commit Name: d07b79568ef37904de81ba00248764233fbaa8c8</div><div id='time'> Time: 2021-10-07</div><div id='author'> Author: ourownstory@users.noreply.github.com</div><div id='file'> File Name: neuralprophet/df_utils.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: split_df(6)</div><div id='n_method'> N Method Name: split_df(5)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: neuralprophet/df_utils.py</div><div id='n_file'> N File Name: neuralprophet/df_utils.py</div><div id='m_start'> M Start Line: 297</div><div id='m_end'> M End Line: 312</div><div id='n_start'> N Start Line: 506</div><div id='n_end'> N End Line: 539</div><BR>

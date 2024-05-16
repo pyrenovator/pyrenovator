@@ -1,0 +1,27 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            self.doc_model = SentenceTransformer(model_path[1])
+    
+    def start_multi_process_pool(self, target_devices: List[str] = None) -&gt; Dict[str, object]:
+        <a id="change">return </a>self.doc_model.start_multi_process_pool(target_devices=target_devices)
+
+    def stop_multi_process_pool(self, pool: Dict[str, object]):
+        output_queue = pool[&quotoutput&quot]</code></pre><h3>After Change</h3><pre><code class='java'>
+    def start_multi_process_pool(self, target_devices: List[str] = None) -&gt; Dict[str, object]:
+        logger.info("Start multi-process pool on devices: {}".format(&quot, &quot.join(map(str, target_devices))))
+
+        ctx = <a id="change">mp.get_context(&quotspawn&quot</a><a id="change">)</a>
+        input_queue = ctx.Queue()
+        output_queue = ctx.Queue()
+        processes = <a id="change">[]</a>
+
+        <a id="change">for </a>process_id, <a id="change">device_name</a> in enumerate(target_devices)<a id="change">:
+            p</a><a id="change"> = ctx.Process(target=SentenceTransformer._encode_multi_process_worker, args=(process_id, device_name, self.doc_model, input_queue, output_queue), daemon=True)</a>
+            <a id="change">p.start()</a>
+            <a id="change">processes.append(p</a><a id="change">)</a>
+
+        return {&quotinput&quot: input_queue, &quotoutput&quot: output_queue, &quotprocesses&quot: processes}
+
+    def stop_multi_process_pool(self, pool: Dict[str, object]):</code></pre>

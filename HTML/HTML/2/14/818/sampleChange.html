@@ -1,0 +1,86 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            RepL run we should read in
+        log_dir: The log directory of current chain experiment.
+    
+    rng<a id="change">, tune_config_updates</a> = setup_run(config)
+    del config  &#47&#47 I want a new name for it
+
+    &#47&#47 Get the directory to store repl runs, and the hash for this config
+    &#47&#47 Used to facilitate reuse of repl runs
+    repl_dir = get_repl_dir(log_dir)
+    merged_repl_config<a id="change"> = </a><a id="change">merge_configs(</a>rep_ex_config, shared_configs, <a id="change">tune_config_updates</a>, <a id="change">&quotrepl&quot</a><a id="change">)</a>
+    repl_hash = hash_configs(merged_repl_config)
+    pretrained_encoder_path = None
+
+    &#47&#47 If we are open to reading in a pretrained repl encoder
+    if repl_encoder_path is not None:
+        assert reuse_repl != ReuseRepl.NO, "You&quotve set a specific encoder path, but also turned off RepL encoder reuse"
+    if reuse_repl in (ReuseRepl.YES, ReuseRepl.IF_AVAILABLE):
+        &#47&#47 If we have hardcoded an encoder path, check if it exists, and, if so, use it
+        if repl_encoder_path is not None:
+            assert os.path.exists(repl_encoder_path), f"Hardcoded encoder path {repl_encoder_path} does not exist"
+            pretrained_encoder_path = repl_encoder_path
+        else:
+            &#47&#47 If we are searching for a prior repl run based on hashed config
+            &#47&#47 This is the default case
+            existing_repl_runs = glob(os.path.join(repl_dir, f"{repl_hash}_*"))
+
+            &#47&#47 If no matching repl run is found, we will fall through to training repl as normal
+            if len(existing_repl_runs) &gt; 0:
+                timestamps = [el.split(&quot_&quot)[-1] for el in existing_repl_runs]
+
+                &#47&#47 Don&quott read in any Repl runs completed after the start of the full run
+                valid_timestamps = [ts for ts in timestamps if int(ts) &lt; full_run_start_time]
+                if len(valid_timestamps) &gt; 0:
+                    most_recent_run = existing_repl_runs[np.argmax(valid_timestamps)]
+                    pretrained_encoder_path = os.path.join(most_recent_run, &quotrepl_encoder&quot)
+                    logging.info(f"Loading encoder from {pretrained_encoder_path}")
+
+            if pretrained_encoder_path is None:
+                assert reuse_repl != ReuseRepl.YES, "Set repl_reuse to YES, but no run was found; erroring out"
+                logging.info(f"No encoder found that existed prior to full run start time")
+
+    &#47&#47 If none of the branches above have found a pretrained path,
+    &#47&#47 proceed with repl training as normal
+    if pretrained_encoder_path is None:
+        tune_config_updates[&quotrepl&quot].update({
+            &quotseed&quot: rng.randint(1 &lt;&lt; 31),
+        })
+        pretrain_result = run_single_exp(merged_repl_config, log_dir, &quotrepl&quot)
+
+        pretrained_encoder_path = pretrain_result[&quotencoder_path&quot]
+        &#47&#47 Once repl training finishes, symlink the result to the repl directory
+        cache_repl_encoder(pretrained_encoder_path,
+                           repl_dir,
+                           repl_hash,
+                           <a id="change">tune_config_updates[&quotrepl&quot]</a>[&quotseed&quot])
+
+    &#47&#47 Run il train
+    <a id="change">tune_config_updates[&quotil_train&quot].update({
+        </a>&quotencoder_path&quot: pretrained_encoder_path,
+        &quotseed&quot: rng.randint(1 &lt;&lt; 31)<a id="change">,
+    }</a><a id="change">)</a>
+    merged_il_train_config = merge_configs(il_train_ex_config,
+                                           shared_configs,
+                                           tune_config_updates, &quotil_train&quot)
+    il_train_result = run_single_exp(merged_il_train_config, log_dir, &quotil_train&quot)</code></pre><h3>After Change</h3><pre><code class='java'>
+                           merged_repl_config[&quotseed&quot])
+
+    &#47&#47 Run il train
+    merged_il_train_config<a id="change"> = </a><a id="change">update(
+        </a><a id="change">{</a>&quotseed&quot: rng.randint(1 &lt;&lt; 31)<a id="change">}</a>,
+        il_train_ex_config,
+        {
+            &quotencoder_path&quot: pretrained_encoder_path,
+            &quotenv_cfg&quot: env_cfg_config,
+            &quotenv_data&quot: env_data_config,
+            &quotvenv_opts&quot: venv_opts_config,
+        }<a id="change">,
+    )</a>
+    il_train_result = run_single_exp(merged_il_train_config, log_dir, &quotil_train&quot)
+
+    &#47&#47 Run il test
+    merged_il_test_config = update(</code></pre>

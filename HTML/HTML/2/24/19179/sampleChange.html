@@ -1,0 +1,35 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        model = PipelinedRobertaForQuestionAnswering(config).parallelize().half()
+        ```
+        
+        <a id="change">layer_ipu</a> = <a id="change">_get_layer_ipu(</a>self.config.layers_per_ipu<a id="change">)</a>
+
+        logger.info("-------------------- Device Allocation --------------------")
+        logger.info("Embedding  --&gt; IPU 0")
+        if self.config.embedding_serialization_factor &gt; 1:
+            self.roberta.embeddings.word_embeddings = SerializedEmbedding(
+                self.roberta.embeddings.word_embeddings, self.config.embedding_serialization_factor
+            )
+        self.roberta.embeddings<a id="change"> = poptorch</a><a id="change">.BeginBlock(</a>self.roberta.embeddings, <a id="change">"Embedding"</a><a id="change">, ipu_id=0)</a>
+        <a id="change">outline_attribute(</a>self.roberta.embeddings.LayerNorm, <a id="change">"embedding"</a><a id="change">)</a>
+
+        <a id="change">for </a><a id="change">index</a>, <a id="change">layer</a> in <a id="change">enumerate(</a>self.roberta.encoder.layer<a id="change">):
+            </a>ipu<a id="change"> = layer_ipu[index]</a>
+            <a id="change">if self.config.recompute_checkpoint_every_layer and index != self.config.num_hidden_layers - 1</a>:
+                <a id="change">recomputation_checkpoint(layer</a><a id="change">)</a>
+            <a id="change">self.roberta.encoder.layer[index] = poptorch</a><a id="change">.BeginBlock(layer</a>, <a id="change">f"Encoder{index}"</a><a id="change">, ipu_id=ipu)</a>
+            logger.info(f"Encoder {index:&lt;2} --&gt; IPU {ipu}")
+
+        logger.info(f"QA Outputs --&gt; IPU {ipu}")
+        self.qa_outputs = poptorch.BeginBlock(self.qa_outputs, "QA Outputs", ipu_id=ipu)</code></pre><h3>After Change</h3><pre><code class='java'>
+    
+
+    def parallelize(self):
+        <a id="change">super().parallelize()</a>
+        last_ipu = self.config.ipus_per_replica - 1
+        logger.info(f"QA Outputs --&gt; IPU {last_ipu}")
+        self.qa_outputs = poptorch.BeginBlock(self.qa_outputs, "QA Outputs", ipu_id=last_ipu)
+        logger.info("-----------------------------------------------------------")</code></pre>

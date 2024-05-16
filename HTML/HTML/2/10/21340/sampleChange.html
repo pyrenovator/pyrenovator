@@ -1,0 +1,30 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+        x = self.embedding(x, **kwargs)  &#47&#47 (batch_size, target_seq_len, d_model)
+        x *= tf.math.sqrt(tf.cast(self.d_model, x.dtype))
+        x<a id="change"> += </a>tf.cast(<a id="change">self.pos_encoding[:, :seq_len, :]</a>, dtype=x.dtype)
+
+        x = self.dropout(x, **kwargs)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        pos_enc_tgt = self.positional_encoding(tgt, **kwargs)
+        output = pos_enc_tgt
+
+        <a id="change">for i</a> in range(self.num_layers)<a id="change">:
+            </a>normed_output<a id="change"> = </a>self.layer_norm(output, **kwargs)
+            output = output<a id="change"> + </a>self.dropout(
+                self.attention[i](normed_output, normed_output, normed_output, target_mask, **kwargs),
+                **kwargs,
+            )
+            normed_output = self.layer_norm(output, **kwargs)
+            output = output + self.dropout(
+                self.source_attention[i](normed_output, memory, memory, source_mask, **kwargs),
+                **kwargs,
+            )
+            normed_output<a id="change"> = </a>self.layer_norm(output, **kwargs)
+            output<a id="change"> = </a>output<a id="change"> + </a>self.dropout(self.position_feed_forward[i](normed_output, **kwargs), **kwargs)
+
+        &#47&#47 (batch_size, seq_len, d_model)
+        return self.layer_norm(output, **kwargs)</code></pre>

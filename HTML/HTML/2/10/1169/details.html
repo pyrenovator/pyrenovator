@@ -1,0 +1,174 @@
+<html><h3>Pattern ID :1169
+</h3><img src='5875547.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    thresholds, _ = torch.sort(torch.cat([thresholds, interm_thresholds]))
+
+    &#47&#47 Computing False Rejection Rate (miss detection)
+    positive_scores = <a id="change">torch.cat(
+        </a>len(thresholds) * [positive_scores.unsqueeze(0)]<a id="change">
+    )</a>
+    pos_scores_threshold = positive_scores.transpose(0, 1) &lt;= thresholds
+    FRR = (pos_scores_threshold.sum(0)).float() / positive_scores.shape[1]
+    del positive_scores
+    del pos_scores_threshold
+
+    &#47&#47 Computing False Acceptance Rate (false alarm)
+    negative_scores = torch.cat(
+        len(thresholds)<a id="change"> * </a>[negative_scores.unsqueeze(0)]
+    )
+    neg_scores_threshold<a id="change"> = </a>negative_scores.transpose(0, 1) &gt; thresholds
+    FAR = (neg_scores_threshold.sum(0)).float() / negative_scores.shape[1]
+    del negative_scores
+    del neg_scores_threshold
+
+    &#47&#47 Finding the threshold for EER
+    min_index<a id="change"> = </a>(FAR - FRR).abs().argmin()
+
+    &#47&#47 It is possible that eer != fpr != fnr. We return (FAR  + FRR) / 2 as EER.
+    EER = (FAR[min_index] + FRR[min_index]) / 2</code></pre><h3>After Change</h3><pre><code class='java'>
+        del neg_scores_threshold
+
+        &#47&#47 Finding the threshold for EER
+        if (FAR - FRR).abs().item() &lt; <a id="change">abs(final_FAR</a><a id="change"> - </a>final_FRR<a id="change">)</a> or i == 0:
+           min_index = i
+           final_FRR = FRR.item()
+           final_FAR = FAR.item()
+
+    &#47&#47 It is possible that eer != fpr != fnr. We return (FAR  + FRR) / 2 as EER.
+    EER<a id="change"> = </a>(<a id="change">final_FAR</a><a id="change"> + </a>final_FRR)<a id="change"> / </a>2
+
+
+    return float(EER), float(thresholds[min_index])</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 9</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/speechbrain/speechbrain/commit/f1fd2091d053c0c34e88b134495f9b791037b3dd#diff-e9bc95358c9483b7f6d69eb19959955a841d3dfb6f3565b07cbce482cfe77aa9L477' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 5875547</div><div id='project'> Project Name: speechbrain/speechbrain</div><div id='commit'> Commit Name: f1fd2091d053c0c34e88b134495f9b791037b3dd</div><div id='time'> Time: 2022-06-23</div><div id='author'> Author: tplink312@gmail.com</div><div id='file'> File Name: speechbrain/utils/metric_stats.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: EER(2)</div><div id='n_method'> N Method Name: EER(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: speechbrain/utils/metric_stats.py</div><div id='n_file'> N File Name: speechbrain/utils/metric_stats.py</div><div id='m_start'> M Start Line: 477</div><div id='m_end'> M End Line: 505</div><div id='n_start'> N Start Line: 477</div><div id='n_end'> N End Line: 504</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    thresholds, _ = torch.sort(torch.cat([thresholds, interm_thresholds]))
+
+    &#47&#47 Computing False Rejection Rate (miss detection)
+    positive_scores = <a id="change">torch.cat(
+        </a>len(thresholds) * [positive_scores.unsqueeze(0)]<a id="change">
+    )</a>
+    pos_scores_threshold = positive_scores.transpose(0, 1) &lt;= thresholds
+    FRR = (pos_scores_threshold.sum(0)).float() / positive_scores.shape[1]
+    del positive_scores
+    del pos_scores_threshold
+
+    &#47&#47 Computing False Acceptance Rate (false alarm)
+    negative_scores<a id="change"> = </a>torch.cat(
+        len(thresholds)<a id="change"> * </a>[negative_scores.unsqueeze(0)]
+    )
+    neg_scores_threshold = negative_scores.transpose(0, 1) &gt; thresholds
+    FAR = (neg_scores_threshold.sum(0)).float() / negative_scores.shape[1]
+    del negative_scores
+    del neg_scores_threshold
+
+    &#47&#47 Finding the threshold for EER
+    min_index<a id="change"> = </a>(FAR - FRR).abs().argmin()
+
+    &#47&#47 It is possible that eer != fpr != fnr. We return (FAR  + FRR) / 2 as EER.
+    EER = (FAR[min_index] + FRR[min_index]) / 2</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    &#47&#47 Variable to store the min FRR, min FAR and their corresponding index
+    min_index = 0
+    <a id="change">final_FRR</a> = 0
+    final_FAR = 0
+
+    for i, cur_thresh in enumerate(thresholds):
+        pos_scores_threshold = positive_scores &lt;= cur_thresh
+        FRR = (pos_scores_threshold.sum(0)).float() / positive_scores.shape[0]
+        del pos_scores_threshold
+
+        neg_scores_threshold = negative_scores &gt; cur_thresh
+        FAR = (neg_scores_threshold.sum(0)).float() / negative_scores.shape[0]
+        del neg_scores_threshold
+
+        &#47&#47 Finding the threshold for EER
+        if (FAR - FRR).abs().item() &lt; <a id="change">abs(</a>final_FAR<a id="change"> - </a>final_FRR<a id="change">)</a> or i == 0:
+           min_index = i
+           final_FRR = FRR.item()
+           final_FAR = FAR.item()
+
+    &#47&#47 It is possible that eer != fpr != fnr. We return (FAR  + FRR) / 2 as EER.
+    EER<a id="change"> = </a>(final_FAR<a id="change"> + </a>final_FRR)<a id="change"> / </a>2
+
+
+    return float(EER), float(thresholds[min_index])</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/speechbrain/speechbrain/commit/f1fd2091d053c0c34e88b134495f9b791037b3dd#diff-e9bc95358c9483b7f6d69eb19959955a841d3dfb6f3565b07cbce482cfe77aa9L456' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 5875579</div><div id='project'> Project Name: speechbrain/speechbrain</div><div id='commit'> Commit Name: f1fd2091d053c0c34e88b134495f9b791037b3dd</div><div id='time'> Time: 2022-06-23</div><div id='author'> Author: tplink312@gmail.com</div><div id='file'> File Name: speechbrain/utils/metric_stats.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: EER(2)</div><div id='n_method'> N Method Name: EER(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: speechbrain/utils/metric_stats.py</div><div id='n_file'> N File Name: speechbrain/utils/metric_stats.py</div><div id='m_start'> M Start Line: 477</div><div id='m_end'> M End Line: 505</div><div id='n_start'> N Start Line: 477</div><div id='n_end'> N End Line: 504</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            noise_lens *= len(noise_batch) / len(added_noise)
+
+        noise_batch = noise_batch.cat(added_noise)
+        noise_lens<a id="change"> = </a><a id="change">noise_lens.cat(</a>added_lens<a id="change">)</a>
+
+        return noise_batch, noise_lens
+
+    def _load_noise_batch(self):</code></pre><h3>After Change</h3><pre><code class='java'>
+        Concatenate two noise batches of potentially different lengths
+
+        &#47&#47 pad shorter batch to correct length
+        <a id="change">noise_tensor_len</a> = noise_batch.shape[1]
+        added_tensor_len = added_noise.shape[1]
+        pad = (0, <a id="change">abs(</a>noise_tensor_len<a id="change"> - </a>added_tensor_len<a id="change">)</a>)
+        if noise_tensor_len &gt; added_tensor_len:
+            added_noise = torch.nn.functional.pad(added_noise, pad)
+            added_lens<a id="change"> = </a>added_lens<a id="change"> * </a>added_tensor_len / noise_tensor_len
+        else:
+            noise_batch = torch.nn.functional.pad(noise_batch, pad)
+            noise_lens = noise_lens<a id="change"> * noise_tensor_len / </a>added_tensor_len
+
+        noise_batch = torch.cat((noise_batch, added_noise))
+        noise_lens<a id="change"> = </a>torch.cat((noise_lens, added_lens))
+
+        return noise_batch, noise_lens
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/speechbrain/speechbrain/commit/be90d151c2c58a71bd9650cfdda902e5c6e5b76a#diff-ef8b6f991a9b7ae57f5a46dd563bace5d8980a13b59fd9e5db2dc9b1034afab3L214' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 5875562</div><div id='project'> Project Name: speechbrain/speechbrain</div><div id='commit'> Commit Name: be90d151c2c58a71bd9650cfdda902e5c6e5b76a</div><div id='time'> Time: 2020-06-08</div><div id='author'> Author: plantinga.peter@gmail.com</div><div id='file'> File Name: speechbrain/processing/speech_augmentation.py</div><div id='m_class'> M Class Name: AddNoise</div><div id='n_method'> N Class Name: AddNoise</div><div id='m_method'> M Method Name: _concat_batch(4)</div><div id='n_method'> N Method Name: _concat_batch(5)</div><div id='m_parent_class'> M Parent Class: torch.nn.Module</div><div id='n_parent_class'> N Parent Class: torch.nn.Module</div><div id='m_file'> M File Name: speechbrain/processing/speech_augmentation.py</div><div id='n_file'> N File Name: speechbrain/processing/speech_augmentation.py</div><div id='m_start'> M Start Line: 214</div><div id='m_end'> M End Line: 227</div><div id='n_start'> N Start Line: 219</div><div id='n_end'> N End Line: 230</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    thresholds, _ = torch.sort(torch.cat([thresholds, interm_thresholds]))
+
+    &#47&#47 Computing False Rejection Rate (miss detection)
+    positive_scores = <a id="change">torch.cat(
+        </a>len(thresholds) * [positive_scores.unsqueeze(0)]<a id="change">
+    )</a>
+    pos_scores_threshold = positive_scores.transpose(0, 1) &lt;= thresholds
+    FRR = (pos_scores_threshold.sum(0)).float() / positive_scores.shape[1]
+    del positive_scores
+    del pos_scores_threshold
+
+    &#47&#47 Computing False Acceptance Rate (false alarm)
+    negative_scores<a id="change"> = </a>torch.cat(
+        len(thresholds)<a id="change"> * </a>[negative_scores.unsqueeze(0)]
+    )
+    neg_scores_threshold = negative_scores.transpose(0, 1) &gt; thresholds
+    FAR = (neg_scores_threshold.sum(0)).float() / negative_scores.shape[1]
+    del negative_scores
+    del neg_scores_threshold
+
+    &#47&#47 Finding the threshold for EER
+    min_index = (FAR - FRR).abs().argmin()
+
+    &#47&#47 It is possible that eer != fpr != fnr. We return (FAR  + FRR) / 2 as EER.
+    EER<a id="change"> = </a>(FAR[min_index] + FRR[min_index]) / 2
+
+    return float(EER), float(thresholds[min_index])
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    &#47&#47 Variable to store the min FRR, min FAR and their corresponding index
+    min_index = 0
+    <a id="change">final_FRR</a> = 0
+    final_FAR = 0
+
+    for i, cur_thresh in enumerate(thresholds):
+        pos_scores_threshold = positive_scores &lt;= cur_thresh
+        FRR = (pos_scores_threshold.sum(0)).float() / positive_scores.shape[0]
+        del pos_scores_threshold
+
+        neg_scores_threshold = negative_scores &gt; cur_thresh
+        FAR = (neg_scores_threshold.sum(0)).float() / negative_scores.shape[0]
+        del neg_scores_threshold
+
+        &#47&#47 Finding the threshold for EER
+        if (FAR - FRR).abs().item() &lt; <a id="change">abs(</a>final_FAR<a id="change"> - </a>final_FRR<a id="change">)</a> or i == 0:
+            min_index = i
+            final_FRR = FRR.item()
+            final_FAR = FAR.item()
+
+    &#47&#47 It is possible that eer != fpr != fnr. We return (FAR  + FRR) / 2 as EER.
+    EER<a id="change"> = </a>(final_FAR<a id="change"> + </a>final_FRR)<a id="change"> / </a>2
+
+    return float(EER), float(thresholds[min_index])
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/speechbrain/speechbrain/commit/84bca108f8c3739bc2f058bab7e43db32c46e090#diff-e9bc95358c9483b7f6d69eb19959955a841d3dfb6f3565b07cbce482cfe77aa9L456' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 5875583</div><div id='project'> Project Name: speechbrain/speechbrain</div><div id='commit'> Commit Name: 84bca108f8c3739bc2f058bab7e43db32c46e090</div><div id='time'> Time: 2022-07-01</div><div id='author'> Author: dominik.wagner@th-nuernberg.de</div><div id='file'> File Name: speechbrain/utils/metric_stats.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: EER(2)</div><div id='n_method'> N Method Name: EER(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: speechbrain/utils/metric_stats.py</div><div id='n_file'> N File Name: speechbrain/utils/metric_stats.py</div><div id='m_start'> M Start Line: 477</div><div id='m_end'> M End Line: 505</div><div id='n_start'> N Start Line: 477</div><div id='n_end'> N End Line: 504</div><BR>

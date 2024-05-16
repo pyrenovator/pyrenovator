@@ -1,0 +1,22 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    bond_buckets[native_bond_idxs[1], native_bond_idxs[0]] = cutoffs.shape[0]
+    &#47&#47 find the indexes - symmetric and we dont want the diag
+    close_bond_idxs = ( bond_buckets &lt; len(cutoffs) ).triu(diagonal=1)
+    close_bond_idxs<a id="change"> = </a><a id="change">( close_bond_idxs + close_bond_idxs.t() ).nonzero().t()</a>
+    &#47&#47 merge all bonds
+    whole_bond_idxs = torch.cat([native_bond_idxs, close_bond_idxs], dim=-1)
+
+    &#47&#47 2. ATTRS: encode bond -&gt; attrs</code></pre><h3>After Change</h3><pre><code class='java'>
+    bond_buckets   += len(cutoffs) * torch.eye(bond_buckets.shape[0]).long()
+    close_bond_idxs = ( bond_buckets &lt; len(cutoffs) ).nonzero().t()
+    &#47&#47 merge all bonds
+    <a id="change">if close_bond_idxs.shape[0] &gt; 0</a>:
+        whole_bond_idxs = torch.cat([native_bond_idxs, close_bond_idxs], dim=-1)
+    else:
+        whole_bond_idxs<a id="change"> = </a>native_bond_idxs
+
+    &#47&#47 2. ATTRS: encode bond -&gt; attrs
+    bond_vecs  = x[ whole_bond_idxs[0] ] - x[ whole_bond_idxs[1] ]</code></pre>

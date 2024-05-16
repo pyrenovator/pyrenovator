@@ -1,0 +1,25 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    &#47&#47 So we trace once and look at the graph, and get the indices of the nodes that lead into the original fx output
+    &#47&#47 node. Then we use those indices to select from train_nodes returned by torchvision get_graph_node_names
+    tracer = NodePathTracer(leaf_modules=list(_leaf_modules), autowrap_functions=list(_autowrap_functions))
+    graph<a id="change"> = </a>tracer.trace(model)
+    graph_nodes = list(reversed(graph.nodes))
+    output_node_names = [n.name for n in <a id="change">graph_nodes[0]</a>._input_nodes.keys()]
+    graph_node_names = [n.name for n in graph_nodes]
+    output_node_indices = [-<a id="change">graph_node_names.index(</a>node_name<a id="change">)</a> for node_name in output_node_names]
+    train_nodes, eval_nodes = get_graph_node_names(
+        model, tracer_kwargs={&quotleaf_modules&quot: list(_leaf_modules), &quotautowrap_functions&quot: list(_autowrap_functions)})
+    eval_return_nodes<a id="change"> = </a>[eval_nodes[ix] for ix in output_node_indices]
+
+    fx_model = create_feature_extractor(
+        model, train_return_nodes=[train_nodes[-1]], eval_return_nodes=eval_return_nodes,</code></pre><h3>After Change</h3><pre><code class='java'>
+        outputs = torch.cat(outputs)
+
+    model = _create_fx_model(model)
+    fx_outputs = tuple(<a id="change">model(</a>inputs<a id="change">)</a>.values())
+    if isinstance(fx_outputs, tuple):
+        fx_outputs = torch.cat(fx_outputs)
+</code></pre>

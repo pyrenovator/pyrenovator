@@ -1,0 +1,32 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        file (Default path: ~/.aws/config).
+        
+        sync_command = f&quotaws s3 sync {self.source} s3://{self.name}/ --delete&quot
+        <a id="change">subprocess.run(</a>sync_command<a id="change">, shell=True, check=True)</a>
+
+    def _transfer_to_s3(self) -&gt; None:
+        if self.source.startswith(&quotgs://&quot):
+            data_transfer.gcs_to_s3(self.name, self.name)</code></pre><h3>After Change</h3><pre><code class='java'>
+        with subprocess.Popen(sync_command.split(&quot &quot),
+                              stderr=subprocess.PIPE) as process:
+            while True:
+                line<a id="change"> = </a>process.stderr.readline()
+                <a id="change">if </a>not line:
+                    break
+                str_line = line.decode(&quotutf-8&quot)
+                logger.info(str_line)
+                if &quotAccess Denied&quot in str_line:
+                    process.kill()
+                    logger.error(&quotSky Storage failed to upload files to &quot
+                                 &quotthe S3 bucket. The bucket does not have &quot
+                                 &quotwrite permissions. It is possible that &quot
+                                 &quotthe bucket is public.&quot)
+                    e = PermissionError(&quotCan\&quott write to bucket!&quot)
+                    logger.error(e)
+                    <a id="change">raise </a>e
+            process.wait()
+            logger.info(&quotDone Syncing Local to S3&quot)
+</code></pre>

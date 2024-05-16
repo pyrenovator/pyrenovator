@@ -1,0 +1,726 @@
+<html><h3>Pattern ID :22516
+</h3><img src='71146525.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                optimizer.clear_grad()
+
+        pred = F.softmax(output)
+        acc<a id="change"> = </a>paddle.metric.accuracy(pred, <a id="change">label.unsqueeze(1</a><a id="change">)</a>)
+
+        batch_size = image.shape[0]
+        train_loss_meter.update(loss.numpy()[0], batch_size)</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    for batch_id, data in enumerate(dataloader):
+        image = data[0]
+        <a id="change">label</a> = data[1]
+        <a id="change">label_orig</a><a id="change"> = label</a><a id="change">.clone()</a>
+
+        <a id="change">if mixup_fn</a><a id="change"> is not None</a>:
+            <a id="change">image</a><a id="change">, label = </a><a id="change">mixup_fn(image</a>, <a id="change">label_orig</a><a id="change">)</a>
+        
+        if amp is True: &#47&#47 mixed precision training
+            with paddle.amp.auto_cast():
+                output = model(image)
+                loss = criterion(image, output, label)
+            scaled = scaler.scale(loss)
+            scaled.backward()
+            if ((batch_id +1) % accum_iter == 0) or (batch_id + 1 == len(dataloader)):
+                scaler.minimize(optimizer, scaled)
+                optimizer.clear_grad()
+        else: &#47&#47 full precision training
+            output = model(image)
+            loss = criterion(output, label)
+            &#47&#47NOTE: division may be needed depending on the loss function
+            &#47&#47 Here no division is needed:
+            &#47&#47 default &quotreduction&quot param in nn.CrossEntropyLoss is set to &quotmean&quot
+            &#47&#47loss =  loss / accum_iter
+            loss.backward()
+
+            if ((batch_id +1) % accum_iter == 0) or (batch_id + 1 == len(dataloader)):
+                optimizer.step()
+                optimizer.clear_grad()
+
+        pred = F.softmax(output)
+        <a id="change">if mixup_fn</a>:
+            acc<a id="change"> = </a>paddle.metric.accuracy(pred, label_orig)
+        else:
+            acc<a id="change"> = paddle.metric.accuracy(</a>pred, <a id="change">label_orig.unsqueeze(1</a><a id="change">))</a>
+
+        batch_size = image.shape[0]
+        train_loss_meter.update(loss.numpy()[0], batch_size)
+        train_acc_meter.update(acc.numpy()[0], batch_size)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 9</div><BR><div id='size'>Non-data size: 14</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/br-idl/paddlevit/commit/7cb9ed425898bd0530399578065fbc475ba3e65d#diff-99fed7436dedf027401851f0e8583a305fb101bcc631b674f8fa0338c2766b9dL84' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 71146525</div><div id='project'> Project Name: br-idl/paddlevit</div><div id='commit'> Commit Name: 7cb9ed425898bd0530399578065fbc475ba3e65d</div><div id='time'> Time: 2021-10-13</div><div id='author'> Author: ’lmk123568@qq.com‘</div><div id='file'> File Name: image_classification/FF_Only/main_single_gpu.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train(12)</div><div id='n_method'> N Method Name: train(9)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: image_classification/FF_Only/main_single_gpu.py</div><div id='n_file'> N File Name: image_classification/FF_Only/main_single_gpu.py</div><div id='m_start'> M Start Line: 113</div><div id='m_end'> M End Line: 146</div><div id='n_start'> N Start Line: 84</div><div id='n_end'> N End Line: 157</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    for batch_id, data in enumerate(dataloader):
+        image = data[0]
+        <a id="change">label</a> = data[1]
+
+        if amp is True:
+            with paddle.amp.auto_cast():
+                output = model(image)
+                loss = criterion(output, label)
+            scaled = scaler.scale(loss)
+            scaled.backward()
+
+            if ((batch_id +1) % accum_iter == 0) or (batch_id + 1 == len(dataloader)):
+                scaler.minimize(optimizer, scaled)
+                optimizer.clear_grad()
+
+        else:
+            output = model(image)
+            loss = criterion(output, label)
+            &#47&#47NOTE: division may be needed depending on the loss function
+            &#47&#47 Here no division is needed:
+            &#47&#47 default &quotreduction&quot param in nn.CrossEntropyLoss is set to &quotmean&quot
+            &#47&#47loss =  loss / accum_iter
+            loss.backward()
+
+            if ((batch_id +1) % accum_iter == 0) or (batch_id + 1 == len(dataloader)):
+                optimizer.step()
+                optimizer.clear_grad()
+
+        pred = F.softmax(output)
+        acc<a id="change"> = </a>paddle.metric.accuracy(pred, <a id="change">label.unsqueeze(1</a><a id="change">)</a>)
+
+        batch_size = image.shape[0]
+        train_loss_meter.update(loss.numpy()[0], batch_size)</code></pre><h3>After Change</h3><pre><code class='java'>
+    time_st = time.time()
+
+    for batch_id, data in enumerate(dataloader):
+        <a id="change">image</a> = data[0]
+        <a id="change">label</a> = data[1]
+        <a id="change">label_orig</a><a id="change"> = </a><a id="change">label.clone()</a>
+
+        <a id="change">if </a><a id="change">mixup_fn is not None</a>:
+            image<a id="change">, label = </a><a id="change">mixup_fn(</a>image, label_orig<a id="change">)</a>
+        
+        if amp is True: &#47&#47 mixed precision training
+            with paddle.amp.auto_cast():
+                output = model(image)
+                loss = criterion(image, output, label)
+            scaled = scaler.scale(loss)
+            scaled.backward()
+            if ((batch_id +1) % accum_iter == 0) or (batch_id + 1 == len(dataloader)):
+                scaler.minimize(optimizer, scaled)
+                optimizer.clear_grad()
+        else: &#47&#47 full precision training
+            output = model(image)
+            loss = criterion(output, label)
+            &#47&#47NOTE: division may be needed depending on the loss function
+            &#47&#47 Here no division is needed:
+            &#47&#47 default &quotreduction&quot param in nn.CrossEntropyLoss is set to &quotmean&quot
+            &#47&#47loss =  loss / accum_iter
+            loss.backward()
+
+            if ((batch_id +1) % accum_iter == 0) or (batch_id + 1 == len(dataloader)):
+                optimizer.step()
+                optimizer.clear_grad()
+
+        pred = F.softmax(output)
+        <a id="change">if mixup_fn</a>:
+            acc<a id="change"> = </a>paddle.metric.accuracy(pred, label_orig)
+        else:
+            acc<a id="change"> = paddle.metric.accuracy(</a>pred, <a id="change">label_orig.unsqueeze(1</a><a id="change">))</a>
+
+        batch_size = image.shape[0]
+        train_loss_meter.update(loss.numpy()[0], batch_size)
+        train_acc_meter.update(acc.numpy()[0], batch_size)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/br-idl/paddlevit/commit/1a90927f0a34e0fb0c6645ccfae4f6f3fe29bf13#diff-dc607e837028b17a42b7436cc8e6f27745b909ecf7110170f0aa803aefec7d2dL81' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 71146524</div><div id='project'> Project Name: br-idl/paddlevit</div><div id='commit'> Commit Name: 1a90927f0a34e0fb0c6645ccfae4f6f3fe29bf13</div><div id='time'> Time: 2021-10-11</div><div id='author'> Author: xperzy@gmail.com</div><div id='file'> File Name: image_classification/SwinTransformer/main_single_gpu.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train(12)</div><div id='n_method'> N Method Name: train(9)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: image_classification/SwinTransformer/main_single_gpu.py</div><div id='n_file'> N File Name: image_classification/SwinTransformer/main_single_gpu.py</div><div id='m_start'> M Start Line: 115</div><div id='m_end'> M End Line: 148</div><div id='n_start'> N Start Line: 84</div><div id='n_end'> N End Line: 157</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    for batch_id, data in enumerate(dataloader):
+        image = data[0]
+        <a id="change">label</a> = data[1]
+
+        if amp is True:
+            with paddle.amp.auto_cast():
+                output = model(image)
+                loss = criterion(output, label)
+            scaled = scaler.scale(loss)
+            scaled.backward()
+            if ((batch_id +1) % accum_iter == 0) or (batch_id + 1 == len(dataloader)):
+                scaler.minimize(optimizer, scaled)
+                optimizer.clear_grad()
+        else: &#47&#47 full precision training
+            output = model(image)
+            loss = criterion(output, label)
+            &#47&#47NOTE: division may be needed depending on the loss function
+            &#47&#47 Here no division is needed:
+            &#47&#47 default &quotreduction&quot param in nn.CrossEntropyLoss is set to &quotmean&quot
+            &#47&#47loss =  loss / accum_iter
+            loss.backward()
+
+            if ((batch_id +1) % accum_iter == 0) or (batch_id + 1 == len(dataloader)):
+                optimizer.step()
+                optimizer.clear_grad()
+
+        pred = F.softmax(output)
+        acc<a id="change"> = </a>paddle.metric.accuracy(pred, <a id="change">label.unsqueeze(1</a><a id="change">)</a>)
+
+        batch_size = paddle.to_tensor(image.shape[0])
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    time_st = time.time()
+
+    for batch_id, data in enumerate(dataloader):
+        <a id="change">image</a> = data[0]
+        <a id="change">label</a> = data[1]
+        <a id="change">label_orig</a><a id="change"> = </a><a id="change">label.clone()</a>
+
+        <a id="change">if </a><a id="change">mixup_fn is not None</a>:
+            image<a id="change">, label = </a><a id="change">mixup_fn(</a>image, label_orig<a id="change">)</a>
+        
+        if amp is True: &#47&#47 mixed precision training
+            with paddle.amp.auto_cast():
+                output = model(image)
+                loss = criterion(output, label)
+            scaled = scaler.scale(loss)
+            scaled.backward()
+            if ((batch_id +1) % accum_iter == 0) or (batch_id + 1 == len(dataloader)):
+                scaler.minimize(optimizer, scaled)
+                optimizer.clear_grad()
+        else: &#47&#47 full precision training
+            output = model(image)
+            loss = criterion(output, label)
+            &#47&#47NOTE: division may be needed depending on the loss function
+            &#47&#47 Here no division is needed:
+            &#47&#47 default &quotreduction&quot param in nn.CrossEntropyLoss is set to &quotmean&quot
+            &#47&#47loss =  loss / accum_iter
+            loss.backward()
+
+            if ((batch_id +1) % accum_iter == 0) or (batch_id + 1 == len(dataloader)):
+                optimizer.step()
+                optimizer.clear_grad()
+
+        pred = F.softmax(output)
+        <a id="change">if mixup_fn</a>:
+            acc<a id="change"> = </a>paddle.metric.accuracy(pred, label_orig)
+        else:
+            acc<a id="change"> = paddle.metric.accuracy(</a>pred, <a id="change">label_orig.unsqueeze(1</a><a id="change">))</a>
+
+        batch_size = paddle.to_tensor(image.shape[0])
+
+        &#47&#47 sync from other gpus for overall loss and acc</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/br-idl/paddlevit/commit/7912401dbd87d0d5550a2e9b3cf1dcfe9598e44b#diff-c536c202079973456990ebf5111c067cd229062e07430217ab33d43e5b7dbdeeL74' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 71146527</div><div id='project'> Project Name: br-idl/paddlevit</div><div id='commit'> Commit Name: 7912401dbd87d0d5550a2e9b3cf1dcfe9598e44b</div><div id='time'> Time: 2021-12-14</div><div id='author'> Author: xperzy@gmail.com</div><div id='file'> File Name: image_classification/PoolFormer/main_multi_gpu.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train(13)</div><div id='n_method'> N Method Name: train(12)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: image_classification/PoolFormer/main_multi_gpu.py</div><div id='n_file'> N File Name: image_classification/PoolFormer/main_multi_gpu.py</div><div id='m_start'> M Start Line: 118</div><div id='m_end'> M End Line: 143</div><div id='n_start'> N Start Line: 85</div><div id='n_end'> N End Line: 156</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    for batch_id, data in enumerate(dataloader):
+        image = data[0]
+        <a id="change">label</a> = data[1]
+
+        if amp is True:
+            with paddle.amp.auto_cast():
+                output = model(image)
+                loss = criterion(output, label)
+            scaled = scaler.scale(loss)
+            scaled.backward()
+
+            if ((batch_id +1) % accum_iter == 0) or (batch_id + 1 == len(dataloader)):
+                scaler.minimize(optimizer, scaled)
+                optimizer.clear_grad()
+
+        else:
+            output = model(image)
+            loss = criterion(output, label)
+            &#47&#47NOTE: division may be needed depending on the loss function
+            &#47&#47 Here no division is needed:
+            &#47&#47 default &quotreduction&quot param in nn.CrossEntropyLoss is set to &quotmean&quot
+            &#47&#47loss =  loss / accum_iter
+            loss.backward()
+
+            if ((batch_id +1) % accum_iter == 0) or (batch_id + 1 == len(dataloader)):
+                optimizer.step()
+                optimizer.clear_grad()
+
+        pred = F.softmax(output)
+        acc<a id="change"> = </a>paddle.metric.accuracy(pred, <a id="change">label.unsqueeze(1</a><a id="change">)</a>)
+
+        batch_size = image.shape[0]
+        train_loss_meter.update(loss.numpy()[0], batch_size)</code></pre><h3>After Change</h3><pre><code class='java'>
+    time_st = time.time()
+
+    for batch_id, data in enumerate(dataloader):
+        <a id="change">image</a> = data[0]
+        <a id="change">label</a> = data[1]
+        <a id="change">label_orig</a><a id="change"> = </a><a id="change">label.clone()</a>
+
+        <a id="change">if </a><a id="change">mixup_fn is not None</a>:
+            image<a id="change">, label = </a><a id="change">mixup_fn(</a>image, label_orig<a id="change">)</a>
+        
+        if amp is True: &#47&#47 mixed precision training
+            with paddle.amp.auto_cast():
+                output = model(image)
+                loss = criterion(image, output, label)
+            scaled = scaler.scale(loss)
+            scaled.backward()
+            if ((batch_id +1) % accum_iter == 0) or (batch_id + 1 == len(dataloader)):
+                scaler.minimize(optimizer, scaled)
+                optimizer.clear_grad()
+        else: &#47&#47 full precision training
+            output = model(image)
+            loss = criterion(output, label)
+            &#47&#47NOTE: division may be needed depending on the loss function
+            &#47&#47 Here no division is needed:
+            &#47&#47 default &quotreduction&quot param in nn.CrossEntropyLoss is set to &quotmean&quot
+            &#47&#47loss =  loss / accum_iter
+            loss.backward()
+
+            if ((batch_id +1) % accum_iter == 0) or (batch_id + 1 == len(dataloader)):
+                optimizer.step()
+                optimizer.clear_grad()
+
+        pred = F.softmax(output)
+        <a id="change">if mixup_fn</a>:
+            acc<a id="change"> = </a>paddle.metric.accuracy(pred, label_orig)
+        else:
+            acc<a id="change"> = paddle.metric.accuracy(</a>pred, <a id="change">label_orig.unsqueeze(1</a><a id="change">))</a>
+
+        batch_size = image.shape[0]
+        train_loss_meter.update(loss.numpy()[0], batch_size)
+        train_acc_meter.update(acc.numpy()[0], batch_size)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/br-idl/paddlevit/commit/7cb9ed425898bd0530399578065fbc475ba3e65d#diff-99fed7436dedf027401851f0e8583a305fb101bcc631b674f8fa0338c2766b9dL79' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 71146526</div><div id='project'> Project Name: br-idl/paddlevit</div><div id='commit'> Commit Name: 7cb9ed425898bd0530399578065fbc475ba3e65d</div><div id='time'> Time: 2021-10-13</div><div id='author'> Author: ’lmk123568@qq.com‘</div><div id='file'> File Name: image_classification/FF_Only/main_single_gpu.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train(12)</div><div id='n_method'> N Method Name: train(9)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: image_classification/FF_Only/main_single_gpu.py</div><div id='n_file'> N File Name: image_classification/FF_Only/main_single_gpu.py</div><div id='m_start'> M Start Line: 113</div><div id='m_end'> M End Line: 146</div><div id='n_start'> N Start Line: 84</div><div id='n_end'> N End Line: 157</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    for batch_id, data in enumerate(dataloader):
+        image = data[0]
+        <a id="change">label</a> = data[1]
+
+        if amp is True:
+            with paddle.amp.auto_cast():
+                output = model(image)
+                loss = criterion(output, label)
+            scaled = scaler.scale(loss)
+            scaled.backward()
+
+            if ((batch_id +1) % accum_iter == 0) or (batch_id + 1 == len(dataloader)):
+                scaler.minimize(optimizer, scaled)
+                optimizer.clear_grad()
+
+        else:
+            output = model(image)
+            loss = criterion(output, label)
+            &#47&#47NOTE: division may be needed depending on the loss function
+            &#47&#47 Here no division is needed:
+            &#47&#47 default &quotreduction&quot param in nn.CrossEntropyLoss is set to &quotmean&quot
+            &#47&#47loss =  loss / accum_iter
+            loss.backward()
+
+            if ((batch_id +1) % accum_iter == 0) or (batch_id + 1 == len(dataloader)):
+                optimizer.step()
+                optimizer.clear_grad() 
+            
+        pred = F.softmax(output)
+        acc<a id="change"> = </a>paddle.metric.accuracy(pred, <a id="change">label.unsqueeze(1</a><a id="change">)</a>)
+
+        batch_size = image.shape[0]
+        train_loss_meter.update(loss.numpy()[0], batch_size)</code></pre><h3>After Change</h3><pre><code class='java'>
+    time_st = time.time()
+
+    for batch_id, data in enumerate(dataloader):
+        <a id="change">image</a> = data[0]
+        <a id="change">label</a> = data[1]
+        <a id="change">label_orig</a><a id="change"> = </a><a id="change">label.clone()</a>
+
+        <a id="change">if </a><a id="change">mixup_fn is not None</a>:
+            image<a id="change">, label = </a><a id="change">mixup_fn(</a>image, label_orig<a id="change">)</a>
+        
+        if amp is True: &#47&#47 mixed precision training
+            with paddle.amp.auto_cast():
+                output = model(image)
+                loss = criterion(output, label)
+            scaled = scaler.scale(loss)
+            scaled.backward()
+            if ((batch_id +1) % accum_iter == 0) or (batch_id + 1 == len(dataloader)):
+                scaler.minimize(optimizer, scaled)
+                optimizer.clear_grad()
+        else: &#47&#47 full precision training
+            output = model(image)
+            loss = criterion(output, label)
+            &#47&#47NOTE: division may be needed depending on the loss function
+            &#47&#47 Here no division is needed:
+            &#47&#47 default &quotreduction&quot param in nn.CrossEntropyLoss is set to &quotmean&quot
+            &#47&#47loss =  loss / accum_iter
+            loss.backward()
+
+            if ((batch_id +1) % accum_iter == 0) or (batch_id + 1 == len(dataloader)):
+                optimizer.step()
+                optimizer.clear_grad()
+
+        pred = F.softmax(output)
+        <a id="change">if mixup_fn</a>:
+            acc<a id="change"> = </a>paddle.metric.accuracy(pred, label_orig)
+        else:
+            acc<a id="change"> = paddle.metric.accuracy(</a>pred, <a id="change">label_orig.unsqueeze(1</a><a id="change">))</a>
+
+        batch_size = image.shape[0]
+        train_loss_meter.update(loss.numpy()[0], batch_size)
+        train_acc_meter.update(acc.numpy()[0], batch_size)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/br-idl/paddlevit/commit/41c4050c0d9bc13dafa1bf9d0c41877c86370ddc#diff-0a9619820fbffc1e80de5f0d4ba85a3f42ebc942d6dec2c212bee5fb658af41bL79' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 71146521</div><div id='project'> Project Name: br-idl/paddlevit</div><div id='commit'> Commit Name: 41c4050c0d9bc13dafa1bf9d0c41877c86370ddc</div><div id='time'> Time: 2021-12-21</div><div id='author'> Author: xperzy@gmail.com</div><div id='file'> File Name: image_classification/BoTNet/main_single_gpu.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train(12)</div><div id='n_method'> N Method Name: train(9)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: image_classification/BoTNet/main_single_gpu.py</div><div id='n_file'> N File Name: image_classification/BoTNet/main_single_gpu.py</div><div id='m_start'> M Start Line: 113</div><div id='m_end'> M End Line: 146</div><div id='n_start'> N Start Line: 81</div><div id='n_end'> N End Line: 154</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    for batch_id, data in enumerate(dataloader):
+        image = data[0]
+        <a id="change">label</a> = data[1]
+
+        if amp is True:
+            with paddle.amp.auto_cast():
+                output = model(image)
+                loss = criterion(output, label)
+            scaled = scaler.scale(loss)
+            scaled.backward()
+
+            if ((batch_id +1) % accum_iter == 0) or (batch_id + 1 == len(dataloader)):
+                scaler.minimize(optimizer, scaled)
+                optimizer.clear_grad()
+
+        else:
+            output = model(image)
+            loss = criterion(output, label)
+            &#47&#47NOTE: division may be needed depending on the loss function
+            &#47&#47 Here no division is needed:
+            &#47&#47 default &quotreduction&quot param in nn.CrossEntropyLoss is set to &quotmean&quot
+            &#47&#47loss =  loss / accum_iter
+            loss.backward()
+
+            if ((batch_id +1) % accum_iter == 0) or (batch_id + 1 == len(dataloader)):
+                optimizer.step()
+                optimizer.clear_grad()
+
+        pred = F.softmax(output)
+        acc<a id="change"> = </a>paddle.metric.accuracy(pred, <a id="change">label.unsqueeze(1</a><a id="change">)</a>)
+
+        batch_size = image.shape[0]
+        train_loss_meter.update(loss.numpy()[0], batch_size)</code></pre><h3>After Change</h3><pre><code class='java'>
+    time_st = time.time()
+
+    for batch_id, data in enumerate(dataloader):
+        <a id="change">image</a> = data[0]
+        <a id="change">label</a> = data[1]
+        <a id="change">label_orig</a><a id="change"> = </a><a id="change">label.clone()</a>
+
+        <a id="change">if </a><a id="change">mixup_fn is not None</a>:
+            image<a id="change">, label = </a><a id="change">mixup_fn(</a>image, label_orig<a id="change">)</a>
+        
+        if amp is True: &#47&#47 mixed precision training
+            with paddle.amp.auto_cast():
+                output = model(image)
+                loss = criterion(output, label)
+            scaled = scaler.scale(loss)
+            scaled.backward()
+            if ((batch_id +1) % accum_iter == 0) or (batch_id + 1 == len(dataloader)):
+                scaler.minimize(optimizer, scaled)
+                optimizer.clear_grad()
+        else: &#47&#47 full precision training
+            output = model(image)
+            loss = criterion(output, label)
+            &#47&#47NOTE: division may be needed depending on the loss function
+            &#47&#47 Here no division is needed:
+            &#47&#47 default &quotreduction&quot param in nn.CrossEntropyLoss is set to &quotmean&quot
+            &#47&#47loss =  loss / accum_iter
+            loss.backward()
+
+            if ((batch_id +1) % accum_iter == 0) or (batch_id + 1 == len(dataloader)):
+                optimizer.step()
+                optimizer.clear_grad()
+
+        pred = F.softmax(output)
+        <a id="change">if mixup_fn</a>:
+            acc<a id="change"> = </a>paddle.metric.accuracy(pred, label_orig)
+        else:
+            acc<a id="change"> = paddle.metric.accuracy(</a>pred, <a id="change">label_orig.unsqueeze(1</a><a id="change">))</a>
+
+        batch_size = image.shape[0]
+        train_loss_meter.update(loss.numpy()[0], batch_size)
+        train_acc_meter.update(acc.numpy()[0], batch_size)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/br-idl/paddlevit/commit/cdefc585fd6e451a6ccba98e4cac9db5ebeb99ca#diff-0402e8891f3cc8d47380d1b970252fdf8b6b86ee00a938c428d8c36f64d1182aL81' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 71146523</div><div id='project'> Project Name: br-idl/paddlevit</div><div id='commit'> Commit Name: cdefc585fd6e451a6ccba98e4cac9db5ebeb99ca</div><div id='time'> Time: 2021-12-07</div><div id='author'> Author: xperzy@gmail.com</div><div id='file'> File Name: image_classification/XCiT/main_single_gpu.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train(12)</div><div id='n_method'> N Method Name: train(9)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: image_classification/XCiT/main_single_gpu.py</div><div id='n_file'> N File Name: image_classification/XCiT/main_single_gpu.py</div><div id='m_start'> M Start Line: 115</div><div id='m_end'> M End Line: 148</div><div id='n_start'> N Start Line: 84</div><div id='n_end'> N End Line: 157</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    for batch_id, data in enumerate(dataloader):
+        image = data[0]
+        <a id="change">label</a> = data[1]
+
+        if amp is True:
+            with paddle.amp.auto_cast():
+                output = model(image)
+                loss = criterion(output, label)
+            scaled = scaler.scale(loss)
+            scaled.backward()
+            if ((batch_id +1) % accum_iter == 0) or (batch_id + 1 == len(dataloader)):
+                scaler.minimize(optimizer, scaled)
+                optimizer.clear_grad()
+        else: &#47&#47 full precision training
+            output = model(image)
+            loss = criterion(output, label)
+            &#47&#47NOTE: division may be needed depending on the loss function
+            &#47&#47 Here no division is needed:
+            &#47&#47 default &quotreduction&quot param in nn.CrossEntropyLoss is set to &quotmean&quot
+            &#47&#47loss =  loss / accum_iter
+            loss.backward()
+
+            if ((batch_id +1) % accum_iter == 0) or (batch_id + 1 == len(dataloader)):
+                optimizer.step()
+                optimizer.clear_grad()
+
+        pred = F.softmax(output)
+        acc<a id="change"> = </a>paddle.metric.accuracy(pred, <a id="change">label.unsqueeze(1</a><a id="change">)</a>)
+
+        batch_size = image.shape[0]
+        train_loss_meter.update(loss.numpy()[0], batch_size)</code></pre><h3>After Change</h3><pre><code class='java'>
+    time_st = time.time()
+
+    for batch_id, data in enumerate(dataloader):
+        <a id="change">image</a> = data[0]
+        <a id="change">label</a> = data[1]
+        <a id="change">label_orig</a><a id="change"> = </a><a id="change">label.clone()</a>
+
+        <a id="change">if </a><a id="change">mixup_fn is not None</a>:
+            image<a id="change">, label = </a><a id="change">mixup_fn(</a>image, label_orig<a id="change">)</a>
+        
+        if amp is True: &#47&#47 mixed precision training
+            with paddle.amp.auto_cast():
+                output = model(image)
+                loss = criterion(output, label)
+            scaled = scaler.scale(loss)
+            scaled.backward()
+            if ((batch_id +1) % accum_iter == 0) or (batch_id + 1 == len(dataloader)):
+                scaler.minimize(optimizer, scaled)
+                optimizer.clear_grad()
+        else: &#47&#47 full precision training
+            output = model(image)
+            loss = criterion(output, label)
+            &#47&#47NOTE: division may be needed depending on the loss function
+            &#47&#47 Here no division is needed:
+            &#47&#47 default &quotreduction&quot param in nn.CrossEntropyLoss is set to &quotmean&quot
+            &#47&#47loss =  loss / accum_iter
+            loss.backward()
+
+            if ((batch_id +1) % accum_iter == 0) or (batch_id + 1 == len(dataloader)):
+                optimizer.step()
+                optimizer.clear_grad()
+
+        pred = F.softmax(output)
+        <a id="change">if mixup_fn</a>:
+            acc<a id="change"> = </a>paddle.metric.accuracy(pred, label_orig)
+        else:
+            acc<a id="change"> = paddle.metric.accuracy(</a>pred, <a id="change">label_orig.unsqueeze(1</a><a id="change">))</a>
+
+        batch_size = image.shape[0]
+        train_loss_meter.update(loss.numpy()[0], batch_size)
+        train_acc_meter.update(acc.numpy()[0], batch_size)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/br-idl/paddlevit/commit/7912401dbd87d0d5550a2e9b3cf1dcfe9598e44b#diff-23a4f998bfedfc8ba5e9eda619f4ea1c2026b57dbd34e229ddee49f24c2c5202L73' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 71146522</div><div id='project'> Project Name: br-idl/paddlevit</div><div id='commit'> Commit Name: 7912401dbd87d0d5550a2e9b3cf1dcfe9598e44b</div><div id='time'> Time: 2021-12-14</div><div id='author'> Author: xperzy@gmail.com</div><div id='file'> File Name: image_classification/PoolFormer/main_single_gpu.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train(12)</div><div id='n_method'> N Method Name: train(11)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: image_classification/PoolFormer/main_single_gpu.py</div><div id='n_file'> N File Name: image_classification/PoolFormer/main_single_gpu.py</div><div id='m_start'> M Start Line: 111</div><div id='m_end'> M End Line: 136</div><div id='n_start'> N Start Line: 85</div><div id='n_end'> N End Line: 150</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    for batch_id, data in enumerate(dataloader):
+        image = data[0]
+        <a id="change">label</a> = data[1]
+
+        if amp is True:
+            with paddle.amp.auto_cast():
+                output = model(image)
+                loss = criterion(output, label)
+            scaled = scaler.scale(loss)
+            scaled.backward()
+
+            if ((batch_id +1) % accum_iter == 0) or (batch_id + 1 == len(dataloader)):
+                scaler.minimize(optimizer, scaled)
+                optimizer.clear_grad()
+
+        else:
+            output = model(image)
+            loss = criterion(output, label)
+            &#47&#47NOTE: division may be needed depending on the loss function
+            &#47&#47 Here no division is needed:
+            &#47&#47 default &quotreduction&quot param in nn.CrossEntropyLoss is set to &quotmean&quot
+            &#47&#47loss =  loss / accum_iter
+            loss.backward()
+
+            if ((batch_id +1) % accum_iter == 0) or (batch_id + 1 == len(dataloader)):
+                optimizer.step()
+                optimizer.clear_grad()
+
+        pred = F.softmax(output)
+        acc<a id="change"> = </a>paddle.metric.accuracy(pred, <a id="change">label.unsqueeze(1</a><a id="change">)</a>)
+
+        batch_size = image.shape[0]
+        train_loss_meter.update(loss.numpy()[0], batch_size)</code></pre><h3>After Change</h3><pre><code class='java'>
+
+
+    for batch_id, data in enumerate(dataloader):
+        <a id="change">image</a> = data[0]
+        <a id="change">label</a> = data[1]
+        <a id="change">label_orig</a><a id="change"> = </a><a id="change">label.clone()</a>
+
+        <a id="change">if </a><a id="change">mixup_fn is not None</a>:
+            image<a id="change">, label = </a><a id="change">mixup_fn(</a>image, label_orig<a id="change">)</a>
+        
+        if amp is True: &#47&#47 mixed precision training
+            with paddle.amp.auto_cast():
+                output = model(image)
+                loss = criterion(image, output, label)
+            scaled = scaler.scale(loss)
+            scaled.backward()
+            if ((batch_id +1) % accum_iter == 0) or (batch_id + 1 == len(dataloader)):
+                scaler.minimize(optimizer, scaled)
+                optimizer.clear_grad()
+        else: &#47&#47 full precision training
+            output = model(image)
+            loss = criterion(output, label)
+            &#47&#47NOTE: division may be needed depending on the loss function
+            &#47&#47 Here no division is needed:
+            &#47&#47 default &quotreduction&quot param in nn.CrossEntropyLoss is set to &quotmean&quot
+            &#47&#47loss =  loss / accum_iter
+            loss.backward()
+
+            if ((batch_id +1) % accum_iter == 0) or (batch_id + 1 == len(dataloader)):
+                optimizer.step()
+                optimizer.clear_grad()
+
+        if model_ema is not None:
+            model_ema.update(model)
+
+        pred = F.softmax(output)
+        <a id="change">if mixup_fn</a>:
+            acc<a id="change"> = </a>paddle.metric.accuracy(pred, label_orig)
+        else:
+            acc<a id="change"> = paddle.metric.accuracy(</a>pred, <a id="change">label_orig.unsqueeze(1</a><a id="change">))</a>
+
+        batch_size = image.shape[0]
+        train_loss_meter.update(loss.numpy()[0], batch_size)
+        train_acc_meter.update(acc.numpy()[0], batch_size)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/br-idl/paddlevit/commit/8830bbf1fbf940d9ae0cfd9625201c78addcf9f5#diff-4a46e202a9c6a7c224314d0ead8529d2611327f70f5648669bb2203934986442L81' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 71146517</div><div id='project'> Project Name: br-idl/paddlevit</div><div id='commit'> Commit Name: 8830bbf1fbf940d9ae0cfd9625201c78addcf9f5</div><div id='time'> Time: 2021-10-20</div><div id='author'> Author: xperzy@gmail.com</div><div id='file'> File Name: image_classification/MobileViT/main_single_gpu.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train(13)</div><div id='n_method'> N Method Name: train(9)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: image_classification/MobileViT/main_single_gpu.py</div><div id='n_file'> N File Name: image_classification/MobileViT/main_single_gpu.py</div><div id='m_start'> M Start Line: 115</div><div id='m_end'> M End Line: 148</div><div id='n_start'> N Start Line: 84</div><div id='n_end'> N End Line: 163</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    for batch_id, data in enumerate(dataloader):
+        image = data[0]
+        <a id="change">label</a> = data[1]
+
+        if amp is True:
+            with paddle.amp.auto_cast():
+                output = model(image)
+                loss = criterion(output, label)
+            scaled = scaler.scale(loss)
+            scaled.backward()
+
+            if ((batch_id +1) % accum_iter == 0) or (batch_id + 1 == len(dataloader)):
+                scaler.minimize(optimizer, scaled)
+                optimizer.clear_grad()
+
+        else:
+            output = model(image)
+            loss = criterion(output, label)
+            &#47&#47NOTE: division may be needed depending on the loss function
+            &#47&#47 Here no division is needed:
+            &#47&#47 default &quotreduction&quot param in nn.CrossEntropyLoss is set to &quotmean&quot
+            &#47&#47loss =  loss / accum_iter
+            loss.backward()
+
+            if ((batch_id +1) % accum_iter == 0) or (batch_id + 1 == len(dataloader)):
+                optimizer.step()
+                optimizer.clear_grad()
+
+        pred = F.softmax(output)
+        acc<a id="change"> = </a>paddle.metric.accuracy(pred, <a id="change">label.unsqueeze(1</a><a id="change">)</a>)
+
+        batch_size = image.shape[0]
+        train_loss_meter.update(loss.numpy()[0], batch_size)</code></pre><h3>After Change</h3><pre><code class='java'>
+    time_st = time.time()
+
+    for batch_id, data in enumerate(dataloader):
+        <a id="change">image</a> = data[0]
+        <a id="change">label</a> = data[1]
+        <a id="change">label_orig</a><a id="change"> = </a><a id="change">label.clone()</a>
+
+        <a id="change">if </a><a id="change">mixup_fn is not None</a>:
+            image<a id="change">, label = </a><a id="change">mixup_fn(</a>image, label_orig<a id="change">)</a>
+        
+        if amp is True: &#47&#47 mixed precision training
+            with paddle.amp.auto_cast():
+                output = model(image)
+                loss = criterion(image, output, label)
+            scaled = scaler.scale(loss)
+            scaled.backward()
+            if ((batch_id +1) % accum_iter == 0) or (batch_id + 1 == len(dataloader)):
+                scaler.minimize(optimizer, scaled)
+                optimizer.clear_grad()
+        else: &#47&#47 full precision training
+            output = model(image)
+            loss = criterion(output, label)
+            &#47&#47NOTE: division may be needed depending on the loss function
+            &#47&#47 Here no division is needed:
+            &#47&#47 default &quotreduction&quot param in nn.CrossEntropyLoss is set to &quotmean&quot
+            &#47&#47loss =  loss / accum_iter
+            loss.backward()
+
+            if ((batch_id +1) % accum_iter == 0) or (batch_id + 1 == len(dataloader)):
+                optimizer.step()
+                optimizer.clear_grad()
+
+        pred = F.softmax(output)
+        <a id="change">if mixup_fn</a>:
+            acc<a id="change"> = </a>paddle.metric.accuracy(pred, label_orig)
+        else:
+            acc<a id="change"> = paddle.metric.accuracy(</a>pred, <a id="change">label_orig.unsqueeze(1</a><a id="change">))</a>
+
+        batch_size = image.shape[0]
+        train_loss_meter.update(loss.numpy()[0], batch_size)
+        train_acc_meter.update(acc.numpy()[0], batch_size)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/br-idl/paddlevit/commit/bf322d765c1f5b8c830638e09240893a160fdf7b#diff-8c31cf2132fc99d4301b59ae3fbcf2d696e5fa86136d77ae15425998d256aef1L79' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 71146516</div><div id='project'> Project Name: br-idl/paddlevit</div><div id='commit'> Commit Name: bf322d765c1f5b8c830638e09240893a160fdf7b</div><div id='time'> Time: 2021-10-15</div><div id='author'> Author: ’lmk123568@qq.com‘</div><div id='file'> File Name: image_classification/RepMLP/main_single_gpu.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train(12)</div><div id='n_method'> N Method Name: train(9)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: image_classification/RepMLP/main_single_gpu.py</div><div id='n_file'> N File Name: image_classification/RepMLP/main_single_gpu.py</div><div id='m_start'> M Start Line: 113</div><div id='m_end'> M End Line: 146</div><div id='n_start'> N Start Line: 84</div><div id='n_end'> N End Line: 157</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    for batch_id, data in enumerate(dataloader):
+        image = data[0]
+        <a id="change">label</a> = data[1]
+
+        if amp is True:
+            with paddle.amp.auto_cast():
+                output = model(image)
+                loss = criterion(output, label)
+            scaled = scaler.scale(loss)
+            scaled.backward()
+
+            if ((batch_id +1) % accum_iter == 0) or (batch_id + 1 == len(dataloader)):
+                scaler.minimize(optimizer, scaled)
+                optimizer.clear_grad()
+
+        else:
+            output = model(image)
+            loss = criterion(output, label)
+            &#47&#47NOTE: division may be needed depending on the loss function
+            &#47&#47 Here no division is needed:
+            &#47&#47 default &quotreduction&quot param in nn.CrossEntropyLoss is set to &quotmean&quot
+            &#47&#47loss =  loss / accum_iter
+            loss.backward()
+
+            if ((batch_id +1) % accum_iter == 0) or (batch_id + 1 == len(dataloader)):
+                optimizer.step()
+                optimizer.clear_grad()
+
+        pred = F.softmax(output)
+        acc<a id="change"> = </a>paddle.metric.accuracy(pred, <a id="change">label.unsqueeze(1</a><a id="change">)</a>)
+
+        batch_size = image.shape[0]
+        train_loss_meter.update(loss.numpy()[0], batch_size)</code></pre><h3>After Change</h3><pre><code class='java'>
+    time_st = time.time()
+
+    for batch_id, data in enumerate(dataloader):
+        <a id="change">image</a> = data[0]
+        <a id="change">label</a> = data[1]
+        <a id="change">label_orig</a><a id="change"> = </a><a id="change">label.clone()</a>
+
+        <a id="change">if </a><a id="change">mixup_fn is not None</a>:
+            image<a id="change">, label = </a><a id="change">mixup_fn(</a>image, label_orig<a id="change">)</a>
+        
+        if amp is True: &#47&#47 mixed precision training
+            with paddle.amp.auto_cast():
+                output = model(image)
+                loss = criterion(image, output, label)
+            scaled = scaler.scale(loss)
+            scaled.backward()
+            if ((batch_id +1) % accum_iter == 0) or (batch_id + 1 == len(dataloader)):
+                scaler.minimize(optimizer, scaled)
+                optimizer.clear_grad()
+        else: &#47&#47 full precision training
+            output = model(image)
+            loss = criterion(output, label)
+            &#47&#47NOTE: division may be needed depending on the loss function
+            &#47&#47 Here no division is needed:
+            &#47&#47 default &quotreduction&quot param in nn.CrossEntropyLoss is set to &quotmean&quot
+            &#47&#47loss =  loss / accum_iter
+            loss.backward()
+
+            if ((batch_id +1) % accum_iter == 0) or (batch_id + 1 == len(dataloader)):
+                optimizer.step()
+                optimizer.clear_grad()
+
+        pred = F.softmax(output)
+        <a id="change">if mixup_fn</a>:
+            acc<a id="change"> = </a>paddle.metric.accuracy(pred, label_orig)
+        else:
+            acc<a id="change"> = paddle.metric.accuracy(</a>pred, <a id="change">label_orig.unsqueeze(1</a><a id="change">))</a>
+
+        batch_size = image.shape[0]
+        train_loss_meter.update(loss.numpy()[0], batch_size)
+        train_acc_meter.update(acc.numpy()[0], batch_size)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/br-idl/paddlevit/commit/a3c34f46c9caacaa14d16a6311998f0c8e775190#diff-b616636ed3ed8e30d834f1b8e9edb5be2c06099706475ff8f1c9a3cc3e36500eL80' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 71146519</div><div id='project'> Project Name: br-idl/paddlevit</div><div id='commit'> Commit Name: a3c34f46c9caacaa14d16a6311998f0c8e775190</div><div id='time'> Time: 2021-10-13</div><div id='author'> Author: ’lmk123568@qq.com‘</div><div id='file'> File Name: image_classification/CycleMLP/main_single_gpu.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train(12)</div><div id='n_method'> N Method Name: train(9)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: image_classification/CycleMLP/main_single_gpu.py</div><div id='n_file'> N File Name: image_classification/CycleMLP/main_single_gpu.py</div><div id='m_start'> M Start Line: 114</div><div id='m_end'> M End Line: 147</div><div id='n_start'> N Start Line: 84</div><div id='n_end'> N End Line: 157</div><BR>

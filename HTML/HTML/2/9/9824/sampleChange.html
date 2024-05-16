@@ -1,0 +1,49 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            List of averaged scores
+        
+        self.model.eval()
+        <a id="change">for </a>(X, y, bias, X_mask, y_mask, time_stamps) in <a id="change">tqdm(</a>self.valid_dataloader<a id="change">):
+            </a>X = X.to(self.device)
+            y = y.to(self.device)
+            bias = bias.to(self.device)
+            X_mask = X_mask.to(self.device)</code></pre><h3>After Change</h3><pre><code class='java'>
+            List of averaged scores
+        
+        self.model.eval()
+        <a id="change">with tqdm(total=len(self.valid_dataloader), leave=False)</a><a id="change"> as pbar:
+            for </a>(
+                X,
+                y,
+                bias,
+                X_mask,
+                y_mask,
+                time_stamps,
+                _,
+                y_inv_transforms,
+            ) in self.valid_dataloader<a id="change">:
+                </a>X = X.to(self.device)
+                y = y.to(self.device)
+                bias = bias.to(self.device)
+                X_mask = X_mask.to(self.device)
+                y_mask = y_mask.to(self.device)
+                if time_stamps is not None:
+                    time_stamps = time_stamps.to(self.device)
+                with torch.no_grad():
+                    Z = self.model(X, bias, X_mask, time_stamps)
+                batch_size = X.size(0)
+                if self.denorm is True:
+                    for i in range(batch_size):
+                        Z[i] = y_inv_transforms[i](Z[i])
+                        y[i] = y_inv_transforms[i](y[i])
+                for metric in self.metrics:
+                    metric.update(Z, y, y_mask)
+                metric_v = sum([metric(False) for metric in self.metrics])
+                pbar.set_description(f"(metric={metric_v:.4f})")
+                <a id="change">pbar.update(1</a><a id="change">)</a>
+        ave_scores = []
+        for metric in self.metrics:
+            ave_score = metric(True)
+            ave_scores.append(ave_score)</code></pre>

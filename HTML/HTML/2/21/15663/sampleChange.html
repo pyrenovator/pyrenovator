@@ -1,0 +1,27 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+    def forward(self, interaction):
+        x = []
+        <a id="change">for </a>field in self.field_names<a id="change">:
+            &#47&#47 todo: check (batch) or (batch, 1)
+            </a><a id="change">x.append(</a><a id="change">interaction[field].unsqueeze(1</a><a id="change">))</a>
+        x = torch.cat(x, dim=1)
+        y = self.sigmoid(self.first_order_linear(x) + self.fm(self.embedding(x)))
+        return y.squeeze()
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    def forward(self, interaction):
+        &#47&#47 sparse_embedding shape: [batch_size, num_token_seq_field+num_token_field, embed_dim] or None
+        &#47&#47 dense_embedding shape: [batch_size, num_float_field] or [batch_size, num_float_field, embed_dim] or None
+        <a id="change">sparse_embedding</a><a id="change">, dense_embedding</a> = self.embed_input_fields(interaction)
+        x = []
+        <a id="change">if sparse_embedding is not None</a>:
+            <a id="change">x.append(sparse_embedding</a><a id="change">)</a>
+        <a id="change">if dense_embedding is not None and len(dense_embedding.shape) == 3</a>:
+            <a id="change">x.append(dense_embedding</a><a id="change">)</a>
+        x = torch.cat(x, dim=1)
+        y = self.sigmoid(self.first_order_linear(interaction) + self.fm(self.embedding(x)))
+        return y.squeeze()
+</code></pre>

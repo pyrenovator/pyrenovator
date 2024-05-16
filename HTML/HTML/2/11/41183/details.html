@@ -1,0 +1,174 @@
+<html><h3>Pattern ID :41183
+</h3><img src='116183629.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            for p in group[&quotparams&quot]:
+                if p.grad is None:
+                    continue
+                grad<a id="change"> = </a>p.grad
+                if grad.is_sparse:
+                    raise RuntimeError(&quotASGD does not support sparse gradients&quot)
+                state = self.state[p]
+
+                &#47&#47 State initialization
+                if len(state) == 0:
+                    state[&quotstep&quot] = 0
+                    state[&quoteta&quot] = group[&quotlr&quot]
+                    state[&quotmu&quot] = 1
+                    state[&quotax&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+
+                state[&quotstep&quot] += 1
+
+                <a id="change">if </a><a id="change">group[&quotweight_decay&quot] != 0</a>:
+                    grad<a id="change"> = </a><a id="change">grad.add(</a>p<a id="change">, alpha=group[&quotweight_decay&quot])</a>
+
+                &#47&#47 decay term
+                <a id="change">p.mul_(</a>1 - group[&quotlambd&quot] * state[&quoteta&quot]<a id="change">)</a>
+
+                &#47&#47 update parameter
+                <a id="change">p.add_(</a>grad<a id="change">, alpha=-state[&quoteta&quot])</a>
+
+                &#47&#47 averaging
+                if state[&quotmu&quot] != 1:
+                    state[&quotax&quot].add_(p.sub(state[&quotax&quot]).mul(state[&quotmu&quot]))</code></pre><h3>After Change</h3><pre><code class='java'>
+            mus = []
+            axs = []
+            etas = []
+            state_steps<a id="change"> = </a><a id="change">[]</a>
+
+            for p in group[&quotparams&quot]:
+                if p.grad is not None:
+                    params_with_grad.append(p)
+                    if p.grad.is_sparse:
+                        raise RuntimeError(&quotASGD does not support sparse gradients&quot)
+                    grads.append(p.grad)
+
+                    state = self.state[p]
+                    &#47&#47 State initialization
+                    if len(state) == 0:
+                        state[&quotstep&quot] = 0
+                        state[&quoteta&quot] = group[&quotlr&quot]
+                        state[&quotmu&quot] = 1
+                        state[&quotax&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+
+                    mus.append(state[&quotmu&quot])
+                    axs.append(state[&quotax&quot])
+                    etas.append(state[&quoteta&quot])
+
+                    state[&quotstep&quot] += 1
+                    <a id="change">state_steps.append(</a>state[&quotstep&quot]<a id="change">)</a>
+
+            F.asgd(params_with_grad,
+                   grads,
+                   axs,</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 10</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/pytorch/pytorch/commit/9a622f4cd9318d69896462823891588ef0bf719c#diff-b5441178f7d0764941fd9b5dc89b596d57da114d4665b7b31138beac59e93c7dL48' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 116183629</div><div id='project'> Project Name: pytorch/pytorch</div><div id='commit'> Commit Name: 9a622f4cd9318d69896462823891588ef0bf719c</div><div id='time'> Time: 2021-05-19</div><div id='author'> Author: iramazanli@fb.com</div><div id='file'> File Name: torch/optim/asgd.py</div><div id='m_class'> M Class Name: ASGD</div><div id='n_method'> N Class Name: ASGD</div><div id='m_method'> M Method Name: step(2)</div><div id='n_method'> N Method Name: step(2)</div><div id='m_parent_class'> M Parent Class: Optimizer</div><div id='n_parent_class'> N Parent Class: Optimizer</div><div id='m_file'> M File Name: torch/optim/asgd.py</div><div id='n_file'> N File Name: torch/optim/asgd.py</div><div id='m_start'> M Start Line: 48</div><div id='m_end'> M End Line: 86</div><div id='n_start'> N Start Line: 49</div><div id='n_end'> N End Line: 94</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            for p in group[&quotparams&quot]:
+                if p.grad is None:
+                    continue
+                grad<a id="change"> = </a>p.grad
+                if grad.is_sparse:
+                    raise RuntimeError(&quotAdamax does not support sparse gradients&quot)
+                state = self.state[p]
+
+                &#47&#47 State initialization
+                if len(state) == 0:
+                    state[&quotstep&quot] = 0
+                    state[&quotexp_avg&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+                    state[&quotexp_inf&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+
+                exp_avg, exp_inf = state[&quotexp_avg&quot], state[&quotexp_inf&quot]
+                beta1, beta2 = group[&quotbetas&quot]
+                eps = group[&quoteps&quot]
+
+                state[&quotstep&quot] += 1
+
+                <a id="change">if </a><a id="change">group[&quotweight_decay&quot] != 0</a>:
+                    grad<a id="change"> = </a><a id="change">grad.add(</a>p<a id="change">, alpha=group[&quotweight_decay&quot])</a>
+
+                &#47&#47 Update biased first moment estimate.
+                <a id="change">exp_avg.mul_(beta1).add_(</a>grad<a id="change">, alpha=1 - beta1)</a>
+                &#47&#47 Update the exponentially weighted infinity norm.
+                norm_buf = torch.cat([
+                    <a id="change">exp_inf.mul_(</a>beta2<a id="change">)</a>.unsqueeze(0),
+                    grad.abs().add_(eps).unsqueeze_(0)
+                ], 0)
+                torch.amax(norm_buf, 0, keepdim=False, out=exp_inf)</code></pre><h3>After Change</h3><pre><code class='java'>
+            params_with_grad = []
+            grads = []
+            exp_avgs = []
+            exp_infs<a id="change"> = </a><a id="change">[]</a>
+            state_steps = []
+
+            beta1, beta2 = group[&quotbetas&quot]
+            eps = group[&quoteps&quot]
+            lr = group[&quotlr&quot]
+            weight_decay = group[&quotweight_decay&quot]
+
+            for p in group[&quotparams&quot]:
+                if p.grad is None:
+                    continue
+                params_with_grad.append(p)
+                if p.grad.is_sparse:
+                    raise RuntimeError(&quotAdamax does not support sparse gradients&quot)
+                grads.append(p.grad)
+
+                state = self.state[p]
+
+                &#47&#47 State initialization
+                if len(state) == 0:
+                    state[&quotstep&quot] = 0
+                    state[&quotexp_avg&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+                    state[&quotexp_inf&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+
+                exp_avgs.append(state[&quotexp_avg&quot])
+                <a id="change">exp_infs.append(</a>state[&quotexp_inf&quot]<a id="change">)</a>
+
+                state[&quotstep&quot] += 1
+                state_steps.append(state[&quotstep&quot])
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/pytorch/pytorch/commit/bb245b6444d3c5b9f586d93121730390985a0bae#diff-148b16d4bd6bab9a518cc1052160cb2dc47f014855087eca0fd3a2a65519e10eL40' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 116183658</div><div id='project'> Project Name: pytorch/pytorch</div><div id='commit'> Commit Name: bb245b6444d3c5b9f586d93121730390985a0bae</div><div id='time'> Time: 2021-04-15</div><div id='author'> Author: wanchaol@fb.com</div><div id='file'> File Name: torch/optim/adamax.py</div><div id='m_class'> M Class Name: Adamax</div><div id='n_method'> N Class Name: Adamax</div><div id='m_method'> M Method Name: step(2)</div><div id='n_method'> N Method Name: step(2)</div><div id='m_parent_class'> M Parent Class: Optimizer</div><div id='n_parent_class'> N Parent Class: Optimizer</div><div id='m_file'> M File Name: torch/optim/adamax.py</div><div id='n_file'> N File Name: torch/optim/adamax.py</div><div id='m_start'> M Start Line: 52</div><div id='m_end'> M End Line: 88</div><div id='n_start'> N Start Line: 53</div><div id='n_end'> N End Line: 96</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            for p in group[&quotparams&quot]:
+                if p.grad is None:
+                    continue
+                grad<a id="change"> = </a>p.grad
+                if grad.is_sparse:
+                    raise RuntimeError(&quotAdadelta does not support sparse gradients&quot)
+                state = self.state[p]
+
+                &#47&#47 State initialization
+                if len(state) == 0:
+                    state[&quotstep&quot] = 0
+                    state[&quotsquare_avg&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+                    state[&quotacc_delta&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+
+                square_avg, acc_delta = state[&quotsquare_avg&quot], state[&quotacc_delta&quot]
+                rho, eps = group[&quotrho&quot], group[&quoteps&quot]
+
+                state[&quotstep&quot] += 1
+
+                <a id="change">if </a><a id="change">group[&quotweight_decay&quot] != 0</a>:
+                    grad<a id="change"> = </a><a id="change">grad.add(</a>p<a id="change">, alpha=group[&quotweight_decay&quot])</a>
+
+                square_avg.mul_(rho).addcmul_(grad, grad, value=1 - rho)
+                std = square_avg.add(eps).sqrt_()
+                delta = acc_delta.add(eps).sqrt_().div_(std).mul_(grad)
+                <a id="change">p.add_(</a>delta<a id="change">, alpha=-group[&quotlr&quot])</a>
+                <a id="change">acc_delta.mul_(</a>rho<a id="change">)</a>.addcmul_(delta, delta, value=1 - rho)
+
+        return loss
+</code></pre><h3>After Change</h3><pre><code class='java'>
+                loss = closure()
+
+        for group in self.param_groups:
+            params_with_grad<a id="change"> = </a><a id="change">[]</a>
+            grads = []
+            square_avgs = []
+            acc_deltas = []
+
+            for p in group[&quotparams&quot]:
+                if p.grad is None:
+                    continue
+                <a id="change">params_with_grad.append(</a>p<a id="change">)</a>
+                if p.grad.is_sparse:
+                    raise RuntimeError(&quotAdadelta does not support sparse gradients&quot)
+                grads.append(p.grad)
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/pytorch/pytorch/commit/d6fb27ce72f357300abe65c2676f69a5848cb997#diff-1e3b06b7b465b89d72e773ead25aa5346022276d1e553494d03f6063cf71a8a8L39' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 116183652</div><div id='project'> Project Name: pytorch/pytorch</div><div id='commit'> Commit Name: d6fb27ce72f357300abe65c2676f69a5848cb997</div><div id='time'> Time: 2021-01-21</div><div id='author'> Author: wanchaol@users.noreply.github.com</div><div id='file'> File Name: torch/optim/adadelta.py</div><div id='m_class'> M Class Name: Adadelta</div><div id='n_method'> N Class Name: Adadelta</div><div id='m_method'> M Method Name: step(2)</div><div id='n_method'> N Method Name: step(2)</div><div id='m_parent_class'> M Parent Class: Optimizer</div><div id='n_parent_class'> N Parent Class: Optimizer</div><div id='m_file'> M File Name: torch/optim/adadelta.py</div><div id='n_file'> N File Name: torch/optim/adadelta.py</div><div id='m_start'> M Start Line: 51</div><div id='m_end'> M End Line: 78</div><div id='n_start'> N Start Line: 52</div><div id='n_end'> N End Line: 88</div><BR>

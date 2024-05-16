@@ -1,0 +1,83 @@
+<html><h3>Pattern ID :226
+</h3><img src='1691545.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 boxes = boxes * self.scale
+
+        &#47&#47 &#47&#47 decode landmarks
+        landms = landms.reshape((43008<a id="change">, 10</a>))
+        &#47&#47 pre = landms.reshape((-1, 10))
+        &#47&#47 landms = torch.cat((
+        &#47&#47     priors[:, :2] + pre[:, :2] * variances[0] * priors[:, 2:],</code></pre><h3>After Change</h3><pre><code class='java'>
+        人脸检测后处理部分只能batch_size为1
+        
+        priors = self.prior_data
+        variances<a id="change"> = </a>self.cfg[&quotvariance&quot]
+        &#47&#47 decode boxes
+        loc = loc.reshape((43008, 4))
+        boxes<a id="change"> = </a>torch.cat((
+            priors[:, :2] + loc[:, :2] * variances[0] * priors[:, 2:],
+            priors[:, 2:]<a id="change"> * </a><a id="change">torch.exp(</a>loc[:, 2:]<a id="change"> * </a>variances[1]<a id="change">)</a>), 1)
+
+        tempA = boxes[:, 0:2]
+        tempB = boxes[:, 2:4]
+        boxes = torch.cat((tempA - tempB/2, tempA<a id="change"> + </a>tempB<a id="change">/</a>2), 1)
+
+        conf = conf.reshape((43008, 2))
+        scores = conf[:, 1]
+
+        <a id="change">return </a>boxes.reshape(1, 43008, 1, 4), scores.reshape(1, 43008, 1)
+
+    def test(self, boxes, scores):
+        boxes = boxes.unsqueeze(0)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 9</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/lihaoxiang1989/tensorrt-cv/commit/defa136eb68db8c102bf6fd06339776e0a40d83e#diff-54c71df309d378a4684cddbd182859418cd3c37a41a1db8093755bc41567b88eL207' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 1691545</div><div id='project'> Project Name: lihaoxiang1989/tensorrt-cv</div><div id='commit'> Commit Name: defa136eb68db8c102bf6fd06339776e0a40d83e</div><div id='time'> Time: 2021-06-27</div><div id='author'> Author: hxl.colin@gmail.com</div><div id='file'> File Name: Retinaface/main.py</div><div id='m_class'> M Class Name: MyModel</div><div id='n_method'> N Class Name: MyModel</div><div id='m_method'> M Method Name: postprocess(3)</div><div id='n_method'> N Method Name: postprocess(5)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: Retinaface/main.py</div><div id='n_file'> N File Name: Retinaface/main.py</div><div id='m_start'> M Start Line: 207</div><div id='m_end'> M End Line: 252</div><div id='n_start'> N Start Line: 227</div><div id='n_end'> N End Line: 242</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    def forward(self, g_s, f_s, g_t, f_t):
+        trans_loss_s, domain_acc_s = self._single_domain_forward(g_s, f_s, domain=1)
+        trans_loss_t<a id="change">, domain_acc_t</a> = self._single_domain_forward(g_t, f_t, domain=0)
+        self.grl.step()
+        self.domain_discriminator_accuracy = 0.5 * (domain_acc_s + domain_acc_t)
+        return 0.5 * (trans_loss_s + trans_loss_t)</code></pre><h3>After Change</h3><pre><code class='java'>
+    def forward(self, g_s, f_s, g_t, f_t):
+        f = torch.cat((f_s, f_t), dim=0)
+        g = torch.cat((g_s, g_t), dim=0)
+        g<a id="change"> = </a>F.softmax(g,dim=1).detach()
+        h = self.grl(self.map(f, g))
+        d = self.domain_discriminator(h)
+        d_label = torch.cat((
+            torch.ones((g_s.size(0), 1)).to(g_s.device),
+            torch.zeros((g_t.size(0), 1)).to(g_t.device),
+        ))
+        weight<a id="change"> = </a>1.0<a id="change"> + </a><a id="change">torch.exp(-entropy(g)</a><a id="change">)</a>
+        batch_size = f.size(0)
+        weight = weight<a id="change"> / torch.sum(weight) * </a>batch_size
+        self.domain_discriminator_accuracy = binary_accuracy(d, d_label)
+        <a id="change">return </a>self.bce(d, d_label, weight.view_as(d))
+
+
+class RandomizedMultiLinearMap(nn.Module):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/thuml/transfer-learning-library/commit/8477111b23336e7dd2d349a4b35b969240ff5871#diff-921a2eeb848068663b0c58710b496c58d46246573eaab61f41628954ccf27867L85' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 1691560</div><div id='project'> Project Name: thuml/transfer-learning-library</div><div id='commit'> Commit Name: 8477111b23336e7dd2d349a4b35b969240ff5871</div><div id='time'> Time: 2020-04-12</div><div id='author'> Author: 13126830206@163.com</div><div id='file'> File Name: dalib/adaptation/cdan.py</div><div id='m_class'> M Class Name: ConditionalDomainAdversarialLoss</div><div id='n_method'> N Class Name: ConditionalDomainAdversarialLoss</div><div id='m_method'> M Method Name: forward(5)</div><div id='n_method'> N Method Name: forward(5)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: dalib/adaptation/cdan.py</div><div id='n_file'> N File Name: dalib/adaptation/cdan.py</div><div id='m_start'> M Start Line: 86</div><div id='m_end'> M End Line: 90</div><div id='n_start'> N Start Line: 87</div><div id='n_end'> N End Line: 100</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        self.domain_discriminator_accuracy = None
+
+    def forward(self, g_s, f_s, g_t, f_t):
+        trans_loss_s<a id="change">, domain_acc_s</a> = self._single_domain_forward(g_s, f_s, domain=1)
+        trans_loss_t, domain_acc_t = self._single_domain_forward(g_t, f_t, domain=0)
+        self.grl.step()
+        self.domain_discriminator_accuracy = 0.5 * (domain_acc_s + domain_acc_t)</code></pre><h3>After Change</h3><pre><code class='java'>
+    def forward(self, g_s, f_s, g_t, f_t):
+        f = torch.cat((f_s, f_t), dim=0)
+        g = torch.cat((g_s, g_t), dim=0)
+        g<a id="change"> = </a>F.softmax(g,dim=1).detach()
+        h = self.grl(self.map(f, g))
+        d = self.domain_discriminator(h)
+        d_label = torch.cat((
+            torch.ones((g_s.size(0), 1)).to(g_s.device),
+            torch.zeros((g_t.size(0), 1)).to(g_t.device),
+        ))
+        weight<a id="change"> = </a>1.0<a id="change"> + </a><a id="change">torch.exp(-entropy(g)</a><a id="change">)</a>
+        batch_size = f.size(0)
+        weight = weight<a id="change"> / torch.sum(weight) * </a>batch_size
+        self.domain_discriminator_accuracy = binary_accuracy(d, d_label)
+        <a id="change">return </a>self.bce(d, d_label, weight.view_as(d))
+
+
+class RandomizedMultiLinearMap(nn.Module):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/thuml/transfer-learning-library/commit/6dfc8e293ca2cbc4d116dc8ed0a6ef176dff0d06#diff-921a2eeb848068663b0c58710b496c58d46246573eaab61f41628954ccf27867L85' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 1691547</div><div id='project'> Project Name: thuml/transfer-learning-library</div><div id='commit'> Commit Name: 6dfc8e293ca2cbc4d116dc8ed0a6ef176dff0d06</div><div id='time'> Time: 2020-04-12</div><div id='author'> Author: 13126830206@163.com</div><div id='file'> File Name: dalib/adaptation/cdan.py</div><div id='m_class'> M Class Name: ConditionalDomainAdversarialLoss</div><div id='n_method'> N Class Name: ConditionalDomainAdversarialLoss</div><div id='m_method'> M Method Name: forward(5)</div><div id='n_method'> N Method Name: forward(5)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: dalib/adaptation/cdan.py</div><div id='n_file'> N File Name: dalib/adaptation/cdan.py</div><div id='m_start'> M Start Line: 86</div><div id='m_end'> M End Line: 90</div><div id='n_start'> N Start Line: 87</div><div id='n_end'> N End Line: 100</div><BR>

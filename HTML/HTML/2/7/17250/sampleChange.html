@@ -1,0 +1,31 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+def setup_eks_clusters(dlc_images):
+    terminable_clusters = []
+    frameworks = {"tensorflow": "tf", "pytorch": "pt", "mxnet": "mx"}
+    <a id="change">for </a>long_name, short_name in <a id="change">frameworks.items():
+        </a>if long_name in dlc_images:
+            cluster_name = None
+            if not is_pr_context():
+                num_nodes = 3 if long_name != "pytorch" else 4</code></pre><h3>After Change</h3><pre><code class='java'>
+def setup_eks_clusters(dlc_images):
+    frameworks = {"tensorflow": "tf", "pytorch": "pt", "mxnet": "mx"}
+    frameworks_in_images = [framework for framework in frameworks.keys() if framework in dlc_images]
+    <a id="change">if len(frameworks_in_images) != 1</a>:
+        raise ValueError(
+            f"All images in dlc_images must be of a single framework for EKS tests.\n"
+            f"Instead seeing {frameworks_in_images} frameworks."
+        )
+    long_name = frameworks_in_images[0]
+    short_name = frameworks[long_name]
+    num_nodes = 2 if is_pr_context() else 3 if long_name != "pytorch" else 4
+    cluster_name = f"dlc-{short_name}-cluster-" \
+                   f"{os.getenv(&quotCODEBUILD_RESOLVED_SOURCE_VERSION&quot)}-{random.randint(1, 10000)}"
+    eks_utils.create_eks_cluster(cluster_name, "gpu", num_nodes, "p3.16xlarge", "pytest.pem")
+    eks_utils.eks_setup(long_name, cluster_name)
+    <a id="change">return </a>cluster_name
+
+
+def main():</code></pre>

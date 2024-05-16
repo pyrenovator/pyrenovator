@@ -1,0 +1,107 @@
+<html><h3>Pattern ID :4527
+</h3><img src='16482427.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                                               position_ids=position_ids,
+                                               head_mask=head_mask)
+
+        hidden_states<a id="change"> = </a>transformer_outputs[0]
+        &#47&#47 hidden_states should be torch.Size([1, 1024, 768]) after reshape
+        &#47&#47 hidden_states=hidden_states.view(-1,self.n_positions,self.n_embed)
+        lm_logits = self.lm_head(hidden_states)
+        outputs = (lm_logits,) + transformer_outputs[1:]
+        if labels is not None:
+            &#47&#47 Shift so that tokens &lt; n predict n
+            shift_logits<a id="change"> = </a>lm_logits[..., :-1, :].contiguous()
+            shift_labels = labels[..., 1:].contiguous()
+            &#47&#47 Flatten the tokens
+            &#47&#47 loss_fct = CrossEntropyLoss(ignore_index=-100)
+            def loss_fct(logits, labels): return nn.functional.cross_entropy(
+                logits, labels, ignore_index=-100)
+            loss<a id="change"> = </a>loss_fct(<a id="change">shift_logits.view(-1</a>, <a id="change">shift_logits.size(-1</a><a id="change">)</a><a id="change">)</a>,
+                            <a id="change">shift_labels.view(-1</a><a id="change">)</a>)
+            
+            &#47&#47 HACK: changed to output just the loss, somehow this improves partitioning results,
+            &#47&#47 need to understand why.
+            outputs = (loss,)
+            &#47&#47 outputs = (loss,) + outputs
+
+        &#47&#47 (loss), lm_logits, presents, (all hidden_states), (attentions)
+        <a id="change">return </a>outputs
+
+
+@add_start_docstrings(The GPT2 Model transformer with a language modeling and a multiple-choice classification</code></pre><h3>After Change</h3><pre><code class='java'>
+        lm_logits = self.lm_head(hidden_states)
+        &#47&#47 hidden_states should be torch.Size([1, 1024, 768]) after reshape
+        &#47&#47 hidden_states=hidden_states.view(-1,self.n_positions,self.n_embed)
+        output<a id="change"> = </a>self.compute_output(lm_logits,
+                                     labels=labels)
+
+        &#47&#47 loss or logits
+        <a id="change">return </a>output
+
+
+@add_start_docstrings(The GPT2 Model transformer with a language modeling and a multiple-choice classification</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 9</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/saareliad/ftpipe/commit/7ac977abea2c3ebc7af0cc51d0b4bba4653d6c9f#diff-666c8f5528a54b5399a46ef60eb53ee26cbb4e383b82d191cc09c11b6c186bd3L459' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 16482427</div><div id='project'> Project Name: saareliad/ftpipe</div><div id='commit'> Commit Name: 7ac977abea2c3ebc7af0cc51d0b4bba4653d6c9f</div><div id='time'> Time: 2020-07-07</div><div id='author'> Author: saareliad@campus.technion.ac.il</div><div id='file'> File Name: models/normal/NLP_models/modeling_gpt2.py</div><div id='m_class'> M Class Name: GPT2LMHeadModel</div><div id='n_method'> N Class Name: GPT2LMHeadModel</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(8)</div><div id='m_parent_class'> M Parent Class: GPT2PreTrainedModel</div><div id='n_parent_class'> N Parent Class: GPT2PreTrainedModel</div><div id='m_file'> M File Name: models/normal/NLP_models/modeling_gpt2.py</div><div id='n_file'> N File Name: models/normal/NLP_models/modeling_gpt2.py</div><div id='m_start'> M Start Line: 804</div><div id='m_end'> M End Line: 835</div><div id='n_start'> N Start Line: 459</div><div id='n_end'> N End Line: 469</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    def forward(self, x):
+        x = self.pool(F.relu(self.conv1(x)))
+        x = self.pool(F.relu(self.conv2(x)))
+        x<a id="change"> = </a><a id="change">x.view(-1</a>, 16*5*5<a id="change">)</a>
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = self.fc3(x)
+        <a id="change">return </a>x
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    def forward(self, x):
+        out = F.relu(self.conv1(x))
+        out<a id="change"> = </a>F.max_pool2d(out, 2)
+        out = F.relu(self.conv2(out))
+        out<a id="change"> = </a>F.max_pool2d(out, 2)
+        out<a id="change"> = out.view(out.size(0</a><a id="change">)</a>, <a id="change">-1</a><a id="change">)</a>
+        out = F.relu(self.fc1(out))
+        out = F.relu(self.fc2(out))
+        out = self.fc3(out)
+        <a id="change">return </a>out
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/johnsk95/pt4al/commit/41e053e2061615c65395447ab947ebf938bcb53b#diff-9c674cdd4cb72ad28654fd3b9e3156da188340938c0869e499e2902c46a888d0L15' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 16482426</div><div id='project'> Project Name: johnsk95/pt4al</div><div id='commit'> Commit Name: 41e053e2061615c65395447ab947ebf938bcb53b</div><div id='time'> Time: 2017-04-17</div><div id='author'> Author: kuang.liu@hotmail.com</div><div id='file'> File Name: models/lenet.py</div><div id='m_class'> M Class Name: LeNet</div><div id='n_method'> N Class Name: LeNet</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: models/lenet.py</div><div id='n_file'> N File Name: models/lenet.py</div><div id='m_start'> M Start Line: 16</div><div id='m_end'> M End Line: 22</div><div id='n_start'> N Start Line: 15</div><div id='n_end'> N End Line: 23</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                                               position_ids=position_ids,
+                                               head_mask=head_mask)
+
+        hidden_states<a id="change"> = </a>transformer_outputs[0]
+        &#47&#47 hidden_states should be torch.Size([1, 1024, 768]) after reshape
+        &#47&#47 hidden_states=hidden_states.view(-1,self.n_positions,self.n_embed)
+        lm_logits = self.stateless_lm_head(self.w_wte, hidden_states)
+        outputs = (lm_logits,) + transformer_outputs[1:]
+        if labels is not None:
+            &#47&#47 Shift so that tokens &lt; n predict n
+            shift_logits<a id="change"> = </a>lm_logits[..., :-1, :].contiguous()
+            shift_labels = labels[..., 1:].contiguous()
+            &#47&#47 Flatten the tokens
+            &#47&#47 loss_fct = CrossEntropyLoss(ignore_index=-100)
+
+            def loss_fct(logits, labels):
+                return nn.functional.cross_entropy(logits, labels, ignore_index=-100)
+            loss<a id="change"> = </a>loss_fct(<a id="change">shift_logits.view(-1</a>, <a id="change">shift_logits.size(-1</a><a id="change">)</a><a id="change">)</a>,
+                            <a id="change">shift_labels.view(-1</a><a id="change">)</a>)
+            
+            &#47&#47 HACK: changed to output just the loss, somehow this improves partitioning results,
+            &#47&#47 need to understand why.
+            outputs = (loss,)
+            &#47&#47 outputs = (loss,) + outputs
+
+        &#47&#47 (loss), lm_logits, presents, (all hidden_states), (attentions)
+        <a id="change">return </a>outputs
+
+
+@add_start_docstrings(The GPT2 Model transformer with a language modeling and a multiple-choice classification</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 hidden_states should be torch.Size([1, 1024, 768]) after reshape
+        &#47&#47 hidden_states=hidden_states.view(-1,self.n_positions,self.n_embed)
+        lm_logits = self.stateless_lm_head(self.w_wte, hidden_states)
+        output<a id="change"> = </a>self.compute_output(lm_logits,
+                                     labels=labels)
+
+        &#47&#47 loss or logits
+        <a id="change">return </a>output
+
+
+@add_start_docstrings(The GPT2 Model transformer with a language modeling and a multiple-choice classification</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/saareliad/ftpipe/commit/7ac977abea2c3ebc7af0cc51d0b4bba4653d6c9f#diff-4ef13e2fb41ecd7b39d8c340cb5027aa3b7922505b04f6cce9e77b6d0a581297L842' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 16482418</div><div id='project'> Project Name: saareliad/ftpipe</div><div id='commit'> Commit Name: 7ac977abea2c3ebc7af0cc51d0b4bba4653d6c9f</div><div id='time'> Time: 2020-07-07</div><div id='author'> Author: saareliad@campus.technion.ac.il</div><div id='file'> File Name: models/normal/NLP_models/modeling_gpt2_tied_weights.py</div><div id='m_class'> M Class Name: GPT2LMHeadModel</div><div id='n_method'> N Class Name: GPT2LMHeadModel</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(8)</div><div id='m_parent_class'> M Parent Class: GPT2PreTrainedModel</div><div id='n_parent_class'> N Parent Class: GPT2PreTrainedModel</div><div id='m_file'> M File Name: models/normal/NLP_models/modeling_gpt2_tied_weights.py</div><div id='n_file'> N File Name: models/normal/NLP_models/modeling_gpt2_tied_weights.py</div><div id='m_start'> M Start Line: 842</div><div id='m_end'> M End Line: 875</div><div id='n_start'> N Start Line: 215</div><div id='n_end'> N End Line: 226</div><BR>

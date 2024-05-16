@@ -1,0 +1,39 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+    &#47&#47 Computing False Acceptance Rate (false alarm)
+    negative_scores = torch.cat(
+        len(thresholds) * [<a id="change">negative_scores.unsqueeze(0</a><a id="change">)</a>]
+    )
+    neg_scores_threshold = negative_scores.transpose(0, 1) &gt; thresholds
+    FAR = (neg_scores_threshold.sum(0)).float() / negative_scores.shape[1]
+    del negative_scores
+    del neg_scores_threshold
+
+    &#47&#47 Finding the threshold for EER
+    min_index = (FAR - FRR).abs().argmin()
+
+    &#47&#47 It is possible that eer != fpr != fnr. We return (FAR  + FRR) / 2 as EER.
+    EER<a id="change"> = </a>(FAR[min_index] + FRR[min_index]) / 2
+
+    return float(EER), float(thresholds[min_index])
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    final_FRR = 0
+    final_FAR = 0
+
+    <a id="change">for </a>i, cur_thresh in <a id="change">enumerate(</a>thresholds<a id="change">):
+        </a>pos_scores_threshold = positive_scores &lt;= cur_thresh
+        FRR = (pos_scores_threshold.sum(0)).float() / positive_scores.shape[0]
+        del pos_scores_threshold
+
+        neg_scores_threshold = negative_scores &gt; cur_thresh
+        FAR = (neg_scores_threshold.sum(0)).float() / negative_scores.shape[0]
+        del neg_scores_threshold
+
+        &#47&#47 Finding the threshold for EER
+        <a id="change">if </a>(FAR - FRR).abs().item() &lt; abs(final_FAR - final_FRR) or <a id="change">i == 0</a>:
+            min_index = i
+            final_FRR = FRR.item()
+            final_FAR = FAR.item()</code></pre>

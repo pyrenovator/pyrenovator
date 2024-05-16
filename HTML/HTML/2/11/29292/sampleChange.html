@@ -1,0 +1,62 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        pbars = self._ctx.progress_reporter.split(2)
+        items = {}
+        img_infos = {}
+        for img_info in pbars[0].iter(<a id="change">json_data["images"]</a>, desc="Parsing image info"):
+            try:
+                img_id = img_info.get("id")
+                if not isinstance(img_id, int):
+                    raise ValueError("Invalid image id value &quot%s&quot" % img_id)
+
+                img_infos[img_id] = img_info
+
+                if img_info.get("height") and img_info.get("width"):
+                    image_size = (img_info["height"], img_info["width"])
+                else:
+                    image_size = None
+
+                items[img_id] = DatasetItem(
+                    id=osp.splitext(img_info["file_name"])[0],
+                    subset=self._subset,
+                    media=Image(
+                        path=osp.join(self._images_dir, img_info["file_name"]), size=image_size
+                    ),
+                    annotations=[],
+                    attributes={"id": img_id},
+                )
+            except Exception as e:
+                self._ctx.error_policy.report_item_error(e, item_id=(img_id, self._subset))
+
+        if self._task is not CocoTask.panoptic:
+            for ann in pbars[1].iter(<a id="change">json_data["annotations"]</a>, desc="Parsing annotations"):
+                try:
+                    img_id = ann.get("image_id")
+                    if not isinstance(img_id, int):</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        if self._task is not CocoTask.panoptic:
+            for ann in pbars[1].iter(
+                <a id="change">self._parse_field(json_data</a>, <a id="change">"annotations"</a>, list<a id="change">)</a>,
+                desc=f"Parsing annotations in &quot{osp.basename(self._path)}&quot",
+            ):
+                img_id = None
+                try:
+                    img_id = self._parse_field(ann, "image_id", int)
+                    if img_id not in img_infos:
+                        raise InvalidAnnotationError(f"Unknown image id &quot{img_id}&quot")
+
+                    self._load_annotations(
+                        ann, img_infos[img_id], parsed_annotations=items[img_id].annotations
+                    )
+                except Exception as e:
+                    self._ctx.error_policy.report_annotation_error(
+                        e, item_id=(img_id, self._subset)
+                    )
+        else:
+            for ann in pbars[1].iter(
+                <a id="change">self._parse_field(json_data</a>, <a id="change">"annotations"</a>, list<a id="change">)</a>,
+                desc=f"Parsing annotations in &quot{osp.basename(self._path)}&quot",
+            ):
+                img_id = None</code></pre>

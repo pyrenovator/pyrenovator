@@ -1,0 +1,60 @@
+<html><h3>Pattern ID :30189
+</h3><img src='89655356.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    def forward(self, data, mask = None):
+        b = data.shape[0]
+        data = fourier_encode(data, self.num_fourier_features)
+        data = <a id="change">rearrange(</a>data, <a id="change">&quotb n ... -&gt; b n (...)&quot</a><a id="change">)</a>
+
+        x = self.latents + self.pos_emb
+        x = repeat(x, &quotn d -&gt; b n d&quot, b = b)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        axis_pos = list(map(lambda size: torch.linspace(-1., 1., steps = size, device = device), axis))
+        pos = torch.stack(torch.meshgrid(*axis_pos), dim = -1)
+        enc_pos = fourier_encode(pos, self.num_fourier_features)
+        enc_pos<a id="change"> = </a>rearrange(enc_pos, &quot... n d -&gt; ... (n d)&quot)
+        enc_pos = repeat(enc_pos, &quot... -&gt; b ...&quot, b = b)
+
+        &#47&#47 concat to channels of data and flatten axis
+
+        data = <a id="change">torch.cat(</a>(data<a id="change">, enc_pos</a>)<a id="change">, dim = -1)</a>
+        data = rearrange(data, &quotb ... d -&gt; b (...) d&quot)
+
+        x = self.latents + self.pos_emb
+        x = repeat(x, &quotn d -&gt; b n d&quot, b = b)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/lucidrains/perceiver-pytorch/commit/37e2eb6650fb9f609f9aee39df5ed830f5550325#diff-3a107568743779cad64d2e3582fceaafb7b32d2fd87d09209dce56be844a44a4L158' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 89655356</div><div id='project'> Project Name: lucidrains/perceiver-pytorch</div><div id='commit'> Commit Name: 37e2eb6650fb9f609f9aee39df5ed830f5550325</div><div id='time'> Time: 2021-03-11</div><div id='author'> Author: lucidrains@gmail.com</div><div id='file'> File Name: perceiver_pytorch/perceiver_pytorch.py</div><div id='m_class'> M Class Name: Perceiver</div><div id='n_method'> N Class Name: Perceiver</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: perceiver_pytorch/perceiver_pytorch.py</div><div id='n_file'> N File Name: perceiver_pytorch/perceiver_pytorch.py</div><div id='m_start'> M Start Line: 158</div><div id='m_end'> M End Line: 160</div><div id='n_start'> N Start Line: 160</div><div id='n_end'> N End Line: 174</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    relative_index = (key_index - query_index) + tokens - 1  &#47&#47 dim X dim (zero indexed)
+    flatten_index = rearrange(relative_index, &quoti j-&gt;(i j)&quot)  &#47&#47 flatten
+    abs_emb = torch.index_select(q_rel, axis, flatten_index)  &#47&#47 [head_planes , (dim*dim)]
+    return <a id="change">rearrange(</a>abs_emb, <a id="change">&quotb h t (x y) -&gt; b h t x y&quot</a><a id="change">, x=tokens)</a>
+
+
+
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    col_pad = torch.zeros((b, h, l, 1), **dd)
+    x = torch.cat((q, col_pad), dim=3)  &#47&#47 zero pad 2l-1 to 2l
+    flat_x = rearrange(x, &quotb h l c -&gt; b h (l c)&quot)
+    flat_pad<a id="change"> = </a>torch.zeros((b, h, l - 1), **dd)
+    flat_x_padded = <a id="change">torch.cat(</a>(flat_x<a id="change">, flat_pad</a>)<a id="change">, dim=2)</a>
+    final_x = flat_x_padded.reshape(b, h, l + 1, 2 * l - 1)
+    final_x = final_x[:, :, :l, (l - 1):]
+    return final_x
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/the-ai-summer/self-attention-cv/commit/400427e8b940a91d0baa90037b7bf2308c8bc9e9#diff-f79da185517a56871e3cc6d2d4115a64d416dea8e8acec3c6ee83a6fae923630L6' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 89655326</div><div id='project'> Project Name: the-ai-summer/self-attention-cv</div><div id='commit'> Commit Name: 400427e8b940a91d0baa90037b7bf2308c8bc9e9</div><div id='time'> Time: 2021-02-09</div><div id='author'> Author: black.adaloglou@gmail.com</div><div id='file'> File Name: self_attention_cv/pos_embeddings/relative_embeddings_1D.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: relative_to_absolute(1)</div><div id='n_method'> N Method Name: relative_to_absolute(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: self_attention_cv/pos_embeddings/relative_embeddings_1D.py</div><div id='n_file'> N File Name: self_attention_cv/pos_embeddings/relative_embeddings_1D.py</div><div id='m_start'> M Start Line: 6</div><div id='m_end'> M End Line: 17</div><div id='n_start'> N Start Line: 11</div><div id='n_end'> N End Line: 27</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    return rearrange(x, &quot... d j -&gt; ... (d j)&quot)
+
+def apply_rotary_pos_emb(x, sinu_pos):
+    sinu_pos = <a id="change">rearrange(</a>sinu_pos, <a id="change">&quot() n (j d) -&gt; n j d&quot</a><a id="change">, j = 2)</a>
+    sin, cos = sinu_pos.unbind(dim = -2)
+    sin, cos = map(lambda t: repeat(t, &quotb n -&gt; b (n j)&quot, j = 2), (sin, cos))
+    return x * cos + rotate_every_two(x) * sin
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    sin, cos = map(lambda t: rearrange(t, &quotb ... -&gt; b () ...&quot), sinu_pos)
+    rot_dim = sin.shape[-1]
+    x, x_pass = x[..., :rot_dim], x[..., rot_dim:]
+    x<a id="change"> =  </a>x * cos + rotate_every_two(x) * sin
+    return <a id="change">torch.cat(</a>(x<a id="change">, x_pass</a>)<a id="change">, dim = -1)</a>
+
+&#47&#47 positional embeddings
+
+class DepthWiseConv1d(nn.Module):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lucidrains/alphafold2/commit/9be6fd958ff5432932845aa3f1f9a23f4b203199#diff-46753fec5461ebc4d150c2c0a150758924540bc61b06a15759dbf2721ce48677L15' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 89655314</div><div id='project'> Project Name: lucidrains/alphafold2</div><div id='commit'> Commit Name: 9be6fd958ff5432932845aa3f1f9a23f4b203199</div><div id='time'> Time: 2021-04-27</div><div id='author'> Author: lucidrains@gmail.com</div><div id='file'> File Name: alphafold2_pytorch/rotary.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: apply_rotary_pos_emb(2)</div><div id='n_method'> N Method Name: apply_rotary_pos_emb(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: alphafold2_pytorch/rotary.py</div><div id='n_file'> N File Name: alphafold2_pytorch/rotary.py</div><div id='m_start'> M Start Line: 16</div><div id='m_end'> M End Line: 19</div><div id='n_start'> N Start Line: 16</div><div id='n_end'> N End Line: 20</div><BR>

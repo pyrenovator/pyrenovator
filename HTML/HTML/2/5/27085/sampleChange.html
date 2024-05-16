@@ -1,0 +1,55 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 "f2"   [1]    [0,1]    []
+        &#47&#47  ^
+        &#47&#47 feature
+        features = <a id="change">KeyedJaggedTensor.from_lengths_sync(
+            keys=["feature_0", "feature_1"],
+            values=torch.tensor([0, 0, 1, 1, 0, 1]),
+            lengths=torch.tensor([0, 1, 2, 1, 2, 0]),
+        )</a>
+
+        opt = torch.optim.SGD(ebc.parameters(), lr=0.1)
+        &#47&#47 pyre-ignore
+        def run_one_training_step() -&gt; None:</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 "f2"   [1]    [0,1]    []
+        &#47&#47  ^
+        &#47&#47 feature
+        features = <a id="change">KeyedJaggedTensor.from_lengths_sync(
+            keys=["feature_0", "feature_1"],
+            values=torch.tensor([0, 0, 1, 1, 0, 1]),
+            lengths=torch.tensor([0, 1, 2, 1, 2, 0]),
+        ).to(device</a><a id="change">)</a>
+
+        opt = torch.optim.SGD(ebc.parameters(), lr=0.1)
+        &#47&#47 pyre-ignore
+        def run_one_training_step() -&gt; None:
+            fused_pooled_embeddings = fused_ebc(features)
+            fused_vals = []
+            for _name, param in fused_pooled_embeddings.to_dict().items():
+                fused_vals.append(param)
+            torch.cat(fused_vals, dim=1).sum().backward()
+
+            opt.zero_grad()
+            pooled_embeddings = ebc(features)
+
+            vals = []
+            for _name, param in pooled_embeddings.to_dict().items():
+                vals.append(param)
+            torch.cat(vals, dim=1).sum().backward()
+            opt.step()
+
+        run_one_training_step()
+        torch.testing.assert_close(
+            ebc.state_dict()["embedding_bags.table_0.weight"],
+            fused_ebc.state_dict()["embedding_bags.table_0.weight"],
+        )
+
+        torch.testing.assert_close(
+            fused_ebc.state_dict()["embedding_bags.table_0.weight"],
+            <a id="change">torch.Tensor([[1.0 - 2 * 0.1] * 4, [2.0 - 1 * 0.1] * 4]).to(device</a><a id="change">)</a>,
+        )
+
+        run_one_training_step()</code></pre>

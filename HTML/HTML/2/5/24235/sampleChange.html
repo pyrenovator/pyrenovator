@@ -1,0 +1,20 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    grad_output_dw = ctx.movement_op(MovementOps.RESHAPE, grad_output, (C.bs * C.groups * C.rcout, 1, C.oy, C.ox))
+    Cdw = get_conv_args(xdw.shape, grad_output_dw.shape, padding=(C.py, C.px), stride=(C.dy, C.dx), dilation=(C.ys, C.xs), groups=C.bs*C.groups)
+    grad_weight = ctx.processing_op(ProcessingOps.CONV, xdw, grad_output_dw, (Cdw.bs, Cdw.cout, Cdw.oy, Cdw.ox), Cdw)
+    grad_weight = <a id="change">ctx.movement_op(</a>MovementOps.RESHAPE, grad_weight, (C.cin, C.bs, C.groups, C.rcout, Cdw.oy, Cdw.ox)<a id="change">)</a>
+    grad_weight = ctx.movement_op(MovementOps.PERMUTE, grad_weight, (1,2,3,0,4,5))
+    grad_weight<a id="change"> = </a>ctx.reduce_op(ReduceOps.SUM, grad_weight, (1, *grad_weight.shape[1:]))
+    grad_weight = ctx.movement_op(MovementOps.RESHAPE, grad_weight, (C.groups*C.rcout, C.cin, Cdw.oy, Cdw.ox))
+    dw = ctx.movement_op(MovementOps.SLICE, grad_weight, ((0, grad_weight.shape[0]), (0, grad_weight.shape[1]), (0, w.shape[2]), (0, w.shape[3])))
+    return dx, dw</code></pre><h3>After Change</h3><pre><code class='java'>
+    xdw = ctx.movement_op(MovementOps.RESHAPE, x, (C.bs, C.groups, C.cin, C.iy, C.ix))
+    xdw = ctx.movement_op(MovementOps.PERMUTE, xdw, (2,1,0,3,4))
+    xdw = ctx.movement_op(MovementOps.RESHAPE, xdw, (C.cin, C.groups*C.bs, C.iy, C.ix))
+    grad_output_dw = ctx.movement_op(MovementOps.PERMUTE, grad_output, (1<a id="change">,0,2,3</a>))
+    grad_output_dw = ctx.movement_op(MovementOps.RESHAPE, grad_output_dw, (C.groups * C.rcout, C.bs, C.oy, C.ox))
+    Cdw = get_conv_args(xdw.shape, grad_output_dw.shape, padding=(C.py, C.px), stride=(C.dy, C.dx), dilation=(C.ys, C.xs), groups=C.groups)
+    grad_weight = ctx.processing_op(ProcessingOps.CONV, xdw, grad_output_dw, (Cdw.bs, Cdw.cout, Cdw.oy, Cdw.ox), Cdw)</code></pre>

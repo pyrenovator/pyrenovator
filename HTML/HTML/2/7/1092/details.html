@@ -1,0 +1,96 @@
+<html><h3>Pattern ID :1092
+</h3><img src='5546196.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        z_list = [self._zero_state(hs)]
+        for _ in range(1, len(self.lstm)):
+            c_list += [self._zero_state(hs)]
+            z_list<a id="change"> += </a><a id="change">[</a><a id="change">self._zero_state(</a>hs<a id="change">)</a>]
+        prev_out = hs.new_zeros(1, self.odim)
+
+        &#47&#47 initialize attention</code></pre><h3>After Change</h3><pre><code class='java'>
+        z_list = [self._zero_state(hs)]
+        for _ in range(1, len(self.lstm)):
+            c_list = c_list + [self._zero_state(hs)]
+            z_list = z_list + <a id="change">[</a><a id="change">self._zero_state(</a>hs<a id="change">)</a>]
+        prev_out = hs.new_zeros(1, self.odim)
+
+        &#47&#47 initialize attention
+        prev_att_w = None
+        self.att.reset()
+
+        &#47&#47 setup for attention constraint
+        if use_att_constraint:
+            last_attended_idx = 0
+        else:
+            last_attended_idx = None
+
+        &#47&#47 loop for an output sequence
+        idx = 0
+        outs, att_ws, probs = [], [], []
+        while True:
+            &#47&#47 updated index
+            idx = idx + self.reduction_factor
+
+            &#47&#47 decoder calculation
+            if self.use_att_extra_inputs:
+                att_c, att_w = self.att(hs,
+                                        ilens,
+                                        z_list[0],
+                                        prev_att_w,
+                                        prev_out,
+                                        last_attended_idx=last_attended_idx,
+                                        backward_window=backward_window,
+                                        forward_window=forward_window, )
+            else:
+                att_c, att_w = self.att(hs,
+                                        ilens,
+                                        z_list[0],
+                                        prev_att_w,
+                                        last_attended_idx=last_attended_idx,
+                                        backward_window=backward_window,
+                                        forward_window=forward_window, )
+
+            att_ws = att_ws + [att_w]
+            if self.speaker_embedding_projection_size is not None:
+                prenet_out = self.prenet(torch.cat([prev_out, speaker_embedding], dim=-1)) if self.prenet is not None else prev_out
+            else:
+                prenet_out = self.prenet(prev_out) if self.prenet is not None else prev_out
+            xs = torch.cat([att_c, prenet_out], dim=1)
+            z_list[0], c_list[0] = self.lstm[0](xs, (z_list[0], c_list[0]))
+            for i in range(1, len(self.lstm)):
+                z_list[i], c_list[i] = self.lstm[i](z_list[i - 1], (z_list[i], c_list[i]))
+            zcs = (torch.cat([z_list[-1], att_c], dim=1) if self.use_concate else z_list[-1])
+            outs<a id="change"> = </a>outs<a id="change"> + </a>[self.feat_out(zcs).view(1, self.odim, -1)]  &#47&#47 [(1, odim, r), ...]
+            probs = probs + [torch.sigmoid(self.prob_out(zcs))[0]]  &#47&#47 [(r), ...]
+            if self.output_activation_fn is not None:
+                prev_out = self.output_activation_fn(outs[-1][:, :, -1])  &#47&#47 (1, odim)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 7</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/digitalphonetics/ims-toucan/commit/0c62eba4c06d41f49d35a03b02044c322f6a5448#diff-09890817e338d073ece7c3562e9071826029d455ae39e08ac3f911b70293b37aL477' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 5546196</div><div id='project'> Project Name: digitalphonetics/ims-toucan</div><div id='commit'> Commit Name: 0c62eba4c06d41f49d35a03b02044c322f6a5448</div><div id='time'> Time: 2021-10-07</div><div id='author'> Author: florian.lux@ims.uni-stuttgart.de</div><div id='file'> File Name: Layers/TacotronDecoder.py</div><div id='m_class'> M Class Name: Decoder</div><div id='n_method'> N Class Name: Decoder</div><div id='m_method'> M Method Name: inference(9)</div><div id='n_method'> N Method Name: inference(9)</div><div id='m_parent_class'> M Parent Class: torch.nn.Module</div><div id='n_parent_class'> N Parent Class: torch.nn.Module</div><div id='m_file'> M File Name: Layers/TacotronDecoder.py</div><div id='n_file'> N File Name: Layers/TacotronDecoder.py</div><div id='m_start'> M Start Line: 477</div><div id='m_end'> M End Line: 531</div><div id='n_start'> N Start Line: 477</div><div id='n_end'> N End Line: 531</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        c_list = [self._zero_state(hs)]
+        z_list = [self._zero_state(hs)]
+        for _ in range(1, len(self.lstm)):
+            c_list<a id="change"> += </a><a id="change">[</a><a id="change">self._zero_state(</a>hs<a id="change">)</a>]
+            z_list += [self._zero_state(hs)]
+        prev_out = hs.new_zeros(hs.size(0), self.odim)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        c_list = [self._zero_state(hs)]
+        z_list = [self._zero_state(hs)]
+        for _ in range(1, len(self.lstm)):
+            c_list<a id="change"> = </a>c_list<a id="change"> + [</a><a id="change">self._zero_state(</a>hs<a id="change">)</a>]
+            z_list = z_list + [self._zero_state(hs)]
+        prev_out = hs.new_zeros(hs.size(0), self.odim)
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/digitalphonetics/ims-toucan/commit/0c62eba4c06d41f49d35a03b02044c322f6a5448#diff-09890817e338d073ece7c3562e9071826029d455ae39e08ac3f911b70293b37aL350' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 5546199</div><div id='project'> Project Name: digitalphonetics/ims-toucan</div><div id='commit'> Commit Name: 0c62eba4c06d41f49d35a03b02044c322f6a5448</div><div id='time'> Time: 2021-10-07</div><div id='author'> Author: florian.lux@ims.uni-stuttgart.de</div><div id='file'> File Name: Layers/TacotronDecoder.py</div><div id='m_class'> M Class Name: Decoder</div><div id='n_method'> N Class Name: Decoder</div><div id='m_method'> M Method Name: forward(5)</div><div id='n_method'> N Method Name: forward(5)</div><div id='m_parent_class'> M Parent Class: torch.nn.Module</div><div id='n_parent_class'> N Parent Class: torch.nn.Module</div><div id='m_file'> M File Name: Layers/TacotronDecoder.py</div><div id='n_file'> N File Name: Layers/TacotronDecoder.py</div><div id='m_start'> M Start Line: 376</div><div id='m_end'> M End Line: 405</div><div id='n_start'> N Start Line: 376</div><div id='n_end'> N End Line: 405</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        c_list = [self._zero_state(hs)]
+        z_list = [self._zero_state(hs)]
+        for _ in range(1, len(self.lstm)):
+            c_list<a id="change"> += </a><a id="change">[</a><a id="change">self._zero_state(</a>hs<a id="change">)</a>]
+            z_list += [self._zero_state(hs)]
+        prev_out = hs.new_zeros(hs.size(0), self.odim)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        c_list = [self._zero_state(hs)]
+        z_list = [self._zero_state(hs)]
+        for _ in range(1, len(self.lstm)):
+            c_list<a id="change"> = </a>c_list<a id="change"> + [</a><a id="change">self._zero_state(</a>hs<a id="change">)</a>]
+            z_list = z_list + [self._zero_state(hs)]
+        prev_out = hs.new_zeros(hs.size(0), self.odim)
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/digitalphonetics/ims-toucan/commit/0c62eba4c06d41f49d35a03b02044c322f6a5448#diff-09890817e338d073ece7c3562e9071826029d455ae39e08ac3f911b70293b37aL561' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 5546200</div><div id='project'> Project Name: digitalphonetics/ims-toucan</div><div id='commit'> Commit Name: 0c62eba4c06d41f49d35a03b02044c322f6a5448</div><div id='time'> Time: 2021-10-07</div><div id='author'> Author: florian.lux@ims.uni-stuttgart.de</div><div id='file'> File Name: Layers/TacotronDecoder.py</div><div id='m_class'> M Class Name: Decoder</div><div id='n_method'> N Class Name: Decoder</div><div id='m_method'> M Method Name: calculate_all_attentions(4)</div><div id='n_method'> N Method Name: calculate_all_attentions(4)</div><div id='m_parent_class'> M Parent Class: torch.nn.Module</div><div id='n_parent_class'> N Parent Class: torch.nn.Module</div><div id='m_file'> M File Name: Layers/TacotronDecoder.py</div><div id='n_file'> N File Name: Layers/TacotronDecoder.py</div><div id='m_start'> M Start Line: 585</div><div id='m_end'> M End Line: 603</div><div id='n_start'> N Start Line: 585</div><div id='n_end'> N End Line: 603</div><BR>

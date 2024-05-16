@@ -1,0 +1,167 @@
+<html><h3>Pattern ID :33722
+</h3><img src='96984227.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                                 step=step_counter)
+            train_losses_this_epoch.append(float(train_loss))
+            optimizer.zero_grad()
+            <a id="change">train_loss.backward()</a>
+            step_counter += 1
+            torch.nn.utils.clip_grad_norm_(net.parameters(), 1.0)
+            optimizer.step()
+        net.eval()</code></pre><h3>After Change</h3><pre><code class='java'>
+    if fine_tune:
+        lr = lr * 0.01
+    optimizer = torch.optim.Adam(net.parameters(), lr=lr, eps=1.0e-06, weight_decay=0.0)
+    <a id="change">scaler</a><a id="change"> = </a><a id="change">GradScaler()</a>
+    if path_to_checkpoint is not None:
+        check_dict = torch.load(os.path.join(path_to_checkpoint), map_location=device)
+        net.load_state_dict(check_dict["model"])
+        if not fine_tune:
+            optimizer.load_state_dict(check_dict["optimizer"])
+            step_counter = check_dict["step_counter"]
+            scaler.load_state_dict(check_dict["scaler"])
+    start_time = time.time()
+    while True:
+        epoch += 1
+        optimizer.zero_grad()
+        train_losses_this_epoch = list()
+        for batch in tqdm(train_loader):
+            with autocast():
+                if not use_speaker_embedding:
+                    train_loss = net(text=batch[0].to(device),
+                                     text_lengths=batch[1].to(device),
+                                     speech=batch[2].to(device),
+                                     speech_lengths=batch[3].to(device),
+                                     speaker_embeddings=None,
+                                     step=step_counter)
+                else:
+                    train_loss = net(text=batch[0].to(device),
+                                     text_lengths=batch[1].to(device),
+                                     speech=batch[2].to(device),
+                                     speech_lengths=batch[3].to(device),
+                                     speaker_embeddings=batch[4].to(device),
+                                     step=step_counter)
+                train_losses_this_epoch.append(float(train_loss))
+            optimizer.zero_grad()
+            <a id="change">scaler.scale(train_loss).backward()</a>
+            step_counter += 1
+            torch.nn.utils.clip_grad_norm_(net.parameters(), 1.0)
+            <a id="change">scaler.step(</a>optimizer<a id="change">)</a>
+            scaler.update()
+        net.eval()
+        if epoch % epochs_per_save == 0:
+            torch.save({</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 6</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/digitalphonetics/ims-toucan/commit/e9c35c3e23fe145b416021cbe50f93424e2af282#diff-50506526d43ed453ff387fee15511f145ae91f8e336dbcc118883a5d89a1232cL122' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 96984227</div><div id='project'> Project Name: digitalphonetics/ims-toucan</div><div id='commit'> Commit Name: e9c35c3e23fe145b416021cbe50f93424e2af282</div><div id='time'> Time: 2021-09-04</div><div id='author'> Author: florian.lux@ims.uni-stuttgart.de</div><div id='file'> File Name: TrainingInterfaces/Text_to_Spectrogram/Tacotron2/tacotron2_train_loop.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train_loop(12)</div><div id='n_method'> N Method Name: train_loop(12)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: TrainingInterfaces/Text_to_Spectrogram/Tacotron2/tacotron2_train_loop.py</div><div id='n_file'> N File Name: TrainingInterfaces/Text_to_Spectrogram/Tacotron2/tacotron2_train_loop.py</div><div id='m_start'> M Start Line: 122</div><div id='m_end'> M End Line: 154</div><div id='n_start'> N Start Line: 124</div><div id='n_end'> N End Line: 166</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            emb_text_tensor = torch.tensor(emb_text[0]).to(device)
+            optimizer.zero_grad()
+            loss = diffusion_prior(text_embed = emb_text_tensor,image_embed = emb_images_tensor)
+            <a id="change">loss.backward()</a>
+            &#47&#47 Samples per second
+            step+=1
+            samples_per_sec = batch_size*step/(time.time()-t)
+            &#47&#47 Save checkpoint every save_interval minutes</code></pre><h3>After Change</h3><pre><code class='java'>
+        os.makedirs(save_path)
+
+    &#47&#47&#47&#47&#47&#47 Training code &#47&#47&#47&#47&#47&#47
+    <a id="change">scaler</a><a id="change"> = </a><a id="change">GradScaler(enabled=amp)</a>
+    optimizer = get_optimizer(diffusion_prior.net.parameters(), wd=weight_decay, lr=learning_rate)
+    epochs = num_epochs
+
+    step = 0
+    t = time.time()
+
+    train_set_size = int(train_percent*num_data_points)
+    val_set_size = int(val_percent*num_data_points)
+
+    for _ in range(epochs):
+        diffusion_prior.train()
+
+        for emb_images,emb_text in zip(image_reader(batch_size=batch_size, start=0, end=train_set_size),
+                text_reader(batch_size=batch_size, start=0, end=train_set_size)):
+            emb_images_tensor = torch.tensor(emb_images[0]).to(device)
+            emb_text_tensor = torch.tensor(emb_text[0]).to(device)
+
+            with autocast(enabled=amp):
+                loss = diffusion_prior(text_embed = emb_text_tensor,image_embed = emb_images_tensor)
+                <a id="change">scaler.scale(loss).backward()</a>
+
+            &#47&#47 Samples per second
+            step+=1
+            samples_per_sec = batch_size*step/(time.time()-t)
+            &#47&#47 Save checkpoint every save_interval minutes
+            if(int(time.time()-t) &gt;= 60*save_interval):
+                t = time.time()
+
+                save_model(
+                    save_path,
+                    dict(model=diffusion_prior.state_dict(), optimizer=optimizer.state_dict(), scaler=scaler.state_dict()))
+
+            &#47&#47 Log to wandb
+            wandb.log({"Training loss": loss.item(),
+                        "Steps": step,
+                        "Samples per second": samples_per_sec})
+
+            scaler.unscale_(optimizer)
+            nn.init.clip_grad_norm_(diffusion_prior.parameters(), max_grad_norm)
+
+            <a id="change">scaler.step(</a>optimizer<a id="change">)</a>
+            scaler.update()
+            optimizer.zero_grad()
+
+        &#47&#47&#47&#47&#47&#47 Evaluate model(validation run) &#47&#47&#47&#47&#47&#47</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lucidrains/dalle2-pytorch/commit/7ee0ecc388b081a37d6ded5ac7426c58fce77c5b#diff-283456789c9565d0a8ad235fc41b44188f310b3043c3bcdeb6678f1958a57b51L44' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 96984226</div><div id='project'> Project Name: lucidrains/dalle2-pytorch</div><div id='commit'> Commit Name: 7ee0ecc388b081a37d6ded5ac7426c58fce77c5b</div><div id='time'> Time: 2022-05-02</div><div id='author'> Author: lucidrains@gmail.com</div><div id='file'> File Name: train_diffusion_prior.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train(23)</div><div id='n_method'> N Method Name: train(22)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: train_diffusion_prior.py</div><div id='n_file'> N File Name: train_diffusion_prior.py</div><div id='m_start'> M Start Line: 95</div><div id='m_end'> M End Line: 127</div><div id='n_start'> N Start Line: 66</div><div id='n_end'> N End Line: 139</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                                 speaker_embeddings=batch[7].to(device))
+            train_losses_this_epoch.append(float(train_loss))
+            optimizer.zero_grad()
+            <a id="change">train_loss.backward()</a>
+            step_counter += 1
+            torch.nn.utils.clip_grad_norm_(net.parameters(), 1.0)
+            optimizer.step()
+            scheduler.step()</code></pre><h3>After Change</h3><pre><code class='java'>
+        lr = lr * 0.01
+    optimizer = torch.optim.Adam(net.parameters(), lr=lr)
+    scheduler = WarmupScheduler(optimizer, warmup_steps=warmup_steps)
+    <a id="change">scaler</a><a id="change"> = </a><a id="change">GradScaler()</a>
+    epoch = 0
+    if path_to_checkpoint is not None:
+        check_dict = torch.load(path_to_checkpoint, map_location=device)
+        net.load_state_dict(check_dict["model"])
+        if not fine_tune:
+            optimizer.load_state_dict(check_dict["optimizer"])
+            scheduler.load_state_dict(check_dict["scheduler"])
+            step_counter = check_dict["step_counter"]
+            scaler.load_state_dict(check_dict["scaler"])
+    start_time = time.time()
+    while True:
+        epoch += 1
+        optimizer.zero_grad()
+        train_losses_this_epoch = list()
+        for batch in tqdm(train_loader):
+            with autocast():
+                if not use_speaker_embedding:
+                    train_loss = net(text_tensors=batch[0].to(device),
+                                     text_lengths=batch[1].to(device),
+                                     gold_speech=batch[2].to(device),
+                                     speech_lengths=batch[3].to(device),
+                                     gold_durations=batch[4].to(device),
+                                     gold_pitch=batch[5].to(device),
+                                     gold_energy=batch[6].to(device))
+                else:
+                    train_loss = net(text_tensors=batch[0].to(device),
+                                     text_lengths=batch[1].to(device),
+                                     gold_speech=batch[2].to(device),
+                                     speech_lengths=batch[3].to(device),
+                                     gold_durations=batch[4].to(device),
+                                     gold_pitch=batch[5].to(device),
+                                     gold_energy=batch[6].to(device),
+                                     speaker_embeddings=batch[7].to(device))
+                train_losses_this_epoch.append(float(train_loss))
+            optimizer.zero_grad()
+            <a id="change">scaler.scale(train_loss).backward()</a>
+            step_counter += 1
+            torch.nn.utils.clip_grad_norm_(net.parameters(), 1.0)
+            <a id="change">scaler.step(</a>optimizer<a id="change">)</a>
+            scaler.update()
+            scheduler.step()
+        net.eval()
+        if epoch % epochs_per_save == 0:</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/digitalphonetics/ims-toucan/commit/e9c35c3e23fe145b416021cbe50f93424e2af282#diff-b8085078dc768b2f7e93d9bc99d3eeaabf3b6734a8f951665829ac81840bed0bL104' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 96984225</div><div id='project'> Project Name: digitalphonetics/ims-toucan</div><div id='commit'> Commit Name: e9c35c3e23fe145b416021cbe50f93424e2af282</div><div id='time'> Time: 2021-09-04</div><div id='author'> Author: florian.lux@ims.uni-stuttgart.de</div><div id='file'> File Name: TrainingInterfaces/Text_to_Spectrogram/FastSpeech2/fastspeech2_train_loop.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train_loop(13)</div><div id='n_method'> N Method Name: train_loop(13)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: TrainingInterfaces/Text_to_Spectrogram/FastSpeech2/fastspeech2_train_loop.py</div><div id='n_file'> N File Name: TrainingInterfaces/Text_to_Spectrogram/FastSpeech2/fastspeech2_train_loop.py</div><div id='m_start'> M Start Line: 151</div><div id='m_end'> M End Line: 189</div><div id='n_start'> N Start Line: 153</div><div id='n_end'> N End Line: 203</div><BR>

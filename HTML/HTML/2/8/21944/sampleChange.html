@@ -1,0 +1,27 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    if matched:
+        return _all_gather_cpu(data)
+    else:
+        <a id="change">return </a>_all_gather_gpu(data)
+
+
+def _all_gather_gpu(data):</code></pre><h3>After Change</h3><pre><code class='java'>
+    Returns:
+        gathered (list[data]): a list of data gathered from each rank
+    
+    <a id="change">if </a>get_world_size(group=group) == 1:
+        return [data]
+
+    <a id="change">tensor</a><a id="change">, group</a> = _serialize_to_tensor(data, group)
+    size_list, tensor = _pad_tensors(tensor, group)
+    max_size = max(size_list)
+
+    tensor_list<a id="change"> = [tensor.new_empty([max_size]) for _ in size_list]</a>
+    <a id="change">dist.all_gather(</a>tensor_list, <a id="change">tensor</a><a id="change">, group=group)</a>
+
+    gathered = []
+    for size, tensor in zip(size_list, tensor_list):
+        buffer = tensor.cpu().numpy().tobytes()[:size]</code></pre>

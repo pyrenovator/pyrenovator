@@ -1,0 +1,51 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    :return: A dictionary in the format "input_name": Input.
+    
+    inputs: Dict[str, Input] = {}
+    <a id="change">for </a>i, <a id="change">input_dataset</a> in <a id="change">enumerate(</a>input_datasets<a id="change">):
+        </a>input_name<a id="change"> = </a>f"INPUT_{i}"
+        version = input_dataset.version
+        &#47&#47 if version is None, this function gets the latest version
+        logging.info(
+            f"Trying to access data asset {input_dataset.name} version {version}, datastore {input_dataset.datastore}"
+        )
+        data_asset: Data = _get_or_create_v2_data_asset(
+            ml_client,
+            input_dataset.datastore,
+            input_dataset.name,
+            version=str(version) if version else None,
+        )
+        if not data_asset.path:
+            raise ValueError(f"Data asset {data_asset.id} has no path.")
+        &#47&#47 Some mismatches with the documentation here:
+        &#47&#47 data_path = data_asset.id: This works in some jobs, but in other gives a
+        &#47&#47 DataAccessError(InvalidInput { message: "invalid uri format", source: None }))
+        &#47&#47 Unclear what the difference is between failing and successful jobs
+        &#47&#47 Alternative: data_path = f"azureml:{data_asset.name}:{version}"
+        &#47&#47 This does not work at all, neither with v1 nor v2 data assets. In both cases, we get
+        &#47&#47 InvalidInput { message: "invalid uri format"
+        data_path = data_asset.path
+
+        inputs[input_name]<a id="change"> = </a>Input(
+            &#47&#47 Data assets can be of type "uri_folder", "uri_file", "mltable", all of which are value types in Input
+            type=data_asset.type,  &#47&#47 type: ignore
+            path=data_path,</code></pre><h3>After Change</h3><pre><code class='java'>
+    :param input_datasets: A list of DatasetConfigs to convert to Inputs.
+    :return: A dictionary in the format "input_name": Input.
+    
+    input_assets = [get_data_asset_from_config(ml_client, input_dataset) <a id="change">for</a> input_dataset in input_datasets]
+    &#47&#47 Data assets can be of type "uri_folder", "uri_file", "mltable", all of which are value types in Input
+    <a id="change">return </a><a id="change">{
+        f"{V2_INPUT_PATTERN}{i}": Input(  &#47&#47 type: ignore
+            type=data_asset.type,  &#47&#47 type: ignore
+            path=data_asset.path,
+            mode=InputOutputModes.MOUNT if input_datasets[i].use_mounting else InputOutputModes.DOWNLOAD
+        ) for i, data_asset in enumerate(input_assets)
+    }</a>
+
+
+def create_v2_outputs(ml_client: MLClient, output_datasets: List[DatasetConfig]) -&gt; Dict[str, Output]:
+    </code></pre>

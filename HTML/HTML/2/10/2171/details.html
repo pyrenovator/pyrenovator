@@ -1,0 +1,360 @@
+<html><h3>Pattern ID :2171
+</h3><img src='9294917.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            if is_best: best_rank1 = rank1
+
+            save_checkpoint({
+                &quotstate_dict&quot: <a id="change">model.state_dict()</a>,
+                &quotrank1&quot: rank1,
+                &quotepoch&quot: epoch,
+            }, is_best, osp.join(args.save_dir, &quotcheckpoint_ep&quot + str(epoch+1) + &quot.pth.tar&quot))</code></pre><h3>After Change</h3><pre><code class='java'>
+            is_best = rank1 &gt; best_rank1
+            if is_best: best_rank1 = rank1
+
+            <a id="change">if use_gpu</a>:
+                state_dict<a id="change"> = model.module.cpu().state_dict()</a>
+            else:
+                state_dict<a id="change"> = </a><a id="change">model.state_dict()</a>
+            save_checkpoint({
+                &quotstate_dict&quot: state_dict,
+                &quotrank1&quot: rank1,
+                &quotepoch&quot: epoch,</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 7</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/vlsomers/bpbreid/commit/6c6bd95e33c83a06dcff55fa067e165692982030#diff-a70466c8977c5fecf87d4a4c2d9bf26612fb55d12ceb469a246ae65cefbd0885L71' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 9294917</div><div id='project'> Project Name: vlsomers/bpbreid</div><div id='commit'> Commit Name: 6c6bd95e33c83a06dcff55fa067e165692982030</div><div id='time'> Time: 2018-03-27</div><div id='author'> Author: k.zhou@qmul.ac.uk</div><div id='file'> File Name: train_vid_model_xent.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(0)</div><div id='n_method'> N Method Name: main(0)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: train_vid_model_xent.py</div><div id='n_file'> N File Name: train_vid_model_xent.py</div><div id='m_start'> M Start Line: 170</div><div id='m_end'> M End Line: 170</div><div id='n_start'> N Start Line: 71</div><div id='n_end'> N End Line: 174</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            if is_best: best_rank1 = rank1
+
+            save_checkpoint({
+                &quotstate_dict&quot: <a id="change">model.state_dict()</a>,
+                &quotrank1&quot: rank1,
+                &quotepoch&quot: epoch,
+            }, is_best, osp.join(args.save_dir, &quotcheckpoint_ep&quot + str(epoch+1) + &quot.pth.tar&quot))</code></pre><h3>After Change</h3><pre><code class='java'>
+def main():
+    torch.manual_seed(args.seed)
+    os.environ[&quotCUDA_VISIBLE_DEVICES&quot] = args.gpu_devices
+    <a id="change">use_gpu</a> = torch.cuda.is_available()
+    if args.use_cpu: <a id="change">use_gpu</a> = False
+
+    if not args.evaluate:
+        sys.stdout = Logger(osp.join(args.save_dir, &quotlog_train.txt&quot))
+    else:
+        sys.stdout = Logger(osp.join(args.save_dir, &quotlog_test.txt&quot))
+    print("==========\nArgs:{}\n==========".format(args))
+
+    if use_gpu:
+        print("Currently using GPU {}".format(args.gpu_devices))
+        cudnn.benchmark = True
+        torch.cuda.manual_seed_all(args.seed)
+    else:
+        print("Currently using CPU (GPU is highly recommended)")
+
+    print("Initializing dataset {}".format(args.dataset))
+    dataset = data_manager.init_dataset(name=args.dataset)
+
+    transform_train = T.Compose([
+        T.Random2DTranslation(args.height, args.width),
+        T.RandomHorizontalFlip(),
+        T.ToTensor(),
+        T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    ])
+
+    transform_test = T.Compose([
+        T.Resize((args.height, args.width)),
+        T.ToTensor(),
+        T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    ])
+
+    pin_memory = True if use_gpu else False
+
+    trainloader = DataLoader(
+        ImageDataset(dataset.train, transform=transform_train),
+        sampler=RandomIdentitySampler(dataset.train, num_instances=args.num_instances),
+        batch_size=args.train_batch, num_workers=args.workers,
+        pin_memory=pin_memory, drop_last=True,
+    )
+
+    queryloader = DataLoader(
+        ImageDataset(dataset.query, transform=transform_test),
+        batch_size=args.test_batch, shuffle=False, num_workers=args.workers,
+        pin_memory=pin_memory, drop_last=False,
+    )
+
+    galleryloader = DataLoader(
+        ImageDataset(dataset.gallery, transform=transform_test),
+        batch_size=args.test_batch, shuffle=False, num_workers=args.workers,
+        pin_memory=pin_memory, drop_last=False,
+    )
+
+    print("Initializing model: {}".format(args.arch))
+    model = models.init_model(name=args.arch, num_classes=dataset.num_train_pids, loss={&quotxent&quot, &quothtri&quot})
+    print("Model size: {:.5f}M".format(sum(p.numel() for p in model.parameters())/1000000.0))
+
+    criterion_xent = CrossEntropyLabelSmooth(num_classes=dataset.num_train_pids, use_gpu=use_gpu)
+    criterion_htri = TripletLoss(margin=args.margin)
+    
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+    if args.stepsize &gt; 0:
+        scheduler = lr_scheduler.StepLR(optimizer, step_size=args.stepsize, gamma=args.gamma)
+    start_epoch = args.start_epoch
+
+    if args.resume:
+        print("Loading checkpoint from &quot{}&quot".format(args.resume))
+        checkpoint = torch.load(args.resume)
+        model.load_state_dict(checkpoint[&quotstate_dict&quot])
+        start_epoch = checkpoint[&quotepoch&quot]
+
+    if use_gpu:
+        model = nn.DataParallel(model).cuda()
+
+    if args.evaluate:
+        print("Evaluate only")
+        test(model, queryloader, galleryloader, use_gpu)
+        return
+
+    start_time = time.time()
+    best_rank1 = -np.inf
+
+    for epoch in range(start_epoch, args.max_epoch):
+        print("==&gt; Epoch {}/{}".format(epoch+1, args.max_epoch))
+        
+        train(model, criterion_xent, criterion_htri, optimizer, trainloader, use_gpu)
+        
+        if args.stepsize &gt; 0: scheduler.step()
+        
+        if args.eval_step &gt; 0 and (epoch+1) % args.eval_step == 0 or (epoch+1) == args.max_epoch:
+            print("==&gt; Test")
+            rank1 = test(model, queryloader, galleryloader, use_gpu)
+            is_best = rank1 &gt; best_rank1
+            if is_best: best_rank1 = rank1
+
+            <a id="change">if use_gpu</a>:
+                state_dict<a id="change"> = model.module.cpu().state_dict()</a>
+            else:
+                state_dict<a id="change"> = </a><a id="change">model.state_dict()</a>
+            save_checkpoint({
+                &quotstate_dict&quot: state_dict,
+                &quotrank1&quot: rank1,
+                &quotepoch&quot: epoch,</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/vlsomers/bpbreid/commit/6c6bd95e33c83a06dcff55fa067e165692982030#diff-ad4d6ecf77a271cc94b647b2dde5c9957df2832560b2b1b68c1d482bda81eb63L72' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 9294909</div><div id='project'> Project Name: vlsomers/bpbreid</div><div id='commit'> Commit Name: 6c6bd95e33c83a06dcff55fa067e165692982030</div><div id='time'> Time: 2018-03-27</div><div id='author'> Author: k.zhou@qmul.ac.uk</div><div id='file'> File Name: train_img_model_xent_htri.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(0)</div><div id='n_method'> N Method Name: main(0)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: train_img_model_xent_htri.py</div><div id='n_file'> N File Name: train_img_model_xent_htri.py</div><div id='m_start'> M Start Line: 171</div><div id='m_end'> M End Line: 171</div><div id='n_start'> N Start Line: 75</div><div id='n_end'> N End Line: 175</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            if is_best: best_rank1 = rank1
+
+            save_checkpoint({
+                &quotstate_dict&quot: <a id="change">model.state_dict()</a>,
+                &quotrank1&quot: rank1,
+                &quotepoch&quot: epoch,
+            }, is_best, osp.join(args.save_dir, &quotcheckpoint_ep&quot + str(epoch+1) + &quot.pth.tar&quot))</code></pre><h3>After Change</h3><pre><code class='java'>
+def main():
+    torch.manual_seed(args.seed)
+    os.environ[&quotCUDA_VISIBLE_DEVICES&quot] = args.gpu_devices
+    <a id="change">use_gpu</a> = torch.cuda.is_available()
+    if args.use_cpu: <a id="change">use_gpu</a> = False
+
+    if not args.evaluate:
+        sys.stdout = Logger(osp.join(args.save_dir, &quotlog_train.txt&quot))
+    else:
+        sys.stdout = Logger(osp.join(args.save_dir, &quotlog_test.txt&quot))
+    print("==========\nArgs:{}\n==========".format(args))
+
+    if use_gpu:
+        print("Currently using GPU {}".format(args.gpu_devices))
+        cudnn.benchmark = True
+        torch.cuda.manual_seed_all(args.seed)
+    else:
+        print("Currently using CPU (GPU is highly recommended)")
+
+    print("Initializing dataset {}".format(args.dataset))
+    dataset = data_manager.init_dataset(name=args.dataset)
+
+    transform_train = T.Compose([
+        T.Random2DTranslation(args.height, args.width),
+        T.RandomHorizontalFlip(),
+        T.ToTensor(),
+        T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    ])
+
+    transform_test = T.Compose([
+        T.Resize((args.height, args.width)),
+        T.ToTensor(),
+        T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    ])
+
+    pin_memory = True if use_gpu else False
+
+    trainloader = DataLoader(
+        ImageDataset(dataset.train, transform=transform_train),
+        batch_size=args.train_batch, shuffle=True, num_workers=args.workers,
+        pin_memory=pin_memory, drop_last=True,
+    )
+
+    queryloader = DataLoader(
+        ImageDataset(dataset.query, transform=transform_test),
+        batch_size=args.test_batch, shuffle=False, num_workers=args.workers,
+        pin_memory=pin_memory, drop_last=False,
+    )
+
+    galleryloader = DataLoader(
+        ImageDataset(dataset.gallery, transform=transform_test),
+        batch_size=args.test_batch, shuffle=False, num_workers=args.workers,
+        pin_memory=pin_memory, drop_last=False,
+    )
+
+    print("Initializing model: {}".format(args.arch))
+    model = models.init_model(name=args.arch, num_classes=dataset.num_train_pids, loss={&quotcent&quot})
+    print("Model size: {:.5f}M".format(sum(p.numel() for p in model.parameters())/1000000.0))
+
+    criterion_xent = CrossEntropyLabelSmooth(num_classes=dataset.num_train_pids, use_gpu=use_gpu)
+    criterion_cent = CenterLoss(num_classes=dataset.num_train_pids, feat_dim=model.feat_dim, use_gpu=use_gpu)
+
+    optimizer_model = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+    optimizer_cent = torch.optim.SGD(criterion_cent.parameters(), lr=args.lr_cent)
+    
+    if args.stepsize &gt; 0:
+        scheduler = lr_scheduler.StepLR(optimizer_model, step_size=args.stepsize, gamma=args.gamma)
+    start_epoch = args.start_epoch
+
+    if args.resume:
+        print("Loading checkpoint from &quot{}&quot".format(args.resume))
+        checkpoint = torch.load(args.resume)
+        model.load_state_dict(checkpoint[&quotstate_dict&quot])
+        start_epoch = checkpoint[&quotepoch&quot]
+
+    if use_gpu:
+        model = nn.DataParallel(model).cuda()
+
+    if args.evaluate:
+        print("Evaluate only")
+        test(model, queryloader, galleryloader, use_gpu)
+        return
+
+    start_time = time.time()
+    best_rank1 = -np.inf
+
+    for epoch in range(start_epoch, args.max_epoch):
+        print("==&gt; Epoch {}/{}".format(epoch+1, args.max_epoch))
+        
+        train(model, criterion_xent, criterion_cent, optimizer_model, optimizer_cent, trainloader, use_gpu)
+        
+        if args.stepsize &gt; 0: scheduler.step()
+        
+        if args.eval_step &gt; 0 and (epoch+1) % args.eval_step == 0 or (epoch+1) == args.max_epoch:
+            print("==&gt; Test")
+            rank1 = test(model, queryloader, galleryloader, use_gpu)
+            is_best = rank1 &gt; best_rank1
+            if is_best: best_rank1 = rank1
+
+            <a id="change">if use_gpu</a>:
+                state_dict<a id="change"> = model.module.cpu().state_dict()</a>
+            else:
+                state_dict<a id="change"> = </a><a id="change">model.state_dict()</a>
+            save_checkpoint({
+                &quotstate_dict&quot: state_dict,
+                &quotrank1&quot: rank1,
+                &quotepoch&quot: epoch,</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/vlsomers/bpbreid/commit/6c6bd95e33c83a06dcff55fa067e165692982030#diff-069f8765084422bb727f31fb63c2a3ef46debe00eb29de67bb97de45d462b33cL69' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 9294905</div><div id='project'> Project Name: vlsomers/bpbreid</div><div id='commit'> Commit Name: 6c6bd95e33c83a06dcff55fa067e165692982030</div><div id='time'> Time: 2018-03-27</div><div id='author'> Author: k.zhou@qmul.ac.uk</div><div id='file'> File Name: train_img_model_cent.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(0)</div><div id='n_method'> N Method Name: main(0)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: train_img_model_cent.py</div><div id='n_file'> N File Name: train_img_model_cent.py</div><div id='m_start'> M Start Line: 169</div><div id='m_end'> M End Line: 169</div><div id='n_start'> N Start Line: 72</div><div id='n_end'> N End Line: 173</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            if is_best: best_rank1 = rank1
+
+            save_checkpoint({
+                &quotstate_dict&quot: <a id="change">model.state_dict()</a>,
+                &quotrank1&quot: rank1,
+                &quotepoch&quot: epoch,
+            }, is_best, osp.join(args.save_dir, &quotcheckpoint_ep&quot + str(epoch+1) + &quot.pth.tar&quot))</code></pre><h3>After Change</h3><pre><code class='java'>
+def main():
+    torch.manual_seed(args.seed)
+    os.environ[&quotCUDA_VISIBLE_DEVICES&quot] = args.gpu_devices
+    <a id="change">use_gpu</a> = torch.cuda.is_available()
+    if args.use_cpu: <a id="change">use_gpu</a> = False
+
+    if not args.evaluate:
+        sys.stdout = Logger(osp.join(args.save_dir, &quotlog_train.txt&quot))
+    else:
+        sys.stdout = Logger(osp.join(args.save_dir, &quotlog_test.txt&quot))
+    print("==========\nArgs:{}\n==========".format(args))
+
+    if use_gpu:
+        print("Currently using GPU {}".format(args.gpu_devices))
+        cudnn.benchmark = True
+        torch.cuda.manual_seed_all(args.seed)
+    else:
+        print("Currently using CPU (GPU is highly recommended)")
+
+    print("Initializing dataset {}".format(args.dataset))
+    dataset = data_manager.init_dataset(name=args.dataset)
+
+    transform_train = T.Compose([
+        T.Random2DTranslation(args.height, args.width),
+        T.RandomHorizontalFlip(),
+        T.ToTensor(),
+        T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    ])
+
+    transform_test = T.Compose([
+        T.Resize((args.height, args.width)),
+        T.ToTensor(),
+        T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    ])
+
+    pin_memory = True if use_gpu else False
+
+    trainloader = DataLoader(
+        ImageDataset(dataset.train, transform=transform_train),
+        batch_size=args.train_batch, shuffle=True, num_workers=args.workers,
+        pin_memory=pin_memory, drop_last=True,
+    )
+
+    queryloader = DataLoader(
+        ImageDataset(dataset.query, transform=transform_test),
+        batch_size=args.test_batch, shuffle=False, num_workers=args.workers,
+        pin_memory=pin_memory, drop_last=False,
+    )
+
+    galleryloader = DataLoader(
+        ImageDataset(dataset.gallery, transform=transform_test),
+        batch_size=args.test_batch, shuffle=False, num_workers=args.workers,
+        pin_memory=pin_memory, drop_last=False,
+    )
+
+    print("Initializing model: {}".format(args.arch))
+    model = models.init_model(name=args.arch, num_classes=dataset.num_train_pids, loss={&quotxent&quot})
+    print("Model size: {:.5f}M".format(sum(p.numel() for p in model.parameters())/1000000.0))
+
+    criterion = CrossEntropyLabelSmooth(num_classes=dataset.num_train_pids, use_gpu=use_gpu)
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+    if args.stepsize &gt; 0:
+        scheduler = lr_scheduler.StepLR(optimizer, step_size=args.stepsize, gamma=args.gamma)
+    start_epoch = args.start_epoch
+
+    if args.resume:
+        print("Loading checkpoint from &quot{}&quot".format(args.resume))
+        checkpoint = torch.load(args.resume)
+        model.load_state_dict(checkpoint[&quotstate_dict&quot])
+        start_epoch = checkpoint[&quotepoch&quot]
+
+    if use_gpu:
+        model = nn.DataParallel(model).cuda()
+
+    if args.evaluate:
+        print("Evaluate only")
+        test(model, queryloader, galleryloader, use_gpu)
+        return
+
+    start_time = time.time()
+    best_rank1 = -np.inf
+
+    for epoch in range(start_epoch, args.max_epoch):
+        print("==&gt; Epoch {}/{}".format(epoch+1, args.max_epoch))
+        
+        train(model, criterion, optimizer, trainloader, use_gpu)
+        
+        if args.stepsize &gt; 0: scheduler.step()
+        
+        if args.eval_step &gt; 0 and (epoch+1) % args.eval_step == 0 or (epoch+1) == args.max_epoch:
+            print("==&gt; Test")
+            rank1 = test(model, queryloader, galleryloader, use_gpu)
+            is_best = rank1 &gt; best_rank1
+            if is_best: best_rank1 = rank1
+
+            <a id="change">if use_gpu</a>:
+                state_dict<a id="change"> = model.module.cpu().state_dict()</a>
+            else:
+                state_dict<a id="change"> = </a><a id="change">model.state_dict()</a>
+            save_checkpoint({
+                &quotstate_dict&quot: state_dict,
+                &quotrank1&quot: rank1,
+                &quotepoch&quot: epoch,</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/vlsomers/bpbreid/commit/6c6bd95e33c83a06dcff55fa067e165692982030#diff-bd658ed8b3a6087a99781489d4eb208b2740d88e2919bada3e8ebd250ba2b881L66' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 9294918</div><div id='project'> Project Name: vlsomers/bpbreid</div><div id='commit'> Commit Name: 6c6bd95e33c83a06dcff55fa067e165692982030</div><div id='time'> Time: 2018-03-27</div><div id='author'> Author: k.zhou@qmul.ac.uk</div><div id='file'> File Name: train_img_model_xent.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(0)</div><div id='n_method'> N Method Name: main(0)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: train_img_model_xent.py</div><div id='n_file'> N File Name: train_img_model_xent.py</div><div id='m_start'> M Start Line: 162</div><div id='m_end'> M End Line: 162</div><div id='n_start'> N Start Line: 69</div><div id='n_end'> N End Line: 166</div><BR>

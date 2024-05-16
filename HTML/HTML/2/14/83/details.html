@@ -1,0 +1,196 @@
+<html><h3>Pattern ID :83
+</h3><img src='1041420.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    key = tf.transpose(tf.reshape(key, [-1, key.shape[1], num_heads, key_dim]), [0, 2, 1, 3])  &#47&#47 [batch, num_heads, hh * ww, key_dim]
+    value = tf.transpose(tf.reshape(value, [-1, value.shape[1], num_heads, key_dim]), [0, 2, 3, 1])  &#47&#47  [batch, num_heads, key_dim, hh * ww]
+
+    attention_scores = <a id="change">keras.layers.Lambda(lambda xx: tf.matmul(xx[0], xx[1]))(</a><a id="change">[</a>query, key<a id="change"></a>]<a id="change">)</a> * qk_scale  &#47&#47 [batch, num_heads, key_dim, key_dim]
+    attention_scores = keras.layers.Softmax(axis=-1, name=name and name + "attention_scores")(attention_scores)
+    attention_scores = keras.layers.Dropout(attn_dropout, name=name and name + "attn_drop")(attention_scores) if attn_dropout &gt; 0 else attention_scores
+
+    &#47&#47 value = [batch, num_heads, key_dim, hh * ww], attention_output = [batch, num_heads, key_dim, hh * ww]
+    attention_output = <a id="change">keras.layers.Lambda(lambda xx: tf.matmul(xx[0], xx[1]))(</a><a id="change">[</a>attention_scores, value<a id="change"></a>]<a id="change">)</a>
+    attention_output = tf.transpose(attention_output, perm=[0, 3, 1, 2])  &#47&#47 [batch, hh * ww, num_heads, key_dim]
+    attention_output = tf.reshape(attention_output, [-1, inputs.shape[1], inputs.shape[2], num_heads * key_dim])
+    &#47&#47 print(f"&gt;&gt;&gt;&gt; {attention_output.shape = }, {attention_scores.shape = }")
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    _, hh, ww, cc = inputs.shape
+    key_dim = key_dim if key_dim &gt; 0 else cc // num_heads
+    &#47&#47 qk_scale = float(1.0 / tf.math.sqrt(tf.cast(key_dim, "float32")))
+    qk_scale = <a id="change">1.0</a><a id="change"> / </a>(<a id="change">float(</a>key_dim<a id="change">) ** 0.5</a>)
+    out_shape = cc if out_shape is None or not out_weight else out_shape
+    qkv_out = num_heads * key_dim
+
+    qkv = layers.Dense(qkv_out * 3, use_bias=qkv_bias, name=name and name + "qkv")(inputs)
+    qkv = functional.reshape(qkv, [-1, qkv.shape[1] * qkv.shape[2], qkv.shape[-1]])
+    value, query, key = functional.split(qkv, 3, axis=-1)  &#47&#47 Matching weights from PyTorch
+    query = functional.transpose(functional.reshape(query, [-1, query.shape[1], num_heads, key_dim]), [0, 2, 3, 1])  &#47&#47 [batch, num_heads, key_dim, hh * ww]
+    key = functional.transpose(functional.reshape(key, [-1, key.shape[1], num_heads, key_dim]), [0, 2, 1, 3])  &#47&#47 [batch, num_heads, hh * ww, key_dim]
+    value = functional.transpose(functional.reshape(value, [-1, value.shape[1], num_heads, key_dim]), [0, 2, 3, 1])  &#47&#47  [batch, num_heads, key_dim, hh * ww]
+
+    &#47&#47 attention_scores = layers.Lambda(lambda xx: functional.matmul(xx[0], xx[1]))([query, key]) * qk_scale  &#47&#47 [batch, num_heads, key_dim, key_dim]
+    attention_scores = (query<a id="change"> @ </a>key)<a id="change"> * </a>qk_scale
+    attention_scores = layers.Softmax(axis=-1, name=name and name + "attention_scores")(attention_scores)
+    attention_scores = layers.Dropout(attn_dropout, name=name and name + "attn_drop")(attention_scores) if attn_dropout &gt; 0 else attention_scores
+
+    &#47&#47 value = [batch, num_heads, key_dim, hh * ww], attention_output = [batch, num_heads, key_dim, hh * ww]
+    &#47&#47 attention_output = layers.Lambda(lambda xx: functional.matmul(xx[0], xx[1]))([attention_scores, value])
+    attention_output = attention_scores<a id="change"> @ </a>value
+    attention_output = functional.transpose(attention_output, perm=[0, 3, 1, 2])  &#47&#47 [batch, hh * ww, num_heads, key_dim]
+    attention_output = functional.reshape(attention_output, [-1, inputs.shape[1], inputs.shape[2], num_heads * key_dim])
+    &#47&#47 print(f"&gt;&gt;&gt;&gt; {attention_output.shape = }, {attention_scores.shape = }")</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 12</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/leondgarse/keras_cv_attention_models/commit/3e9ba29ee6ea38d6190199b74812538fc0614c47#diff-464e90ce9f69b06d34e12af856ad358b24067de5ac1030d1a6d64c70e2e6534fL27' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 1041420</div><div id='project'> Project Name: leondgarse/keras_cv_attention_models</div><div id='commit'> Commit Name: 3e9ba29ee6ea38d6190199b74812538fc0614c47</div><div id='time'> Time: 2023-02-08</div><div id='author'> Author: leondgarse@gmail.com</div><div id='file'> File Name: keras_cv_attention_models/davit/davit.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: multi_head_self_attention_channel(10)</div><div id='n_method'> N Method Name: multi_head_self_attention_channel(10)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: keras_cv_attention_models/davit/davit.py</div><div id='n_file'> N File Name: keras_cv_attention_models/davit/davit.py</div><div id='m_start'> M Start Line: 27</div><div id='m_end'> M End Line: 52</div><div id='n_start'> N Start Line: 30</div><div id='n_end'> N End Line: 58</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    key = tf.transpose(tf.reshape(key, [-1, kv_blocks, num_heads, key_dim]), [0, 2, 3, 1])  &#47&#47  [batch, num_heads, key_dim, hh * ww]
+    value = tf.transpose(tf.reshape(value, [-1, kv_blocks, num_heads, value_dim]), [0, 2, 1, 3])  &#47&#47  [batch, num_heads, hh * ww, value_dim]
+
+    attention_scores = <a id="change">keras.layers.Lambda(lambda xx: tf.matmul(xx[0], xx[1]))(</a><a id="change">[</a>query, key<a id="change"></a>]<a id="change">)</a> * qk_scale  &#47&#47 [batch, num_heads, hh * ww, hh * ww]
+    &#47&#47 print(f"{query.shape = }, {key.shape = }, {value.shape = }, {attention_scores.shape = }, {query_height = }")
+    attention_scores = MultiHeadPositionalEmbedding(query_height=query_height, name=name and name + "pos_emb")(attention_scores)
+
+    if use_talking_head:
+        attention_scores = tf.transpose(attention_scores, [0, 2, 3, 1])  &#47&#47 [batch, hh * ww, hh * ww, num_heads]
+        attention_scores = conv2d_no_bias(attention_scores, num_heads, use_bias=True, name=name and name + "talking_head_1_")
+        attention_scores = keras.layers.Softmax(axis=2, name=name and name + "attention_scores")(attention_scores)  &#47&#47 On previous last dimension
+        attention_scores = conv2d_no_bias(attention_scores, num_heads, use_bias=True, name=name and name + "talking_head_2_")
+        &#47&#47 attention_scores = keras.layers.Dropout(attn_dropout, name=name and name + "attn_drop")(attention_scores) if attn_dropout &gt; 0 else attention_scores
+        attention_scores = tf.transpose(attention_scores, [0, 3, 1, 2])  &#47&#47 [batch, num_heads, hh * ww, hh * ww]
+    else:
+        attention_scores = keras.layers.Softmax(axis=-1, name=name and name + "attention_scores")(attention_scores)
+        &#47&#47 attention_scores = keras.layers.Dropout(attn_dropout, name=name and name + "attn_drop")(attention_scores) if attn_dropout &gt; 0 else attention_scores
+
+    &#47&#47 value = [batch, num_heads, hh * ww, value_dim], attention_output = [batch, num_heads, hh * ww, value_dim]
+    attention_output = <a id="change">keras.layers.Lambda(lambda xx: tf.matmul(xx[0], xx[1]))(</a><a id="change">[</a>attention_scores, value<a id="change"></a>]<a id="change">)</a>
+    attention_output = tf.transpose(attention_output, perm=[0, 2, 1, 3])
+    attention_output = tf.reshape(attention_output, [-1, query_height, query_width, num_heads * value_dim])
+    attention_output += vv_local
+    &#47&#47 print(f"&gt;&gt;&gt;&gt; {attention_output.shape = }, {attention_scores.shape = }")</code></pre><h3>After Change</h3><pre><code class='java'>
+    input_channel = inputs.shape[-1]
+    key_dim = key_dim if key_dim &gt; 0 else input_channel // num_heads
+    &#47&#47 qk_scale = float(1.0 / tf.math.sqrt(tf.cast(key_dim, "float32")))
+    qk_scale = <a id="change">1.0</a><a id="change"> / </a>(<a id="change">float(</a>key_dim<a id="change">) ** 0.5</a>)
+    out_shape = input_channel if out_shape is None else out_shape
+    qk_out = num_heads * key_dim
+    value_out = attn_ratio * qk_out
+    value_dim = attn_ratio * key_dim
+
+    if strides &gt; 1:
+        should_cut_height, should_cut_width = inputs.shape[1] % 2, inputs.shape[2] % 2  &#47&#47 keep shape same with inputs after later UpSampling2D
+        inputs = depthwise_conv2d_no_bias(inputs, use_bias=True, kernel_size=3, strides=strides, padding="same", name=name and name + "down_sample_")
+        inputs = batchnorm_with_activation(inputs, activation=None, name=name and name + "down_sample_")
+
+    kv_blocks = inputs.shape[1] * inputs.shape[2]
+
+    if use_local_global_query:
+        &#47&#47 pool_query = layers.AvgPool2D(pool_size=1, strides=2)(inputs)
+        pool_query = inputs[:, ::2, ::2]  &#47&#47 nn.AvgPool2d(kernel_size=1, stride=2, padding=0)
+        local_query = depthwise_conv2d_no_bias(inputs, use_bias=qkv_bias, kernel_size=3, strides=2, padding="same", name=name and name + "local_query_")
+        pre_query = pool_query + local_query
+        vv_local_strides = 2
+    else:
+        pre_query = inputs
+        vv_local_strides = 1
+    _, query_height, query_width, _ = pre_query.shape
+
+    query = conv2d_no_bias(pre_query, qk_out, use_bias=qkv_bias, kernel_size=1, name=name and name + "query_")
+    query = batchnorm_with_activation(query, activation=None, name=name and name + "query_")
+
+    key = conv2d_no_bias(inputs, qk_out, use_bias=qkv_bias, kernel_size=1, name=name and name + "key_")
+    key = batchnorm_with_activation(key, activation=None, name=name and name + "key_")
+
+    value = conv2d_no_bias(inputs, value_out, use_bias=qkv_bias, kernel_size=1, name=name and name + "value_")
+    value = batchnorm_with_activation(value, activation=None, name=name and name + "value_")
+    vv_local = depthwise_conv2d_no_bias(value, use_bias=qkv_bias, kernel_size=3, strides=vv_local_strides, padding="same", name=name and name + "value_local_")
+    vv_local = batchnorm_with_activation(vv_local, activation=None, name=name and name + "value_local_")
+
+    query = functional.transpose(
+        functional.reshape(query, [-1, query_height * query_width, num_heads, key_dim]), [0, 2, 1, 3]
+    )  &#47&#47  [batch, num_heads, hh * ww, key_dim]
+    key = functional.transpose(functional.reshape(key, [-1, kv_blocks, num_heads, key_dim]), [0, 2, 3, 1])  &#47&#47  [batch, num_heads, key_dim, hh * ww]
+    value = functional.transpose(functional.reshape(value, [-1, kv_blocks, num_heads, value_dim]), [0, 2, 1, 3])  &#47&#47  [batch, num_heads, hh * ww, value_dim]
+
+    &#47&#47 attention_scores = layers.Lambda(lambda xx: functional.matmul(xx[0], xx[1]))([query, key]) * qk_scale  &#47&#47 [batch, num_heads, hh * ww, hh * ww]
+    &#47&#47 print(f"{query.shape = }, {key.shape = }, {value.shape = }, {attention_scores.shape = }, {query_height = }")
+    attention_scores = (query<a id="change"> @ </a>key)<a id="change"> * </a>qk_scale
+    attention_scores = MultiHeadPositionalEmbedding(query_height=query_height, name=name and name + "pos_emb")(attention_scores)
+
+    if use_talking_head:
+        attention_scores = functional.transpose(attention_scores, [0, 2, 3, 1])  &#47&#47 [batch, hh * ww, hh * ww, num_heads]
+        attention_scores = conv2d_no_bias(attention_scores, num_heads, use_bias=True, name=name and name + "talking_head_1_")
+        attention_scores = layers.Softmax(axis=2, name=name and name + "attention_scores")(attention_scores)  &#47&#47 On previous last dimension
+        attention_scores = conv2d_no_bias(attention_scores, num_heads, use_bias=True, name=name and name + "talking_head_2_")
+        &#47&#47 attention_scores = layers.Dropout(attn_dropout, name=name and name + "attn_drop")(attention_scores) if attn_dropout &gt; 0 else attention_scores
+        attention_scores = functional.transpose(attention_scores, [0, 3, 1, 2])  &#47&#47 [batch, num_heads, hh * ww, hh * ww]
+    else:
+        attention_scores = layers.Softmax(axis=-1, name=name and name + "attention_scores")(attention_scores)
+        &#47&#47 attention_scores = layers.Dropout(attn_dropout, name=name and name + "attn_drop")(attention_scores) if attn_dropout &gt; 0 else attention_scores
+
+    &#47&#47 value = [batch, num_heads, hh * ww, value_dim], attention_output = [batch, num_heads, hh * ww, value_dim]
+    &#47&#47 attention_output = layers.Lambda(lambda xx: functional.matmul(xx[0], xx[1]))([attention_scores, value])
+    attention_output = attention_scores<a id="change"> @ </a>value
+    attention_output = functional.transpose(attention_output, perm=[0, 2, 1, 3])
+    attention_output = functional.reshape(attention_output, [-1, query_height, query_width, num_heads * value_dim])
+    attention_output += vv_local</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/leondgarse/keras_cv_attention_models/commit/e3784150a3d11fcb46093897dda15e06293789f5#diff-d951f6b71d727a99a913866fb46cb898cfdeca6b20838027e15d6a1e4652bacaL24' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 1041434</div><div id='project'> Project Name: leondgarse/keras_cv_attention_models</div><div id='commit'> Commit Name: e3784150a3d11fcb46093897dda15e06293789f5</div><div id='time'> Time: 2023-02-07</div><div id='author'> Author: leondgarse@gmail.com</div><div id='file'> File Name: keras_cv_attention_models/efficientformer/efficientformer_v2.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: conv_mhsa_with_multi_head_position(11)</div><div id='n_method'> N Method Name: conv_mhsa_with_multi_head_position(11)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: keras_cv_attention_models/efficientformer/efficientformer_v2.py</div><div id='n_file'> N File Name: keras_cv_attention_models/efficientformer/efficientformer_v2.py</div><div id='m_start'> M Start Line: 38</div><div id='m_end'> M End Line: 101</div><div id='n_start'> N Start Line: 38</div><div id='n_end'> N End Line: 106</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    query *= qk_scale
+    &#47&#47 [batch, num_heads, cls_token + hh * ww, cls_token + hh * ww]
+    attention_scores = <a id="change">keras.layers.Lambda(lambda xx: tf.matmul(xx[0], xx[1]))(</a><a id="change">[</a>query, key<a id="change"></a>]<a id="change">)</a>
+    if use_pos_emb:
+        attention_scores = MultiHeadRelativePositionalEmbedding(attn_height=attn_height, name=name and name + "pos_emb")(attention_scores)
+    &#47&#47 attention_scores = tf.nn.softmax(attention_scores, axis=-1, name=name and name + "_attention_scores")
+    attention_scores = keras.layers.Softmax(axis=-1, name=name and name + "attention_scores")(attention_scores)
+
+    if attn_dropout &gt; 0:
+        attention_scores = keras.layers.Dropout(attn_dropout, name=name and name + "attn_drop")(attention_scores)
+    &#47&#47 value = [batch, num_heads, cls_token + hh * ww, key_dim]
+    &#47&#47 attention_output = tf.matmul(attention_scores, value)  &#47&#47 [batch, num_heads, cls_token + hh * ww, key_dim]
+    attention_output = <a id="change">keras.layers.Lambda(lambda xx: tf.matmul(xx[0], xx[1]))(</a><a id="change">[</a>attention_scores, value<a id="change"></a>]<a id="change">)</a>
+    attention_output = tf.transpose(attention_output, perm=[0, 2, 1, 3])
+    attention_output = tf.reshape(attention_output, [-1, bb, emded_dim])
+    &#47&#47 print(f"&gt;&gt;&gt;&gt; {attention_output.shape = }, {attention_scores.shape = }")
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    _, bb, cc = inputs.shape
+    key_dim = key_dim if key_dim &gt; 0 else cc // num_heads
+    &#47&#47 qk_scale = float(1.0 / tf.math.sqrt(tf.cast(key_dim, "float32")))
+    qk_scale = <a id="change">1.0</a><a id="change"> / </a>(<a id="change">float(</a>key_dim<a id="change">) ** 0.5</a>)
+    emded_dim = num_heads * key_dim
+    &#47&#47 print(f"&gt;&gt;&gt;&gt; {bb = }, {cc = }, {emded_dim = }")
+
+    &#47&#47 if qkv_bias, just use bias in qkv_dense, and set qv_bias False
+    qkv_bias, qv_bias = (True, False) if qkv_bias else (False, qv_bias)
+
+    qkv = layers.Dense(emded_dim * 3, use_bias=qkv_bias, name=name and name + "qkv")(inputs)
+    &#47&#47 print(f"&gt;&gt;&gt;&gt; {qkv.shape = }")
+    qkv = functional.reshape(qkv, [-1, bb, qkv.shape[-1]])
+    query, key, value = functional.split(qkv, 3, axis=-1)
+    &#47&#47 query = [batch, num_heads, cls_token + hh * ww, key_dim]
+    if qv_bias:
+        query = BiasLayer(name=name + "query_bias")(query)
+    query = functional.reshape(query, [-1, query.shape[1], num_heads, key_dim])
+    query = functional.transpose(query, [0, 2, 1, 3])
+    &#47&#47 key = [batch, num_heads, key_dim, cls_token + hh * ww]
+    key = functional.transpose(functional.reshape(key, [-1, key.shape[1], num_heads, key_dim]), [0, 2, 3, 1])
+    &#47&#47 value = [batch, num_heads, cls_token + hh * ww, key_dim]
+    if qv_bias:
+        value = BiasLayer(name=name + "value_bias")(value)
+    value = functional.reshape(value, [-1, value.shape[1], num_heads, key_dim])
+    value = functional.transpose(value, [0, 2, 1, 3])
+
+    &#47&#47 query *= qk_scale
+    &#47&#47 [batch, num_heads, cls_token + hh * ww, cls_token + hh * ww]
+    &#47&#47 attention_scores = layers.Lambda(lambda xx: tf.matmul(xx[0], xx[1]))([query, key])
+    attention_scores = (query<a id="change"> @ </a>key)<a id="change"> * </a>qk_scale
+    if use_pos_emb:
+        attention_scores = MultiHeadRelativePositionalEmbedding(attn_height=attn_height, name=name and name + "pos_emb")(attention_scores)
+    &#47&#47 attention_scores = tf.nn.softmax(attention_scores, axis=-1, name=name and name + "_attention_scores")
+    attention_scores = layers.Softmax(axis=-1, name=name and name + "attention_scores")(attention_scores)
+
+    if attn_dropout &gt; 0:
+        attention_scores = layers.Dropout(attn_dropout, name=name and name + "attn_drop")(attention_scores)
+    &#47&#47 value = [batch, num_heads, cls_token + hh * ww, key_dim]
+    &#47&#47 attention_output = tf.matmul(attention_scores, value)  &#47&#47 [batch, num_heads, cls_token + hh * ww, key_dim]
+    &#47&#47 attention_output = layers.Lambda(lambda xx: tf.matmul(xx[0], xx[1]))([attention_scores, value])
+    attention_output = attention_scores<a id="change"> @ </a>value
+    attention_output = functional.transpose(attention_output, perm=[0, 2, 1, 3])
+    attention_output = functional.reshape(attention_output, [-1, bb, emded_dim])
+    &#47&#47 print(f"&gt;&gt;&gt;&gt; {attention_output.shape = }, {attention_scores.shape = }")</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/leondgarse/keras_cv_attention_models/commit/1aa29dc686f862bc1ff66a11700fa8ef16bd2b8a#diff-02508ae7c53082aa4dbb63a5c5fd259b84bc5bdbf0b1971ed6cb2060ef9b9779L141' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 1041413</div><div id='project'> Project Name: leondgarse/keras_cv_attention_models</div><div id='commit'> Commit Name: 1aa29dc686f862bc1ff66a11700fa8ef16bd2b8a</div><div id='time'> Time: 2023-02-03</div><div id='author'> Author: leondgarse@gmail.com</div><div id='file'> File Name: keras_cv_attention_models/beit/beit.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: attention_block(11)</div><div id='n_method'> N Method Name: attention_block(11)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: keras_cv_attention_models/beit/beit.py</div><div id='n_file'> N File Name: keras_cv_attention_models/beit/beit.py</div><div id='m_start'> M Start Line: 145</div><div id='m_end'> M End Line: 187</div><div id='n_start'> N Start Line: 151</div><div id='n_end'> N End Line: 198</div><BR>

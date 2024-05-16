@@ -1,0 +1,54 @@
+<html><h3>Pattern ID :40881
+</h3><img src='115279199.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            assert torch.isfinite(
+                loss
+            ), "Loss should not be infinite - i.e. something went wrong (e.g. input is not in log space)"
+        elif <a id="change"></a>self.reduction == "none":
+            loss = losses.masked_fill(mask, "nan")
+        return loss
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            if self.reduction == "mean":
+                losses = losses.masked_fill(mask, 0.0)
+                loss = losses.sum() / lengths.sum()
+            elif <a id="change"></a>self.reduction == "sqrt-mean":
+                losses = <a id="change">losses.masked_fill(</a>mask, <a id="change">0.0</a><a id="change">)</a>
+                loss<a id="change"> = </a>losses.sum() / lengths.sum()
+                loss = loss.sqrt()
+            assert not torch.isnan(
+                loss</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/jdb78/pytorch-forecasting/commit/2d0c6b91be7a3bcef86a9b8be1c48e319adce9a3#diff-b33317714bfa742fe554f4cce1ee1221e7d5182714f10cfd995f89f71ab1dac1L122' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 115279199</div><div id='project'> Project Name: jdb78/pytorch-forecasting</div><div id='commit'> Commit Name: 2d0c6b91be7a3bcef86a9b8be1c48e319adce9a3</div><div id='time'> Time: 2020-08-09</div><div id='author'> Author: beitner.jan@bcg.com</div><div id='file'> File Name: pytorch_forecasting/metrics.py</div><div id='m_class'> M Class Name: MultiHorizonMetric</div><div id='n_method'> N Class Name: MultiHorizonMetric</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: Metric</div><div id='n_parent_class'> N Parent Class: Metric</div><div id='m_file'> M File Name: pytorch_forecasting/metrics.py</div><div id='n_file'> N File Name: pytorch_forecasting/metrics.py</div><div id='m_start'> M Start Line: 132</div><div id='m_end'> M End Line: 142</div><div id='n_start'> N Start Line: 122</div><div id='n_end'> N End Line: 142</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    else:
+        if method == "squared_relu":
+            return torch.relu(a) ** 2 / l
+        elif <a id="change"></a>method == "softmax_plus":
+            return torch.softmax(a * torch.log(l) / np.log(512), dim=dim)
+    return a
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            scale = torch.log(l) / np.log(512)
+            &#47&#47 mask: 1 for not padding, 0 for padding
+            &#47&#47 padding position&quots scale is 1
+            <a id="change">if </a>mask is not None:
+                scale<a id="change"> = </a><a id="change">scale.masked_fill(</a>mask == 0, <a id="change">1.0</a><a id="change">)</a>
+            return torch.softmax(a * scale, dim=dim)
+    return a
+
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/junnyu/gau-alpha-pytorch/commit/af0ee499d1316062070ac2b02e4ab0ab593b5a12#diff-28841fe6f6c6e10667eb76bf060cce0710a35f98dae1d38d2b8e631d5080811cL10' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 115279193</div><div id='project'> Project Name: junnyu/gau-alpha-pytorch</div><div id='commit'> Commit Name: af0ee499d1316062070ac2b02e4ab0ab593b5a12</div><div id='time'> Time: 2022-04-30</div><div id='author'> Author: 573009727@qq.com</div><div id='file'> File Name: src/gau_alpha/layer.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: attention_normalize(4)</div><div id='n_method'> N Method Name: attention_normalize(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/gau_alpha/layer.py</div><div id='n_file'> N File Name: src/gau_alpha/layer.py</div><div id='m_start'> M Start Line: 21</div><div id='m_end'> M End Line: 22</div><div id='n_start'> N Start Line: 19</div><div id='n_end'> N End Line: 32</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+        sim = einsum(&quotb i d, b j d -&gt; b i j&quot, q, k)
+
+        <a id="change">if </a>self.causal:
+            sim = sim / rearrange(torch.arange(seq_len, device = device) + 1, &quot... -&gt; ... 1&quot)
+        else:
+            sim = sim / seq_len</code></pre><h3>After Change</h3><pre><code class='java'>
+        attn = F.relu(sim) ** 2
+        attn = self.dropout(attn)
+
+        <a id="change">if </a>exists(mask):
+            mask = rearrange(mask, &quotb j -&gt; b 1 j&quot)
+            attn<a id="change"> = </a><a id="change">attn.masked_fill(</a>~mask, <a id="change">0.</a><a id="change">)</a>
+
+        if self.causal:
+            causal_mask = torch.ones((seq_len, seq_len), dtype = torch.bool, device = device).triu(1)
+            attn = attn.masked_fill(causal_mask, 0.)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lucidrains/flash-pytorch/commit/6b0cc2e2316bf9c93b8b48916a11f774209d7bf1#diff-6408ce30d3c8730249ca81344fdd04a1dd01ed7b072e84e9d752276e93661682L158' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 115279201</div><div id='project'> Project Name: lucidrains/flash-pytorch</div><div id='commit'> Commit Name: 6b0cc2e2316bf9c93b8b48916a11f774209d7bf1</div><div id='time'> Time: 2022-03-28</div><div id='author'> Author: lucidrains@gmail.com</div><div id='file'> File Name: flash_pytorch/flash_pytorch.py</div><div id='m_class'> M Class Name: GAU</div><div id='n_method'> N Class Name: GAU</div><div id='m_method'> M Method Name: forward(4)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: flash_pytorch/flash_pytorch.py</div><div id='n_file'> N File Name: flash_pytorch/flash_pytorch.py</div><div id='m_start'> M Start Line: 171</div><div id='m_end'> M End Line: 178</div><div id='n_start'> N Start Line: 162</div><div id='n_end'> N End Line: 184</div><BR>

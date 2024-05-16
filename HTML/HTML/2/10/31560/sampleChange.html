@@ -1,0 +1,96 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                        heuristic_count += 1
+                        continue
+                    should_skip = False
+                    <a id="change">for </a>q in quote_values<a id="change">:
+                        </a><a id="change">if </a>q not in all_input_columns:
+                            heuristic_count<a id="change"> += </a>1
+                            should_skip = True
+                            break
+                    if should_skip:
+                        <a id="change">continue</a>
+                if args.remove_duplicates:
+                    normalized_example = re.sub(&quot\s+&quot, &quot&quot, &quot&quot.join([o[i] for i in args.no_duplication_columns]))
+                    &#47&#47 print(normalized_example)
+                    if normalized_example in seen_examples:</code></pre><h3>After Change</h3><pre><code class='java'>
+        written_count = 0
+        if args.remove_duplicates:
+            seen_examples = set()
+        all_thrown_away_rows<a id="change"> = []</a>
+        for row in tqdm(reader, desc=&quotLines&quot):
+            output_rows = []
+            thrown_away_rows = []
+            if args.transformation == &quotremove_thingtalk_quotes&quot:
+                row[args.thingtalk_column], _ = remove_thingtalk_quotes(row[args.thingtalk_column])
+            if args.transformation == &quotremove_wrong_thingtalk&quot:
+                if row[args.thingtalk_column] == gold_thingtalks[gold_thingtalk_count]:
+                    output_rows = [row]
+                else:
+                    output_rows = []
+                    thrown_away_rows = [row]
+                gold_thingtalk_count += 1
+            elif args.transformation == &quotget_wrong_thingtalk&quot:
+                if row[args.thingtalk_column] != gold_thingtalks[gold_thingtalk_count]:
+                    if args.replace_with_gold:
+                        row[args.thingtalk_column] = gold_thingtalks[gold_thingtalk_count]
+                    output_rows = [row]
+                else:
+                    output_rows = []
+                gold_thingtalk_count += 1
+            elif args.transformation == &quotmerge_input_file_with_query_file&quot:
+                output_rows.append(row)
+                for _ in range(args.num_new_queries):
+                    row = row.copy()
+                    row[args.utterance_column] = new_queries[new_query_count]
+                    output_rows.append(row)
+                    new_query_count += 1
+            elif args.transformation == &quotreplace_queries&quot:
+                for idx in range(args.num_new_queries):
+                    copy_row = row.copy()
+                    copy_row[args.utterance_column] = new_queries[new_query_count]
+                    copy_row[args.id_column] = &quotA&quot + copy_row[args.id_column] + &quot-&quot + str(idx) &#47&#47 add &quotA&quot for auto-paraphrasing
+                    output_rows.append(copy_row)
+                    new_query_count += 1
+            else:
+                assert args.transformation == &quotnone&quot
+                &#47&#47 do basic clean-up because old generation code missed these
+                row[args.utterance_column] = row[args.utterance_column].replace(&quot&lt;pad&gt;&quot, &quot&quot)
+                row[args.utterance_column] = re.sub(&quot\s\s+&quot, &quot &quot, row[args.utterance_column])
+                row[args.utterance_column] = row[args.utterance_column].strip()
+                output_rows = [row]
+            
+            for o in output_rows:
+                output_row = ""
+                if args.remove_with_heuristics:
+                    if not passes_heuristic_checks(o, args):
+                        heuristic_count += 1
+                        continue
+                if args.remove_duplicates:
+                    normalized_example = re.sub(&quot\s+&quot, &quot&quot, &quot&quot.join([o[i] for i in args.no_duplication_columns]))
+                    &#47&#47 print(normalized_example)
+                    if normalized_example in seen_examples:
+                        duplicate_count += 1
+                        continue
+                    else:
+                        seen_examples.add(normalized_example)
+                written_count += 1
+                for i, column in enumerate(args.output_columns):
+                    output_row += o[column]
+                    if i &lt; len(args.output_columns)-1:
+                        output_row += &quot\t&quot
+                output_file.write(output_row + &quot\n&quot)
+            <a id="change">for </a>o in thrown_away_rows<a id="change">:
+                </a>if args.remove_with_heuristics and passes_heuristic_checks(o, args):
+                    <a id="change">all_thrown_away_rows.append(</a>o<a id="change">)</a>
+
+        if args.thrown_away is not None:
+            &#47&#47 write the thrown away exampels into a file
+            with open(args.thrown_away, &quotw&quot) as output_file:
+                <a id="change">for </a>o in all_thrown_away_rows<a id="change">:
+                    </a>output_row = ""
+                    for i, column in enumerate(args.output_columns):
+                        output_row += o[column]
+                        if i &lt; len(args.output_columns)-1:</code></pre>

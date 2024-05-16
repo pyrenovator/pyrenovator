@@ -1,0 +1,46 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        split_dims = [ctx.dims.depth]
+    prefix_name = prefixed_name(ctx, name)
+    depth_indexing &= not ctx.model.weight_sharing
+    if <a id="change">depth_indexing</a>:
+        <a id="change">assert </a>idx is not None, "idx has to be set when depth indexing is true"
+        str_shape = [ctx.dims.depth]<a id="change"> + </a>str_shape
+    shape = dims_to_shape(ctx, str_shape)
+    if prefix_name not in ctx.parameters:
+        ctx.parameter_dims[prefix_name] = str_shape
+        if std is None and mean is None:
+            param, var = stacked_orthogonal_init(ctx, str_shape, column_axes, split_dims)
+            param *= scale * post_variance_scale
+        else:
+            if scale != 1:
+                print(f"Warning: get_param creates normal distribution with scale=1 even though it should be {scale}")
+            param = normal(ctx, shape)
+            if std is not None:
+                param *= std
+            if mean is not None:
+                param += mean
+        ctx.parameter_variance[prefix_name] = lr_scale * scale
+        param = param.astype(
+            ctx.model.storage_dtype if dtype is None else jnp.promote_types(ctx.model.storage_dtype, dtype))
+        assign(ctx, name, param)
+    param = ctx.parameters[prefix_name]
+    if <a id="change">depth_indexing</a>:
+        param<a id="change"> = </a>param[idx].reshape(param.shape[1:])
+    return param.astype(
+        ctx.model.computation_dtype if dtype is None else jnp.promote_types(ctx.model.computation_dtype, dtype))
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        computation_dtype = jnp.promote_types(ctx.model.computation_dtype, dtype)
+        storage_dtype = jnp.promote_types(ctx.model.storage_dtype, dtype)
+
+    if <a id="change">weight_sharing</a>:
+        split_name<a id="change"> = </a>[n.split(&quot:&quot)[0] + &quot:&quot for n in name.split(&quot/&quot)]
+        for pname, <a id="change">param</a> in ctx.parameters.items():
+            <a id="change">if ctx.parameter_dims[pname] != str_shape</a>:
+                <a id="change">continue</a>
+            pname<a id="change"> = </a>pname.split(&quot/&quot)
+            if all(p.startswith(s) for p, s in zip(pname, split_name)):
+                return param.astype(computation_dtype)
+</code></pre>

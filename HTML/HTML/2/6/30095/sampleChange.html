@@ -1,0 +1,57 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        return 1
+
+    &#47&#47 Check if the output file already exists
+    if <a id="change">output_xml_path.exists() and not force</a>:
+        logger.error(
+            f"The output file {str(output_xml_path)!r} already exists. "
+            "Either delete it or use the --force option to overwrite it.",</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    path_map = _prepare_output_paths(input_paths, output_dir, force)
+
+    <a id="change">if len(path_map) == 0</a>:
+        logger.warning("No files to process, stopping")
+        return 0
+
+    output_dir.mkdir(exist_ok=True)
+
+    &#47&#47 Convert
+    def do_work(
+        path_map_item: tuple[pathlib.Path, pathlib.Path]
+    ) -&gt; pathlib.Path | None:
+        Try to run conversion, or return name of input pdf if that fails.
+
+        Parameters
+        ----------
+        path_map_item
+            Key-value pair of `input_pdf` and `output_xml` paths.
+
+        Returns
+        -------
+        pathlib.Path | None
+            Return `input_pdf` if conversion failed, otherwise None.
+        
+        pdf_path, xml_path = path_map_item
+        try:
+            _convert_pdf_file(grobid_host, grobid_port, pdf_path, xml_path)
+        except Exception as exc:
+            logger.exception(
+                f"An error happened when processing {pdf_path.resolve().as_uri()}: "
+                f"{exc}"
+            )
+            return pdf_path
+        return None
+
+    with ThreadPoolExecutor(max_workers=num_workers) as executor:
+        failed_paths<a id="change"> = </a>executor.map(do_work, path_map.items(), timeout=60)
+
+    for path in failed_paths:
+        if path is not None:
+            <a id="change">logger.warning(f"Failed to process {path.resolve().as_uri()}"</a><a id="change">)</a>
+
+    return 0
+
+</code></pre>

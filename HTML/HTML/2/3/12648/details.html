@@ -1,0 +1,61 @@
+<html><h3>Pattern ID :12648
+</h3><img src='42914239.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        output = Identity.apply(input[0])
+        output.grad_fn.register_hook(wrapper)
+        &#47&#47 work around to support in-place operations
+        output = <a id="change">output.clone()</a>
+        return (output,)
+
+    def pre_backward(self, module, grad_input, grad_output):
+        &quot&quot&quotStore the grad_output for the backward hook&quot&quot&quot</code></pre><h3>After Change</h3><pre><code class='java'>
+        def wrapper(grad_input, grad_output):
+            return hook_ref().backward(module, grad_input, hook_ref().stored_tensors[&quotgrad_output&quot])
+
+        if not <a id="change">isinstance(</a>input, tuple<a id="change">)</a>:
+            input = (input<a id="change"></a>,)
+
+        post_input = Identity.apply(*input)
+        post_input[0].grad_fn.register_hook(wrapper)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/chr5tphr/zennit/commit/62426d3531a20b503dcfab70a4ac0cfc57013f6e#diff-3ef0ee9bb8222874fd6032880e02f6e56b7459d101f274b574d76801f2981affL143' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 42914239</div><div id='project'> Project Name: chr5tphr/zennit</div><div id='commit'> Commit Name: 62426d3531a20b503dcfab70a4ac0cfc57013f6e</div><div id='time'> Time: 2021-06-25</div><div id='author'> Author: chrstphr@posteo.eu</div><div id='file'> File Name: zennit/core.py</div><div id='m_class'> M Class Name: Hook</div><div id='n_method'> N Class Name: Hook</div><div id='m_method'> M Method Name: pre_forward(3)</div><div id='n_method'> N Method Name: pre_forward(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: zennit/core.py</div><div id='n_file'> N File Name: zennit/core.py</div><div id='m_start'> M Start Line: 147</div><div id='m_end'> M End Line: 151</div><div id='n_start'> N Start Line: 143</div><div id='n_end'> N End Line: 150</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                if self.dynamic or self.grid[i].shape[2:4] != x[i].shape[2:4]:
+                    self.grid[i], self.anchor_grid[i] = self._make_grid(nx, ny, i)
+
+                y = <a id="change">x[i].clone()</a>
+                y[..., :5 + self.nc].sigmoid_()
+                if self.inplace:
+                    y[..., 0:2] = (y[..., 0:2] * 2 + self.grid[i]) * self.stride[i]  &#47&#47 xy
+                    y[..., 2:4] = (y[..., 2:4] * 2) ** 2 * self.anchor_grid[i]  &#47&#47 wh</code></pre><h3>After Change</h3><pre><code class='java'>
+                if self.dynamic or self.grid[i].shape[2:4] != x[i].shape[2:4]:
+                    self.grid[i], self.anchor_grid[i] = self._make_grid(nx, ny, i)
+
+                if <a id="change">isinstance(</a>self, Segment<a id="change">)</a>:  &#47&#47 (boxes + masks)
+                    xy, wh, conf, mask = x[i].split((2, 2, self.nc + 1, self.no - self.nc - 5), 4)
+                    xy = (xy.sigmoid() * 2 + self.grid[i]) * self.stride[i]  &#47&#47 xy
+                    wh = (wh.sigmoid() * 2) ** 2 * self.anchor_grid[i]  &#47&#47 wh
+                    y = torch.cat((xy, wh, conf.sigmoid(), mask), 4)
+                else:  &#47&#47 Detect (boxes only)
+                    xy, wh, conf = x[i].sigmoid().split((2, 2, self.nc + 1), 4)
+                    xy = (xy * 2 + self.grid[i]) * self.stride[i]  &#47&#47 xy
+                    wh = (wh * 2) ** 2 * self.anchor_grid[i]  &#47&#47 wh
+                    y = torch.cat((xy<a id="change">, wh, conf</a>), 4)
+                z.append(y.view(bs, self.na * nx * ny, self.no))
+
+        return x if self.training else (torch.cat(z, 1),) if self.export else (torch.cat(z, 1), x)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/ultralytics/yolov5/commit/060837406542c5c65301b8fde641f4d92a1f395e#diff-2cd118cbb69c9ca7b5544f4187b11335fc3addbaf2c3c5bb45435cac648c957bL56' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 42914246</div><div id='project'> Project Name: ultralytics/yolov5</div><div id='commit'> Commit Name: 060837406542c5c65301b8fde641f4d92a1f395e</div><div id='time'> Time: 2022-09-17</div><div id='author'> Author: glenn.jocher@ultralytics.com</div><div id='file'> File Name: models/yolo.py</div><div id='m_class'> M Class Name: Detect</div><div id='n_method'> N Class Name: Detect</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: models/yolo.py</div><div id='n_file'> N File Name: models/yolo.py</div><div id='m_start'> M Start Line: 61</div><div id='m_end'> M End Line: 77</div><div id='n_start'> N Start Line: 58</div><div id='n_end'> N End Line: 77</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        self.rep = self.backbone(x)
+
+        for i, head in enumerate(self.heads):
+            rep_i = <a id="change">self.rep.detach().clone()</a>
+            rep_i.requires_grad = True
+            rep_i.register_hook(self._hook(i))
+
+            preds.append(head(rep_i))</code></pre><h3>After Change</h3><pre><code class='java'>
+        preds = []
+        out = self.backbone(x)
+
+        if <a id="change">isinstance(</a>out, (list, tuple)<a id="change">)</a>:
+            rep<a id="change">, extra_out</a> = out[0], out[1:]
+            extra_out = list(extra_out)
+        else:
+            rep = out</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/adrianjav/rotograd/commit/40bb6d893a9f213702cc156339d8057613b84859#diff-e7ce180bd1a1e867d1acb0e764d0ba1e7560fd46f06ed0e8df0761e5a3961a0bL36' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 42914240</div><div id='project'> Project Name: adrianjav/rotograd</div><div id='commit'> Commit Name: 40bb6d893a9f213702cc156339d8057613b84859</div><div id='time'> Time: 2021-12-17</div><div id='author'> Author: adrian.javaloy@gmail.com</div><div id='file'> File Name: rotograd/rotograd.py</div><div id='m_class'> M Class Name: VanillaMTL</div><div id='n_method'> N Class Name: VanillaMTL</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: rotograd/rotograd.py</div><div id='n_file'> N File Name: rotograd/rotograd.py</div><div id='m_start'> M Start Line: 38</div><div id='m_end'> M End Line: 47</div><div id='n_start'> N Start Line: 50</div><div id='n_end'> N End Line: 82</div><BR>

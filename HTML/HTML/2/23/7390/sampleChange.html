@@ -1,0 +1,72 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    output3d = cotrans.forward_regular(example_clip)
+    assert torch.allclose(target, output3d)
+
+    o = <a id="change">[]</a>
+    &#47&#47 Manual zero pad (due to padding=1 in Conv3d)
+    zeros = torch.zeros_like(example_clip[:, :, 0])
+    o.append(<a id="change">cotrans.forward(</a>zeros<a id="change">)</a>)
+    <a id="change">for i</a> in <a id="change">range(example_clip.shape[2]</a><a id="change">)</a><a id="change">:
+        o.append(cotrans</a><a id="change">.forward(example_clip</a>[:, :, <a id="change">i</a>]<a id="change">))</a>
+    <a id="change">o.append(cotrans.forward(</a>zeros<a id="change">)</a><a id="change">)</a>
+
+    &#47&#47 For debugging:
+    &#47&#47 close = []
+    &#47&#47 equal = []</code></pre><h3>After Change</h3><pre><code class='java'>
+    target = trans.forward(example_clip)
+
+    &#47&#47 Recurrent block
+    <a id="change">cotrans</a> = CoX3DTransform(
+        dim_in=2,
+        dim_out=2,
+        temp_kernel_size=3,
+        stride=2,
+        dim_inner=5,
+        num_groups=5,
+        stride_1x1=False,
+        inplace_relu=True,
+        eps=1e-5,
+        bn_mmt=0.1,
+        dilation=1,
+        norm_module=torch.nn.BatchNorm3d,
+        se_ratio=0.1,
+        swish_inner=True,
+        block_idx=0,
+        temporal_window_size=example_clip.shape[2],  &#47&#47 +2 from padding
+        temporal_fill="zeros",
+        se_scope="clip",
+    )
+    co.load_state_dict(cotrans, trans.state_dict(), flatten=True)
+    cotrans.eval()  &#47&#47 This has a major effect on BatchNorm result
+
+    &#47&#47 forward
+    output = <a id="change">cotrans.forward(</a>example_clip<a id="change">)</a>
+    assert torch.allclose(target, output)
+
+    &#47&#47 forward_steps
+    output = cotrans.forward_steps(example_clip, pad_end=True)
+    assert torch.allclose(target, output)
+
+    &#47&#47 forward_steps - broken up
+    cotrans.clean_state()
+    nothing<a id="change"> = cotrans</a><a id="change">.forward_steps(example_clip[:, :, :-1]</a><a id="change">, pad_end=False)</a>  &#47&#47 init
+    assert isinstance(nothing, TensorPlaceholder)
+
+    lasts = <a id="change">cotrans.forward_steps(example_clip[:, :, -1:]</a><a id="change">, pad_end=True)</a>
+    assert torch.allclose(lasts, target)
+
+    &#47&#47 forward_step
+    <a id="change">cotrans.clean_state()</a>
+    nothing = cotrans.forward_steps(example_clip[:, :, :], pad_end=False)  &#47&#47 init
+    assert isinstance(nothing, TensorPlaceholder)
+
+    &#47&#47 Manual pad end.
+    zeros = torch.zeros_like(example_clip[:, :, 0])
+    step<a id="change"> = cotrans</a><a id="change">.forward_step(</a>zeros<a id="change">)</a>
+    assert torch.allclose(step, target[:, :, 0])  &#47&#47 (4/4) correct in SE pool
+    step = cotrans.forward_step(zeros)
+    assert torch.allclose(step, target[:, :, 1], atol=5e-3)  &#47&#47 (3/4) correct in pool
+    step = cotrans.forward_step(zeros)</code></pre>

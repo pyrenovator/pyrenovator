@@ -1,0 +1,99 @@
+<html><h3>Pattern ID :35381
+</h3><img src='100543294.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                               fx=self.in_out_scale, fy=self.in_out_scale,
+                               interpolation=cv2.INTER_CUBIC).astype(np.float32) / 255
+        &#47&#47 mask_miss area marked by 0.
+        mask_miss = <a id="change">(mask_miss &gt; 0.5).astype(</a>np.float32<a id="change">)</a>
+
+        &#47&#47 &#47&#47 for IDE debug only
+        &#47&#47 import matplotlib.pyplot as plt
+        &#47&#47 resize_hmps = cv2.resize(heatmaps, (0, 0),</code></pre><h3>After Change</h3><pre><code class='java'>
+        else:
+            return (
+                torch.from_numpy(heatmaps.transpose((2, 0, 1))),
+                <a id="change">torch.tensor([]</a><a id="change">)</a>,
+                torch.from_numpy(mask_miss[None, ...])
+            )
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/hellojialee/offsetguided/commit/3a615cd83a8447ec06e84213780a0aaecaca7fe5#diff-11de34204b3cbb56310eb027a81832a1eeb59d05670fba45af30bd84945c2f19L46' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 100543294</div><div id='project'> Project Name: hellojialee/offsetguided</div><div id='commit'> Commit Name: 3a615cd83a8447ec06e84213780a0aaecaca7fe5</div><div id='time'> Time: 2020-06-26</div><div id='author'> Author: ustclijia@gmail.com</div><div id='file'> File Name: encoder/heatmap.py</div><div id='m_class'> M Class Name: HeatMaps</div><div id='n_method'> N Class Name: HeatMaps</div><div id='m_method'> M Method Name: __call__(4)</div><div id='n_method'> N Method Name: __call__(4)</div><div id='m_parent_class'> M Parent Class: object</div><div id='n_parent_class'> N Parent Class: object</div><div id='m_file'> M File Name: encoder/heatmap.py</div><div id='n_file'> N File Name: encoder/heatmap.py</div><div id='m_start'> M Start Line: 46</div><div id='m_end'> M End Line: 80</div><div id='n_start'> N Start Line: 46</div><div id='n_end'> N End Line: 77</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        accuracy_meta_test.append(acc_test)
+        total_accuracy_meta_test.append(acc_test)
+        reset_array()
+    print(&quottesting accuracy: &quot, <a id="change">np.array(total_accuracy_meta_test).mean(axis=0).astype(</a>np.float16<a id="change">)</a>)
+
+
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    features = torch.FloatTensor(features).float().to(device)
+    labels = torch.LongTensor(labels).to(device)
+    
+    accuracy_meta_test = <a id="change">[]</a>
+
+    node_num = adj.shape[0]
+    class_label = list(np.unique(labels.cpu()))
+    combination = list(combinations(class_label, 2))
+
+    train_file = pd.read_csv(args.data_dir + &quot/fold&quot + str(args.fold_n) + &quot/train.csv&quot)
+    test_file = pd.read_csv(args.data_dir + &quot/fold&quot + str(args.fold_n) + &quot/test.csv&quot)
+
+    test_label = list(np.unique(test_file.label.values))
+    train_label = list(np.unique(train_file.label.values))
+
+    if args.model == &quotSGC&quot:
+        features = sgc_precompute(features, adj, args.degree)
+
+    print(&quotTrain_Label_List {}: &quot.format(train_label))
+    print(&quotTest_Label_List {}: &quot.format(test_label))
+    model = get_model(args.model, features.size(1), n_way, args.cuda)
+
+    for j in range(iteration):
+        random.seed(j)
+        labels_local = labels.clone().detach()
+        select_class = random.sample(train_label, n_way)
+        print(&quotITERATION {} Train_Label: {}&quot.format(j+1, select_class))
+
+        class1_idx = []
+        class2_idx = []
+        for k in range(node_num):
+            if(labels_local[k] == select_class[0]):
+                class1_idx.append(k)
+                labels_local[k] = 0
+            elif(labels_local[k] == select_class[1]):
+                class2_idx.append(k)
+                labels_local[k] = 1
+        for m in range(step):
+            random.seed(m)
+            class1_train = random.sample(class1_idx,train_shot)
+            class2_train = random.sample(class2_idx,train_shot)
+            class1_test = [n1 for n1 in class1_idx if n1 not in class1_train]
+            class2_test = [n2 for n2 in class2_idx if n2 not in class2_train]
+            train_idx = class1_train + class2_train
+            random.shuffle(train_idx)
+            test_idx = class1_test + class2_test
+            random.shuffle(test_idx)
+
+            model = train_regression(model, features[train_idx], labels_local[train_idx], args.epochs, args.weight_decay, args.lr)
+            acc_query = test_regression(model, features[test_idx], labels_local[test_idx])
+            accuracy_meta_test.append(acc_query)
+            reset_array()
+        
+    print(&quotMeta-Train_Accuracy: {}&quot.format(<a id="change">torch.tensor(</a>accuracy_meta_test<a id="change">)</a>.numpy().mean()))
+
+    torch.save(model.state_dict(), &quotmodel.pkl&quot)
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/mims-harvard/g-meta/commit/8c759d99d745c57780c9bd2d53d7d458bfbd22a2#diff-7c787e1c04bf5965ddb8685e9b52baff9f82db0bdc38c721aea81357586e324aL40' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 100543292</div><div id='project'> Project Name: mims-harvard/g-meta</div><div id='commit'> Commit Name: 8c759d99d745c57780c9bd2d53d7d458bfbd22a2</div><div id='time'> Time: 2020-05-05</div><div id='author'> Author: kexinhuang@hsph.harvard.edu</div><div id='file'> File Name: few_shot_GNN/sgc_fewshot/citation.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(0)</div><div id='n_method'> N Method Name: main(0)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: few_shot_GNN/sgc_fewshot/citation.py</div><div id='n_file'> N File Name: few_shot_GNN/sgc_fewshot/citation.py</div><div id='m_start'> M Start Line: 42</div><div id='m_end'> M End Line: 148</div><div id='n_start'> N Start Line: 48</div><div id='n_end'> N End Line: 166</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                               fx=self.in_out_scale, fy=self.in_out_scale,
+                               interpolation=cv2.INTER_CUBIC).astype(np.float32) / 255
+        &#47&#47 mask_miss area marked by 0.
+        mask_miss = <a id="change">(mask_miss &gt; 0.5).astype(</a>np.float32<a id="change">)</a>
+        &#47&#47 import matplotlib.pyplot as plt
+        &#47&#47 plt.imshow(np.repeat(mask_miss[:, :, np.newaxis], 3, axis=2))  &#47&#47 mask_all
+        &#47&#47 plt.show()
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        else:
+            return (
+                torch.from_numpy(offset_maps.transpose((2, 0, 1))),
+                <a id="change">torch.tensor([]</a><a id="change">)</a>,
+                torch.from_numpy(mask_miss[None, ...]),
+            )
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/hellojialee/offsetguided/commit/3a615cd83a8447ec06e84213780a0aaecaca7fe5#diff-fd7b0ed488b71151abd25f5b9b75bd85779eae356c707314e4009e6cadb4c707L31' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 100543293</div><div id='project'> Project Name: hellojialee/offsetguided</div><div id='commit'> Commit Name: 3a615cd83a8447ec06e84213780a0aaecaca7fe5</div><div id='time'> Time: 2020-06-26</div><div id='author'> Author: ustclijia@gmail.com</div><div id='file'> File Name: encoder/offset.py</div><div id='m_class'> M Class Name: OffsetMaps</div><div id='n_method'> N Class Name: OffsetMaps</div><div id='m_method'> M Method Name: __call__(4)</div><div id='n_method'> N Method Name: __call__(4)</div><div id='m_parent_class'> M Parent Class: object</div><div id='n_parent_class'> N Parent Class: object</div><div id='m_file'> M File Name: encoder/offset.py</div><div id='n_file'> N File Name: encoder/offset.py</div><div id='m_start'> M Start Line: 43</div><div id='m_end'> M End Line: 65</div><div id='n_start'> N Start Line: 46</div><div id='n_end'> N End Line: 65</div><BR>

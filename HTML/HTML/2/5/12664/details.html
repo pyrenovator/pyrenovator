@@ -1,0 +1,79 @@
+<html><h3>Pattern ID :12664
+</h3><img src='42942751.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        g_kfe = self._to_kfe_sua(g, kfe_x, kfe_gy)
+        m2.mul_(self.alpha).add_((1. - self.alpha) * bs, g_kfe ** 2)
+        g_nat_kfe = g_kfe / (m2 + self.eps)
+        g_nat<a id="change"> = </a>self._to_kfe_sua(g_nat_kfe, kfe_x.t(), kfe_gy.t())
+        if bias_grad is not None:
+            gb = g_nat[:, -1, s[2] // 2, s[3] // 2]
+            &#47&#47 bias.grad.data = gb
+            g_nat = g_nat[:, :-1]
+        &#47&#47 weight.grad.data = g_nat
+
+        return g_nat.contiguous(), <a id="change">gb.contiguous()</a>
+
+    def _precond_intra_sua(self, group: dict[str, Union[LayerType, Iterable[torch.Tensor]]], weight_grad: torch.Tensor, bias_grad: Optional[torch.Tensor],
+                           ) -&gt; tuple[torch.Tensor, Optional[torch.Tensor]]:
+        Preconditioning for KFAC SUA.</code></pre><h3>After Change</h3><pre><code class='java'>
+            gb = gb[None, :, None, None].repeat(1, 1, s[2], s[3])    &#47&#47 (out, 1, kh, kw)
+            g = torch.cat([g, gb], dim=1)    &#47&#47 (out, in + 1, kh, kw)
+
+        N = <a id="change">state.x.size(0</a><a id="change">)</a>
+        g_kfe = self.to_kfe_sua(g, state.kfe_x, state.kfe_gy)  &#47&#47 (out, in + 1, kh, kw)
+        m2 = self.alpha * state.m2 + (1 - self.alpha) * N * (g_kfe.square())  &#47&#47 (out, in + 1, kh, kw)
+        g_nat_kfe = g_kfe / (m2 + self.eps)  &#47&#47 (out, in + 1, kh, kw)
+        g = self.to_kfe_sua(g_nat_kfe, state.kfe_x.t(), state.kfe_gy.t())  &#47&#47 (out, in + 1, kh, kw)
+
+        if gb is not None:
+            gb = g[:, -1, s[2] // 2, s[3] // 2].contiguous()  &#47&#47 (out)
+            g = g[:, :-1]  &#47&#47 (out, in, kh, kw)
+        g<a id="change"> = </a>g.contiguous()
+        return g, gb
+
+    def _precond_intra_sua(self, mod: nn.Conv2d, weight_grad: torch.Tensor,</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/ain-soph/trojanzoo/commit/6c7dbc51bfacdfb1fbe957a3544f7f6d1ae55bb4#diff-60d04c6f7847bd8fc01137e7634942a75744d0f87d0cab4a7f63e78dd3f54c2bL86' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 42942751</div><div id='project'> Project Name: ain-soph/trojanzoo</div><div id='commit'> Commit Name: 6c7dbc51bfacdfb1fbe957a3544f7f6d1ae55bb4</div><div id='time'> Time: 2021-09-24</div><div id='author'> Author: ain-soph@live.com</div><div id='file'> File Name: trojanzoo/utils/fim/ekfac.py</div><div id='m_class'> M Class Name: EKFAC</div><div id='n_method'> N Class Name: EKFAC</div><div id='m_method'> M Method Name: _precond_sua_ra(4)</div><div id='n_method'> N Method Name: _precond_sua_ra(4)</div><div id='m_parent_class'> M Parent Class: BaseKFAC</div><div id='n_parent_class'> N Parent Class: Optimizer</div><div id='m_file'> M File Name: trojanzoo/utils/fim/ekfac.py</div><div id='n_file'> N File Name: trojanzoo/utils/fim/ekfac.py</div><div id='m_start'> M Start Line: 167</div><div id='m_end'> M End Line: 196</div><div id='n_start'> N Start Line: 86</div><div id='n_end'> N End Line: 106</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    def forward(self, x, rois, roi_indices):
+        roi_indices = torch.Tensor(roi_indices).float()
+        rois<a id="change"> = </a>torch.Tensor(rois).float()
+        if x.is_cuda:
+            roi_indices = roi_indices.cuda()
+            rois = rois.cuda()
+            
+        indices_and_rois = torch.cat([roi_indices[:, None], rois], dim=1)
+
+        xy_indices_and_rois = indices_and_rois[:, [0, 1, 2, 3, 4]]
+        indices_and_rois =  <a id="change">xy_indices_and_rois.contiguous()</a>
+        &#47&#47 利用建议框对公用特征层进行截取
+        pool = self.roi(x, indices_and_rois)
+        fc7 = self.classifier(pool)</code></pre><h3>After Change</h3><pre><code class='java'>
+        roi_cls_locs = self.cls_loc(fc7)
+        roi_scores = self.score(fc7)
+        roi_cls_locs = roi_cls_locs.view(n, -1, roi_cls_locs.size(1))
+        roi_scores<a id="change"> = </a>roi_scores.view(n, -1, <a id="change">roi_scores.size(1</a><a id="change">)</a>)
+        return roi_cls_locs, roi_scores
+
+def normal_init(m, mean, stddev, truncated=False):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/bubbliiiing/faster-rcnn-pytorch/commit/d456f02a402fd8cf8db1d991aa612439b3c0ffb2#diff-e9af117e882e879caed77569c76b6d4c9a00e932a2844fed75b18ec08abfd3fbL67' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 42942749</div><div id='project'> Project Name: bubbliiiing/faster-rcnn-pytorch</div><div id='commit'> Commit Name: d456f02a402fd8cf8db1d991aa612439b3c0ffb2</div><div id='time'> Time: 2021-01-30</div><div id='author'> Author: 47347516+bubbliiiing@users.noreply.github.com</div><div id='file'> File Name: nets/classifier.py</div><div id='m_class'> M Class Name: Resnet50RoIHead</div><div id='n_method'> N Class Name: Resnet50RoIHead</div><div id='m_method'> M Method Name: forward(5)</div><div id='n_method'> N Method Name: forward(4)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: nets/classifier.py</div><div id='n_file'> N File Name: nets/classifier.py</div><div id='m_start'> M Start Line: 68</div><div id='m_end'> M End Line: 77</div><div id='n_start'> N Start Line: 82</div><div id='n_end'> N End Line: 107</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        
+    def forward(self, x, rois, roi_indices):
+        roi_indices = torch.Tensor(roi_indices).float()
+        rois<a id="change"> = </a>torch.Tensor(rois).float()
+        if x.is_cuda:
+            roi_indices = roi_indices.cuda()
+            rois = rois.cuda()
+        indices_and_rois = torch.cat([roi_indices[:, None], rois], dim=1)
+        
+        xy_indices_and_rois = indices_and_rois[:, [0, 1, 2, 3, 4]]
+        indices_and_rois =  <a id="change">xy_indices_and_rois.contiguous()</a>
+        &#47&#47 利用建议框对公用特征层进行截取
+        pool = self.roi(x, indices_and_rois)
+        pool = pool.view(pool.size(0), -1)</code></pre><h3>After Change</h3><pre><code class='java'>
+        roi_cls_locs = self.cls_loc(fc7)
+        roi_scores = self.score(fc7)
+
+        roi_cls_locs<a id="change"> = </a>roi_cls_locs.view(n, -1, <a id="change">roi_cls_locs.size(1</a><a id="change">)</a>)
+        roi_scores = roi_scores.view(n, -1, roi_scores.size(1))
+        return roi_cls_locs, roi_scores
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/bubbliiiing/faster-rcnn-pytorch/commit/d456f02a402fd8cf8db1d991aa612439b3c0ffb2#diff-e9af117e882e879caed77569c76b6d4c9a00e932a2844fed75b18ec08abfd3fbL30' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 42942740</div><div id='project'> Project Name: bubbliiiing/faster-rcnn-pytorch</div><div id='commit'> Commit Name: d456f02a402fd8cf8db1d991aa612439b3c0ffb2</div><div id='time'> Time: 2021-01-30</div><div id='author'> Author: 47347516+bubbliiiing@users.noreply.github.com</div><div id='file'> File Name: nets/classifier.py</div><div id='m_class'> M Class Name: VGG16RoIHead</div><div id='n_method'> N Class Name: VGG16RoIHead</div><div id='m_method'> M Method Name: forward(5)</div><div id='n_method'> N Method Name: forward(4)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: nets/classifier.py</div><div id='n_file'> N File Name: nets/classifier.py</div><div id='m_start'> M Start Line: 31</div><div id='m_end'> M End Line: 39</div><div id='n_start'> N Start Line: 33</div><div id='n_end'> N End Line: 59</div><BR>

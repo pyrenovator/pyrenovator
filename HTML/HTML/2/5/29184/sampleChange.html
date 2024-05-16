@@ -1,0 +1,18 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    def backward(self, ctx, grad_output):
+        (input_,) = ctx.saved_tensors
+        grad_input = grad_output.clone()
+        <a id="change">input_[input_ &gt; 0]</a> = grad_input / input_
+        input_[input_ &lt;= 0] = (torch.rand(input_.size()) - 0.5) * self.var
+        grad = input_.clone()
+        return grad</code></pre><h3>After Change</h3><pre><code class='java'>
+        grad_input = grad_output.clone()
+        grad = (grad_input * out) / (input_ + threshold) + (
+            grad_input * (~out.bool()).float()
+        )<a id="change"> * </a>((<a id="change">torch.rand_like(</a>input_<a id="change">) - 0.5</a>) * variance)
+        &#47&#47 grad += ((torch.rand(input_.size()) - 0.5) * variance) * (~grad.bool()).float()
+
+        return grad</code></pre>

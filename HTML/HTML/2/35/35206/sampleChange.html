@@ -1,0 +1,73 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    def process_step(self) -&gt; List[Any]:
+        self._time_profiler.record(self.uid, Event.queue_in)
+        data = self._in_ques[0].get_dict()
+        if <a id="change">data is None</a>:
+            <a id="change">self._set_finished()</a>
+            return True
+
+        side_by<a id="change"> = dict(</a><a id="change">(k, data[k]) for k in self._side_by_keys)</a>
+        process_data = [data.get(key) for key in self._node_repr.inputs]
+        if any((i is Empty() for i in process_data)):
+            for out_que in self._output_ques:
+                <a id="change">if not out_que.put_dict(side_by)</a>:
+                    <a id="change">self._set_stopped()</a>
+                    <a id="change">return True</a>
+        else:
+            self._time_profiler.record(self.uid, Event.process_in)
+            succ, outputs, msg = self._call(process_data)
+            <a id="change">if not succ</a>:
+                <a id="change">self._set_failed(</a>msg<a id="change">)</a>
+                <a id="change">return True</a>
+
+            size<a id="change"> = </a>len(self._node_repr.outputs)
+
+            for output in outputs:
+                if size &gt; 1:
+                    output_map = {self._node_repr.outputs[i]: output[i] for i in range(size)}
+                else:
+                    output_map = {self._node_repr.outputs[0]: output}
+
+                side_by.update(output_map)
+
+                for out_que in self._output_ques:
+                    if not out_que.put_dict(side_by):
+                        self._set_stopped()
+                        return True
+
+                side_by = {}
+            <a id="change">self._time_profiler.record(</a>self.uid, Event.process_out<a id="change">)</a>
+            <a id="change">self._time_profiler.record(</a>self.uid, Event.queue_out<a id="change">)</a>
+
+        return False
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    
+    def process_step(self) -&gt; List[Any]:
+        self._time_profiler.record(self.uid, Event.queue_in)
+        <a id="change">data</a> = self.read_row()
+        if <a id="change">data is None or not self.side_by_to_next(data)</a>:
+            return None
+        process_data = [data.get(key) for key in self._node_repr.inputs]
+
+        <a id="change">if </a>any((item is Empty() for item in process_data)):
+            <a id="change">return None</a>
+
+        self._time_profiler.record(self.uid, Event.process_in)
+        succ, outputs, msg = self._call(process_data)
+        <a id="change">assert </a>succ, msg
+
+        size<a id="change"> = </a>len(self._node_repr.outputs)
+        for output in outputs:
+            if size &gt; 1:
+                output_map = {self._node_repr.outputs[i]: output[i] for i in range(size)}
+            else:
+                output_map = {self._node_repr.outputs[0]: output}
+            if not self.data_to_next(output_map):
+                return None
+
+        <a id="change">self._time_profiler.record(</a>self.uid, Event.process_out<a id="change">)</a>
+        <a id="change">self._time_profiler.record(</a>self.uid, Event.queue_out<a id="change">)</a>
+</code></pre>

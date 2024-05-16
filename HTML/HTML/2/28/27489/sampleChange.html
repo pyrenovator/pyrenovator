@@ -1,0 +1,52 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    def download(self, metadata: StorageMetadata, storage_dir: str) -&gt; None:
+        for rel_path in metadata.resources.keys():
+            abs_path = os.path.join(storage_dir, rel_path)
+            <a id="change">os.makedirs(</a><a id="change">os.path.dirname(</a>abs_path<a id="change">), exist_ok=True)</a>
+
+            &#47&#47 Only create empty directory for keys that end with "/".
+            &#47&#47 See `upload` method for more context.
+            <a id="change">if rel_path.endswith("/"</a><a id="change">)</a>:
+                <a id="change">continue</a>
+
+            blob_name<a id="change"> = </a>"{}/{}".format(metadata.storage_id, rel_path)
+            blob = self.bucket.blob(blob_name)
+
+            logging.debug(<a id="change">"Downloading from GCS: {}".format(</a>blob_name<a id="change">)</a>)
+
+            blob.download_to_filename(abs_path)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    @util.preserve_random_state
+    def download(self, storage_id: str, storage_dir: str) -&gt; None:
+        storage_prefix<a id="change"> = </a>storage_id
+        found<a id="change"> = </a>False
+        &#47&#47 Listing blobs with prefix set and no delimiter is equivalent to a recursive listing.  If
+        &#47&#47 you include a `delimiter="/"` you will get only the file-like blobs inside of a
+        &#47&#47 directory-like blob.
+        for blob in self.bucket.list_blobs(prefix=storage_prefix):
+            found<a id="change"> = </a>True
+            dst = os.path.join(storage_dir, os.path.relpath(blob.name, storage_prefix))
+            <a id="change">dst_dir = </a><a id="change">os.path.dirname(</a>dst<a id="change">)</a>
+            <a id="change">if not os.path.exists(dst_dir)</a>:
+                <a id="change">os.makedirs(dst_dir</a><a id="change">, exist_ok=True)</a>
+
+            &#47&#47 Only create empty directory for keys that end with "/".
+            &#47&#47 See `upload` method for more context.
+            <a id="change">if </a>blob.name.endswith("/"):
+                os.makedirs(dst, exist_ok=True)
+                <a id="change">continue</a>
+
+            logging.debug(f"Downloading from GCS: {blob.name}")
+
+            blob.download_to_filename(dst)
+
+        <a id="change">if not found</a>:
+            <a id="change">raise </a><a id="change">errors.CheckpointNotFound(f"Did not find checkpoint {storage_id} in GCS"</a><a id="change">)</a>
+
+    @util.preserve_random_state
+    def delete(self, storage_id: str) -&gt; None:
+        logging.info(f"Deleting checkpoint {storage_id} from GCS")</code></pre>

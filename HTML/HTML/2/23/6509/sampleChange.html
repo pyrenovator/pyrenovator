@@ -1,0 +1,78 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+):
+    if clip_global_grad_norm&lt;1.0:
+        torch._foreach_mul_(grads, clip_global_grad_norm.item())
+    copy_grads<a id="change"> = </a><a id="change">[g.clone() for g in grads]</a>
+
+    diff = torch._foreach_sub(grads, pre_grads)
+    &#47&#47 NOTE: line below while looking identical gives different result, due to float precision errors.
+    &#47&#47 using mul+add produces identical results to single-tensor, using add+alpha doesn&quott
+    &#47&#47 On cuda this difference doesn&quott matter due to its&quot own precision non-determinism
+    &#47&#47 update = torch._foreach_add(grads, torch._foreach_mul(diff, beta2))
+    update = torch._foreach_add(grads, diff, alpha=beta2)
+
+    torch._foreach_mul_(exp_avgs, beta1)
+    torch._foreach_add_(exp_avgs, grads, alpha=1 - beta1) &#47&#47 m_t
+
+    torch._foreach_mul_(exp_avg_diffs, beta2)
+    torch._foreach_add_(exp_avg_diffs, diff, alpha=1 - beta2) &#47&#47 diff_t
+
+    torch._foreach_mul_(exp_avg_sqs, beta3)
+    torch._foreach_addcmul_(exp_avg_sqs, update, update, value=1 - beta3) &#47&#47 n_t
+
+    denom = torch._foreach_sqrt(exp_avg_sqs)
+    torch._foreach_div_(denom, bias_correction3_sqrt)
+    torch._foreach_add_(denom, eps)
+
+    update = torch._foreach_div(exp_avgs, bias_correction1)
+    &#47&#47 NOTE: same issue as above. beta2 * diff / bias_correction2 != diff * (beta2 / bias_correction2)
+    &#47&#47 using faster version by default. 
+    &#47&#47 torch._foreach_add_(update, torch._foreach_div(torch._foreach_mul(exp_avg_diffs, beta2), bias_correction2))
+    torch._foreach_add_(update, torch._foreach_mul(exp_avg_diffs, beta2 / bias_correction2))
+    torch._foreach_div_(update, denom)
+
+    if no_prox:
+        torch._foreach_mul_(params, 1 - lr * weight_decay)
+        torch._foreach_add_(params, update, alpha=-lr)
+    else:
+        torch._foreach_add_(params, update, alpha=-lr)
+        torch._foreach_div_(params, 1 + lr * weight_decay)
+    <a id="change">return </a>copy_grads</code></pre><h3>After Change</h3><pre><code class='java'>
+    torch._foreach_add_(exp_avg_diffs, neg_pre_grads,
+                        alpha=1 - beta2)  &#47&#47 diff_t
+
+    <a id="change">torch._foreach_mul_(neg_pre_grads</a>, <a id="change">beta2</a><a id="change">)</a>
+    torch._foreach_add_(neg_pre_grads, grads)
+    torch._foreach_mul_(exp_avg_sqs, beta3)
+    torch._foreach_addcmul_(exp_avg_sqs,
+                            neg_pre_grads,
+                            neg_pre_grads,
+                            value=1 - beta3)  &#47&#47 n_t
+
+    denom = torch._foreach_sqrt(exp_avg_sqs)
+    torch._foreach_div_(denom, bias_correction3_sqrt)
+    torch._foreach_add_(denom, eps)
+
+    step_size_diff = <a id="change">lr</a><a id="change"> * beta2 / </a>bias_correction2
+    step_size<a id="change"> = lr</a><a id="change"> / </a>bias_correction1
+
+    if no_prox:
+        torch._foreach_mul_(params, 1 - lr * weight_decay)
+        <a id="change">torch._foreach_addcdiv_(params</a>, <a id="change">exp_avgs</a>, denom<a id="change">, value=-step_size)</a>
+        <a id="change">torch._foreach_addcdiv_(params</a>,
+                                <a id="change">exp_avg_diffs</a>,
+                                denom<a id="change">,
+                                value=-step_size_diff)</a>
+    else:
+        <a id="change">torch._foreach_addcdiv_(params</a>, <a id="change">exp_avgs</a>, denom<a id="change">, value=-step_size)</a>
+        <a id="change">torch._foreach_addcdiv_(params</a>,
+                                <a id="change">exp_avg_diffs</a>,
+                                denom<a id="change">,
+                                value=-step_size_diff)</a>
+        torch._foreach_div_(params, 1 + lr * weight_decay)
+    <a id="change">torch._foreach_zero_(neg_pre_grads</a><a id="change">)</a>
+    torch._foreach_add_(neg_pre_grads, grads, alpha=-1.0)
+</code></pre>

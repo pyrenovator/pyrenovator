@@ -1,0 +1,179 @@
+<html><h3>Pattern ID :9824
+</h3><img src='35257104.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            List of averaged scores
+        
+        self.model.eval()
+        <a id="change">for </a>(X, y, bias, X_mask, y_mask, time_stamps) in <a id="change">tqdm(</a>self.valid_dataloader<a id="change">):
+            </a>X = X.to(self.device)
+            y = y.to(self.device)
+            bias = bias.to(self.device)
+            X_mask = X_mask.to(self.device)</code></pre><h3>After Change</h3><pre><code class='java'>
+            List of averaged scores
+        
+        self.model.eval()
+        <a id="change">with tqdm(total=len(self.valid_dataloader), leave=False)</a><a id="change"> as pbar:
+            for </a>(
+                X,
+                y,
+                bias,
+                X_mask,
+                y_mask,
+                time_stamps,
+                _,
+                y_inv_transforms,
+            ) in self.valid_dataloader<a id="change">:
+                </a>X = X.to(self.device)
+                y = y.to(self.device)
+                bias = bias.to(self.device)
+                X_mask = X_mask.to(self.device)
+                y_mask = y_mask.to(self.device)
+                if time_stamps is not None:
+                    time_stamps = time_stamps.to(self.device)
+                with torch.no_grad():
+                    Z = self.model(X, bias, X_mask, time_stamps)
+                batch_size = X.size(0)
+                if self.denorm is True:
+                    for i in range(batch_size):
+                        Z[i] = y_inv_transforms[i](Z[i])
+                        y[i] = y_inv_transforms[i](y[i])
+                for metric in self.metrics:
+                    metric.update(Z, y, y_mask)
+                metric_v = sum([metric(False) for metric in self.metrics])
+                pbar.set_description(f"(metric={metric_v:.4f})")
+                <a id="change">pbar.update(1</a><a id="change">)</a>
+        ave_scores = []
+        for metric in self.metrics:
+            ave_score = metric(True)
+            ave_scores.append(ave_score)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 7</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/takuyashintate/tsts/commit/e952ef63302c29b32c95e17f46dfcaabd2ad1b85#diff-38852a333fabc2d9fd8c03e25fb7cb67a9c31d255cc4c9f612c65b9ce2ed52e3L135' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 35257104</div><div id='project'> Project Name: takuyashintate/tsts</div><div id='commit'> Commit Name: e952ef63302c29b32c95e17f46dfcaabd2ad1b85</div><div id='time'> Time: 2021-09-14</div><div id='author'> Author: kmdbn2hs@gmail.com</div><div id='file'> File Name: tsts/trainers/trainer.py</div><div id='m_class'> M Class Name: SupervisedTrainer</div><div id='n_method'> N Class Name: SupervisedTrainer</div><div id='m_method'> M Method Name: on_val(1)</div><div id='n_method'> N Method Name: on_val(1)</div><div id='m_parent_class'> M Parent Class: Trainer</div><div id='n_parent_class'> N Parent Class: Trainer</div><div id='m_file'> M File Name: tsts/trainers/trainer.py</div><div id='n_file'> N File Name: tsts/trainers/trainer.py</div><div id='m_start'> M Start Line: 135</div><div id='m_end'> M End Line: 149</div><div id='n_start'> N Start Line: 146</div><div id='n_end'> N End Line: 178</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    def on_train(self) -&gt; List[float]:
+        self.model.train()
+        ave_loss_vs = [0.0 for _ in range(len(self.losses))]
+        <a id="change">for </a>(X, y, bias, X_mask, y_mask, time_stamps) in <a id="change">tqdm(</a>self.train_dataloader<a id="change">):
+            </a>X = X.to(self.device)
+            y = y.to(self.device)
+            bias = bias.to(self.device)
+            X_mask = X_mask.to(self.device)</code></pre><h3>After Change</h3><pre><code class='java'>
+    def on_train(self) -&gt; List[float]:
+        self.model.train()
+        ave_loss_vs = [0.0 for _ in range(len(self.losses))]
+        <a id="change">with tqdm(total=len(self.train_dataloader), leave=False)</a><a id="change"> as pbar:
+            for </a>(
+                X,
+                y,
+                bias,
+                X_mask,
+                y_mask,
+                time_stamps,
+                _,
+                _,
+            ) in self.train_dataloader<a id="change">:
+                </a>X = X.to(self.device)
+                y = y.to(self.device)
+                bias = bias.to(self.device)
+                X_mask = X_mask.to(self.device)
+                y_mask = y_mask.to(self.device)
+                if time_stamps is not None:
+                    time_stamps = time_stamps.to(self.device)
+                Z = self.model(X, bias, X_mask, time_stamps)
+                self.optimizer.zero_grad()
+                device = Z.device
+                total_loss_v = torch.tensor(
+                    0.0,
+                    dtype=torch.float32,
+                    device=device,
+                )
+                for (i, loss) in enumerate(self.losses):
+                    weight = self.weight_per_loss[i]
+                    loss_v = loss(Z, y, y_mask)
+                    total_loss_v += weight * loss_v
+                    ave_loss_vs[i] += loss_v.item()
+                total_loss_v.backward()
+                if self.max_grad_norm &gt; 0:
+                    torch.nn.utils.clip_grad_norm_(
+                        self.model.parameters(),
+                        self.max_grad_norm,
+                    )
+                self.optimizer.step()
+                pbar.set_description(f"(loss={total_loss_v.item():.4f})")
+                <a id="change">pbar.update(1</a><a id="change">)</a>
+        self.scheduler.step()
+        for i in range(len(self.losses)):
+            ave_loss_vs[i] /= len(self.train_dataloader)
+        return ave_loss_vs</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/takuyashintate/tsts/commit/e952ef63302c29b32c95e17f46dfcaabd2ad1b85#diff-38852a333fabc2d9fd8c03e25fb7cb67a9c31d255cc4c9f612c65b9ce2ed52e3L90' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 35257107</div><div id='project'> Project Name: takuyashintate/tsts</div><div id='commit'> Commit Name: e952ef63302c29b32c95e17f46dfcaabd2ad1b85</div><div id='time'> Time: 2021-09-14</div><div id='author'> Author: kmdbn2hs@gmail.com</div><div id='file'> File Name: tsts/trainers/trainer.py</div><div id='m_class'> M Class Name: SupervisedTrainer</div><div id='n_method'> N Class Name: SupervisedTrainer</div><div id='m_method'> M Method Name: on_train(1)</div><div id='n_method'> N Method Name: on_train(1)</div><div id='m_parent_class'> M Parent Class: Trainer</div><div id='n_parent_class'> N Parent Class: Trainer</div><div id='m_file'> M File Name: tsts/trainers/trainer.py</div><div id='n_file'> N File Name: tsts/trainers/trainer.py</div><div id='m_start'> M Start Line: 93</div><div id='m_end'> M End Line: 121</div><div id='n_start'> N Start Line: 92</div><div id='n_end'> N End Line: 132</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    c = 0
+    &#47&#47 Physical time
+    t = 0.0
+    <a id="change">for </a>j in <a id="change">tqdm(</a>range(steps)<a id="change">):
+        &#47&#47 Stream function in Fourier space: solve Poisson equation
+        </a>psi_h = w_h / lap
+
+        &#47&#47 Velocity field in x-direction = psi_y
+        q = psi_h.clone()</code></pre><h3>After Change</h3><pre><code class='java'>
+    c = 0
+    &#47&#47 Physical time
+    t = 0.0
+    <a id="change">with tqdm(total=record_steps)</a><a id="change"> as pbar:
+        for </a>j in range(steps)<a id="change">:
+            &#47&#47 Stream function in Fourier space: solve Poisson equation
+            </a>psi_h = w_h / lap
+
+            &#47&#47 Velocity field in x-direction = psi_y
+            q = psi_h.clone()
+            q_real_temp = q.real.clone()
+            q.real = -2 * math.pi * k_y * q.imag
+            q.imag = 2 * math.pi * k_y * q_real_temp
+            q = torch.fft.ifftn(q, dim=[1, 2], norm=&quotbackward&quot).real
+
+            &#47&#47 Velocity field in y-direction = -psi_x
+            v = psi_h.clone()
+            v_real_temp = v.real.clone()
+            v.real = 2 * math.pi * k_x * v.imag
+            v.imag = -2 * math.pi * k_x * v_real_temp
+            v = torch.fft.ifftn(v, dim=[1, 2], norm=&quotbackward&quot).real
+
+            &#47&#47 Partial x of vorticity
+            w_x = w_h.clone()
+            w_x_temp = w_x.real.clone()
+            w_x.real = -2 * math.pi * k_x * w_x.imag
+            w_x.imag = 2 * math.pi * k_x * w_x_temp
+            w_x = torch.fft.ifftn(w_x, dim=[1, 2], norm=&quotbackward&quot).real
+
+            &#47&#47 Partial y of vorticity
+            w_y = w_h.clone()
+            w_y_temp = w_y.real.clone()
+            w_y.real = -2 * math.pi * k_y * w_y.imag
+            w_y.imag = 2 * math.pi * k_y * w_y_temp
+            w_y = torch.fft.ifftn(w_y, dim=[1, 2], norm=&quotbackward&quot).real
+
+            &#47&#47 Non-linear term (u.grad(w)): compute in physical space then back to Fourier space
+            F_h = torch.fft.fftn(q * w_x + v * w_y,
+                                 dim=[1, 2], norm=&quotbackward&quot)
+
+            &#47&#47 Dealias
+            F_h *= dealias
+
+            &#47&#47 Cranck-Nicholson update
+            factor = 0.5 * delta_t * visc * lap
+            num = -delta_t * F_h + delta_t * f_h + (1.0 - factor) * w_h
+            w_h = num / (1.0 + factor)
+
+            &#47&#47 Update real time (used only for recording)
+            t += delta_t
+
+            if (j + 1) % record_time == 0:
+                &#47&#47 Solution in physical space
+                w = torch.fft.ifftn(w_h, dim=[1, 2], norm=&quotbackward&quot).real
+                if w.isnan().any().item():
+                    raise ValueError(&quotNaN values found.&quot)
+
+                &#47&#47 Record solution and time
+                sol[..., c] = w
+                sol_t[c] = t
+                <a id="change">pbar.update(1</a><a id="change">)</a>
+
+                c += 1
+
+    return sol, sol_t</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/alasdairtran/fourierflow/commit/9aab33d98746341e1bb383b6da0b1541151735b6#diff-d0d169e5de1d1cdb077b89968a8b4c4afff05a0886109fbae6ad1bb38f6b696dL14' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 35257109</div><div id='project'> Project Name: alasdairtran/fourierflow</div><div id='commit'> Commit Name: 9aab33d98746341e1bb383b6da0b1541151735b6</div><div id='time'> Time: 2021-08-13</div><div id='author'> Author: alasdair.tran@gmail.com</div><div id='file'> File Name: fourierflow/datastores/synthetic/ns_2d.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: solve_navier_stokes_2d(6)</div><div id='n_method'> N Method Name: solve_navier_stokes_2d(6)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: fourierflow/datastores/synthetic/ns_2d.py</div><div id='n_file'> N File Name: fourierflow/datastores/synthetic/ns_2d.py</div><div id='m_start'> M Start Line: 23</div><div id='m_end'> M End Line: 123</div><div id='n_start'> N Start Line: 23</div><div id='n_end'> N End Line: 126</div><BR>

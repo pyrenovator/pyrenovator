@@ -1,0 +1,29 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 Load a image
+        img_file = os.path.join(self.data_dir, &quotJPEGImages&quot, id_ + &quot.jpg&quot)
+
+        img = np.asarray(Image.open(img_file), dtype=np.float32).transpose((2<a id="change">, 0, 1</a>))
+        img = img / 255.
+        &#47&#47 img = self.ToTensor(Image.open(img_file))  &#47&#47 自带归一化
+        in_c, in_h, in_w = img.shape
+        &#47&#47 preprocess img 缩放到最小比例,这样最终长和宽都能放缩到规定的尺寸
+        scale1 = 600 / min(in_h, in_w)
+        scale2 = 1000 / max(in_h, in_w)
+        scale = min(scale1, scale2)
+        &#47&#47 resize到最小比例,anti_aliasing为是否采用高斯滤波 使用sk-learn的方式来resize
+        out_h, out_w = in_h * scale, in_w * scale
+        img<a id="change"> = </a><a id="change">sktsf.resize(</a>img, (in_c, out_h, out_w)<a id="change">, mode=&quotreflect&quot, anti_aliasing=False)</a>  &#47&#47 np.float64
+        img = self.normalize(torch.from_numpy(img)).numpy()
+        &#47&#47 img = F.interpolate(img.unsqueeze(0), size=(round(out_h), round(out_w)), mode="nearest").squeeze(0)
+        &#47&#47 img = F.interpolate(img.unsqueeze(0), size=(round(out_h), round(out_w)), mode="bilinear",align_corners=True).squeeze(0)</code></pre><h3>After Change</h3><pre><code class='java'>
+        scale2 = self.max_size / max(in_h, in_w)
+        scale = min(scale1, scale2)
+        out_h, out_w = round(in_h * scale), round(in_w * scale)
+        img = <a id="change">F.interpolate(img.unsqueeze(0), size=(out_h, out_w), mode="bilinear",align_corners=True).squeeze(0</a><a id="change">)</a>
+        img = self.normalize(img).numpy()
+        if self.is_train:
+            box *= scale
+            &#47&#47 需要将后续返回的img替换为img.copy()</code></pre>

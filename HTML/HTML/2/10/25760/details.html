@@ -1,0 +1,94 @@
+<html><h3>Pattern ID :25760
+</h3><img src='78005670.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            Tuple[PoolingType, DataType], List[EmbeddingBagConfig]
+        ] = defaultdict(list)
+        self._length_per_key: List[int] = []
+        self._emb_modules: nn.ModuleList = <a id="change">nn.ModuleList()</a>
+        self._output_dtype = output_dtype
+
+        table_names = set()
+        for table in self._embedding_bag_configs:</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 We map over the parameters from FBGEMM backed kernels to the canonical nn.EmbeddingBag
+        &#47&#47 representation. This provides consistency between this class and the EmbeddingBagCollection
+        &#47&#47 nn.Module API calls (state_dict, named_modules, etc)
+        <a id="change">self.embedding_bags: nn.ModuleDict = </a><a id="change">nn.ModuleDict()</a>
+        for (_key, tables), emb_module in zip(
+            self._key_to_tables.items(), self._emb_modules
+        ):
+            for embedding_config, (weight, _) in zip(
+                tables, emb_module.split_embedding_weights(split_scale_shifts=False)
+            ):
+                <a id="change">self.embedding_bags[embedding_config.name] = </a><a id="change">torch.nn.Module()</a>
+                &#47&#47 register as a buffer so it&quots exposed in state_dict.
+                &#47&#47 however, since this is only needed for inference, we do not need to expose it as part of parameters.
+                &#47&#47 Additionally, we cannot expose uint8 weights as parameters due to autograd restrictions.
+                <a id="change">self.embedding_bags[embedding_config.name].register_buffer(
+                    "weight"</a>, weight<a id="change">
+                )</a>
+
+    def forward(
+        self,
+        features: KeyedJaggedTensor,</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 9</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/facebookresearch/torchrec/commit/d4eb3e9556a0593ea23c6908df76445bb9843d79#diff-30aabdcc064c9c3eee50a1dfb7ca08d561f2c524858be4eee22357c7e2befe70L185' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 78005670</div><div id='project'> Project Name: facebookresearch/torchrec</div><div id='commit'> Commit Name: d4eb3e9556a0593ea23c6908df76445bb9843d79</div><div id='time'> Time: 2022-07-27</div><div id='author'> Author: yingliufb@fb.com</div><div id='file'> File Name: torchrec/quant/embedding_modules.py</div><div id='m_class'> M Class Name: EmbeddingBagCollection</div><div id='n_method'> N Class Name: EmbeddingBagCollection</div><div id='m_method'> M Method Name: __init__(6)</div><div id='n_method'> N Method Name: __init__(6)</div><div id='m_parent_class'> M Parent Class: EmbeddingBagCollectionInterface</div><div id='n_parent_class'> N Parent Class: EmbeddingBagCollectionInterface</div><div id='m_file'> M File Name: torchrec/quant/embedding_modules.py</div><div id='n_file'> N File Name: torchrec/quant/embedding_modules.py</div><div id='m_start'> M Start Line: 190</div><div id='m_end'> M End Line: 190</div><div id='n_start'> N Start Line: 185</div><div id='n_end'> N End Line: 258</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        self._input_dists: nn.ModuleList = nn.ModuleList()
+        self._lookups: nn.ModuleList = nn.ModuleList()
+        self._create_lookups(fused_params)
+        self._output_dists: nn.ModuleList = <a id="change">nn.ModuleList()</a>
+        self._embedding_names: List[str] = []
+        self._embedding_dims: List[int] = []
+        self._feature_splits: List[int] = []
+        self._features_order: List[int] = []</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 nn.Module API calls (state_dict, named_modules, etc)
+        &#47&#47 Currently, Sharded Quant EBC only uses TW sharding, and returns non-sharded tensors as part of state dict
+        &#47&#47 TODO - revisit if we state_dict can be represented as sharded tensor
+        <a id="change">self.embedding_bags: nn.ModuleDict = </a><a id="change">nn.ModuleDict()</a>
+        for table in self._embedding_bag_configs:
+            <a id="change">self.embedding_bags[table.name] = </a><a id="change">torch.nn.Module()</a>
+
+        for _sharding_type, lookup in zip(
+            self._sharding_type_to_sharding.keys(), self._lookups
+        ):
+            lookup_state_dict = lookup.state_dict()
+            for key in lookup_state_dict:
+                if not key.endswith(".weight"):
+                    continue
+                table_name = key[: -len(".weight")]
+                &#47&#47 Register as buffer because this is an inference model, and can potentially use uint8 types.
+                <a id="change">self.embedding_bags[table_name].register_buffer(
+                    "weight"</a>, lookup_state_dict[key]<a id="change">
+                )</a>
+
+    def _create_input_dist(
+        self,
+        input_feature_names: List[str],</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/pytorch/torchrec/commit/44ee74de8c11b544bcebdaf56b9fd9d92a556585#diff-47054702d9b60e19832807f14dfe91b0ec48fff611d6737d4535160cb1dfcf13L70' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 78005668</div><div id='project'> Project Name: pytorch/torchrec</div><div id='commit'> Commit Name: 44ee74de8c11b544bcebdaf56b9fd9d92a556585</div><div id='time'> Time: 2022-08-16</div><div id='author'> Author: yingliufb@fb.com</div><div id='file'> File Name: torchrec/distributed/quant_embeddingbag.py</div><div id='m_class'> M Class Name: ShardedQuantEmbeddingBagCollection</div><div id='n_method'> N Class Name: ShardedQuantEmbeddingBagCollection</div><div id='m_method'> M Method Name: __init__(5)</div><div id='n_method'> N Method Name: __init__(5)</div><div id='m_parent_class'> M Parent Class: Subscript</div><div id='n_parent_class'> N Parent Class: Subscript</div><div id='m_file'> M File Name: torchrec/distributed/quant_embeddingbag.py</div><div id='n_file'> N File Name: torchrec/distributed/quant_embeddingbag.py</div><div id='m_start'> M Start Line: 91</div><div id='m_end'> M End Line: 94</div><div id='n_start'> N Start Line: 76</div><div id='n_end'> N End Line: 127</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            Tuple[PoolingType, DataType], List[EmbeddingBagConfig]
+        ] = defaultdict(list)
+        self._length_per_key: List[int] = []
+        self._emb_modules: nn.ModuleList = <a id="change">nn.ModuleList()</a>
+        self._output_dtype = output_dtype
+
+        table_names = set()
+        for table in self._embedding_bag_configs:</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 We map over the parameters from FBGEMM backed kernels to the canonical nn.EmbeddingBag
+        &#47&#47 representation. This provides consistency between this class and the EmbeddingBagCollection
+        &#47&#47 nn.Module API calls (state_dict, named_modules, etc)
+        <a id="change">self.embedding_bags: nn.ModuleDict = </a><a id="change">nn.ModuleDict()</a>
+        for (_key, tables), emb_module in zip(
+            self._key_to_tables.items(), self._emb_modules
+        ):
+            for embedding_config, (weight, _) in zip(
+                tables, emb_module.split_embedding_weights(split_scale_shifts=False)
+            ):
+                <a id="change">self.embedding_bags[embedding_config.name] = </a><a id="change">torch.nn.Module()</a>
+                &#47&#47 register as a buffer so it&quots exposed in state_dict.
+                &#47&#47 however, since this is only needed for inference, we do not need to expose it as part of parameters.
+                &#47&#47 Additionally, we cannot expose uint8 weights as parameters due to autograd restrictions.
+                <a id="change">self.embedding_bags[embedding_config.name].register_buffer(
+                    "weight"</a>, weight<a id="change">
+                )</a>
+
+    def forward(
+        self,
+        features: KeyedJaggedTensor,</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/pytorch/torchrec/commit/d4eb3e9556a0593ea23c6908df76445bb9843d79#diff-30aabdcc064c9c3eee50a1dfb7ca08d561f2c524858be4eee22357c7e2befe70L175' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 78005676</div><div id='project'> Project Name: pytorch/torchrec</div><div id='commit'> Commit Name: d4eb3e9556a0593ea23c6908df76445bb9843d79</div><div id='time'> Time: 2022-07-27</div><div id='author'> Author: yingliufb@fb.com</div><div id='file'> File Name: torchrec/quant/embedding_modules.py</div><div id='m_class'> M Class Name: EmbeddingBagCollection</div><div id='n_method'> N Class Name: EmbeddingBagCollection</div><div id='m_method'> M Method Name: __init__(6)</div><div id='n_method'> N Method Name: __init__(6)</div><div id='m_parent_class'> M Parent Class: EmbeddingBagCollectionInterface</div><div id='n_parent_class'> N Parent Class: EmbeddingBagCollectionInterface</div><div id='m_file'> M File Name: torchrec/quant/embedding_modules.py</div><div id='n_file'> N File Name: torchrec/quant/embedding_modules.py</div><div id='m_start'> M Start Line: 190</div><div id='m_end'> M End Line: 190</div><div id='n_start'> N Start Line: 185</div><div id='n_end'> N End Line: 258</div><BR>

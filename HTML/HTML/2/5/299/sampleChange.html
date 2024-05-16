@@ -1,0 +1,57 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            exp_weights = safe_sum(exp_weights, exp_weight_chunk)
+            weighted_values = safe_sum(weighted_values, weighted_value_chunk)
+
+        normalized_values<a id="change"> = </a>weighted_values / (<a id="change">rearrange(</a>exp_weights, <a id="change">&quot... -&gt; ... 1&quot</a><a id="change">)</a> + eps)
+        out.append(normalized_values)
+
+    return torch.cat(out, dim = -2)</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    out = []
+    for q_index, q_chunk in enumerate(q_chunks):
+        exp_weights = <a id="change">[]</a>
+        weighted_values = []
+        weight_maxes = []
+
+        for k_index, (k_chunk, v_chunk, mask_chunk) in enumerate(zip(k_chunks, v_chunks, mask_chunks)):
+
+            causal_mask_chunk = None
+            if causal:
+                causal_mask_chunk = causal_mask[
+                    (q_index * q_bucket_size):(q_index * q_bucket_size + q_bucket_size),
+                    (k_index * k_bucket_size):(k_index * k_bucket_size + k_bucket_size),
+                ]
+
+            exp_weight_chunk, weighted_value_chunk, weight_max_chunk = checkpointed_summarize_qkv_chunk(
+                q_chunk,
+                k_chunk,
+                v_chunk,
+                mask_chunk,
+                causal_mask_chunk
+            )
+
+            exp_weights.append(exp_weight_chunk)
+            weighted_values.append(weighted_value_chunk)
+            weight_maxes.append(weight_max_chunk)
+
+        weight_maxes = torch.stack(weight_maxes, dim = -1)
+
+        weighted_values = torch.stack(weighted_values, dim = -1)
+        exp_weights = torch.stack(exp_weights, dim = -1)
+
+        global_max = weight_maxes.amax(dim = -1, keepdim = True)
+        renorm_factor = (weight_maxes - global_max).exp().detach()
+
+        exp_weights = exp_weights * renorm_factor
+        weighted_values = weighted_values * rearrange(renorm_factor, &quot... c -&gt; ... 1 c&quot)
+
+        all_values = weighted_values.sum(dim = -1)
+        all_weights = exp_weights.sum(dim = -1)
+
+        normalized_values<a id="change"> = </a>all_values / (rearrange(all_weights, &quot... -&gt; ... 1&quot) + eps)
+        out.append(normalized_values)
+
+    return torch.cat(out, dim = -2)</code></pre>

@@ -1,0 +1,167 @@
+<html><h3>Pattern ID :13604
+</h3><img src='45704843.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            raw_scale = self.raw_scale.get(self.inputs[0])
+            channel_order = self.channel_swap.get(self.inputs[0])
+            &#47&#47 Padding context crops needs the mean in unprocessed input space.
+            self.crop_mean = <a id="change">self.mean[self.inputs[0]].copy()</a>
+            self.crop_mean = self.crop_mean.transpose((1,2,0))
+            channel_order_inverse = [channel_order.index(i)
+                                     for i in range(self.crop_mean.shape[2])]
+            self.crop_mean = self.crop_mean[:,:, channel_order_inverse]
+            self.crop_mean<a id="change"> /= </a>raw_scale
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            raw_scale = self.raw_scale.get(self.inputs[0])
+            channel_order = self.channel_swap.get(self.inputs[0])
+            &#47&#47 Padding context crops needs the mean in unprocessed input space.
+            mean<a id="change"> = </a><a id="change">self.mean.get(</a>self.inputs[0]<a id="change">)</a>
+            <a id="change">if </a>mean is not None:
+                crop_mean = mean.copy().transpose((1,2,0))
+                if channel_order is not None:
+                    channel_order_inverse = [channel_order.index(i)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 5</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/BVLC/caffe/commit/4f7726916cb965c79975c44e833e71347fa1822c#diff-7173bf5d2af5c5eda92a5c9def6c5f5d718a1267e3c1b0d3e5223c9cd27d04c2L186' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 45704843</div><div id='project'> Project Name: BVLC/caffe</div><div id='commit'> Commit Name: 4f7726916cb965c79975c44e833e71347fa1822c</div><div id='time'> Time: 2014-08-05</div><div id='author'> Author: shelhamer@imaginarynumber.net</div><div id='file'> File Name: python/caffe/detector.py</div><div id='m_class'> M Class Name: Detector</div><div id='n_method'> N Class Name: Detector</div><div id='m_method'> M Method Name: configure_crop(2)</div><div id='n_method'> N Method Name: configure_crop(2)</div><div id='m_parent_class'> M Parent Class: caffe.Net</div><div id='n_parent_class'> N Parent Class: caffe.Net</div><div id='m_file'> M File Name: python/caffe/detector.py</div><div id='n_file'> N File Name: python/caffe/detector.py</div><div id='m_start'> M Start Line: 186</div><div id='m_end'> M End Line: 194</div><div id='n_start'> N Start Line: 186</div><div id='n_end'> N End Line: 201</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        input_token_field = token_field
+        input_text_field = input_spec[input_token_field].parent  &#47&#47 pytype: disable=attribute-error
+        counterfactual = copy.deepcopy(example)
+        modified_tokens<a id="change"> = </a><a id="change">copy.copy(</a>tokens<a id="change">)</a>
+        for j in token_idxs:
+          modified_tokens[j] = replacement_tokens[j]
+        counterfactual[input_token_field] = modified_tokens
+        &#47&#47 TODO(iftenney, bastings): call a model-provided detokenizer here?</code></pre><h3>After Change</h3><pre><code class='java'>
+    max_flips = int(config.get(MAX_FLIPS_KEY, MAX_FLIPS_DEFAULT))
+    tokens_to_ignore = config.get(TOKENS_TO_IGNORE_KEY,
+                                  TOKENS_TO_IGNORE_DEFAULT)
+    drop_tokens<a id="change"> = </a>bool(<a id="change">config.get(</a>DROP_TOKENS_KEY, DROP_TOKENS_DEFAULT<a id="change">)</a>)
+
+    assert model is not None, "Please provide a model for this generator."
+    logging.info(r"W3lc0m3 t0 H0tFl1p \o/")
+    logging.info("Original example: %r", example)
+
+    &#47&#47 Find classification prediciton key.
+    pred_keys = self.find_fields(model.output_spec(),
+                                 types.MulticlassPreds, None)
+    if len(pred_keys) == 0:  &#47&#47 pylint: disable=g-explicit-length-test
+      &#47&#47 TODO(ataly): Add support for regression models.
+      logging.warning("The model does not have a classification head."
+                      "Cannot use HotFlip. :-(")
+      return []  &#47&#47 Cannot generate examples.
+    if len(pred_keys) &gt; 1:
+      &#47&#47 TODO(ataly): Use a config argument when there are multiple prediction
+      &#47&#47 heads.
+      logging.warning("Multiple classification heads found."
+                      "Cannot use HotFlip. :-(")
+      return []  &#47&#47 Cannot generate examples.
+    pred_key = pred_keys[0]
+
+    &#47&#47 Find gradient fields to use for HotFlip
+    input_spec = model.input_spec()
+    output_spec = model.output_spec()
+    grad_fields = self.find_fields(output_spec, types.TokenGradients,
+                                   types.Tokens)
+    logging.info("Found gradient fields for HotFlip use: %s", str(grad_fields))
+    if len(grad_fields) == 0:  &#47&#47 pylint: disable=g-explicit-length-test
+      logging.info("No gradient fields found. Cannot use HotFlip. :-(")
+      return []  &#47&#47 Cannot generate examples without gradients.
+
+    &#47&#47 Get model outputs.
+    logging.info("Performing a forward/backward pass on the input example.")
+    orig_output = list(model.predict([example]))[0]
+    logging.info(orig_output.keys())
+
+    &#47&#47 Get model word embeddings and vocab.
+    inv_vocab, embed = model.get_embedding_table()
+    assert len(inv_vocab) == embed.shape[0], "Vocab/embeddings size mismatch."
+    logging.info("Vocab size: %d, Embedding size: %r", len(inv_vocab),
+                 embed.shape)
+
+    &#47&#47 Get original prediction class
+    orig_probabilities = orig_output[pred_key]
+    orig_prediction = np.argmax(orig_probabilities)
+
+    &#47&#47 TODO(lit-team): use only 1 sequence as input (configurable in UI).
+    successful_counterfactuals = []
+    successful_positions = []
+    for grad_field in grad_fields:
+      &#47&#47 Get the tokens and their gradient vectors.
+      token_field = output_spec[grad_field].align  &#47&#47 pytype: disable=attribute-error
+      tokens = orig_output[token_field]
+      grads = orig_output[grad_field]
+      token_emb_fields = self.find_fields(output_spec, types.TokenEmbeddings,
+                                          types.Tokens)
+      assert len(token_emb_fields) == 1, "Found multiple token embeddings"
+      token_embs = orig_output[token_emb_fields[0]]
+      assert token_embs.shape[0] == grads.shape[0]
+
+      if drop_tokens:
+        &#47&#47 Update max_flips so that it is at most len(tokens) - 1 (we don&quott
+        &#47&#47 want to drop all tokens!)
+        max_flips = min(len(tokens)-1, max_flips)
+      else:
+        &#47&#47 Identify replacement tokens.
+        &#47&#47 We take a dot product of each input token gradient (grads) with the
+        &#47&#47 embedding table (embed) and pick the argmin embedding.
+        &#47&#47 TODO(ataly): Only consider tokens that have the same part-of-speech
+        &#47&#47 tag as the original token (and a certain cosine similarity with the
+        &#47&#47 original token)
+        replacement_token_ids = np.argmin(
+            (np.expand_dims(embed, 1) @ grads.T).squeeze(1), axis=0)
+        replacement_tokens = [inv_vocab[id] for id in replacement_token_ids]
+        logging.info("Replacement tokens: %s", replacement_tokens)
+
+      &#47&#47 Consider all combinations of tokens upto length max_flips.
+      &#47&#47 We will iterate through this list (in toplogically sorted order)
+      &#47&#47 and at each iteration, replace the selected tokens with corresponding
+      &#47&#47 replacement tokens and checks if the prediction flips.
+      &#47&#47 At each level of the topological sort, we will consider combinations
+      &#47&#47 by ordering tokens by gradient L2 (i.e., we wish to prioritize flipping
+      &#47&#47 tokens that may have the largest impact on the prediction.)
+      token_grads_l2 = np.sum(grads * grads, axis=-1)
+      &#47&#47 TODO(ataly, bastings): Consider sorting by attributions (either
+      &#47&#47 Integrated Gradients or Shapley values).
+      token_idxs_sorted_by_grads = np.argsort(token_grads_l2)[::-1]
+      token_idxs_to_flip = [idx for idx in token_idxs_sorted_by_grads
+                            if tokens[idx] not in tokens_to_ignore]
+
+      &#47&#47 If the number of tokens considered for flipping is larger than
+      &#47&#47 MAX_FLIPPABLE_TOKENS we only consider the top tokens.
+      token_idxs_to_flip = token_idxs_to_flip[:MAX_FLIPPABLE_TOKENS]
+
+      for token_idxs in self._gen_tokens_to_flip(
+          token_idxs_to_flip, max_flips):
+        if len(successful_counterfactuals) &gt;= num_examples:
+          return successful_counterfactuals
+        &#47&#47 If a subset of the set of tokens have already been successful in
+        &#47&#47 obtaining a flip, we continue. This ensure that we only consider
+        &#47&#47 sets of token flips that are minimal.
+        if self._subset_exists(set(token_idxs), successful_positions):
+          continue
+
+        &#47&#47 Create a new input to the model.
+        &#47&#47 TODO(iftenney, bastings): enforce somewhere that this field has the
+        &#47&#47 same name in the input and output specs.
+        input_token_field = token_field
+        input_text_field = input_spec[input_token_field].parent  &#47&#47 pytype: disable=attribute-error
+        counterfactual = copy.deepcopy(example)
+        <a id="change">if </a>drop_tokens:
+          modified_tokens = self._drop_tokens(tokens, token_idxs)
+          logging.info("Selected tokens to drop: %s (positions=%s)",
+                       [tokens[i] for i in token_idxs], token_idxs)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/pair-code/lit/commit/27c7f5991315e90e674c71ec2bea7afbe35eb138#diff-41eb7113846ed4c4535652386dad9255695323df8ef1054ac4d7a17fb493d925L100' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 45704834</div><div id='project'> Project Name: pair-code/lit</div><div id='commit'> Commit Name: 27c7f5991315e90e674c71ec2bea7afbe35eb138</div><div id='time'> Time: 2021-04-21</div><div id='author'> Author: ataly@google.com</div><div id='file'> File Name: lit_nlp/components/hotflip.py</div><div id='m_class'> M Class Name: HotFlip</div><div id='n_method'> N Class Name: HotFlip</div><div id='m_method'> M Method Name: generate(5)</div><div id='n_method'> N Method Name: generate(5)</div><div id='m_parent_class'> M Parent Class: lit_components.Generator</div><div id='n_parent_class'> N Parent Class: lit_components.Generator</div><div id='m_file'> M File Name: lit_nlp/components/hotflip.py</div><div id='n_file'> N File Name: lit_nlp/components/hotflip.py</div><div id='m_start'> M Start Line: 165</div><div id='m_end'> M End Line: 225</div><div id='n_start'> N Start Line: 122</div><div id='n_end'> N End Line: 249</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    def _train_with_config(
+        self, estimator, config_w_resource, sample_size=None
+    ):
+        config<a id="change"> = </a><a id="change">config_w_resource.copy()</a>
+        if &quotFLAML_sample_size&quot in config:
+            if not sample_size:
+                sample_size = config[&quotFLAML_sample_size&quot]
+            del config[&quotFLAML_sample_size&quot]</code></pre><h3>After Change</h3><pre><code class='java'>
+    ):
+        if not sample_size:
+            sample_size = config_w_resource[&quotFLAML_sample_size&quot]
+        config<a id="change"> = </a><a id="change">config_w_resource.get(</a>&quotml&quot, config_w_resource<a id="change">)</a>.copy()
+        if &quotFLAML_sample_size&quot in config:
+            del config[&quotFLAML_sample_size&quot]
+        <a id="change">if </a>"learner" in config:
+            del config[&quotlearner&quot]
+        assert sample_size is not None
+        sampled_X_train, sampled_y_train, sampled_weight, groups = \</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/microsoft/flaml/commit/6ab0730793f42ff5bb7f53b3a9d43d640e597189#diff-47aff7bcc3e528c362ea162261b640e1e276e2bce981dfafc6cce49d3d81e324L216' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 45704836</div><div id='project'> Project Name: microsoft/flaml</div><div id='commit'> Commit Name: 6ab0730793f42ff5bb7f53b3a9d43d640e597189</div><div id='time'> Time: 2021-09-01</div><div id='author'> Author: wang.chi@microsoft.com</div><div id='file'> File Name: flaml/automl.py</div><div id='m_class'> M Class Name: AutoMLState</div><div id='n_method'> N Class Name: AutoMLState</div><div id='m_method'> M Method Name: _train_with_config(4)</div><div id='n_method'> N Method Name: _train_with_config(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: flaml/automl.py</div><div id='n_file'> N File Name: flaml/automl.py</div><div id='m_start'> M Start Line: 219</div><div id='m_end'> M End Line: 223</div><div id='n_start'> N Start Line: 227</div><div id='n_end'> N End Line: 244</div><BR>

@@ -1,0 +1,51 @@
+<html><h3>Pattern ID :2214
+</h3><img src='9524321.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+                    maddpg.store_transitions([{
+                        "state": {"state": ost.unsqueeze(0).clone()},
+                        "action": {"action": <a id="change">act.clone()</a>},
+                        "next_state": {"state": st.unsqueeze(0).clone()},
+                        "reward": float(rew),
+                        "terminal": term or step == c.max_steps</code></pre><h3>After Change</h3><pre><code class='java'>
+                        [{"state": st.unsqueeze(0)} for st in states]
+                    )
+                    actions = [int(r[0]) for r in results]
+                    action_probs<a id="change"> = </a><a id="change">[r[1] for r in results]</a>
+
+                    states, rewards, terminals, _ = env.step(actions)
+                    states = [t.tensor(st, dtype=t.float32, device=c.device)
+                              for st in states]</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/iffix/machin/commit/d0a2a3bae481090848ab8f473c625dfe6cb93e2d#diff-5463b7ff76cda2accdf8ceeab692f98f1b6f126423b657a0d8e61a1a0bb9f21fL377' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 9524321</div><div id='project'> Project Name: iffix/machin</div><div id='commit'> Commit Name: d0a2a3bae481090848ab8f473c625dfe6cb93e2d</div><div id='time'> Time: 2020-08-07</div><div id='author'> Author: hanhanmumuqq@163.com</div><div id='file'> File Name: test/frame/algorithms/test_maddpg.py</div><div id='m_class'> M Class Name: TestMADDPG</div><div id='n_method'> N Class Name: TestMADDPG</div><div id='m_method'> M Method Name: test_full_train(3)</div><div id='n_method'> N Method Name: test_full_train(3)</div><div id='m_parent_class'> M Parent Class: object</div><div id='n_parent_class'> N Parent Class: object</div><div id='m_file'> M File Name: test/frame/algorithms/test_maddpg.py</div><div id='n_file'> N File Name: test/frame/algorithms/test_maddpg.py</div><div id='m_start'> M Start Line: 377</div><div id='m_end'> M End Line: 393</div><div id='n_start'> N Start Line: 377</div><div id='n_end'> N End Line: 395</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    def forward(ctx: Any, group: dist.ProcessGroup, input: Tensor):
+        if get_world_size(group) &lt;= 1:
+            return input
+        output = <a id="change">torch.clone(</a>input<a id="change">)</a>.contiguous()
+        dist.all_reduce(output, op=torch.distributed.ReduceOp.SUM)
+        return output
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            return input
+        ctx.input_shape = input.shape
+        ctx.leading_dim = 0
+        chunks = <a id="change">[x.contiguous() for x in torch.chunk(input, chunks=ctx.num_nodes, dim=ctx.leading_dim)]</a>
+        assert len(chunks) == ctx.num_nodes
+        output<a id="change"> = </a>torch.empty_like(chunks[0])
+        dist.reduce_scatter(output=output, input_list=list(chunks))
+        return output
+    @staticmethod</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/microsoft/tutel/commit/6b434d936b8d892725a0ff0020d2a41f6aa43a3e#diff-97cb6b6b4a46f907579b92c457a8eaec4a13ed75c520b40ae8911d4a59440021L85' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 9524315</div><div id='project'> Project Name: microsoft/tutel</div><div id='commit'> Commit Name: 6b434d936b8d892725a0ff0020d2a41f6aa43a3e</div><div id='time'> Time: 2021-11-15</div><div id='author'> Author: weicu@microsoft.com</div><div id='file'> File Name: tutel/impls/communicate.py</div><div id='m_class'> M Class Name: PostAllreduceSum</div><div id='n_method'> N Class Name: PostAllreduceSum</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: torch.autograd.Function</div><div id='n_parent_class'> N Parent Class: torch.autograd.Function</div><div id='m_file'> M File Name: tutel/impls/communicate.py</div><div id='n_file'> N File Name: tutel/impls/communicate.py</div><div id='m_start'> M Start Line: 85</div><div id='m_end'> M End Line: 89</div><div id='n_start'> N Start Line: 93</div><div id='n_end'> N End Line: 103</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    def backward(ctx: Any, grad_output: Tensor):
+        if get_world_size(ctx.group) &lt;= 1:
+            return (None, grad_output)
+        dinput = <a id="change">torch.clone(</a>grad_output<a id="change">)</a>.contiguous()
+        dist.all_reduce(dinput, op=torch.distributed.ReduceOp.SUM)
+        return (None, dinput)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        if get_world_size(ctx.group) &lt;= 1:
+            return (None, doutput)
+        dinput = torch.empty(ctx.input_shape, device=doutput.device, dtype=doutput.dtype)
+        chunks<a id="change"> = </a><a id="change">[x.contiguous() for x in torch.chunk(doutput.view(ctx.num_nodes, -1), chunks=ctx.num_nodes, dim=0)]</a>
+        dist.reduce_scatter(output=dinput, input_list=chunks)
+        return (None, dinput)
+
+class PostAllreduceSum(torch.autograd.Function):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/microsoft/tutel/commit/6b434d936b8d892725a0ff0020d2a41f6aa43a3e#diff-97cb6b6b4a46f907579b92c457a8eaec4a13ed75c520b40ae8911d4a59440021L76' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 9524319</div><div id='project'> Project Name: microsoft/tutel</div><div id='commit'> Commit Name: 6b434d936b8d892725a0ff0020d2a41f6aa43a3e</div><div id='time'> Time: 2021-11-15</div><div id='author'> Author: weicu@microsoft.com</div><div id='file'> File Name: tutel/impls/communicate.py</div><div id='m_class'> M Class Name: PreAllreduceSum</div><div id='n_method'> N Class Name: PreAllreduceSum</div><div id='m_method'> M Method Name: backward(2)</div><div id='n_method'> N Method Name: backward(2)</div><div id='m_parent_class'> M Parent Class: torch.autograd.Function</div><div id='n_parent_class'> N Parent Class: torch.autograd.Function</div><div id='m_file'> M File Name: tutel/impls/communicate.py</div><div id='n_file'> N File Name: tutel/impls/communicate.py</div><div id='m_start'> M Start Line: 76</div><div id='m_end'> M End Line: 80</div><div id='n_start'> N Start Line: 83</div><div id='n_end'> N End Line: 88</div><BR>

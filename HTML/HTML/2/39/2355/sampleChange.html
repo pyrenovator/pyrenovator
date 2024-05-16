@@ -1,0 +1,58 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                if type(criterion) == torch.nn.modules.loss.BCEWithLogitsLoss:
+                    loss = criterion(out, j[-1].float().cuda())
+                else:
+                    loss<a id="change"> = </a><a id="change">criterion(</a>out, <a id="change">j[-1].cuda()</a><a id="change">)</a>
+                totalloss += loss * len(j[-1])
+                if task == "classification":
+                    pred.append(torch.argmax(out, 1))
+                elif task == "multilabel":</code></pre><h3>After Change</h3><pre><code class='java'>
+                if type(criterion) == torch.nn.modules.loss.BCEWithLogitsLoss:
+                    loss1=criterion(out, j[-1].float().cuda())
+                else:
+                    <a id="change">if len(j[-1].size())&gt;1</a>:
+                        <a id="change">j[-1] = j</a><a id="change">[-1].squeeze()</a>
+                    loss1=<a id="change">criterion(</a>out, <a id="change">j[-1].long().cuda()</a><a id="change">)</a>
+                loss2=regularize(out, [i.float().cuda() for i in j[:-1]]) if regularization else 0
+                loss = loss1+loss2
+            &#47&#47 print(loss)
+            totalloss += loss * len(j[-1])
+            totals += len(j[-1])
+            if regularization:
+                totalloss1 += loss1 * len(j[-1])
+                totalloss2 += loss2 * len(j[-1])
+                loss.backward(retain_graph=True)
+            else:
+                loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 8)
+            op.step()
+        if regularization:
+            print("Epoch " + str(epoch) + " train loss: " + str(totalloss1 / totals) + " reg loss: " + str(
+                totalloss2 / totals))
+        else:
+            print("Epoch " + str(epoch) + " train loss: " + str(totalloss / totals))
+
+        model.eval()
+        with torch.no_grad():
+            totalloss = 0.0
+            pred = []
+            true = []
+            pts = []
+            for j in valid_dataloader:
+                if is_packed:
+                    out = model([[i.cuda() for i in j[0]], j[1]], training=False)
+                else:
+                    out = model([i.float().cuda() for i in j[:-1]], training=False)
+                if type(criterion) == torch.nn.modules.loss.BCEWithLogitsLoss:
+                    loss = criterion(out, j[-1].float().cuda())
+                else:
+                    <a id="change">if len(j[-1].size())&gt;1</a>:
+                        <a id="change">j[-1] = j[-1].squeeze()</a>
+                    loss<a id="change">=</a><a id="change">criterion(</a>out, <a id="change">j[-1].long().cuda())</a>
+                totalloss += loss * len(j[-1])
+                if task == "classification":
+                    pred.append(torch.argmax(out, 1))
+                elif task == "multilabel":</code></pre>

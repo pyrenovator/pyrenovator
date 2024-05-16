@@ -1,0 +1,92 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        callback.on_rollout_start()
+        continue_training = True
+
+        while total_steps &lt; n_steps or <a id="change">total_episodes &lt; n_episodes</a>:
+            done = False
+            episode_reward, episode_timesteps = 0.0, 0
+
+            while not done:
+
+                if self.use_sde and self.sde_sample_freq &gt; 0 and total_steps % self.sde_sample_freq == 0:
+                    &#47&#47 Sample a new noise matrix
+                    self.actor.reset_noise()
+
+                &#47&#47 Select action randomly or according to policy
+                action, buffer_action = self._sample_action(learning_starts, action_noise)
+
+                &#47&#47 Rescale and perform action
+                new_obs, reward, done, infos = env.step(action)
+
+                self.num_timesteps += 1
+                episode_timesteps += 1
+                total_steps += 1
+
+                &#47&#47 Give access to local variables
+                callback.update_locals(locals())
+                &#47&#47 Only stop training if return value is False, not when it is None.
+                if callback.on_step() is False:
+                    return RolloutReturn(0.0, total_steps, total_episodes, continue_training=False)
+
+                episode_reward += reward
+
+                &#47&#47 Retrieve reward and episode length if using Monitor wrapper
+                self._update_info_buffer(infos, done)
+
+                &#47&#47 Store data in replay buffer
+                if replay_buffer is not None:
+                    &#47&#47 Store only the unnormalized version
+                    if self._vec_normalize_env is not None:
+                        new_obs_ = self._vec_normalize_env.get_original_obs()
+                        reward_ = self._vec_normalize_env.get_original_reward()
+                    else:
+                        &#47&#47 Avoid changing the original ones
+                        self._last_original_obs, new_obs_, reward_ = self._last_obs, new_obs, reward
+
+                    replay_buffer.add(self._last_original_obs, new_obs_, buffer_action, reward_, done)
+
+                self._last_obs = new_obs
+                &#47&#47 Save the unnormalized observation
+                if self._vec_normalize_env is not None:
+                    self._last_original_obs = new_obs_
+
+                self._update_current_progress_remaining(self.num_timesteps, self._total_timesteps)
+
+                &#47&#47 For DQN, check if the target network should be updated
+                &#47&#47 and update the exploration schedule
+                &#47&#47 For SAC/TD3, the update is done as the same time as the gradient update
+                &#47&#47 see https://github.com/hill-a/stable-baselines/issues/900
+                self._on_step()
+
+                if 0 &lt; n_steps &lt;= total_steps:
+                    break
+
+            if done:
+                total_episodes += 1
+                self._episode_num += 1
+                episode_rewards.append(episode_reward)
+                total_timesteps.append(episode_timesteps)
+
+                if action_noise is not None:
+                    action_noise.reset()
+
+                &#47&#47 Log training infos
+                if log_interval is not None and self._episode_num % log_interval == 0:
+                    self._dump_logs()
+
+        mean_reward = np.mean(episode_rewards) if total_episodes &gt; 0 else 0.0
+
+        callback.on_rollout_end()
+
+        <a id="change">return </a><a id="change">RolloutReturn(</a>mean_reward, total_steps, <a id="change">total_episodes</a>, continue_training<a id="change">)</a>
+</code></pre><h3>After Change</h3><pre><code class='java'>
+                &#47&#47 see https://github.com/hill-a/stable-baselines/issues/900
+                self._on_step()
+
+                <a id="change">if </a>not should_collect_more_steps(train_freq, num_collected_steps, num_collected_episodes):
+                    break
+
+            if done:</code></pre>

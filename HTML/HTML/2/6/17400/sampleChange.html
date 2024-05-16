@@ -1,0 +1,41 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        step_duration = self.pipeline.config.step
+        sample_rate = self.pipeline.config.sample_rate
+
+        operators<a id="change"> = </a>[]
+
+        &#47&#47 Dynamic resampling if the audio source isn&quott compatible
+        if sample_rate != source.sample_rate:
+            msg = f"Audio source has sample rate {source.sample_rate}, " \
+                  f"but pipeline&quots is {sample_rate}. Will resample."
+            logging.warning(msg)
+            operators.append(ops.map(Resample(source.sample_rate, sample_rate)))
+
+        &#47&#47 Estimate the total number of chunks that the source will emit
+        self.num_chunks = None
+        if source.duration is not None:
+            numerator = source.duration - chunk_duration + step_duration
+            self.num_chunks = int(np.ceil(numerator / step_duration))
+
+        &#47&#47 Add rx operators to manage the inputs and outputs of the pipeline
+        operators<a id="change"> += </a><a id="change">[
+            </a>dops.rearrange_audio_stream(chunk_duration, step_duration, sample_rate),
+            ops.buffer_with_count(count=self.batch_size),
+            ops.map(pipeline),
+            ops.flat_map(lambda results: rx.from_iterable(results)),
+            ops.do(self.accumulator)<a id="change"></a>,
+        ]
+
+        &#47&#47 Show progress if required</code></pre><h3>After Change</h3><pre><code class='java'>
+            unit = "chunk" if batch_size == 1 else "batch"
+            self.stream = dops.profile(self.stream, [ops.map(pipeline)], unit)
+        else:
+            self.stream<a id="change"> = </a>self.stream.pipe(<a id="change">ops.map(</a>pipeline<a id="change">)</a>)
+
+        self.stream<a id="change"> = </a>self.stream.pipe(
+            ops.flat_map(lambda results: rx.from_iterable(results)),
+            ops.do(self.accumulator),
+        )</code></pre>

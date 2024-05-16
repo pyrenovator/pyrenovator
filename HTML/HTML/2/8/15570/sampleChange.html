@@ -1,0 +1,47 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    def load_state_dict_pre_hook(module, state_dict, *args, **kwargs):
+        Redirect input state_dict to model for OTE model compatibility
+        
+        <a id="change">logger.info(&quot----------------- SAMImageClassifier.load_state_dict_pre_hook() called&quot</a><a id="change">)</a>
+        if type(module.backbone).__name__ == &quotOTEMobileNetV3&quot:
+            for k in list(state_dict.keys()):
+                v = state_dict.pop(k)
+                if k.startswith(&quotclassifier.&quot) or k.startswith(&quothead.classifier&quot):</code></pre><h3>After Change</h3><pre><code class='java'>
+    def load_state_dict_pre_hook(module, state_dict, *args, **kwargs):
+        Redirect input state_dict to model for OTE model compatibility
+        
+        backbone_type<a id="change"> = </a>type(module.backbone).__name__
+        <a id="change">if backbone_type not in [&quotOTEMobileNetV3&quot, &quotOTEEfficientNet&quot, &quotOTEEfficientNetV2&quot]</a>:
+            <a id="change">return</a>
+
+        if backbone_type == &quotOTEMobileNetV3&quot:
+            for k in list(state_dict.keys()):
+                v = state_dict.pop(k)
+                if k.startswith(&quotclassifier.&quot):
+                    k = &quothead.&quot+k.replace(&quot4&quot, &quot3&quot) if &quot4&quot in k else &quothead.&quot+k
+                elif not k.startswith(&quotbackbone.&quot):
+                    k = &quotbackbone.&quot+k
+                state_dict[k] = v
+
+        elif backbone_type == &quotOTEEfficientNet&quot:
+            for k in list(state_dict.keys()):
+                v = state_dict.pop(k)
+                if k.startswith(&quotfeatures.&quot) and &quotactiv&quot not in k:
+                    k = &quotbackbone.&quot+k
+                elif <a id="change"></a>k.startswith(&quotoutput.&quot):
+                    k = k.replace(&quotoutput&quot, &quothead&quot)
+                state_dict[k] = v
+
+        elif backbone_type == &quotOTEEfficientNetV2&quot:
+            for k in list(state_dict.keys()):
+                v = state_dict.pop(k)
+                if k.startswith(&quotmodel.classifier&quot):
+                    k = k.replace(&quotmodel.classifier&quot, &quothead.fc&quot)
+                    v = v.t()
+                elif <a id="change"></a>k.startswith(&quotmodel&quot):
+                    k = &quotbackbone.&quot+k
+                state_dict[k] = v
+        else:</code></pre>

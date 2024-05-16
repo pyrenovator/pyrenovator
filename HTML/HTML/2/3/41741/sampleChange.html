@@ -1,0 +1,19 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        key_dim = make_divisible(cc * key_dim, divisor=8) // num_heads  &#47&#47 regard as key_dim_ratio
+    else:
+        key_dim = cc // num_heads  &#47&#47 Default value
+    qk_scale = float(1.0<a id="change"> / </a>tf.math.sqrt(<a id="change">tf.cast(</a>key_dim, "float32"<a id="change">)</a>))
+    out_shape = cc if out_shape is None else out_shape
+    emb_dim = num_heads * key_dim
+    kv_kernel = block_size + halo_size * 2</code></pre><h3>After Change</h3><pre><code class='java'>
+    &#47&#47 print(f"&gt;&gt;&gt;&gt; {attn_query.shape = }, {key.shape = }, {value.shape = }, {kv_inp.shape = }, {pos_query.shape = }, {num_heads = }")
+    &#47&#47 attention_scores = [batch, num_heads, hh, ww, query_block * query_block, kv_kernel * kv_kernel]
+    &#47&#47 attention_scores = layers.Lambda(lambda xx: functional.matmul(xx[0], xx[1], transpose_b=True))([attn_query, key])
+    attention_scores = attn_query @ <a id="change">functional.transpose(</a>key, [0, 1, 2, 3, 5, 4]<a id="change">)</a>
+    &#47&#47 pos = [batch, num_heads * hh * ww, query_block, query_block, kv_kernel, kv_kernel]
+    pos = RelativePositionalEmbedding(position_height=kv_kernel, name=name and name + "pos_emb")(pos_query)
+    &#47&#47 print(f"&gt;&gt;&gt;&gt; {pos.shape = }, {attention_scores.shape = }")
+    pos = functional.reshape(pos, [-1, *attention_scores.shape[1:]])</code></pre>

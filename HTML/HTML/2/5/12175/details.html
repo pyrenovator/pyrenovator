@@ -1,0 +1,142 @@
+<html><h3>Pattern ID :12175
+</h3><img src='41150211.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            alpha2Hx = (alpha * 2.0) * H * ctx.x  &#47&#47 componentwise product
+            A_grad -= ctx.A_val * alpha2Hx[:, ctx.A_col_ind.type(torch.long)]
+
+        <a id="change">return </a>A_grad, AH, None, None, None, None, None, None
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        batch_size = grad_output.shape[0]
+
+        H = grad_output.clone()
+        H_double = <a id="change">H.double()</a>
+        ctx.numeric_decomposition.solve(H_double)  &#47&#47 solve in place
+
+        A_args = (
+            ctx.sparse_structure.num_cols,
+            ctx.A_row_ptr,
+            ctx.A_col_ind,
+            ctx.A_val_double,
+        )
+        AH = mat_vec(batch_size, *A_args, H_double)
+        b_Ax = ctx.b - mat_vec(batch_size, *A_args, ctx.x)
+
+        &#47&#47 now we fill values of a matrix with structure identical to A with
+        &#47&#47 selected entries from the difference of tensor products:
+        &#47&#47   b_Ax (X) H - AH (X) x
+        &#47&#47 NOTE: this row-wise manipulation can be much faster in C++ or Cython
+        A_col_ind = ctx.sparse_structure.col_ind
+        A_row_ptr = ctx.sparse_structure.row_ptr
+        batch_size = grad_output.shape[0]
+        A_grad = torch.empty(
+            size=(batch_size, len(A_col_ind)),
+            dtype=torch.double,
+            device=grad_output.device,
+        )  &#47&#47 return value, A&quots grad
+        for r in range(len(A_row_ptr) - 1):
+            start, end = A_row_ptr[r], A_row_ptr[r + 1]
+            columns = A_col_ind[start:end]  &#47&#47 col indices, for this row
+            A_grad[:, start:end] = (
+                b_Ax[:, r].unsqueeze(1) * H_double[:, columns]
+                - AH[:, r].unsqueeze(1) * ctx.x[:, columns]
+            )
+
+        &#47&#47 apply correction if there is a multiplicative damping
+        if (
+            ctx.damping_alpha_beta is not None
+            and (ctx.damping_alpha_beta[0] &gt; 0.0).any()
+        ):
+            alpha = ctx.damping_alpha_beta[0].view(-1, 1)
+            alpha2Hx = (alpha * 2.0) * H_double * ctx.x  &#47&#47 componentwise product
+            A_grad -= ctx.A_val_double * alpha2Hx[:, ctx.A_col_ind.type(torch.long)]
+
+        <a id="change">return </a>(
+            A_grad.to(dtype=grad_output.dtype)<a id="change">,
+            AH.to(dtype=grad_output.dtype),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None</a>,
+        )
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 5</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/facebookresearch/theseus/commit/f2748febd469fbd1287bfde54d9213b84de756f3#diff-60ea285ddf32665abf1b445d01d61c251ba77cee5613c7274a5b97f6dd76da4dL114' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 41150211</div><div id='project'> Project Name: facebookresearch/theseus</div><div id='commit'> Commit Name: f2748febd469fbd1287bfde54d9213b84de756f3</div><div id='time'> Time: 2022-12-08</div><div id='author'> Author: 4759586+luisenp@users.noreply.github.com</div><div id='file'> File Name: theseus/optimizer/autograd/baspacho_sparse_autograd.py</div><div id='m_class'> M Class Name: BaspachoSolveFunction</div><div id='n_method'> N Class Name: BaspachoSolveFunction</div><div id='m_method'> M Method Name: backward(2)</div><div id='n_method'> N Method Name: backward(2)</div><div id='m_parent_class'> M Parent Class: torch.autograd.Function</div><div id='n_parent_class'> N Parent Class: torch.autograd.Function</div><div id='m_file'> M File Name: theseus/optimizer/autograd/baspacho_sparse_autograd.py</div><div id='n_file'> N File Name: theseus/optimizer/autograd/baspacho_sparse_autograd.py</div><div id='m_start'> M Start Line: 114</div><div id='m_end'> M End Line: 150</div><div id='n_start'> N Start Line: 117</div><div id='n_end'> N End Line: 168</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            alpha2Hx = (alpha * 2.0) * H * ctx.x  &#47&#47 componentwise product
+            A_grad -= ctx.A_val * alpha2Hx[:, ctx.A_col_ind.type(torch.long)]
+
+        <a id="change">return </a>A_grad, AH, None, None, None, None, None, None
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        batch_size = grad_output.shape[0]
+
+        H = grad_output.clone()
+        H_double = <a id="change">H.double()</a>
+        ctx.solver_context.solve(H_double)  &#47&#47 solve in place
+
+        A_args = (
+            ctx.sparse_structure.num_cols,
+            ctx.A_row_ptr,
+            ctx.A_col_ind,
+            ctx.A_val_double,
+        )
+        AH = mat_vec(batch_size, *A_args, H_double)
+        b_Ax = ctx.b - mat_vec(batch_size, *A_args, ctx.x)
+
+        &#47&#47 now we fill values of a matrix with structure identical to A with
+        &#47&#47 selected entries from the difference of tensor products:
+        &#47&#47   b_Ax (X) H - AH (X) x
+        &#47&#47 NOTE: this row-wise manipulation can be much faster in C++ or Cython
+        A_col_ind = ctx.sparse_structure.col_ind
+        A_row_ptr = ctx.sparse_structure.row_ptr
+        batch_size = grad_output.shape[0]
+        A_grad = torch.empty(
+            size=(batch_size, len(A_col_ind)), dtype=torch.double, device="cuda"
+        )  &#47&#47 return value, A&quots grad
+        for r in range(len(A_row_ptr) - 1):
+            start, end = A_row_ptr[r], A_row_ptr[r + 1]
+            columns = A_col_ind[start:end]  &#47&#47 col indices, for this row
+            A_grad[:, start:end] = (
+                b_Ax[:, r].unsqueeze(1) * H_double[:, columns]
+                - AH[:, r].unsqueeze(1) * ctx.x[:, columns]
+            )
+
+        &#47&#47 apply correction if there is a multiplicative damping
+        if (
+            ctx.damping_alpha_beta is not None
+            and (ctx.damping_alpha_beta[0] &gt; 0.0).any()
+        ):
+            alpha = ctx.damping_alpha_beta[0].view(-1, 1)
+            alpha2Hx = (alpha * 2.0) * H_double * ctx.x  &#47&#47 componentwise product
+            A_grad -= (
+                ctx.A_val_double.to(grad_output.dtype)
+                * alpha2Hx[:, ctx.A_col_ind.type(torch.long)]
+            )
+
+        <a id="change">return </a>(
+            <a id="change">A_grad.to(dtype=grad_output.dtype),
+            AH.to(dtype=grad_output.dtype),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None</a>,
+        )
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/facebookresearch/theseus/commit/f2748febd469fbd1287bfde54d9213b84de756f3#diff-69f2100fbaed4dc21b13b12f5990f5b34eeb26adfec87de4a45385a21b0aa061L126' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 41150214</div><div id='project'> Project Name: facebookresearch/theseus</div><div id='commit'> Commit Name: f2748febd469fbd1287bfde54d9213b84de756f3</div><div id='time'> Time: 2022-12-08</div><div id='author'> Author: 4759586+luisenp@users.noreply.github.com</div><div id='file'> File Name: theseus/optimizer/autograd/lu_cuda_sparse_autograd.py</div><div id='m_class'> M Class Name: LUCudaSolveFunction</div><div id='n_method'> N Class Name: LUCudaSolveFunction</div><div id='m_method'> M Method Name: backward(2)</div><div id='n_method'> N Method Name: backward(2)</div><div id='m_parent_class'> M Parent Class: torch.autograd.Function</div><div id='n_parent_class'> N Parent Class: torch.autograd.Function</div><div id='m_file'> M File Name: theseus/optimizer/autograd/lu_cuda_sparse_autograd.py</div><div id='n_file'> N File Name: theseus/optimizer/autograd/lu_cuda_sparse_autograd.py</div><div id='m_start'> M Start Line: 151</div><div id='m_end'> M End Line: 185</div><div id='n_start'> N Start Line: 152</div><div id='n_end'> N End Line: 204</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        context_in[torch.arange(B)[:, None, None],
+                   torch.arange(H)[None, :, None],
+                   index, :] = torch.matmul(attn, V)
+        <a id="change">return </a>context_in
+
+    def forward(self, queries, keys, values, attn_mask):
+        B, L, H, D = queries.shape</code></pre><h3>After Change</h3><pre><code class='java'>
+                   torch.arange(H)[None, :, None],
+                   index, :] = torch.matmul(attn, V)
+        if self.output_attention:
+            attns = <a id="change">(torch.ones([B, H, L_V, L_V])/L_V).double().to(</a>attn.device<a id="change">)</a>
+            attns[torch.arange(B)[:, None, None], torch.arange(H)[None, :, None], index, :] = attn
+            <a id="change">return </a>(context_in<a id="change">, attns</a>)
+        else:
+            return (context_in, None)
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/zhouhaoyi/informer2020/commit/f55a50eec7349931e9482515d1217bb8417b0158#diff-5a4c62511bcb230aabde06b4492839a39912e40a36708e5552a50c7e943073b6L75' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 41150212</div><div id='project'> Project Name: zhouhaoyi/informer2020</div><div id='commit'> Commit Name: f55a50eec7349931e9482515d1217bb8417b0158</div><div id='time'> Time: 2021-02-19</div><div id='author'> Author: 1095715895@qq.com</div><div id='file'> File Name: models/attn.py</div><div id='m_class'> M Class Name: ProbAttention</div><div id='n_method'> N Class Name: ProbAttention</div><div id='m_method'> M Method Name: _update_context(7)</div><div id='n_method'> N Method Name: _update_context(7)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: models/attn.py</div><div id='n_file'> N File Name: models/attn.py</div><div id='m_start'> M Start Line: 84</div><div id='m_end'> M End Line: 87</div><div id='n_start'> N Start Line: 88</div><div id='n_end'> N End Line: 100</div><BR>

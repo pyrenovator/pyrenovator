@@ -1,0 +1,48 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        Then, repeatedly put each document from the processed batch in the push queue
+        
+        while self.transform_count &lt;= self.ndocs and not self.timeout_event.is_set():
+            <a id="change">with self</a><a id="change">.transform_batch_lock:
+                </a>batch = self._get_transform_batch()
+
+            if self.func is not None:
+                old_batch = deepcopy(batch)</code></pre><h3>After Change</h3><pre><code class='java'>
+        
+        while self.transform_count &lt; self.ndocs and not self.timeout_event.is_set():
+            batch = self._get_transform_batch()
+            <a id="change">if </a>not batch:
+                continue
+
+            <a id="change">try:
+                </a>if self.func is not None:
+                    old_batch = deepcopy(batch)
+
+                    if self.func_lock is not None:
+                        with self.func_lock:
+                            new_batch = self.func(
+                                batch,
+                                *self.func_args,
+                                **self.func_kwargs,
+                            )
+                    else:
+                        new_batch = self.func(
+                            batch,
+                            *self.func_args,
+                            **self.func_kwargs,
+                        )
+
+                    batch = PullTransformPush._postprocess(new_batch, old_batch)
+
+                for document in batch:
+                    self.pq.put(document)
+
+            <a id="change">except </a>Exception as e:
+                traceback.print_exc()
+                <a id="change">print(</a>e<a id="change">)</a>
+
+            self.transform_bar.update(len(batch))
+            self.transform_count += len(batch)
+</code></pre>

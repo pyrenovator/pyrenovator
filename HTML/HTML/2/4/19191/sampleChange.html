@@ -1,0 +1,41 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+&#47&#47  Hyperopt training function
+def hyper_objective(learning_rate):
+    torch_model<a id="change"> = </a>train(learning_rate)
+    pred_df = torch_model.transform(test_df)
+    argmax = udf(lambda v: float(np.argmax(v)), returnType=T.DoubleType())
+    pred_df = pred_df.withColumn(&quotlabel_pred&quot, argmax(pred_df.label_prob))
+    evaluator = MulticlassClassificationEvaluator(predictionCol=&quotlabel_pred&quot, labelCol=&quotlabel&quot, metricName=&quotaccuracy&quot)
+    accuracy = evaluator.evaluate(pred_df)
+    print(&quotTest accuracy:&quot, accuracy)
+
+    with mlflow.start_run():
+      mlflow.log_metric("learning_rate", learning_rate)
+      <a id="change">mlflow.log_metric(</a>"loss", 1-accuracy<a id="change">)</a>
+    return {&quotloss&quot: 1-accuracy, &quotstatus&quot: STATUS_OK}
+
+
+&#47&#47 Do a super parameter tuning with hyperopt</code></pre><h3>After Change</h3><pre><code class='java'>
+
+def hyper_objective(learning_rate):
+    with mlflow.start_run():
+        model<a id="change"> = </a>train(learning_rate)
+
+        &#47&#47 Write checkpoint
+        meta = {
+            &quotinput_shapes&quot: model.getInputShapes(),
+            &quotmetadata&quot: model._get_metadata(),
+        }
+        save_checkpoint(checkpoint_dir, model.getModel(), None, learning_rate, meta)
+
+        test_loss = test_model(model)
+        mlflow.log_metric("learning_rate", learning_rate)
+        <a id="change">mlflow.log_metric(</a>"loss", test_loss<a id="change">)</a>
+    return {&quotloss&quot: test_loss, &quotstatus&quot: STATUS_OK}
+
+
+&#47&#47 Do a super parameter tuning with hyperopt</code></pre>

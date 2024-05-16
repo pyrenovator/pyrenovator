@@ -1,0 +1,95 @@
+<html><h3>Pattern ID :11023
+</h3><img src='37937667.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+        &#47&#47 numerical crimes follow
+        &#47&#47 q = b ** -x_
+        q<a id="change"> = </a>x_.exp()
+        sd = s*d
+        &#47&#47 bdp, bdm = b**d, b**-d
+        sdm, sdp = (-sd).exp(), sd.exp()
+        &#47&#47 &#47&#47 censoring
+        lo_cens = x &lt;= self.lo
+        hi_cens = x &gt;= self.hi
+        ones = torch.ones_like(q)
+        zeros = torch.zeros_like(q)
+
+        diff_term = torch.where(
+            lo_cens | hi_cens, ones, sdp - sdm).log()
+        &#47&#47 sdm_term = torch.where(
+        &#47&#47     hi_cens, ones, (q + sdm)).log()
+        sdm_term = torch.where(hi_cens, zeros, x_ + F.softplus(-sd-x_))
+        &#47&#47 sdp_term = torch.where(
+        &#47&#47     lo_cens, ones, (q + sdp)).log()
+        sdp_term = torch.where(lo_cens, zeros, x_ + F.softplus(sd-x_))
+        x_or_sd<a id="change"> = </a><a id="change">torch.where(</a>hi_cens, sd, x_<a id="change">)</a>
+
+        log_delta_cdf = (
+            x_or_sd + diff_term -<a id="change"> sdm_term - </a>sdp_term
+        )
+    
+        &#47&#47 log prob</code></pre><h3>After Change</h3><pre><code class='java'>
+            r |= {
+                &#47&#47 &quotmin_sharpness&quot: s.min(),
+                &quotmax_sharpness&quot: s.max(),
+                &quotmean_sharpness&quot: (s<a id="change">*</a><a id="change">log_pi.exp()</a>).sum(-1).mean(),
+                &#47&#47 &quotmin_entropy&quot: ent.min(),
+                &#47&#47 &quotmax_entropy&quot: ent.max(),
+                &quotmean_cmp_entropy&quot: ent.mean(),</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 6</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/intelligent-instruments-lab/iil-python-tools/commit/3cfb0feff3aa13a704a8a16302c1d7bbde37807f#diff-fdebb209d61f0b27525d808f0d35a76b67fc68369026b191e1046c52821c93b6L53' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 37937667</div><div id='project'> Project Name: intelligent-instruments-lab/iil-python-tools</div><div id='commit'> Commit Name: 3cfb0feff3aa13a704a8a16302c1d7bbde37807f</div><div id='time'> Time: 2022-03-17</div><div id='author'> Author: victor.shepardson@gmail.com</div><div id='file'> File Name: notepredictor/notepredictor/distributions.py</div><div id='m_class'> M Class Name: CensoredMixtureLogistic</div><div id='n_method'> N Class Name: CensoredMixtureLogistic</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: notepredictor/notepredictor/distributions.py</div><div id='n_file'> N File Name: notepredictor/notepredictor/distributions.py</div><div id='m_start'> M Start Line: 53</div><div id='m_end'> M End Line: 99</div><div id='n_start'> N Start Line: 54</div><div id='n_end'> N End Line: 86</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        colour = "green"
+
+    &#47&#47 handle outliers
+    weighted_segments<a id="change"> = </a><a id="change">np.where(</a>weighted_segments &gt; 1.0, 1, weighted_segments<a id="change">)</a>
+    weighted_segments = np.where(weighted_segments &lt; -1.0, -1, weighted_segments)
+    &#47&#47 normalize coefficients: coefficient_i ∈ [0.0, 1.0]
+    n_weighted_segments = (weighted_segments - weighted_segments.min()) / (
+            weighted_segments.max()<a id="change"> - </a>weighted_segments.min())
+
+    &#47&#47 check if volume is bigger than the amount of segments
+    max_volume = len(np.unique(segment_mask))</code></pre><h3>After Change</h3><pre><code class='java'>
+    n_weighted_segments = (weighted_segments - weighted_segments.min()) / (
+            weighted_segments.max() - weighted_segments.min())
+    
+    n_weighted_segments = 1/(1+<a id="change">np.exp(</a>-weighted_segments<a id="change">)</a>)
+
+    &#47&#47 check if volume is bigger than the amount of segments
+    max_volume = len(np.unique(segment_mask))
+    if volume &gt; max_volume:
+        volume = max_volume
+
+    &#47&#47 differentiate n_weighted_segments with respect to threshold and volume
+    &#47&#47 values less than max(limit, threshold) are set to 0
+    limit = np.sort(np.unique(n_weighted_segments))[-volume]
+    n_d_weighted_segments = np.where(n_weighted_segments &gt;= max(limit, threshold), n_weighted_segments,
+                                     0)
+    &#47&#47 manipulate the original image (quick and dirty)
+    c = np.array(colours[colour])
+    image_c<a id="change"> = </a>image.copy()
+    indices = np.argwhere(n_d_weighted_segments != 0)
+    for i, row in enumerate(segment_mask):
+        for j, el in enumerate(row):
+            if el in indices:
+                image_c[i, j] = ((round(n_d_weighted_segments[el], 1) * c / 127.5) - 1)
+
+    return image_c<a id="change"> * </a>transparency + image * (1-transparency)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/xai-demonstrator/xai-demonstrator/commit/4bfcb4fe8565c240b9485a44a437a8acd2d3be07#diff-253c689ec685aff67cbcff384ccecefc30caeec1d419b5ded83631135d42eb34L141' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 37937669</div><div id='project'> Project Name: xai-demonstrator/xai-demonstrator</div><div id='commit'> Commit Name: 4bfcb4fe8565c240b9485a44a437a8acd2d3be07</div><div id='time'> Time: 2022-02-05</div><div id='author'> Author: mat.nase@web.de</div><div id='file'> File Name: guess-the-country/country-backend/country/explainer/new_lime_.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: generate_visual_explanation(7)</div><div id='n_method'> N Method Name: generate_visual_explanation(6)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: guess-the-country/country-backend/country/explainer/new_lime_.py</div><div id='n_file'> N File Name: guess-the-country/country-backend/country/explainer/new_lime_.py</div><div id='m_start'> M Start Line: 163</div><div id='m_end'> M End Line: 189</div><div id='n_start'> N Start Line: 144</div><div id='n_end'> N End Line: 194</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        magnitude = torch.sqrt(real**2 + imag**2)
+        output_magnitude = magnitude + self.bias
+        ratio = output_magnitude / (magnitude + self.eps)
+        ratio<a id="change"> = </a><a id="change">torch.where(</a>output_magnitude &gt;= 0, ratio, torch.zeros_like(magnitude)<a id="change">)</a>
+        real, imag = ratio<a id="change"> * </a>real, ratio * imag
+        output = torch.cat([real, imag], dim=1)
+        
+        return output</code></pre><h3>After Change</h3><pre><code class='java'>
+        if not is_complex:
+            input = torch.view_as_complex(input)
+        
+        magnitude<a id="change"> = </a>torch.abs(input)
+        angle = torch.angle(input)
+        magnitude = F.relu(magnitude + self.bias.unsqueeze(dim=-1))
+        output = magnitude<a id="change"> * </a><a id="change">torch.exp(</a>1j * angle<a id="change">)</a>
+        
+        if not is_complex:
+            output = torch.view_as_real(output)
+        </code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/tky823/dnn-based_source_separation/commit/4663266b4fc0a2328bdc62039fb64bdb0beedbf3#diff-d2a1aeb484b86497f04c4e8890fa4fda7abd429d423b8c7384bf31d50f69c476L30' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 37937673</div><div id='project'> Project Name: tky823/dnn-based_source_separation</div><div id='commit'> Commit Name: 4663266b4fc0a2328bdc62039fb64bdb0beedbf3</div><div id='time'> Time: 2021-11-17</div><div id='author'> Author: delta9guitar97@gmail.com</div><div id='file'> File Name: src/activation.py</div><div id='m_class'> M Class Name: ModReLU1d</div><div id='n_method'> N Class Name: ModReLU1d</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: src/activation.py</div><div id='n_file'> N File Name: src/activation.py</div><div id='m_start'> M Start Line: 31</div><div id='m_end'> M End Line: 39</div><div id='n_start'> N Start Line: 45</div><div id='n_end'> N End Line: 58</div><BR>

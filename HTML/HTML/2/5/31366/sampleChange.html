@@ -1,0 +1,56 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        gold = {"heads": annot["heads"], "deps": annot["deps"]}
+        doc[0].dep_ = "compound"
+        example = Example.from_dict(doc, gold)
+        <a id="change">scorer.score(</a>example<a id="change">)</a>
+    results = scorer.scores
+
+    assert results["uas"] == 100
+    assert_almost_equal(results["las"], 90.9090909)</code></pre><h3>After Change</h3><pre><code class='java'>
+def test_las_per_type(en_vocab):
+    &#47&#47 Gold and Doc are identical
+    scorer = Scorer()
+    examples<a id="change"> = </a><a id="change">[]</a>
+    for input_, annot in test_las_apple:
+        doc = get_doc(
+            en_vocab,
+            words=input_.split(" "),
+            heads=([h - i for i, h in enumerate(annot["heads"])]),
+            deps=annot["deps"],
+        )
+        gold = {"heads": annot["heads"], "deps": annot["deps"]}
+        example = Example.from_dict(doc, gold)
+        examples.append(example)
+    results = scorer.score(examples)
+
+    assert results["dep_uas"] == 1.0
+    assert results["dep_las"] == 1.0
+    assert results["dep_las_per_type"]["nsubj"]["p"] == 1.0
+    assert results["dep_las_per_type"]["nsubj"]["r"] == 1.0
+    assert results["dep_las_per_type"]["nsubj"]["f"] == 1.0
+    assert results["dep_las_per_type"]["compound"]["p"] == 1.0
+    assert results["dep_las_per_type"]["compound"]["r"] == 1.0
+    assert results["dep_las_per_type"]["compound"]["f"] == 1.0
+
+    &#47&#47 One dep is incorrect in Doc
+    scorer = Scorer()
+    examples = []
+    for input_, annot in test_las_apple:
+        doc = get_doc(
+            en_vocab,
+            words=input_.split(" "),
+            heads=([h - i for i, h in enumerate(annot["heads"])]),
+            deps=annot["deps"],
+        )
+        gold = {"heads": annot["heads"], "deps": annot["deps"]}
+        doc[0].dep_ = "compound"
+        example = Example.from_dict(doc, gold)
+        examples.append(example)
+    results<a id="change"> = </a><a id="change">scorer.score(</a>examples<a id="change">)</a>
+
+    assert results["dep_uas"] == 1.0
+    assert_almost_equal(results["dep_las"], 0.9090909)
+    assert results["dep_las_per_type"]["nsubj"]["p"] == 0</code></pre>

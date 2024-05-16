@@ -1,0 +1,54 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 classification loss in m selected candidates
+        _, indices = tar_candit_prob.topk(self.M, dim=1)
+        batch_idx = torch.vstack([torch.arange(0, batch_size, device=self.device) for _ in range(self.M)]).T
+        tar_pred_prob_selected = <a id="change">F.normalize(</a>tar_candit_prob[batch_idx, indices]<a id="change">, dim=-1)</a>
+        candidate_gt_selected = candidate_gt[batch_idx, indices]
+        m_candidate_loss<a id="change"> = F.binary_cross_entropy(</a>tar_pred_prob_selected, candidate_gt_selected<a id="change">, reduction=reduction)</a>
+
+        &#47&#47 pred offset and compute regression loss
+        feat_in_reg = torch.cat([feat_in, tar_candidate[candidate_gt.bool()]], dim=1)  &#47&#47 [batch_size, feat_dim + 2]
+        tar_offset_mean = self.mean_mlp(feat_in_reg)                                   &#47&#47 [batch_size, 2]
+        offset_loss = F.smooth_l1_loss(tar_offset_mean, offset_gt, reduction=reduction)
+
+        &#47&#47 ====================================== DEBUG ====================================== &#47&#47
+        &#47&#47 &#47&#47 select the M output and check corresponding gt
+        &#47&#47 _, indices = tar_candit_prob.topk(self.M, dim=1)
+        &#47&#47 batch_idx = torch.vstack([torch.arange(0, batch_size, device=self.device) for _ in range(self.M)]).T
+        &#47&#47 tar_pred_prob_selected = F.normalize(tar_candit_prob[batch_idx, indices], dim=-1)
+        &#47&#47 tar_pred_selected = tar_candidate[batch_idx, indices]
+        &#47&#47 candidate_gt_selected = candidate_gt[batch_idx, indices]
+        &#47&#47
+        &#47&#47 tar_candit_prob_cpu = tar_pred_prob_selected.detach().cpu().numpy()
+        &#47&#47 candidate_gt_cpu = candidate_gt_selected.detach().cpu().numpy()
+        &#47&#47
+        &#47&#47 print("\n[DEBUG]: tar_pred_prob_selected: \n{};\n[DEBUG]: candidate_gt_selected: \n{};".format(tar_candit_prob_cpu,
+        &#47&#47                                                                                                candidate_gt_cpu))
+        &#47&#47 print("[DEBUG]: tar_pred_selected: \n{};\n[DEBUG]: tar_gt: \n{};".format(tar_pred_selected.detach().cpu().numpy(),
+        &#47&#47                                                                          tar_candidate[candidate_gt.bool()].detach().cpu().numpy()))
+        &#47&#47 &#47&#47 check offset
+        &#47&#47 tar_offset_mean_cpu = tar_offset_mean.detach().cpu().numpy()
+        &#47&#47 offset_gt_cpu = offset_gt.detach().cpu().numpy()
+        &#47&#47 print("[DEBUG]: tar_offset_mean: {};\n[DEBUG]: offset_gt: {};".format(tar_offset_mean_cpu, offset_gt_cpu))
+        &#47&#47
+        &#47&#47 &#47&#47 check destination
+        &#47&#47 dst_gt = tar_candidate[candidate_gt.bool()] + offset_gt
+        &#47&#47 offset = torch.normal(self.mean_mlp(feat_in_prob), std=1.0)[batch_idx, indices]
+        &#47&#47 dst_pred = tar_pred_selected + offset
+        &#47&#47 print("[DEBUG]: dst_pred: \n{};\n[DEBUG]: dst_gt: \n{};".format(dst_pred.detach().cpu().numpy(),
+        &#47&#47                                                                 dst_gt.detach().cpu().numpy()))
+        &#47&#47 ====================================== DEBUG ====================================== &#47&#47
+        <a id="change">return </a>n_candidate_loss<a id="change"> + m_candidate_loss + </a>offset_loss
+        &#47&#47 return n_candidate_loss + offset_loss
+
+    def inference(self,</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47                                                                 dst_gt.detach().cpu().numpy()))
+        &#47&#47 ====================================== DEBUG ====================================== &#47&#47
+        &#47&#47 return n_candidate_loss + m_candidate_loss + offset_loss, tar_candidate[batch_idx, indices], tar_offset_mean[batch_idx, indices]
+        <a id="change">return </a>n_candidate_loss<a id="change"> + </a>offset_loss, tar_candidate[batch_idx, indices], tar_offset_mean[batch_idx, indices]
+
+    def inference(self,
+                  feat_in: torch.Tensor,</code></pre>

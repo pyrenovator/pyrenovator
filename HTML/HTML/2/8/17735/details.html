@@ -1,0 +1,75 @@
+<html><h3>Pattern ID :17735
+</h3><img src='58417656.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                total_loss += batch_loss.item() * inputs.size(0)
+
+            predicted_probs, predicted = self.get_predicted(outputs)
+            y_pred<a id="change"> = </a>list(<a id="change">predicted.cpu().detach().numpy()</a>)
+            y_true = list(labels.cpu().detach().numpy())
+            self.running_metrics.update(y_true, y_pred)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+            predicted_probs, predicted = self.get_predicted(outputs)
+            &#47&#47 if segmentation reshape the predictions and labels
+            <a id="change">if len(predicted.shape) &gt; 2</a>:
+                predicted<a id="change"> = </a>predicted.T.reshape(predicted.shape[0] * predicted.shape[2] * predicted.shape[3], predicted.shape[1])
+                labels<a id="change"> = </a>labels.T.reshape(labels.shape[0] * labels.shape[2] * labels.shape[3], labels.shape[1])
+            self.running_metrics.update(predicted.type(torch.uint8), labels.type(torch.uint8))
+
+        if criterion:</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 7</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/biasvariancelabs/aitlas/commit/e717447a11e0755178ba0a98c2e0561a98ae8eae#diff-8c90d9e0305520faf5687b35e4d44d83709cb7e5160a7973610665e9a7133487L200' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 58417656</div><div id='project'> Project Name: biasvariancelabs/aitlas</div><div id='commit'> Commit Name: e717447a11e0755178ba0a98c2e0561a98ae8eae</div><div id='time'> Time: 2021-03-07</div><div id='author'> Author: ivica.dimitrovski@gmail.com</div><div id='file'> File Name: aitlas/base/models.py</div><div id='m_class'> M Class Name: BaseModel</div><div id='n_method'> N Class Name: BaseModel</div><div id='m_method'> M Method Name: evaluate_model(4)</div><div id='n_method'> N Method Name: evaluate_model(4)</div><div id='m_parent_class'> M Parent Class: nn.Module,Configurable</div><div id='n_parent_class'> N Parent Class: nn.Module,Configurable</div><div id='m_file'> M File Name: aitlas/base/models.py</div><div id='n_file'> N File Name: aitlas/base/models.py</div><div id='m_start'> M Start Line: 200</div><div id='m_end'> M End Line: 210</div><div id='n_start'> N Start Line: 201</div><div id='n_end'> N End Line: 213</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        pred = torch.ones_like(scores)
+        pred[scores &lt;= .5] = 0
+        y_pred = pred.cpu().numpy().flatten()
+        auc_scores<a id="change"> = </a><a id="change">scores.detach().cpu().numpy()</a>.flatten()
+
+        res = {
+            "accuracy": accuracy_score(y_true, y_pred),</code></pre><h3>After Change</h3><pre><code class='java'>
+            "f1_score": f1_score(y_true, y_pred, zero_division=0)
+        }
+
+        <a id="change">if scores.shape[1] == 2</a>:
+            auc_scores<a id="change"> = </a>scores[:, 1].detach().cpu().numpy().flatten()
+            if len(set(y_true)) == 2:
+                res["auc"] = roc_auc_score(y_true, auc_scores).astype(float)
+            else:
+                res["auc"]<a id="change"> = </a>0.5 &#47&#47TODO: warning
+        return res
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/makgyver/gossipy/commit/31a93a404f8bfba3869c5eb733962a438f4806f0#diff-36e45624fe64c0d02688d4de471bd229b4bba0d9212ce90bec22a3949a0f2f10L90' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 58417688</div><div id='project'> Project Name: makgyver/gossipy</div><div id='commit'> Commit Name: 31a93a404f8bfba3869c5eb733962a438f4806f0</div><div id='time'> Time: 2021-08-29</div><div id='author'> Author: mak1788@gmail.com</div><div id='file'> File Name: gossipy/model/handler.py</div><div id='m_class'> M Class Name: TorchModelHandler</div><div id='n_method'> N Class Name: TorchModelHandler</div><div id='m_method'> M Method Name: evaluate(2)</div><div id='n_method'> N Method Name: evaluate(2)</div><div id='m_parent_class'> M Parent Class: ModelHandler</div><div id='n_parent_class'> N Parent Class: ModelHandler</div><div id='m_file'> M File Name: gossipy/model/handler.py</div><div id='n_file'> N File Name: gossipy/model/handler.py</div><div id='m_start'> M Start Line: 93</div><div id='m_end'> M End Line: 103</div><div id='n_start'> N Start Line: 99</div><div id='n_end'> N End Line: 123</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        
+        Converts indices to string labels, and adds a `"label"` key to the result.
+        
+        predictions = <a id="change">output_dict["probs"].cpu().data.numpy()</a>
+        argmax_indices<a id="change"> = </a>numpy.argmax(predictions, axis=-1)
+        labels = [self.vocab.get_token_from_index(x, namespace="labels") for x in argmax_indices]
+        output_dict["label"] = labels
+        return output_dict</code></pre><h3>After Change</h3><pre><code class='java'>
+        add `"label"` key to the dictionary with the result.
+        
+        predictions = output_dict["label_probs"]
+        <a id="change">if predictions.dim() == 2</a>:
+            predictions_list<a id="change"> = </a>[predictions[i] for i in range(predictions.shape[0])]
+        else:
+            predictions_list<a id="change"> = </a>[predictions]
+        classes = []
+        for prediction in predictions_list:
+            label_idx = prediction.argmax(dim=-1).item()</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/allenai/allennlp-models/commit/4b1392424079e79a39dec47c72aefed412bec3fd#diff-a96cfab49c3f3818690a079f3e94114d709b21fb450d9aac5f5cd24663593dabL230' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 58417692</div><div id='project'> Project Name: allenai/allennlp-models</div><div id='commit'> Commit Name: 4b1392424079e79a39dec47c72aefed412bec3fd</div><div id='time'> Time: 2021-04-01</div><div id='author'> Author: nelson-liu@users.noreply.github.com</div><div id='file'> File Name: allennlp_models/pair_classification/models/bimpm.py</div><div id='m_class'> M Class Name: BiMpm</div><div id='n_method'> N Class Name: BiMpm</div><div id='m_method'> M Method Name: make_output_human_readable(2)</div><div id='n_method'> N Method Name: make_output_human_readable(2)</div><div id='m_parent_class'> M Parent Class: Model</div><div id='n_parent_class'> N Parent Class: Model</div><div id='m_file'> M File Name: allennlp_models/pair_classification/models/bimpm.py</div><div id='n_file'> N File Name: allennlp_models/pair_classification/models/bimpm.py</div><div id='m_start'> M Start Line: 236</div><div id='m_end'> M End Line: 239</div><div id='n_start'> N Start Line: 242</div><div id='n_end'> N End Line: 254</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        y, feature = net(x)
+
+    &#47&#47 make score and link map
+    score_text<a id="change"> = </a><a id="change">y[0,:,:,0].cpu().data.numpy()</a>
+    score_link = y[0,:,:,1].cpu().data.numpy()
+
+    &#47&#47 Post-processing
+    boxes, polys, mapper = getDetBoxes(score_text, score_link, text_threshold, link_threshold, low_text, poly, estimate_num_chars)</code></pre><h3>After Change</h3><pre><code class='java'>
+    return new_state_dict
+
+def test_net(canvas_size, mag_ratio, net, image, text_threshold, link_threshold, low_text, poly, device, estimate_num_chars=False):
+    <a id="change">if </a>isinstance(image, np.ndarray) and <a id="change">len(image.shape) == 4</a>:  &#47&#47 image is batch of np arrays
+        image_arrs<a id="change"> = </a>image
+    else:                                                        &#47&#47 image is single numpy array
+        image_arrs<a id="change"> = </a>[image]
+
+    img_resized_list = []
+    &#47&#47 resize</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/jaidedai/easyocr/commit/78be56f87d091dfcea6d2289948fc86cc7188cf7#diff-d1923068b4a3834cfd4a66d8427816480985cf6c87ad09ce919ad9128500a255L24' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 58417650</div><div id='project'> Project Name: jaidedai/easyocr</div><div id='commit'> Commit Name: 78be56f87d091dfcea6d2289948fc86cc7188cf7</div><div id='time'> Time: 2021-06-12</div><div id='author'> Author: samhunsadamant@gmail.com</div><div id='file'> File Name: easyocr/detection.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: test_net(10)</div><div id='n_method'> N Method Name: test_net(10)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: easyocr/detection.py</div><div id='n_file'> N File Name: easyocr/detection.py</div><div id='m_start'> M Start Line: 26</div><div id='m_end'> M End Line: 58</div><div id='n_start'> N Start Line: 25</div><div id='n_end'> N End Line: 71</div><BR>

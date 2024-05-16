@@ -1,0 +1,20 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                point_per_piece = points / max_length if max_length &gt; 0 else 0.0
+                batch_size = request.tensors[0].size[0] if request.tensors else 1
+
+                cache_metadata<a id="change"> = </a>torch.tensor(
+                    <a id="change">[[-1, -1, -1] for _ in range(batch_size)]</a>, dtype=torch.int64
+                )  &#47&#47 [cache_handle, rel_index, prefix_length]
+                prefix_length = 0
+</code></pre><h3>After Change</h3><pre><code class='java'>
+                async with self._allocate_cache(requested_backends, batch_size, max_length) as cache_handles:
+                    assert len(cache_handles) == len(requested_backends)
+                    while request.tensors:  &#47&#47 iterate while user is willing to supply tensors
+                        hidden_states, prompts, hypo_ids = <a id="change">map(</a>deserialize_torch_tensor, request.tensors<a id="change">)</a>
+
+                        &#47&#47 Cast inputs to backend dtype
+                        hidden_states = hidden_states.to(requested_backends[0].dtype)
+                        assert hypo_ids.dtype == torch.int64, f"hypo ids must be int64, got {hypo_ids.dtype}"</code></pre>

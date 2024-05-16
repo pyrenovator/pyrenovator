@@ -1,0 +1,32 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    &#47&#47 STEP 5: Define optimizer and lr_scheduler
+    &#47&#47 set lr according to batch size and world size (hacked from official code)
+    linear_scaled_lr = (config.TRAIN.BASE_LR *
+        config.DATA.BATCH_SIZE * <a id="change">dist.get_world_size()</a>)<a id="change"> / </a>512.0
+    linear_scaled_warmup_start_lr = (config.TRAIN.WARMUP_START_LR *
+        config.DATA.BATCH_SIZE * dist.get_world_size()) / 512.0
+    linear_scaled_end_lr = (config.TRAIN.END_LR *</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    &#47&#47 STEP 5: Define optimizer and lr_scheduler
+    &#47&#47 set lr according to batch size and world size (hacked from Swin official code)
+    <a id="change">if config.TRAIN.LINEAR_SCALED_LR is not None</a>:
+        linear_scaled_lr = (
+            config.TRAIN.BASE_LR * config.DATA.BATCH_SIZE) / config.TRAIN.LINEAR_SCALED_LR
+        linear_scaled_warmup_start_lr = (
+            config.TRAIN.WARMUP_START_LR * config.DATA.BATCH_SIZE) / config.TRAIN.LINEAR_SCALED_LR
+        linear_scaled_end_lr = (
+            config.TRAIN.END_LR * config.DATA.BATCH_SIZE) / config.TRAIN.LINEAR_SCALED_LR
+    
+        if config.TRAIN.ACCUM_ITER &gt; 1:
+            linear_scaled_lr = linear_scaled_lr * config.TRAIN.ACCUM_ITER
+            linear_scaled_warmup_start_lr = linear_scaled_warmup_start_lr * config.TRAIN.ACCUM_ITER
+            linear_scaled_end_lr = linear_scaled_end_lr * config.TRAIN.ACCUM_ITER
+        
+        config.TRAIN.BASE_LR = linear_scaled_lr
+        config.TRAIN.WARMUP_START_LR<a id="change"> = </a>linear_scaled_warmup_start_lr
+        config.TRAIN.END_LR = linear_scaled_end_lr
+
+    if config.TRAIN.ACCUM_ITER &gt; 1:</code></pre>

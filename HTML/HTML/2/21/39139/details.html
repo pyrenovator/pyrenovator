@@ -1,0 +1,92 @@
+<html><h3>Pattern ID :39139
+</h3><img src='111336862.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            nn = cmt_block(nn, num_head, sr_ratio, ffn_expansion, activation=activation, drop_rate=block_drop_rate, name=name)
+
+    nn = conv2d_no_bias(nn, 1280, 1, strides=1, name="post_")
+    nn<a id="change"> = </a><a id="change">batchnorm_with_activation(</a>nn<a id="change">, activation=activation, name="post_")</a>
+
+    <a id="change">if num_classes &gt; 0</a>:
+        <a id="change">nn = keras.layers.GlobalAveragePooling2D(name="avg_pool")(</a>nn<a id="change">)</a>
+        &#47&#47 nn = keras.layers.Dense(1280, name="post_dense")(nn)
+        <a id="change">if dropout &gt; 0</a>:
+            nn<a id="change"> = keras.layers.Dropout(dropout)(nn</a><a id="change">)</a>
+        nn<a id="change"> = </a><a id="change">keras.layers.Dense(num_classes, dtype="float32", activation=classifier_activation, name="predictions")(nn</a><a id="change">)</a>
+
+    model = keras.models.Model(inputs, nn, name=model_name)
+    add_pre_post_process(model, rescale_mode="torch")
+    return model</code></pre><h3>After Change</h3><pre><code class='java'>
+            global_block_id += 1
+            nn = cmt_block(nn, num_head, sr_ratio, ffn_expansion, activation=activation, drop_rate=block_drop_rate, name=name)
+
+    nn = <a id="change">output_block(</a>nn, output_num_features, activation, num_classes, dropout, classifier_activation<a id="change">, act_first=True)</a>
+    model = keras.models.Model(inputs, nn, name=model_name)
+    add_pre_post_process(model, rescale_mode="torch")
+    reload_model_weights(model, PRETRAINED_DICT, "cmt", pretrained, MultiHeadRelativePositionalEmbedding)
+    return model</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 16</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/leondgarse/keras_cv_attention_models/commit/9047050ebd6007c33d6f9d8b4b78e6f972aba143#diff-f52477ea03b2a8f18695211ce6217a2ea1e5dd5afaa7adfd75a231c5a04692bcL135' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 111336862</div><div id='project'> Project Name: leondgarse/keras_cv_attention_models</div><div id='commit'> Commit Name: 9047050ebd6007c33d6f9d8b4b78e6f972aba143</div><div id='time'> Time: 2022-03-03</div><div id='author'> Author: leondgarse@gmail.com</div><div id='file'> File Name: keras_cv_attention_models/cmt/cmt.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: CMT(16)</div><div id='n_method'> N Method Name: CMT(15)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: keras_cv_attention_models/cmt/cmt.py</div><div id='n_file'> N File Name: keras_cv_attention_models/cmt/cmt.py</div><div id='m_start'> M Start Line: 153</div><div id='m_end'> M End Line: 165</div><div id='n_start'> N Start Line: 135</div><div id='n_end'> N End Line: 160</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    nn = conv2d_no_bias(inputs, stem_width, 3, strides=2, padding="same", name="stem_1_")
+    nn = batchnorm_with_activation(nn, activation=activation, name="stem_1_")
+    nn = conv2d_no_bias(nn, stem_width, 3, strides=1, padding="same", name="stem_2_")
+    nn<a id="change"> = </a><a id="change">batchnorm_with_activation(</a>nn<a id="change">, activation=activation, name="stem_2_")</a>
+
+     stage [1, 2, 3, 4] 
+    total_blocks = sum(num_blocks)
+    global_block_id = 0
+    for stack_id, (num_block, out_channel, block_type) in enumerate(zip(num_blocks, out_channels, block_types)):
+        is_conv_block = True if block_type[0].lower() == "c" else False
+        stack_se_ratio = se_ratio[stack_id] if isinstance(se_ratio, (list, tuple)) else se_ratio
+        stack_strides = strides[stack_id] if isinstance(strides, (list, tuple)) else strides
+        for block_id in range(num_block):
+            name = "stage_{}_block_{}_".format(stack_id + 1, block_id + 1)
+            stride = stack_strides if block_id == 0 else 1
+            conv_short_cut = True if block_id == 0 else False
+            block_se_ratio = stack_se_ratio[block_id] if isinstance(stack_se_ratio, (list, tuple)) else stack_se_ratio
+            block_drop_rate = drop_connect_rate * global_block_id / total_blocks
+            global_block_id += 1
+            if is_conv_block:
+                nn = res_MBConv(nn, out_channel, conv_short_cut, stride, expansion, block_se_ratio, block_drop_rate, activation=activation, name=name)
+            else:
+                nn = res_mhsa(nn, out_channel, conv_short_cut, stride, head_dimension, block_drop_rate, activation=activation, name=name)
+                nn = res_ffn(nn, expansion=expansion, drop_rate=block_drop_rate, activation=activation, name=name + "ffn_")
+
+    <a id="change">if num_classes &gt; 0</a>:
+        <a id="change">nn = keras.layers.GlobalAveragePooling2D(name="avg_pool")(</a>nn<a id="change">)</a>
+        <a id="change">if drop_rate &gt; 0</a>:
+            nn<a id="change"> = keras.layers.Dropout(drop_rate)(</a>nn<a id="change">)</a>
+        nn<a id="change"> = </a><a id="change">keras.layers.Dense(num_classes, dtype="float32", activation=classifier_activation, name="predictions")(</a>nn<a id="change">)</a>
+
+    model = keras.models.Model(inputs, nn, name=model_name)
+    return model
+</code></pre><h3>After Change</h3><pre><code class='java'>
+                nn = res_mhsa(nn, out_channel, conv_short_cut, stride, head_dimension, block_drop_rate, activation=activation, name=name)
+                nn = res_ffn(nn, expansion=expansion, drop_rate=block_drop_rate, activation=activation, name=name + "ffn_")
+
+    nn = <a id="change">output_block(</a>nn<a id="change">, num_classes=num_classes, drop_rate=drop_rate, classifier_activation=classifier_activation)</a>
+    model = keras.models.Model(inputs, nn, name=model_name)
+    return model
+
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/leondgarse/keras_cv_attention_models/commit/d2bf7528de720b9f01a12c367db19090700a0404#diff-93ecfaca577d52a2659237cd2194089f24ed46627c659ab6c323a696749405deL139' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 111336863</div><div id='project'> Project Name: leondgarse/keras_cv_attention_models</div><div id='commit'> Commit Name: d2bf7528de720b9f01a12c367db19090700a0404</div><div id='time'> Time: 2021-12-27</div><div id='author'> Author: leondgarse@gmail.com</div><div id='file'> File Name: keras_cv_attention_models/coatnet/coatnet.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: CoAtNet(17)</div><div id='n_method'> N Method Name: CoAtNet(17)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: keras_cv_attention_models/coatnet/coatnet.py</div><div id='n_file'> N File Name: keras_cv_attention_models/coatnet/coatnet.py</div><div id='m_start'> M Start Line: 163</div><div id='m_end'> M End Line: 192</div><div id='n_start'> N Start Line: 182</div><div id='n_end'> N End Line: 187</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    if num_features != 0:  &#47&#47 efficientnet like
+        nn = conv2d_no_bias(nn, num_features, 1, strides=1, name="features_")
+        nn<a id="change"> = </a><a id="change">batchnorm_with_activation(</a>nn<a id="change">, activation=activation, name="features_")</a>
+
+    <a id="change">if num_classes &gt; 0</a>:
+        <a id="change">nn = keras.layers.GlobalAveragePooling2D(name="avg_pool")(</a>nn<a id="change">)</a>
+        <a id="change">if drop_rate &gt; 0</a>:
+            nn<a id="change"> = keras.layers.Dropout(drop_rate, name="head_drop")(</a>nn<a id="change">)</a>
+        nn<a id="change"> = </a><a id="change">keras.layers.Dense(num_classes, dtype="float32", activation=classifier_activation, name="predictions")(</a>nn<a id="change">)</a>
+
+    model = keras.models.Model(inputs, nn, name=model_name)
+    return model
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    if preact:  &#47&#47 resnetv2 like
+        nn = batchnorm_with_activation(nn, activation=activation, zero_gamma=False, name="post_")
+
+    nn = <a id="change">output_block(</a>nn, output_num_features, activation, num_classes<a id="change">, drop_rate=drop_rate, classifier_activation=classifier_activation)</a>
+    model = keras.models.Model(inputs, nn, name=model_name)
+    return model
+
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/leondgarse/keras_cv_attention_models/commit/a6b256994deba19f65ec593111c13c3744960557#diff-1f71df69cfd2e478a7dfb4976b2eecc6edb982e949d811902e030615cfa9cf3cL161' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 111336861</div><div id='project'> Project Name: leondgarse/keras_cv_attention_models</div><div id='commit'> Commit Name: a6b256994deba19f65ec593111c13c3744960557</div><div id='time'> Time: 2021-10-13</div><div id='author'> Author: leondgarse@gmail.com</div><div id='file'> File Name: keras_cv_attention_models/aotnet/aotnet.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: AotNet(29)</div><div id='n_method'> N Method Name: AotNet(24)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: keras_cv_attention_models/aotnet/aotnet.py</div><div id='n_file'> N File Name: keras_cv_attention_models/aotnet/aotnet.py</div><div id='m_start'> M Start Line: 169</div><div id='m_end'> M End Line: 226</div><div id='n_start'> N Start Line: 212</div><div id='n_end'> N End Line: 271</div><BR>

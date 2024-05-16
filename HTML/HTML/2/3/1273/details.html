@@ -1,0 +1,51 @@
+<html><h3>Pattern ID :1273
+</h3><img src='6322800.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            sim_matrix = sim_matrix / torch.einsum(&quoti,ju-&gt;iju&quot, z1_abs, z2_abs)
+
+        sim_matrix = torch.exp(sim_matrix / self.tau)  &#47&#47 [batch_size, batch_size, num_conformers]
+        <a id="change">ic(</a>sim_matrix.shape<a id="change">)</a>
+        pos_sim = torch.diagonal(sim_matrix)  &#47&#47 [batch_size, num_conformers]
+        ic(pos_sim.shape)
+        loss = pos_sim / (sim_matrix.sum(dim=1) - pos_sim)
+        loss = - torch.log(loss).mean()</code></pre><h3>After Change</h3><pre><code class='java'>
+            sim_matrix = sim_matrix / torch.einsum(&quoti,ju-&gt;iju&quot, z1_abs, z2_abs)
+
+        sim_matrix = torch.exp(sim_matrix / self.tau)  &#47&#47 [batch_size, batch_size, num_conformers]
+        pos_sim = <a id="change">sim_matrix[range(batch_size), range(batch_size), :]</a>  &#47&#47 [batch_size, num_conformers]
+        loss = pos_sim / (sim_matrix.sum(dim=1) - pos_sim)
+        loss = - torch.log(loss).mean()
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/hannesstark/3dinfomax/commit/4232b957c17cfd67f1066a1400c440a67e21b427#diff-55a3bd64c39f25290e7e11ba397c450880c4aab081e0c8ab2bcfecd724bbab0aL274' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 6322800</div><div id='project'> Project Name: hannesstark/3dinfomax</div><div id='commit'> Commit Name: 4232b957c17cfd67f1066a1400c440a67e21b427</div><div id='time'> Time: 2021-06-24</div><div id='author'> Author: hannes.staerk@gmail.com</div><div id='file'> File Name: commons/losses.py</div><div id='m_class'> M Class Name: NTXentMultiplePositivesV3</div><div id='n_method'> N Class Name: NTXentMultiplePositivesV3</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: _Loss</div><div id='n_parent_class'> N Parent Class: _Loss</div><div id='m_file'> M File Name: commons/losses.py</div><div id='n_file'> N File Name: commons/losses.py</div><div id='m_start'> M Start Line: 274</div><div id='m_end'> M End Line: 277</div><div id='n_start'> N Start Line: 274</div><div id='n_end'> N End Line: 275</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    def forward(self, h, pos_enc, mask):
+        batch_size, max_num_atoms, _ = h.size()
+        <a id="change">ic(</a>pos_enc.shape<a id="change">)</a>
+        h = self.atom_encoder(h.view(-1, h.shape[-1])) &#47&#47 [batch_size, max_num_atoms * (hidden_dim - pos_enc_dim)]
+        h = h.view(batch_size, max_num_atoms, -1)  &#47&#47 [batch_size, max_num_atoms, hidden_dim - pos_enc_dim]
+        pos_enc = self.pos_enc_mlp(pos_enc) &#47&#47 [batch_size, max_num_atoms, num_eigvec, pos_enc_dim]
+        pos_enc = pos_enc.sum(dim=2) &#47&#47 [batch_size, max_num_atoms, pos_enc_dim]</code></pre><h3>After Change</h3><pre><code class='java'>
+        h = torch.cat([h, pos_enc], dim=-1)  &#47&#47 [batch_size, max_num_atoms, hidden_dim]
+
+        &#47&#47 add virtual node for readout
+        h = torch.cat([<a id="change">self.v_node[None, None, :]</a>.expand(batch_size, -1, -1), h], dim=1)&#47&#47 [batch_size, max_num_atoms + 1, hidden_dim]
+
+        mask = torch.cat([torch.tensor(False, device=h.device).unsqueeze(0).expand(batch_size, -1), mask], dim=1)&#47&#47 [batch_size, max_num_atoms + 1]
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/hannesstark/3dinfomax/commit/a165907548f15c7571758457fe0867a83ad049dc#diff-e34e919520ffcf961fbcbe6e33d514c3eebea9323c4324e1fecb6c407343d426L86' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 6322802</div><div id='project'> Project Name: hannesstark/3dinfomax</div><div id='commit'> Commit Name: a165907548f15c7571758457fe0867a83ad049dc</div><div id='time'> Time: 2021-07-03</div><div id='author'> Author: hannes.staerk@gmail.com</div><div id='file'> File Name: models/transformer.py</div><div id='m_class'> M Class Name: TransformerGNN</div><div id='n_method'> N Class Name: TransformerGNN</div><div id='m_method'> M Method Name: forward(4)</div><div id='n_method'> N Method Name: forward(4)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: models/transformer.py</div><div id='n_file'> N File Name: models/transformer.py</div><div id='m_start'> M Start Line: 88</div><div id='m_end'> M End Line: 94</div><div id='n_start'> N Start Line: 70</div><div id='n_end'> N End Line: 75</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            copy_graph = copy.deepcopy(batched_graph3d)
+            copy_graph.ndata[&quotx&quot] += torch.randn_like(copy_graph.ndata[&quotx&quot]) * self.std
+            distances = torch.norm(copy_graph.ndata[&quotx&quot][edges[0]] - copy_graph.ndata[&quotx&quot][edges[1]],p=2,dim=-1)
+            <a id="change">ic(</a>distances<a id="change">)</a>
+            ic(previous_distances)
+            copy_graph.edata[&quotw&quot] = distances
+            graphs3d_noised.append(copy_graph)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            copy_graph = copy.deepcopy(batched_graph3d)
+            copy_graph.ndata[&quotx&quot] += torch.randn_like(copy_graph.ndata[&quotx&quot]) * self.std
+            distances = torch.norm(copy_graph.ndata[&quotx&quot][edges[0]] - copy_graph.ndata[&quotx&quot][edges[1]],p=2,dim=-1)
+            copy_graph.edata[&quotw&quot] = <a id="change">distances[:,None]</a>
+            graphs3d_noised.append(copy_graph)
+
+        batched_graph3d = dgl.batch(graphs3d_noised)
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/hannesstark/3dinfomax/commit/a38acd10b3f8f48180cc80a93d748621d74e6268#diff-05aa1678959c1615a4d795dcd1309cd5caf14d534d725cbbff89efefc4a4587fL62' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 6322804</div><div id='project'> Project Name: hannesstark/3dinfomax</div><div id='commit'> Commit Name: a38acd10b3f8f48180cc80a93d748621d74e6268</div><div id='time'> Time: 2021-06-10</div><div id='author'> Author: hannes.staerk@gmail.com</div><div id='file'> File Name: datasets/custom_collate.py</div><div id='m_class'> M Class Name: NoisedCoordinatesCollate</div><div id='n_method'> N Class Name: NoisedCoordinatesCollate</div><div id='m_method'> M Method Name: __call__(2)</div><div id='n_method'> N Method Name: __call__(2)</div><div id='m_parent_class'> M Parent Class: object</div><div id='n_parent_class'> N Parent Class: object</div><div id='m_file'> M File Name: datasets/custom_collate.py</div><div id='n_file'> N File Name: datasets/custom_collate.py</div><div id='m_start'> M Start Line: 68</div><div id='m_end'> M End Line: 76</div><div id='n_start'> N Start Line: 73</div><div id='n_end'> N End Line: 74</div><BR>

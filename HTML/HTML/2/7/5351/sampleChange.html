@@ -1,0 +1,33 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    is_tensor, is_prod = _check_compatability(X, func, z0, t)
+
+    if adjoint:
+        <a id="change">try:
+            </a>adjoint_params = tuple(kwargs[&quotadjoint_params&quot])
+        <a id="change">except </a>KeyError:
+            try:
+                adjoint_params = tuple(func.parameters())
+            except AttributeError:</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        for buffer in X.buffers():
+            &#47&#47 Compare based on id to avoid PyTorch not playing well with using `in` on tensors.
+            <a id="change">if buffer.requires_grad and id(buffer) not in _adjoint_params</a>:
+                <a id="change">warnings.warn("One of the inputs to the control path X requires gradients but is not listed in "
+                              "`options[&quotadjoint_params&quot]`. This is probably a mistake: it will not receive a gradient "
+                              "when using the adjoint method. Either have the input not require gradients (if that "
+                              "was unintended), or include it (and every other parameter needing gradients) in "
+                              "`adjoint_params`. For example:\n"
+                              "```\n"
+                              "coeffs = ...\n"
+                              "func = ...\n"
+                              "X = NaturalCubicSpline(coeffs)\n"
+                              "adjoint_params = tuple(func.parameters()) + (coeffs,)\n"
+                              "cdeint(X=X, func=func, ..., adjoint_params=adjoint_params)\n"
+                              "```"</a><a id="change">)</a>
+
+    vector_field = _VectorField(X=X, func=func, is_tensor=is_tensor, is_prod=is_prod)
+    odeint = torchdiffeq.odeint_adjoint if adjoint else torchdiffeq.odeint
+    out = odeint(func=vector_field, y0=z0, t=t, **kwargs)</code></pre>

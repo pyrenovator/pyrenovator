@@ -1,0 +1,52 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+    &#47&#47 create model
+    print("=&gt; using pre-trained model &quot{}&quot".format(args.arch))
+    num_classes<a id="change"> = </a>train_dataset.num_classes
+    backbone_q = models.__dict__[args.arch](pretrained=True)
+    if args.pretrained:
+        print("=&gt; loading pre-trained backbone from &quot{}&quot".format(args.pretrained))
+        pretrained_dict = torch.load(args.pretrained)
+        backbone_q.load_state_dict(pretrained_dict, strict=False)
+    classifier_q = Classifier(backbone_q, num_classes, projection_dim=args.projection_dim)
+    if args.pretrained_fc:
+        print("=&gt; loading pre-trained fc from &quot{}&quot".format(args.pretrained_fc))
+        pretrained_fc_dict = torch.load(args.pretrained_fc)
+        classifier_q.projector.load_state_dict(pretrained_fc_dict, strict=False)
+    classifier_q = classifier_q.to(device)
+    backbone_k = models.__dict__[args.arch](pretrained=True)
+    classifier_k<a id="change"> = </a><a id="change">Classifier(backbone_k, num_classes).to(</a>device<a id="change">)</a>
+
+    bituning = Bituning(classifier_q, classifier_k, num_classes, K=args.K, m=args.m, T=args.T)
+
+    &#47&#47 define optimizer and lr scheduler</code></pre><h3>After Change</h3><pre><code class='java'>
+    print("train_transform: ", train_transform)
+    print("val_transform: ", val_transform)
+
+    train_dataset<a id="change">, val_dataset, num_classes</a> = utils.get_dataset(args.data, args.root, train_transform,
+                                                                val_transform, args.sample_rate, args.sample_size)
+    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,
+                              num_workers=args.workers, drop_last=True)
+    train_iter = ForeverDataIterator(train_loader)
+    val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
+    print("training dataset size: {} test dataset size: {}".format(len(train_dataset), len(val_dataset)))
+
+    &#47&#47 create model
+    print("=&gt; using pre-trained model &quot{}&quot".format(args.arch))
+    backbone_q = utils.get_model(args.arch, args.pretrained)
+    pool_layer = nn.Identity() if args.no_pool else None
+    classifier_q = Classifier(backbone_q, num_classes, pool_layer=pool_layer, projection_dim=args.projection_dim, finetune=args.finetune)
+    if args.pretrained_fc:
+        print("=&gt; loading pre-trained fc from &quot{}&quot".format(args.pretrained_fc))
+        pretrained_fc_dict = torch.load(args.pretrained_fc)
+        classifier_q.projector.load_state_dict(pretrained_fc_dict, strict=False)
+    classifier_q = classifier_q.to(device)
+    backbone_k = utils.get_model(args.arch)
+    classifier_k = <a id="change">Classifier(backbone_k, num_classes, pool_layer=pool_layer).to(</a>device<a id="change">)</a>
+
+    bituning = Bituning(classifier_q, classifier_k, num_classes, K=args.K, m=args.m, T=args.T)
+
+    &#47&#47 define optimizer and lr scheduler</code></pre>

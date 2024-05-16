@@ -1,0 +1,28 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 forward decoder
+        h_masks = None
+        zs, _ = self.decoder(encoded_texts, h_masks, utterance_embedding)  &#47&#47 (B, Lmax, adim)
+        before_outs = self.feat_out(zs).view(<a id="change">zs.size(</a>0<a id="change">)</a>, -1, self.odim)  &#47&#47 (B, Lmax, odim)
+
+        &#47&#47 postnet -&gt; (B, Lmax//r * r, odim)
+        after_outs = before_outs + self.postnet(before_outs.transpose(1, 2)).transpose(1, 2)</code></pre><h3>After Change</h3><pre><code class='java'>
+        z = self.decoder(cond=encoded_texts.transpose(1, 2), infer=True)
+
+        encoded_texts = cut_to_multiple_of_n(encoded_texts)
+        before_outs = <a id="change">self.decoder.decoder(</a>z<a id="change">, nonpadding=None, cond=encoded_texts.transpose(1, 2).detach())</a>.transpose(1, 2)
+
+        &#47&#47 forward flow post-net
+        if self.glow_enabled:
+            after_outs = self.run_post_glow(tgt_mels=None,
+                                            infer=True,
+                                            mel_out=before_outs,
+                                            encoded_texts=encoded_texts,
+                                            tgt_nonpadding=None)
+        else:
+            after_outs<a id="change"> = </a>before_outs
+
+        return before_outs, after_outs, duration_predictions, pitch_predictions, energy_predictions
+</code></pre>

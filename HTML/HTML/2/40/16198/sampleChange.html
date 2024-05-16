@@ -1,0 +1,45 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    data = batch[&quotdata&quot].numpy()    &#47&#47 this seems to return a reference, not a copy
+    mask = batch[&quotmask&quot].numpy()
+    B, C, H, W = data.shape
+    T_aug<a id="change"> = []</a>
+    for i in range(B):
+        <a id="change">if np.mod(i, config[&quotwindow_size&quot]) == 0</a>:
+            <a id="change">continue</a>
+        img = data[i].squeeze()
+        mmg = mask[i].squeeze()
+        rot = np.random.uniform(-rot_max, rot_max)
+        M = cv2.getRotationMatrix2D((W / 2, H / 2), <a id="change">rot</a><a id="change"> * 180</a> / np.pi, 1.0)
+        data[i] = cv2.warpAffine(img, M, (W, H), flags=cv2.INTER_CUBIC).reshape(C, H, W)
+        mask[i] = cv2.warpAffine(mmg, M, (W, H), flags=cv2.INTER_CUBIC).reshape(C, H, W)
+        T_aug<a id="change"> += [</a>torch.from_numpy(<a id="change">get_transform(0</a>, <a id="change">0</a>, <a id="change">-rot</a><a id="change">)</a>)<a id="change"></a>]
+    batch[&quotdata&quot] = torch.from_numpy(data)
+    <a id="change">batch[&quotmask&quot]</a> = torch.from_numpy(mask &gt; 0.5).type(batch[&quotdata&quot].dtype)    &#47&#47 make into a binary mask
+    <a id="change">batch[&quotT_aug&quot] = </a>T_aug
+    return batch
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    window_size = config[&quotwindow_size&quot]
+    data = batch[&quotdata&quot].numpy()
+    mask = batch[&quotmask&quot].numpy()
+    <a id="change">T_21</a><a id="change"> = batch[&quotT_21&quot].numpy()</a>
+    _, C, H, W = data.shape
+    <a id="change">for </a>i in range(batch_size)<a id="change">:
+        </a><a id="change">rot</a> = np.random.uniform(-rot_max, rot_max)
+        T = get_transform(0, 0, -rot)
+        for j in range(1, window_size):
+            k<a id="change"> = </a>j<a id="change"> + </a>i * window_size
+            img = data[k].squeeze()
+            mmg = mask[k].squeeze()
+            M = cv2.getRotationMatrix2D((W / 2, H / 2), <a id="change">rot</a><a id="change"> * 180</a> * j / np.pi, 1.0)
+            data[i] = cv2.warpAffine(img, M, (W, H), flags=cv2.INTER_CUBIC).reshape(C, H, W)
+            mask[i] = cv2.warpAffine(mmg, M, (W, H), flags=cv2.INTER_CUBIC).reshape(1, H, W)
+            <a id="change">T_21[i - 1] = </a><a id="change">np.matmul(</a>T, <a id="change">T_21[i - 1]</a><a id="change">)</a>
+    batch[&quotdata&quot] = torch.from_numpy(data)
+    <a id="change">batch[&quotmask&quot]</a> = torch.from_numpy(mask &gt; 0.5).type(batch[&quotdata&quot].dtype)    &#47&#47 make into a binary mask
+    <a id="change">batch[&quotT_21&quot] = </a>torch.from_numpy(T_21)
+    return batch
+
+&#47&#47 apply a random transformation to every other frame and adjust the ground truth transform accordingly</code></pre>

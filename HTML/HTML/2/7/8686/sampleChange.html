@@ -1,0 +1,278 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 Start training.
+        print(&quotStart training...&quot)
+        start_time = time.time()
+        <a id="change">for </a>i in range(start_iters, self.num_iters)<a id="change">:
+
+            &#47&#47 =================================================================================== &#47&#47
+            &#47&#47                             1. Preprocess input data                                &#47&#47
+            &#47&#47 =================================================================================== &#47&#47
+
+            &#47&#47 Fetch real images and labels.
+            </a>try:
+                x_real, label_org = next(data_iter)
+            except:
+                data_iter = iter(data_loader)</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 Start training.
+        print(&quotStart training...&quot)
+        start_time = time.time()
+        <a id="change">for </a><a id="change">i</a> in range(start_iters, self.num_iters)<a id="change">:
+
+            </a><a id="change">try:
+                &#47&#47 =================================================================================== &#47&#47
+                &#47&#47                             1. Preprocess input data                                &#47&#47
+                &#47&#47 =================================================================================== &#47&#47
+
+                &#47&#47 Fetch real images and labels.
+                </a>try:
+                    x_real, label_org = next(data_iter)
+                    label_org = torch.unsqueeze(label_org, dim=1)
+                except:
+                    data_iter = iter(self.data_loader)
+                    x_real, label_org = next(data_iter)
+
+                &#47&#47 Generate target domain labels randomly.
+                rand_idx = torch.randperm(label_org.size(0))
+                label_trg = label_org[rand_idx]
+
+                &#47&#47 if self.dataset == &quotCelebA&quot:
+                &#47&#47     c_org = label_org.clone()
+                &#47&#47     c_trg = label_trg.clone()
+                &#47&#47 elif self.dataset == &quotRaFD&quot:
+                &#47&#47     c_org = self.label2onehot(label_org, self.c_dim)
+                &#47&#47     c_trg = self.label2onehot(label_trg, self.c_dim)
+
+                x_real = x_real.to(self.device)  &#47&#47 Input images.
+                &#47&#47 c_org = c_org.to(self.device)  &#47&#47 Original domain labels.
+                &#47&#47 c_trg = c_trg.to(self.device)  &#47&#47 Target domain labels.
+                label_org = label_org.to(self.device)  &#47&#47 Labels for computing classification loss.
+                label_trg = label_trg.to(self.device)  &#47&#47 Labels for computing classification loss.
+
+                &#47&#47 =================================================================================== &#47&#47
+                &#47&#47                             2. Train the discriminator                              &#47&#47
+                &#47&#47 =================================================================================== &#47&#47
+                &#47&#47 self.d_optimizer.zero_grad()
+                &#47&#47 Compute loss with real images.
+                &#47&#47 out_src, out_cls = self.D(x_real)
+                &#47&#47 out_real = self.D(x_real, num_domains=2)
+
+                &#47&#47 d_out_real = torch.gather(out_real, 1, label_org.long())
+                &#47&#47 d_loss_real = torch.mean(torch.log(d_out_src))
+
+                &#47&#47 d_loss_real = self.bce_loss(self.zeros_target(self.batch_size), d_out_real)
+                &#47&#47 d_loss_cls = self.classification_loss(out_cls, label_org, self.dataset)
+                &#47&#47
+                &#47&#47 &#47&#47 z:latent code s_tilde:target style code
+                &#47&#47 z = self.noise(size=self.batch_size, dimension=16, device=self.device)
+                &#47&#47 s_tilde = self.F(z, num_domains=2)
+                &#47&#47
+                &#47&#47 &#47&#47 target style code s_tilde
+                &#47&#47
+                &#47&#47 &#47&#47 Compute loss with fake images.
+                &#47&#47 &#47&#47 s_tilde_tensor = torch.stack(s_tilde, 1)
+                &#47&#47 s_tilde_trg = torch.index_select(torch.stack(s_tilde, 1), 1, label_trg.squeeze().long())[:, 0, :]
+                &#47&#47 &#47&#47 s_tilde_trg = torch.gather(s_tilde_tensor, 1, label_trg.expand(s_tilde_tensor.size()).long())
+                &#47&#47 &#47&#47 s_tilde_trg = torch.gather(torch.stack(s_tilde, 1), 1, torch.unsqueeze(label_trg, 2).long())
+                &#47&#47
+                &#47&#47 d_x_fake = self.G(x_real, s_tilde_trg)
+                &#47&#47 out_fake = self.D(d_x_fake.detach())
+                &#47&#47 d_out_fake = torch.gather(out_fake, 1, label_trg.long())
+                &#47&#47 &#47&#47 d_loss_fake = torch.mean(out_fake)
+                &#47&#47 d_loss_fake = self.bce_loss(self.ones_target(self.batch_size), d_out_fake)
+
+                &#47&#47 &#47&#47 Compute loss for gradient penalty.
+                &#47&#47 alpha = torch.rand(x_real.size(0), 1, 1, 1).to(self.device)
+                &#47&#47 x_hat = (alpha * x_real.data + (1 - alpha) * x_fake.data).requires_grad_(True)
+                &#47&#47 out_src, _ = self.D(x_hat)
+                &#47&#47 d_loss_gp = self.gradient_penalty(out_src, x_hat)
+
+                &#47&#47 &#47&#47 Backward and optimize.
+                &#47&#47 d_loss = -(d_loss_real + d_loss_fake)
+                &#47&#47
+                &#47&#47 &#47&#47 R1 regularization
+                &#47&#47 l1_norm = torch.norm(self.D.weight, p=1)
+                &#47&#47 d_loss += l1_norm
+
+                s_tilde_trg = self.generate_style_code(label_trg)
+                x_fake = self.G(x_real, s_tilde_trg)
+                &#47&#47 fake_logits = self.D(x_fake)
+
+                &#47&#47 d_loss, d_loss_real, d_loss_fake = self.compute_adversarial_loss(True, x_real, label_org, d_x_fake, label_trg)
+                d_loss, d_loss_real, d_loss_fake = self.train_discriminator(x_real, x_fake, label_org,
+                                                                            label_trg)
+
+                &#47&#47 d_loss = d_loss_real + d_loss_fake + self.lambda_cls * d_loss_cls + self.lambda_gp * d_loss_gp
+                &#47&#47 d_loss = -d_loss
+                &#47&#47 self.reset_grad()
+                &#47&#47 d_loss.backward()
+                &#47&#47 self.d_optimizer.step()
+
+                &#47&#47 Logging.
+                loss = {
+                    &quotD/loss&quot: d_loss.item(),
+                    &quotD/loss_real&quot: d_loss_real.item(),
+                    &quotD/loss_fake&quot: d_loss_fake.item()
+                }
+
+                writer.add_scalar(&quotD/loss&quot, d_loss.item(), i)
+                writer.add_scalar(&quotD/loss_real&quot, d_loss_real.item(), i)
+                writer.add_scalar(&quotD/loss_fake&quot, d_loss_fake.item(), i)
+
+                &#47&#47 =================================================================================== &#47&#47
+                &#47&#47                               3. Train the generator                                &#47&#47
+                &#47&#47 =================================================================================== &#47&#47
+
+                if (i + 1) % self.n_critic == 0:
+                    &#47&#47 &#47&#47 style reconstruction
+                    &#47&#47 g_s_tilde_trg = self.generate_style_code(label_trg)
+                    &#47&#47 &#47&#47 g_x_fake = self.G(x_real, g_s_tilde_trg)
+                    &#47&#47 &#47&#47 s_hat = self.E(d_x_fake)
+                    &#47&#47
+                    &#47&#47 &#47&#47 s_hat: estimated style code of source image
+                    &#47&#47 &#47&#47 loss style reconstruction:style reconstruction
+                    &#47&#47 s_hat = self.E(self.G(x_real, g_s_tilde_trg), num_domains=2)
+                    &#47&#47 s_hat_trg = torch.index_select(torch.stack(s_hat, 1), 1, label_trg.squeeze().long())[:, 0, :]
+                    &#47&#47 g_loss_sty = self.l1_loss(g_s_tilde_trg, s_hat_trg)
+                    &#47&#47
+                    &#47&#47 &#47&#47 loss cycle: preserving source characteristics
+                    &#47&#47 s_hat_org = torch.index_select(torch.stack(s_hat, 1), 1, label_org.squeeze().long())[:, 0, :]
+                    &#47&#47 x_fake_cyc = self.G(self.G(x_real, g_s_tilde_trg), s_hat_org)
+                    &#47&#47 g_loss_cyc = self.l1_loss(x_real, x_fake_cyc)
+                    &#47&#47
+                    &#47&#47 &#47&#47 loss style diversification:style diversification
+                    &#47&#47 &#47&#47 z1 = self.noise(size=self.batch_size, dimension=16)
+                    &#47&#47 &#47&#47 s1_tilde = self.F(z1, num_domains=2)
+                    &#47&#47 &#47&#47 s1_tilde_trg = torch.index_select(torch.stack(s1_tilde, 1), 1, label_trg.squeeze().long())[:, 0, :]
+                    &#47&#47 s1_tilde_trg = self.generate_style_code(label_trg)
+                    &#47&#47 &#47&#47 z2 = self.noise(size=self.batch_size, dimension=16)
+                    &#47&#47 &#47&#47 s2_tilde = self.F(z2, num_domains=2)
+                    &#47&#47 &#47&#47 s2_tilde_trg = torch.index_select(torch.stack(s2_tilde, 1), 1, label_trg.squeeze().long())[:, 0, :]
+                    &#47&#47 s2_tilde_trg = self.generate_style_code(label_trg)
+                    &#47&#47 g_loss_ds = self.l1_loss(self.G(x_real, s1_tilde_trg), self.G(x_real, s2_tilde_trg))
+
+                    &#47&#47 &#47&#47 Original-to-target domain.
+                    &#47&#47 x_fake = self.G(x_real, c_trg)
+                    &#47&#47 out_src, out_cls = self.D(x_fake)
+                    &#47&#47 g_loss_fake = - torch.mean(out_src)
+                    &#47&#47 g_loss_cls = self.classification_loss(out_cls, label_trg, self.dataset)
+                    &#47&#47
+                    &#47&#47 &#47&#47 Target-to-original domain.
+                    &#47&#47 x_reconst = self.G(x_fake, c_org)
+                    &#47&#47 g_loss_rec = torch.mean(torch.abs(x_real - x_reconst))
+
+                    &#47&#47 out_real = self.D(x_real, num_domains=2)
+                    &#47&#47 g_out_real = torch.gather(out_real, 1, label_org.long())
+                    &#47&#47 g_loss_real = self.bce_loss(self.zeros_target(self.batch_size), g_out_real)
+                    &#47&#47 &#47&#47 target style code s_tilde
+                    &#47&#47
+                    &#47&#47 &#47&#47 Compute loss with fake images.
+                    &#47&#47 &#47&#47 x_fake = self.G(x_real, s_tilde[0])
+                    &#47&#47 out_fake = self.D(g_x_fake)
+                    &#47&#47 g_out_fake = torch.gather(out_fake, 1, label_org.long())
+                    &#47&#47 &#47&#47 d_loss_fake = torch.mean(out_fake)
+                    &#47&#47 g_loss_fake = self.bce_loss(self.ones_target(self.batch_size), g_out_fake)
+
+                    g_loss, g_adv_loss, g_loss_sty, g_loss_cyc, g_loss_ds = self.train_generator(x_real, x_fake,
+                                                                                                 s_tilde_trg, label_org,
+                                                                                                 label_trg)
+                    &#47&#47 g_loss = self.train_generator(x_real, label_org, label_trg)
+
+                    &#47&#47 g_adv_loss = self.compute_adversarial_loss(False, x_real, label_org, g_s_tilde_trg, label_trg)[0]
+
+                    &#47&#47 Backward and optimize.
+                    &#47&#47 g_loss = g_adv_loss + self.lambda_sty * g_loss_sty + self.lambda_cyc * g_loss_cyc + self.lambda_ds * g_loss_ds
+                    &#47&#47 self.reset_grad()
+                    &#47&#47 g_loss.backward()
+                    &#47&#47 self.g_optimizer.step()
+                    &#47&#47 self.e_optimizer.step()
+                    &#47&#47 self.f_optimizer.step()
+
+                    &#47&#47 Logging.
+                    &#47&#47 loss[&quotG/loss_fake&quot] = g_loss_fake.item()
+                    &#47&#47 loss[&quotG/loss_sty&quot] = g_loss_sty.item()
+                    &#47&#47 loss[&quotG/loss_cyc&quot] = g_loss_cyc.item()
+                    &#47&#47 loss[&quotG/loss_ds&quot] = g_loss_ds.item()
+                    loss[&quotG/loss&quot] = g_loss.item()
+                    loss[&quotG/loss_adv&quot] = g_adv_loss.item()
+                    loss[&quotG/loss_sty&quot] = g_loss_sty.item()
+                    loss[&quotG/loss_cyc&quot] = g_loss_cyc.item()
+                    loss[&quotG/loss_ds&quot] = g_loss_ds.item()
+
+                    &#47&#47 writer.add_scalar(&quotG/loss_cyc&quot, g_loss_cyc.item(), i)
+                    &#47&#47 writer.add_scalar(&quotG/loss_ds&quot, g_loss_ds.item(), i)
+                    writer.add_scalar(&quotG/loss&quot, g_loss.item(), i)
+                    writer.add_scalar(&quotG/loss_adv&quot, g_adv_loss.item(), i)
+                    writer.add_scalar(&quotG/loss_sty&quot, g_loss_sty.item(), i)
+                    writer.add_scalar(&quotG/loss_cyc&quot, g_loss_cyc.item(), i)
+                    writer.add_scalar(&quotG/loss_ds&quot, g_loss_ds.item(), i)
+
+                &#47&#47 =================================================================================== &#47&#47
+                &#47&#47                                 4. Miscellaneous                                    &#47&#47
+                &#47&#47 =================================================================================== &#47&#47
+
+                &#47&#47 Print out training information.
+                if (i + 1) % self.log_step == 0:
+                    et = time.time() - start_time
+                    et = str(datetime.timedelta(seconds=et))[:-7]
+                    log = "Elapsed [{}], Iteration [{}/{}]".format(et, i + 1, self.num_iters)
+                    for tag, value in loss.items():
+                        log += ", {}: {:.4f}".format(tag, value)
+                    print(log)
+
+                    &#47&#47 if self.use_tensorboard:
+                    &#47&#47     for tag, value in loss.items():
+                    &#47&#47         self.logger.scalar_summary(tag, value, i + 1)
+
+                &#47&#47 Translate fixed images for debugging.
+                if (i + 1) % self.sample_step == 0:
+                    with torch.no_grad():
+                        &#47&#47 random style: source images + generated images
+                        g_s_tilde_trg = self.generate_style_code(label_trg)
+
+                        &#47&#47 reference guided style: x_real as the reference image
+                        ref_style<a id="change"> = </a>self.get_reference_style(x_real, label_org)
+
+                        x_fake_list = [x_fixed, self.G(x_fixed, g_s_tilde_trg), x_real, self.G(x_fixed, ref_style)]
+
+                        &#47&#47 for c_fixed in label_org:
+                        x_concat = torch.cat(x_fake_list, dim=3)
+                        sample_path = os.path.join(self.sample_dir, &quot{}-images.jpg&quot.format(i + 1))
+                        save_image(self.denorm(x_concat.data.cpu()), sample_path, nrow=1, padding=0)
+                        print(&quotSaved real and fake images into {}...&quot.format(sample_path))
+
+                        grid = torchvision.utils.make_grid(x_concat)
+                        writer.add_image(&quotimages&quot, grid, 0)
+                        &#47&#47 writer.add_graph(model, images)
+
+                &#47&#47 Save model checkpoints.
+                if (i + 1) % self.model_save_step == 0:
+                    G_path = os.path.join(self.model_save_dir, &quot{}-G.ckpt&quot.format(i + 1))
+                    D_path = os.path.join(self.model_save_dir, &quot{}-D.ckpt&quot.format(i + 1))
+                    E_path = os.path.join(self.model_save_dir, &quot{}-E.ckpt&quot.format(i + 1))
+                    F_path = os.path.join(self.model_save_dir, &quot{}-F.ckpt&quot.format(i + 1))
+                    torch.save(self.G.state_dict(), G_path)
+                    torch.save(self.D.state_dict(), D_path)
+                    torch.save(self.E.state_dict(), E_path)
+                    torch.save(self.F.state_dict(), F_path)
+                    print(&quotSaved model checkpoints into {}...&quot.format(self.model_save_dir))
+                &#47&#47
+                &#47&#47 &#47&#47 Decay learning rates.
+                &#47&#47 if (i + 1) % self.lr_update_step == 0 and (i + 1) &gt; (self.num_iters - self.num_iters_decay):
+                &#47&#47     g_lr -= (self.g_lr / float(self.num_iters_decay))
+                &#47&#47     d_lr -= (self.d_lr / float(self.num_iters_decay))
+                &#47&#47     self.update_lr(g_lr, d_lr)
+                &#47&#47     print(&quotDecayed learning rates, g_lr: {}, d_lr: {}.&quot.format(g_lr, d_lr))
+
+                &#47&#47 Decay weight lambda ds
+                if (i + 1) &lt; self.num_iters_decay:
+                    self.lambda_ds = 1 - 0.00002 * (i + 1)
+                    &#47&#47 print(&quotDecayed weight lambda ds , lambda_ds: {}&quot.format(self.lambda_ds))
+            <a id="change">except </a>Exception as e:
+                <a id="change">print(</a>str(e)<a id="change">)</a>
+
+        &#47&#47 close the tensorboard summary writter
+        writer.close()
+</code></pre>

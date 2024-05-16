@@ -1,0 +1,79 @@
+<html><h3>Pattern ID :25328
+</h3><img src='77537087.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            block_name = stack_name + "block{}_".format(block_id + 1)
+            block_drop_rate = drop_connect_rate * global_block_id / total_blocks
+            mlp_ratio = cur_mlp_ratios[block_id] if isinstance(cur_mlp_ratios, (list, tuple)) else cur_mlp_ratios
+            is_attn_block = True<a id="change"> if block_id &gt; num_block - cur_num_attn_blocks - 1</a><a id="change"> else </a>False
+            nn = meta_block(nn, is_attn_block, mlp_ratio=mlp_ratio, layer_scale=layer_scale, drop_rate=block_drop_rate, activation=activation, name=block_name)
+            global_block_id += 1
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            block_drop_rate = drop_connect_rate * global_block_id / total_blocks
+            mlp_ratio = cur_mlp_ratios[block_id] if isinstance(cur_mlp_ratios, (list, tuple)) else cur_mlp_ratios
+            if block_id &gt;= attn_block_start_id:
+                nn = <a id="change">layers.Permute([2, 3, 1])(</a>nn<a id="change">)</a> if block_id == attn_block_start_id and <a id="change">image_data_format() == "channels_first"</a> else nn
+                nn = attn_block(nn, mlp_ratio=mlp_ratio, layer_scale=layer_scale, drop_rate=block_drop_rate, activation=activation, name=block_name)
+                nn = <a id="change">layers.Permute([3</a>, <a id="change">1</a>, <a id="change">2</a>]<a id="change">)</a>(nn) if block_id == num_block - 1 and image_data_format() == "channels_first" else nn
+            else:
+                nn = conv_block(nn, mlp_ratio=mlp_ratio, layer_scale=layer_scale, drop_rate=block_drop_rate, activation=activation, name=block_name)
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 8</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/leondgarse/keras_cv_attention_models/commit/e05e233f369a1d58f912872b1581a80d15cacc3f#diff-e4e5a4f85b1ff1331833f78429788f4c2aeb32f0af6bd15093785e3e483e2c29L68' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 77537087</div><div id='project'> Project Name: leondgarse/keras_cv_attention_models</div><div id='commit'> Commit Name: e05e233f369a1d58f912872b1581a80d15cacc3f</div><div id='time'> Time: 2023-02-07</div><div id='author'> Author: leondgarse@gmail.com</div><div id='file'> File Name: keras_cv_attention_models/efficientformer/efficientformer.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: EfficientFormer(17)</div><div id='n_method'> N Method Name: EfficientFormer(17)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: keras_cv_attention_models/efficientformer/efficientformer.py</div><div id='n_file'> N File Name: keras_cv_attention_models/efficientformer/efficientformer.py</div><div id='m_start'> M Start Line: 68</div><div id='m_end'> M End Line: 110</div><div id='n_start'> N Start Line: 71</div><div id='n_end'> N End Line: 120</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        attn = multi_head_self_attention_channel(attn, num_heads, qkv_bias=True, out_bias=True, name=name + "channel_attn_")
+    else:
+        attn = window_attention(attn, window_size, num_heads, name=name + "attn_")
+    attn = ChannelAffine(use_bias=False, weight_init_value=layer_scale, name=name + "1_gamma")(attn)<a id="change"> if layer_scale &gt;= 0</a><a id="change"> else </a>attn
+    attn = drop_block(attn, drop_rate=drop_rate, name=name + "attn_")
+    &#47&#47 print(f"{pre_attn.shape = }, {attn.shape = }, {inputs.shape = }")
+    attn_out = keras.layers.Add(name=name + "attn_out")([pre_attn, attn])</code></pre><h3>After Change</h3><pre><code class='java'>
+    input_channel = inputs.shape[-1 if backend.image_data_format() == "channels_last" else 1]
+
+    pre_attn = conv_positional_encoding(inputs, 3, use_norm=False, activation=None, name=name + "pre_attn_cpe_")
+    attn = pre_attn if <a id="change">backend.image_data_format() == "channels_last"</a> else <a id="change">layers.Permute([2, 3, 1])(</a>pre_attn<a id="change">)</a>
+    attn = layer_norm(attn, axis=-1, name=name + "attn_")
+    if use_channel_attn:
+        attn = multi_head_self_attention_channel(attn, num_heads, qkv_bias=True, out_bias=True, name=name + "channel_attn_")
+    else:
+        attn = window_attention(attn, window_size, num_heads, name=name + "attn_")
+    attn = attn if backend.image_data_format() == "channels_last" else layers.Permute([3, 1, 2])(attn)
+    &#47&#47 print(f"{pre_attn.shape = }, {attn.shape = }, {inputs.shape = }")
+    attn_out = add_with_layer_scale_and_drop_block(pre_attn, attn, layer_scale=layer_scale, drop_rate=drop_rate, name=name + "1_")
+
+    pre_ffn = conv_positional_encoding(attn_out, 3, use_norm=False, activation=None, name=name + "pre_ffn_cpe_")
+    mlp = pre_ffn if backend.image_data_format() == "channels_last" else <a id="change">layers.Permute([2</a>, <a id="change">3</a>, <a id="change">1</a>]<a id="change">)</a>(pre_ffn)
+    mlp = layer_norm(mlp, axis=-1, name=name + "mlp_")
+    mlp = mlp_block(mlp, int(input_channel * mlp_ratio), drop_rate=mlp_drop_rate, use_conv=False, activation="gelu", name=name + "mlp_")
+    mlp = mlp if backend.image_data_format() == "channels_last" else layers.Permute([3, 1, 2])(mlp)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/leondgarse/keras_cv_attention_models/commit/3e9ba29ee6ea38d6190199b74812538fc0614c47#diff-464e90ce9f69b06d34e12af856ad358b24067de5ac1030d1a6d64c70e2e6534fL139' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 77537071</div><div id='project'> Project Name: leondgarse/keras_cv_attention_models</div><div id='commit'> Commit Name: 3e9ba29ee6ea38d6190199b74812538fc0614c47</div><div id='time'> Time: 2023-02-08</div><div id='author'> Author: leondgarse@gmail.com</div><div id='file'> File Name: keras_cv_attention_models/davit/davit.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: davit_block(10)</div><div id='n_method'> N Method Name: davit_block(10)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: keras_cv_attention_models/davit/davit.py</div><div id='n_file'> N File Name: keras_cv_attention_models/davit/davit.py</div><div id='m_start'> M Start Line: 142</div><div id='m_end'> M End Line: 160</div><div id='n_start'> N Start Line: 148</div><div id='n_end'> N End Line: 166</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            block_name = stack_name + "block{}_".format(block_id + 1)
+            block_drop_rate = drop_connect_rate * global_block_id / total_blocks
+            mlp_ratio = cur_mlp_ratios[block_id] if isinstance(cur_mlp_ratios, (list, tuple)) else cur_mlp_ratios
+            is_attn_block = True<a id="change"> if block_id &gt; num_block - cur_num_attn_blocks - 1</a><a id="change"> else </a>False
+            nn = meta_block(nn, is_attn_block, mlp_ratio=mlp_ratio, layer_scale=layer_scale, drop_rate=block_drop_rate, activation=activation, name=block_name)
+            global_block_id += 1
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            block_drop_rate = drop_connect_rate * global_block_id / total_blocks
+            mlp_ratio = cur_mlp_ratios[block_id] if isinstance(cur_mlp_ratios, (list, tuple)) else cur_mlp_ratios
+            if block_id &gt;= attn_block_start_id:
+                nn = <a id="change">layers.Permute([2</a>, <a id="change">3</a>, <a id="change">1</a>]<a id="change">)</a>(nn) if block_id == attn_block_start_id and image_data_format() == "channels_first" else nn
+                nn = attn_block(nn, mlp_ratio=mlp_ratio, layer_scale=layer_scale, drop_rate=block_drop_rate, activation=activation, name=block_name)
+                nn = <a id="change">layers.Permute([3, 1, 2])(</a>nn<a id="change">)</a> if block_id == num_block - 1 and <a id="change">image_data_format() == "channels_first"</a> else nn
+            else:
+                nn = conv_block(nn, mlp_ratio=mlp_ratio, layer_scale=layer_scale, drop_rate=block_drop_rate, activation=activation, name=block_name)
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/leondgarse/keras_cv_attention_models/commit/e05e233f369a1d58f912872b1581a80d15cacc3f#diff-e4e5a4f85b1ff1331833f78429788f4c2aeb32f0af6bd15093785e3e483e2c29L49' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 77537081</div><div id='project'> Project Name: leondgarse/keras_cv_attention_models</div><div id='commit'> Commit Name: e05e233f369a1d58f912872b1581a80d15cacc3f</div><div id='time'> Time: 2023-02-07</div><div id='author'> Author: leondgarse@gmail.com</div><div id='file'> File Name: keras_cv_attention_models/efficientformer/efficientformer.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: EfficientFormer(17)</div><div id='n_method'> N Method Name: EfficientFormer(17)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: keras_cv_attention_models/efficientformer/efficientformer.py</div><div id='n_file'> N File Name: keras_cv_attention_models/efficientformer/efficientformer.py</div><div id='m_start'> M Start Line: 68</div><div id='m_end'> M End Line: 110</div><div id='n_start'> N Start Line: 71</div><div id='n_end'> N End Line: 120</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+def mhsa_with_multi_head_relative_position_embedding(
+    inputs, num_heads=4, key_dim=0, global_query=None, out_shape=None, out_weight=True, qkv_bias=False, out_bias=False, attn_dropout=0, name=None
+):
+    channel_axis = -1<a id="change"> if image_data_format() == "channels_last"</a><a id="change"> else </a>1
+    input_channel = inputs.shape[channel_axis]
+    height, width = inputs.shape[1:-1] if image_data_format() == "channels_last" else inputs.shape[2:]
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    &#47&#47 Permute for conv if given data_format not matching actual image_data_format
+    if image_data_format() == "channels_last" and data_format == "channels_first":
+        inputs = <a id="change">layers.Permute([2</a>, <a id="change">3</a>, <a id="change">1</a>]<a id="change">)</a>(inputs)
+    elif image_data_format() == "channels_first" and <a id="change">data_format == "channels_last"</a>:
+        inputs = <a id="change">layers.Permute([3, 1, 2])(</a>inputs<a id="change">)</a>
+    conv_channel_axis = -1 if image_data_format() == "channels_last" else 1
+
+    if global_query is not None:
+        &#47&#47 kv = layers.Dense(qk_out * 2, use_bias=qkv_bias, name=name and name + "kv")(inputs)  &#47&#47 For GCViT weights</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/leondgarse/keras_cv_attention_models/commit/2ba27b0132168f3590dd4b3bead9edc15a70ba7d#diff-93ecfaca577d52a2659237cd2194089f24ed46627c659ab6c323a696749405deL22' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 77537078</div><div id='project'> Project Name: leondgarse/keras_cv_attention_models</div><div id='commit'> Commit Name: 2ba27b0132168f3590dd4b3bead9edc15a70ba7d</div><div id='time'> Time: 2023-02-11</div><div id='author'> Author: leondgarse@gmail.com</div><div id='file'> File Name: keras_cv_attention_models/coatnet/coatnet.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: mhsa_with_multi_head_relative_position_embedding(11)</div><div id='n_method'> N Method Name: mhsa_with_multi_head_relative_position_embedding(10)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: keras_cv_attention_models/coatnet/coatnet.py</div><div id='n_file'> N File Name: keras_cv_attention_models/coatnet/coatnet.py</div><div id='m_start'> M Start Line: 25</div><div id='m_end'> M End Line: 57</div><div id='n_start'> N Start Line: 32</div><div id='n_end'> N End Line: 74</div><BR>

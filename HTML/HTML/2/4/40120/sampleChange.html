@@ -1,0 +1,35 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+def shutdown_init_context():
+    global zero_init_enabled
+
+    <a id="change">if </a>not zero_init_enabled:
+        return
+
+    def _disable_class(cls):
+        cls.__init__ = cls._old_init
+
+    &#47&#47 Replace .__init__() for all existing subclasses of torch.nn.Module
+    for subclass in get_all_subclasses(torch.nn.modules.module.Module):
+        _disable_class(subclass)
+
+    &#47&#47 putting methods back the way we found them
+    torch.nn.modules.module.Module.__init_subclass__<a id="change"> = </a>torch.nn.modules.module.Module._old_init_subclass
+    torch.nn.modules.module.Module.apply = torch.nn.modules.module.Module._old_apply
+
+    torch.Tensor.__new__ = torch.Tensor.__old_new__
+    torch.empty = _orig_torch_empty
+    torch.zeros<a id="change"> = </a>_orig_torch_zeros
+    torch.ones = _orig_torch_ones
+    torch.full = _orig_torch_full
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    This function is used to initialize deepspeed engine inside the context of Init.
+    We need to remove the wrappers but keep the list of contexts.
+    
+    <a id="change">global zero_init_context</a>
+    for ctx in zero_init_context:
+        ctx.remove_wrappers()
+
+</code></pre>

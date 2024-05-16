@@ -1,0 +1,39 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    optimization_direction = np.dot(updater.normal_dist.T, scaled_rewards)
+    updater(learning_rate=0.01, optimization_direction=optimization_direction)
+    new_population = updater.population
+    <a id="change">assert </a>new_population.shape == (POPULATION_SIZE, 2)
+    np.testing.assert_allclose(np.std(new_population, axis=0), np.ones(2), rtol=0.1)
+    np.testing.assert_array_less(updater.mean, np.array([10, 10]))
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    )
+
+    &#47&#47 ASSERT POPULATION STATS
+    updater<a id="change"> = </a>NoisyGradientAscent(model_continuous)
+    &#47&#47 make sure starting population mean is correct
+    np.testing.assert_allclose(
+        np.mean(model_continuous.numpy_actors(), axis=0), np.array([10, 10]), rtol=0.1
+    )
+
+    &#47&#47 TEST CALL
+    old_model = copy.deepcopy(model_continuous)
+    old_population = model_continuous.numpy_actors()
+    action = model_continuous(np.zeros(POPULATION_SIZE))
+    _, rewards, _, _ = env_continuous.step(action)
+    scaled_rewards = (rewards - np.mean(rewards)) / np.std(rewards)
+    optimization_direction = np.dot(updater.normal_dist.T, scaled_rewards)
+    log = updater(learning_rate=0.01, optimization_direction=optimization_direction)
+    new_population = model_continuous.numpy_actors()
+    assert log.divergence &gt; 0
+    &#47&#47 make sure the nerual network has been updated by the updater
+    assert model_continuous != old_model
+    assert np.not_equal(old_population, new_population).any()
+    &#47&#47 make sure the network mean has been updated by the updater
+    <a id="change">np.testing.assert_array_equal(</a>model_continuous.mean_actor, updater.mean<a id="change">)</a>
+    &#47&#47 make sure the new popualtion has the correct std
+    np.testing.assert_allclose(
+        np.std(model_continuous.numpy_actors(), axis=0), np.ones(2), rtol=0.1
+    )</code></pre>

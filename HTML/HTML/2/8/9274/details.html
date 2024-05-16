@@ -1,0 +1,142 @@
+<html><h3>Pattern ID :9274
+</h3><img src='33354782.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            bin_mask = bin_mask.unsqueeze(0)
+                
+            if one_hot_stack is None:
+                one_hot_stack<a id="change"> = </a>bin_mask
+            else:
+                one_hot_stack = torch.cat((one_hot_stack, bin_mask))
+                
+        if batch_stack is None:
+            batch_stack = one_hot_stack
+            &#47&#47 always ensure we are returning a tensor with batch_size encoded
+            batch_stack = <a id="change">batch_stack.unsqueeze(0</a><a id="change">)</a>
+        else:
+            if one_hot_stack.shape != batch_stack.shape:
+                one_hot_stack = one_hot_stack.unsqueeze(0)
+            batch_stack<a id="change"> = </a>torch.cat((batch_stack, one_hot_stack))
+            
+    return batch_stack
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 one_hot_stack = np.zeros([len(class_list), def_shape[2], def_shape[3], def_shape[4]])
+        &#47&#47 since the input tensor is 5D, with [batch_size, modality, x, y, z], we do not need to consider the modality dimension for labels
+        segmask_array_iter = segmask_array[b, 0, ...]
+        bin_mask = <a id="change">(segmask_array_iter == 0).numpy()</a>  &#47&#47 initialize bin_mask
+        &#47&#47 this implementation allows users to combine logical operands
+
+        class_idx = 0
+        for _class in class_list:
+            if isinstance(_class, str):
+                if "||" in _class:  &#47&#47 special case
+                    class_split = _class.split("||")
+                    bin_mask = segmask_array_iter == int(class_split[0])
+                    for i in range(1, len(class_split)):
+                        bin_mask = bin_mask | (
+                            segmask_array_iter == int(class_split[i])
+                        )
+                elif "|" in _class:  &#47&#47 special case
+                    class_split = _class.split("|")
+                    bin_mask = segmask_array_iter == int(class_split[0])
+                    for i in range(1, len(class_split)):
+                        bin_mask = bin_mask | (
+                            segmask_array_iter == int(class_split[i])
+                        )
+                else:
+                    &#47&#47 assume that it is a simple int
+                    bin_mask = segmask_array_iter == int(_class)
+            else:
+                bin_mask = segmask_array_iter == int(_class)
+            bin_mask = bin_mask.long()
+            &#47&#47 we always ensure the append happens in dim 0, which is blank
+            bin_mask = bin_mask.unsqueeze(0)
+
+            batch_stack[b, class_idx, ...]<a id="change"> = </a>bin_mask
+            class_idx<a id="change"> += </a>1
+                
+        &#47&#47     if one_hot_stack is None:
+        &#47&#47         one_hot_stack = bin_mask</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 6</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/cbica/gandlf/commit/f8cee6b9b288779a9f99ae6e6f84e5aec79836b0#diff-bb94cfa3aa2c4896ffc51250bc8aaa76a69755d33e3ec31c80f29b9c9353119bL20' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 33354782</div><div id='project'> Project Name: cbica/gandlf</div><div id='commit'> Commit Name: f8cee6b9b288779a9f99ae6e6f84e5aec79836b0</div><div id='time'> Time: 2021-10-04</div><div id='author'> Author: sarthak.pati@hotmail.com</div><div id='file'> File Name: GANDLF/utils/tensor.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: one_hot(2)</div><div id='n_method'> N Method Name: one_hot(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: GANDLF/utils/tensor.py</div><div id='n_file'> N File Name: GANDLF/utils/tensor.py</div><div id='m_start'> M Start Line: 20</div><div id='m_end'> M End Line: 66</div><div id='n_start'> N Start Line: 21</div><div id='n_end'> N End Line: 73</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            bin_mask = bin_mask.unsqueeze(0)
+                
+            if one_hot_stack is None:
+                one_hot_stack<a id="change"> = </a>bin_mask
+            else:
+                one_hot_stack = torch.cat((one_hot_stack, bin_mask))
+                
+        if batch_stack is None:
+            batch_stack = one_hot_stack
+            &#47&#47 always ensure we are returning a tensor with batch_size encoded
+            batch_stack = <a id="change">batch_stack.unsqueeze(0</a><a id="change">)</a>
+        else:
+            if one_hot_stack.shape != batch_stack.shape:
+                one_hot_stack = one_hot_stack.unsqueeze(0)
+            batch_stack<a id="change"> = </a>torch.cat((batch_stack, one_hot_stack))
+            
+    return batch_stack
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    &#47&#47 batch_stack = None
+    def_shape = segmask_array.shape
+    batch_stack = np.zeros([def_shape[0], len(class_list), def_shape[2], def_shape[3], def_shape[4]], dtype=np.float32)
+    for <a id="change">b</a> in range(batch_size):
+        &#47&#47 one_hot_stack = np.zeros([len(class_list), def_shape[2], def_shape[3], def_shape[4]])
+        &#47&#47 since the input tensor is 5D, with [batch_size, modality, x, y, z], we do not need to consider the modality dimension for labels
+        segmask_array_iter = segmask_array[b, 0, ...]
+        bin_mask = <a id="change">(segmask_array_iter == 0).numpy()</a>  &#47&#47 initialize bin_mask
+        &#47&#47 this implementation allows users to combine logical operands
+
+        class_idx<a id="change"> = </a>0
+        for _class in class_list:
+            if isinstance(_class, str):
+                if "||" in _class:  &#47&#47 special case
+                    class_split = _class.split("||")
+                    bin_mask = segmask_array_iter == int(class_split[0])
+                    for i in range(1, len(class_split)):
+                        bin_mask = bin_mask | (
+                            segmask_array_iter == int(class_split[i])
+                        )
+                elif "|" in _class:  &#47&#47 special case
+                    class_split = _class.split("|")
+                    bin_mask = segmask_array_iter == int(class_split[0])
+                    for i in range(1, len(class_split)):
+                        bin_mask = bin_mask | (
+                            segmask_array_iter == int(class_split[i])
+                        )
+                else:
+                    &#47&#47 assume that it is a simple int
+                    bin_mask = segmask_array_iter == int(_class)
+            else:
+                bin_mask = segmask_array_iter == int(_class)
+            bin_mask = bin_mask.long()
+            &#47&#47 we always ensure the append happens in dim 0, which is blank
+            bin_mask = bin_mask.unsqueeze(0)
+
+            batch_stack[b, class_idx, ...]<a id="change"> = </a>bin_mask
+            class_idx += 1
+                
+        &#47&#47     if one_hot_stack is None:</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/cbica/gandlf/commit/f8cee6b9b288779a9f99ae6e6f84e5aec79836b0#diff-bb94cfa3aa2c4896ffc51250bc8aaa76a69755d33e3ec31c80f29b9c9353119bL8' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 33354778</div><div id='project'> Project Name: cbica/gandlf</div><div id='commit'> Commit Name: f8cee6b9b288779a9f99ae6e6f84e5aec79836b0</div><div id='time'> Time: 2021-10-04</div><div id='author'> Author: sarthak.pati@hotmail.com</div><div id='file'> File Name: GANDLF/utils/tensor.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: one_hot(2)</div><div id='n_method'> N Method Name: one_hot(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: GANDLF/utils/tensor.py</div><div id='n_file'> N File Name: GANDLF/utils/tensor.py</div><div id='m_start'> M Start Line: 20</div><div id='m_end'> M End Line: 66</div><div id='n_start'> N Start Line: 21</div><div id='n_end'> N End Line: 73</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+async def query(query: Query) -&gt; List[Dict[str, float]]:
+    text = [query.query.text] + [document.text for document in query.documents]
+
+    embeddings<a id="change"> = </a>encode(text)
+
+    &#47&#47 query_id = query.query.uid
+    query_embedding = <a id="change">embeddings[0].unsqueeze(0</a><a id="change">)</a>.cpu().numpy()
+    document_ids = [int(doc.uid) for doc in query.documents]
+    document_embeddings<a id="change"> = </a>embeddings[1:].cpu().numpy()
+
+    add_to_faiss_index(document_ids, document_embeddings, model.index)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    &#47&#47 See: https://github.com/facebookresearch/faiss/issues/859
+    &#47&#47 To do this, we first determine which of the incoming ids do not exist in the index
+    indexed_ids = set(faiss.vector_to_array(model.index.id_map).tolist())
+    <a id="change">to_embed</a> = [(id_, text) for id_, text in zip(ids, texts) if id_ not in indexed_ids]
+    &#47&#47 We then embed the corresponding text and update the index
+    if to_embed:
+        ids<a id="change">, texts = </a>zip(*to_embed)  &#47&#47 type: ignore
+        embeddings<a id="change"> = </a><a id="change">encode(texts).cpu().numpy()</a>
+        add_to_faiss_index(ids, embeddings, model.index)
+
+    top_k = max(min(query.top_k, len(query.documents)), 0) if query.top_k else None
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/pathwaycommons/semantic-search/commit/b9f93d776ecb495fc68c9e7562f0b62701d88f00#diff-34cfc92293696e7fed771364dbb281ae80afb154513853dbd87ac7436f0c2969L87' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 33354791</div><div id='project'> Project Name: pathwaycommons/semantic-search</div><div id='commit'> Commit Name: b9f93d776ecb495fc68c9e7562f0b62701d88f00</div><div id='time'> Time: 2021-03-02</div><div id='author'> Author: johnmgiorgi@gmail.com</div><div id='file'> File Name: semantic_search/main.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: query(1)</div><div id='n_method'> N Method Name: query(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: semantic_search/main.py</div><div id='n_file'> N File Name: semantic_search/main.py</div><div id='m_start'> M Start Line: 88</div><div id='m_end'> M End Line: 105</div><div id='n_start'> N Start Line: 92</div><div id='n_end'> N End Line: 115</div><BR>

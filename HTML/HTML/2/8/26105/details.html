@@ -1,0 +1,310 @@
+<html><h3>Pattern ID :26105
+</h3><img src='78699185.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+    video_f.release(st_video=True)
+
+    <a id="change">pass</a>
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    N_step = st_utils.number_input(&quotN_step&quot, cfg.N_step, sidebar=True)
+
+    show_depth = st_utils.checkbox(&quotshow_depth&quot, True)
+    <a id="change">show_weights_sum = </a><a id="change">st_utils.checkbox(&quotshow_weights_sum&quot</a>, True<a id="change">)</a>
+
+    seed = st_utils.get_seed(seeds=cfg.seeds)
+
+    if not global_cfg.tl_debug:
+      if not st.sidebar.button("run_web"):
+        return
+
+    if saved_suffix_state is not None:
+      saved_suffix_state.saved_suffix = saved_suffix_state.saved_suffix + 1
+
+    device = &quotcuda&quot
+    torch_utils.init_seeds(seed=seed)
+
+    G_kwargs = cfg.G_kwargs.clone()
+    G_kwargs[&quotnerf_kwargs&quot][&quoth_stddev&quot] = 0.
+    G_kwargs[&quotnerf_kwargs&quot][&quotv_stddev&quot] = 0.
+    G_kwargs[&quotnerf_kwargs&quot][&quotN_samples&quot] = nerf_N_samples
+    G_kwargs[&quotnerf_kwargs&quot][&quotN_importance&quot] = nerf_N_importance
+
+    if use_network_pkl_model:
+      G = torch.load(network_pkl_model).cuda()
+    else:
+      load_G_cfg = TLCfgNode.load_yaml_file(cfg_filename=f"{os.path.dirname(network_pkl)}/config_command.yaml")
+      load_G_cfg = list(load_G_cfg.values())[0]
+      G = build_model(load_G_cfg.G_cfg).cuda()
+      Checkpointer(G).load_state_dict_from_file(network_pkl)
+      cfg = load_G_cfg
+
+    H = W = img_size
+    cam_cfg = cfg.get(&quotcam_cfg&quot, {})
+    cam_param = cam_params.CamParams.from_config(H0=H, W0=W, **cam_cfg).cuda()
+    intr = cam_param(mode=&quotget_intrinsic&quot)
+
+
+    st_image = st.empty()
+    video_f = cv2_utils.ImageioVideoWriter(f"{outdir}/video.mp4", fps=fps, hd_video=True)
+
+    G.eval()
+    zs = G.get_zs(bs)
+
+    yaw_list = np.linspace(yaw_min, yaw_max, N_step)
+    for idx, yaw_ in enumerate(yaw_list):
+      rays_o, rays_d, select_inds = cam_param.get_rays_random_pose(
+        device=device, bs=bs, intr=intr,
+        **{**G_kwargs.nerf_kwargs,
+           &quoth_mean&quot: yaw_,
+           &quoth_stddev&quot: 0,
+           &quotv_stddev&quot: 0})
+
+      with torch.set_grad_enabled(False):
+        imgs, ret_imgs = G(zs=zs,
+                           rays_o=rays_o,
+                           rays_d=rays_d,
+                           forward_points=forward_points ** 2,  &#47&#47 disable gradients
+                           return_aux_img=True,
+                           **{**G_kwargs,
+                              &quotpsi&quot: psi})
+        g_imgs_aux = ret_imgs[&quotaux_img&quot]
+
+        imgs = norm_ip(imgs, -1, 1)
+        g_imgs_aux = norm_ip(g_imgs_aux, -1, 1)
+        img_list = [imgs, g_imgs_aux]
+
+        if show_depth:
+          depth_img = ret_imgs[&quotdepth&quot][:, None].expand(-1, 3, -1, -1)
+          depth_img = norm_ip(depth_img, 0, 1.5)
+          img_list.append(depth_img)
+        <a id="change">if show_weights_sum</a>:
+          weights_sum = ret_imgs[&quotweights_sum&quot][:, None].expand(-1, 3, -1, -1)
+          weights_sum<a id="change"> = </a>norm_ip(weights_sum, 0, 1)
+          img_list.append(weights_sum)
+
+        gen_imgs = torch.cat(img_list, dim=0)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 5</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/peterouzh/cips-3d/commit/b4aa7359ca5484fbb5767a6cc808fca3f46e32ec#diff-197b0950b9e59ae8498afdaa8d2db45ced1c9e05e8e1aa8a5108f6d00dab839bL192' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 78699185</div><div id='project'> Project Name: peterouzh/cips-3d</div><div id='commit'> Commit Name: b4aa7359ca5484fbb5767a6cc808fca3f46e32ec</div><div id='time'> Time: 2022-02-24</div><div id='author'> Author: zhoupengcv@sjtu.edu.cn</div><div id='file'> File Name: exp/cips3d_inversion/models/st_web.py</div><div id='m_class'> M Class Name: STModel</div><div id='n_method'> N Class Name: STModel</div><div id='m_method'> M Method Name: sampling_yaw_web(4)</div><div id='n_method'> N Method Name: sampling_yaw_web(4)</div><div id='m_parent_class'> M Parent Class: object</div><div id='n_parent_class'> N Parent Class: object</div><div id='m_file'> M File Name: exp/cips3d_inversion/models/st_web.py</div><div id='n_file'> N File Name: exp/cips3d_inversion/models/st_web.py</div><div id='m_start'> M Start Line: 241</div><div id='m_end'> M End Line: 252</div><div id='n_start'> N Start Line: 192</div><div id='n_end'> N End Line: 279</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    video_f.release(st_video=True)
+
+    <a id="change">pass</a>
+
+  def sampling_yaw_web(self,
+                       cfg,
+                       outdir,</code></pre><h3>After Change</h3><pre><code class='java'>
+                                        default_key=cfg.default_network_pkl, sidebar=True)
+    network_pkl_model = st_utils.selectbox_v1(&quotnetwork_pkl_model&quot, options_dict=cfg.network_pkl_model,
+                                              default_key=cfg.default_network_pkl_model, sidebar=True)
+    <a id="change">use_network_pkl_model = </a><a id="change">st_utils.checkbox(&quotuse_network_pkl_model&quot</a>, cfg.use_network_pkl_model<a id="change">)</a>
+
+    st_utils.st_set_sep(&quotvideo kwargs&quot)
+    bs = st_utils.number_input(&quotbs&quot, cfg.bs, sidebar=True)
+    img_size = st_utils.number_input(&quotimg_size&quot, cfg.img_size, sidebar=True)
+    N_samples = st_utils.number_input(&quotN_samples&quot, cfg.N_samples, sidebar=True)
+    N_step = st_utils.number_input(&quotN_step&quot, cfg.N_step, sidebar=True)
+    fps = st_utils.number_input(&quotfps&quot, cfg.fps, sidebar=True)
+
+    st_utils.st_set_sep(&quotinterp kwargs&quot)
+    z_mode = st_utils.selectbox(&quotz_mode&quot, options=cfg.z_mode, default_value=cfg.default_z_mode, sidebar=True)
+    interp_mode = st_utils.selectbox(&quotinterp_mode&quot, options=cfg.interp_mode, sidebar=True)
+
+    st_utils.st_set_sep(&quotNeRF kwargs&quot)
+    nerf_N_samples = st_utils.number_input(&quotnerf_N_samples&quot, cfg.nerf_N_samples, sidebar=True)
+    nerf_N_importance = st_utils.number_input(&quotnerf_N_importance&quot, cfg.nerf_N_importance, sidebar=True)
+    forward_points = st_utils.number_input(&quotforward_points&quot, cfg.forward_points, sidebar=True)
+
+    seed = st_utils.get_seed(seeds=cfg.seeds)
+
+    if not global_cfg.tl_debug:
+      if not st.sidebar.button("run_web"):
+        return
+
+    if saved_suffix_state is not None:
+      saved_suffix_state.saved_suffix = saved_suffix_state.saved_suffix + 1
+
+    device = &quotcuda&quot
+    torch_utils.init_seeds(seed=seed)
+
+    G_kwargs = cfg.G_kwargs.clone()
+    G_kwargs[&quotnerf_kwargs&quot][&quoth_stddev&quot] = 0.
+    G_kwargs[&quotnerf_kwargs&quot][&quotv_stddev&quot] = 0.
+    G_kwargs[&quotnerf_kwargs&quot][&quotN_samples&quot] = nerf_N_samples
+    G_kwargs[&quotnerf_kwargs&quot][&quotN_importance&quot] = nerf_N_importance
+
+    <a id="change">if use_network_pkl_model</a>:
+      G<a id="change"> = </a>torch.load(network_pkl_model).cuda()
+    else:
+      G = build_model(cfg.G_cfg).cuda()
+      Checkpointer(G).load_state_dict_from_file(network_pkl)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/peterouzh/cips-3d/commit/bc88c4d853026bde14f4dc41ece48bbf845bf742#diff-197b0950b9e59ae8498afdaa8d2db45ced1c9e05e8e1aa8a5108f6d00dab839bL56' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 78699186</div><div id='project'> Project Name: peterouzh/cips-3d</div><div id='commit'> Commit Name: bc88c4d853026bde14f4dc41ece48bbf845bf742</div><div id='time'> Time: 2022-02-19</div><div id='author'> Author: zhoupengcv@sjtu.edu.cn</div><div id='file'> File Name: exp/cips3d_inversion/models/st_web.py</div><div id='m_class'> M Class Name: STModel</div><div id='n_method'> N Class Name: STModel</div><div id='m_method'> M Method Name: interpolate_z_web(4)</div><div id='n_method'> N Method Name: interpolate_z_web(4)</div><div id='m_parent_class'> M Parent Class: object</div><div id='n_parent_class'> N Parent Class: object</div><div id='m_file'> M File Name: exp/cips3d_inversion/models/st_web.py</div><div id='n_file'> N File Name: exp/cips3d_inversion/models/st_web.py</div><div id='m_start'> M Start Line: 99</div><div id='m_end'> M End Line: 149</div><div id='n_start'> N Start Line: 64</div><div id='n_end'> N End Line: 155</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    video_f.release(st_video=True)
+
+    <a id="change">pass</a>
+
+  def sampling_yaw_web(self,
+                       cfg,
+                       outdir,</code></pre><h3>After Change</h3><pre><code class='java'>
+    nerf_N_importance = st_utils.number_input(&quotnerf_N_importance&quot, cfg.nerf_N_importance, sidebar=True)
+    forward_points = st_utils.number_input(&quotforward_points&quot, cfg.forward_points, sidebar=True)
+
+    <a id="change">show_depth = </a><a id="change">st_utils.checkbox(&quotshow_depth&quot</a>, True<a id="change">)</a>
+
+    seed = st_utils.get_seed(seeds=cfg.seeds)
+
+    network_pkl = st_utils.selectbox_v1(&quotnetwork_pkl&quot, options_dict=cfg.network_pkl,
+                                        default_key=cfg.default_network_pkl, sidebar=True)
+
+    if not global_cfg.tl_debug:
+      if not st.sidebar.button("run_web"):
+        return
+
+    if saved_suffix_state is not None:
+      saved_suffix_state.saved_suffix = saved_suffix_state.saved_suffix + 1
+
+    device = &quotcuda&quot
+    torch_utils.init_seeds(seed=seed)
+
+    G_kwargs = cfg.G_kwargs.clone()
+    G_kwargs[&quotnerf_kwargs&quot][&quoth_stddev&quot] = 0.
+    G_kwargs[&quotnerf_kwargs&quot][&quotv_stddev&quot] = 0.
+    G_kwargs[&quotnerf_kwargs&quot][&quotN_samples&quot] = nerf_N_samples
+    G_kwargs[&quotnerf_kwargs&quot][&quotN_importance&quot] = nerf_N_importance
+
+    if use_network_pkl_model:
+      G = torch.load(network_pkl_model).cuda()
+    else:
+      load_G_cfg = TLCfgNode.load_yaml_file(cfg_filename=f"{os.path.dirname(network_pkl)}/config_command.yaml")
+      load_G_cfg = list(load_G_cfg.values())[0]
+      G = build_model(load_G_cfg.G_cfg).cuda()
+      Checkpointer(G).load_state_dict_from_file(network_pkl)
+      cfg = load_G_cfg
+
+    H = W = img_size
+    cam_cfg = cfg.get(&quotcam_cfg&quot, {})
+    cam_param = cam_params.CamParams.from_config(H0=H, W0=W, **cam_cfg).cuda()
+
+    intr = cam_param(mode=&quotget_intrinsic&quot)
+    rays_o, rays_d, select_inds = cam_param.get_rays_random_pose(
+      device=device, bs=bs, intr=intr, **G_kwargs.nerf_kwargs)
+
+    st_image = st.empty()
+    video_f = cv2_utils.ImageioVideoWriter(f"{outdir}/video.mp4", fps=fps, hd_video=True)
+
+    G.eval()
+    zs = G.get_zs(bs)
+    zs_list = [G.get_zs(bs) for _ in range(N_samples)]
+
+    for idx in range(N_samples):
+      zs1 = zs_list[idx]
+      zs2 = zs_list[(idx + 1) % N_samples]
+      ts = np.linspace(0, 1, N_step)
+      for t in ts:
+        z1_ = zs1[z_mode]
+        z2_ = zs2[z_mode]
+        if interp_mode == &quotslerp&quot:
+          z_interp_ = interpolate_sphere(z1_, z2_, t)
+        elif interp_mode == &quotlerp&quot:
+          z_interp_ = torch.lerp(z1_, z2_, t)
+        else:
+          assert 0
+        zs[z_mode] = z_interp_
+
+        with torch.set_grad_enabled(False):
+          imgs, ret_imgs = G(zs=zs,
+                             rays_o=rays_o,
+                             rays_d=rays_d,
+                             forward_points=forward_points ** 2,  &#47&#47 disable gradients
+                             return_aux_img=True,
+                             **G_kwargs)
+          g_imgs_aux = ret_imgs[&quotaux_img&quot]
+
+          imgs = norm_ip(imgs, -1, 1)
+          g_imgs_aux = norm_ip(g_imgs_aux, -1, 1)
+          img_list = [imgs, g_imgs_aux]
+
+          <a id="change">if show_depth</a>:
+            depth_img = ret_imgs[&quotdepth&quot][:, None].expand(-1, 3, -1, -1)
+            depth_img<a id="change"> = </a>norm_ip(depth_img, 0, 1.5)
+            img_list.append(depth_img)
+
+        gen_imgs = torch.cat(img_list, dim=0)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/peterouzh/cips-3d/commit/d596a9bf9455c28ed0cbf758071f239b70a397a4#diff-197b0950b9e59ae8498afdaa8d2db45ced1c9e05e8e1aa8a5108f6d00dab839bL63' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 78699189</div><div id='project'> Project Name: peterouzh/cips-3d</div><div id='commit'> Commit Name: d596a9bf9455c28ed0cbf758071f239b70a397a4</div><div id='time'> Time: 2022-02-28</div><div id='author'> Author: zhoupengcv@sjtu.edu.cn</div><div id='file'> File Name: exp/cips3d_inversion/models/st_web.py</div><div id='m_class'> M Class Name: STModel</div><div id='n_method'> N Class Name: STModel</div><div id='m_method'> M Method Name: interpolate_z_web(4)</div><div id='n_method'> N Method Name: interpolate_z_web(4)</div><div id='m_parent_class'> M Parent Class: object</div><div id='n_parent_class'> N Parent Class: object</div><div id='m_file'> M File Name: exp/cips3d_inversion/models/st_web.py</div><div id='n_file'> N File Name: exp/cips3d_inversion/models/st_web.py</div><div id='m_start'> M Start Line: 69</div><div id='m_end'> M End Line: 162</div><div id='n_start'> N Start Line: 89</div><div id='n_end'> N End Line: 181</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    video_f.release(st_video=True)
+
+    <a id="change">pass</a>
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    yaw_max = st_utils.number_input(&quotyaw_max&quot, cfg.yaw_max, sidebar=True, format="%.3f")
+    N_step = st_utils.number_input(&quotN_step&quot, cfg.N_step, sidebar=True)
+
+    <a id="change">show_depth = </a><a id="change">st_utils.checkbox(&quotshow_depth&quot</a>, True<a id="change">)</a>
+    show_weights_sum = st_utils.checkbox(&quotshow_weights_sum&quot, True)
+
+    seed = st_utils.get_seed(seeds=cfg.seeds)
+
+    if not global_cfg.tl_debug:
+      if not st.sidebar.button("run_web"):
+        return
+
+    if saved_suffix_state is not None:
+      saved_suffix_state.saved_suffix = saved_suffix_state.saved_suffix + 1
+
+    device = &quotcuda&quot
+    torch_utils.init_seeds(seed=seed)
+
+    G_kwargs = cfg.G_kwargs.clone()
+    G_kwargs[&quotnerf_kwargs&quot][&quoth_stddev&quot] = 0.
+    G_kwargs[&quotnerf_kwargs&quot][&quotv_stddev&quot] = 0.
+    G_kwargs[&quotnerf_kwargs&quot][&quotN_samples&quot] = nerf_N_samples
+    G_kwargs[&quotnerf_kwargs&quot][&quotN_importance&quot] = nerf_N_importance
+
+    if use_network_pkl_model:
+      G = torch.load(network_pkl_model).cuda()
+    else:
+      load_G_cfg = TLCfgNode.load_yaml_file(cfg_filename=f"{os.path.dirname(network_pkl)}/config_command.yaml")
+      load_G_cfg = list(load_G_cfg.values())[0]
+      G = build_model(load_G_cfg.G_cfg).cuda()
+      Checkpointer(G).load_state_dict_from_file(network_pkl)
+      cfg = load_G_cfg
+
+    H = W = img_size
+    cam_cfg = cfg.get(&quotcam_cfg&quot, {})
+    cam_param = cam_params.CamParams.from_config(H0=H, W0=W, **cam_cfg).cuda()
+    intr = cam_param(mode=&quotget_intrinsic&quot)
+
+
+    st_image = st.empty()
+    video_f = cv2_utils.ImageioVideoWriter(f"{outdir}/video.mp4", fps=fps, hd_video=True)
+
+    G.eval()
+    zs = G.get_zs(bs)
+
+    yaw_list = np.linspace(yaw_min, yaw_max, N_step)
+    for idx, yaw_ in enumerate(yaw_list):
+      rays_o, rays_d, select_inds = cam_param.get_rays_random_pose(
+        device=device, bs=bs, intr=intr,
+        **{**G_kwargs.nerf_kwargs,
+           &quoth_mean&quot: yaw_,
+           &quoth_stddev&quot: 0,
+           &quotv_stddev&quot: 0})
+
+      with torch.set_grad_enabled(False):
+        imgs, ret_imgs = G(zs=zs,
+                           rays_o=rays_o,
+                           rays_d=rays_d,
+                           forward_points=forward_points ** 2,  &#47&#47 disable gradients
+                           return_aux_img=True,
+                           **{**G_kwargs,
+                              &quotpsi&quot: psi})
+        g_imgs_aux = ret_imgs[&quotaux_img&quot]
+
+        imgs = norm_ip(imgs, -1, 1)
+        g_imgs_aux = norm_ip(g_imgs_aux, -1, 1)
+        img_list = [imgs, g_imgs_aux]
+
+        <a id="change">if show_depth</a>:
+          depth_img = ret_imgs[&quotdepth&quot][:, None].expand(-1, 3, -1, -1)
+          depth_img<a id="change"> = </a>norm_ip(depth_img, 0, 1.5)
+          img_list.append(depth_img)
+        if show_weights_sum:
+          weights_sum = ret_imgs[&quotweights_sum&quot][:, None].expand(-1, 3, -1, -1)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/peterouzh/cips-3d/commit/b4aa7359ca5484fbb5767a6cc808fca3f46e32ec#diff-197b0950b9e59ae8498afdaa8d2db45ced1c9e05e8e1aa8a5108f6d00dab839bL157' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 78699179</div><div id='project'> Project Name: peterouzh/cips-3d</div><div id='commit'> Commit Name: b4aa7359ca5484fbb5767a6cc808fca3f46e32ec</div><div id='time'> Time: 2022-02-24</div><div id='author'> Author: zhoupengcv@sjtu.edu.cn</div><div id='file'> File Name: exp/cips3d_inversion/models/st_web.py</div><div id='m_class'> M Class Name: STModel</div><div id='n_method'> N Class Name: STModel</div><div id='m_method'> M Method Name: sampling_yaw_web(4)</div><div id='n_method'> N Method Name: sampling_yaw_web(4)</div><div id='m_parent_class'> M Parent Class: object</div><div id='n_parent_class'> N Parent Class: object</div><div id='m_file'> M File Name: exp/cips3d_inversion/models/st_web.py</div><div id='n_file'> N File Name: exp/cips3d_inversion/models/st_web.py</div><div id='m_start'> M Start Line: 241</div><div id='m_end'> M End Line: 252</div><div id='n_start'> N Start Line: 192</div><div id='n_end'> N End Line: 279</div><BR>

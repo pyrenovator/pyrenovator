@@ -1,0 +1,144 @@
+<html><h3>Pattern ID :23796
+</h3><img src='74271593.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            FusedLeakyReLU(resl2ch[128])
+        )
+
+        layers<a id="change"> = </a><a id="change">[]</a>
+        for resl in list(resl2ch.keys())[::-1]:
+            layers += [
+                ResBlock(resl2ch[resl], resl2ch[resl//2])
+            ]
+            if resl == list(resl2ch.keys())[1]:
+                break
+        
+        <a id="change">layers.append(</a>MiniBatchStd()<a id="change">)</a>
+        layers<a id="change"> += </a>[
+            EqualizedConv2d(resl2ch[4]+1, resl2ch[4], 3, padding=1, bias=False),
+            FusedLeakyReLU(resl2ch[4]),
+            Flatten(),</code></pre><h3>After Change</h3><pre><code class='java'>
+            nn.LeakyReLU(0.2, inplace=True)
+        )
+        resl = image_size
+        blocks<a id="change"> = </a><a id="change">[]</a>
+        while resl &gt; 4:
+            resl = resl // 2
+            channels *= 2
+            ichannels, ochannels = ochannels, check_c(channels)
+            blocks.append(
+                DBlock(ichannels, ochannels, block_num_conv)
+            )
+        blocks.append(MiniBatchStdDev(mbsd_groups))
+        <a id="change">blocks.extend(</a>[
+            Conv2d(&quotelr&quot, ochannels+1, ochannels, 3, padding=1),
+            nn.LeakyReLU(0.2, inplace=True),
+            Flatten(),
+            Linear(&quotelr&quot, ochannels*(resl**2), ochannels),
+            nn.LeakyReLU(0.2, inplace=True),
+            Linear(&quotelr&quot, ochannels, 1)
+        ]<a id="change">)</a>
+        self.blocks = nn.Sequential(*blocks)
+    def forward(self, x):
+        x = self.from_rgb(x)
+        x = self.blocks(x)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 7</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/stomoya/animeface/commit/b3652bae109c713da926d5532eb014b02135da52#diff-0383c3e0d2575e5076916c51cfa38d4b02353d9aef3e245e35d328bb2169f279L354' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 74271593</div><div id='project'> Project Name: stomoya/animeface</div><div id='commit'> Commit Name: b3652bae109c713da926d5532eb014b02135da52</div><div id='time'> Time: 2020-12-14</div><div id='author'> Author: blackie0110@gmail.com</div><div id='file'> File Name: implementations/StyleGAN2/model.py</div><div id='m_class'> M Class Name: Discriminator</div><div id='n_method'> N Class Name: Discriminator</div><div id='m_method'> M Method Name: __init__(7)</div><div id='n_method'> N Method Name: __init__(1)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: implementations/StyleGAN2/model.py</div><div id='n_file'> N File Name: implementations/StyleGAN2/model.py</div><div id='m_start'> M Start Line: 354</div><div id='m_end'> M End Line: 387</div><div id='n_start'> N Start Line: 364</div><div id='n_end'> N End Line: 389</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                                                        batch_size=self.poison_num, num_workers=0)
+        target_imgs, _ = self.model.get_data(next(iter(target_dataloader)))
+
+        dataset_list<a id="change"> = </a><a id="change">[</a>target_class_dataset<a id="change"></a>]
+        for source_class in other_classes:
+            source_class_dataset = self.dataset.get_dataset(mode=&quottrain&quot, full=True, classes=[source_class])
+            poison_source_class_dataset, other_source_class_dataset = self.dataset.split_set(
+                source_class_dataset, self.poison_num)
+            poison_source_class_dataloader = self.dataset.get_dataloader(mode=&quottrain&quot, dataset=poison_source_class_dataset,
+                                                                         batch_size=self.poison_num, num_workers=0)
+            source_imgs, source_label = self.model.get_data(next(iter(poison_source_class_dataloader)))
+            if self.poison_generation_method == &quotgan&quot:
+                gan_data = torch.cat([source_imgs, target_imgs])
+                self.wgan.reset_parameters()
+                self.wgan.train(gan_data)
+                source_encode = self.wgan.get_encode_value(source_imgs, self.poison_num).detach()
+                target_encode = self.wgan.get_encode_value(target_imgs, self.poison_num).detach()
+                interpolation_encode = source_encode * self.tau + target_encode * (1 - self.tau)
+                poison_imgs = self.wgan.G(interpolation_encode).detach()
+                poison_imgs = self.add_mark(poison_imgs)
+            elif self.poison_generation_method == &quotpgd&quot:
+                poison_imgs, _ = self.pgd.craft_example(_input=source_imgs)
+                poison_imgs = self.add_mark(poison_imgs)
+            else:
+                raise ValueError(f&quot{self.poison_generation_method} poison generation method not supported.&quot)
+            poison_label = [self.target_class] * len(poison_imgs)
+            poison_imgs = poison_imgs.to(&quotcpu&quot)
+            poison_set = MyDataset(poison_imgs, poison_label)
+            <a id="change">dataset_list.append(</a>poison_set<a id="change">)</a>
+            dataset_list.append(other_source_class_dataset)
+        final_set = torch.utils.data.ConcatDataset(dataset_list)
+        final_loader = self.dataset.get_dataloader(mode=&quottrain&quot, dataset=final_set, num_workers=0)
+        self.model._train(optimizer=optimizer, lr_scheduler=lr_scheduler, save_fn=self.save,</code></pre><h3>After Change</h3><pre><code class='java'>
+            other_classes = list(range(self.dataset.num_classes))
+            other_classes.pop(self.target_class)
+            x_list = []
+            y_list<a id="change"> = </a><a id="change">[]</a>
+            for source_class in other_classes:
+                source_class_dataset = self.dataset.get_dataset(mode=&quottrain&quot, full=True, classes=[source_class])
+                poison_source_class_dataset, _ = self.dataset.split_set(
+                    source_class_dataset, self.poison_num)
+                poison_source_class_dataloader = self.dataset.get_dataloader(mode=&quottrain&quot, dataset=poison_source_class_dataset,
+                                                                             batch_size=self.poison_num, num_workers=0)
+                source_imgs, _ = self.model.get_data(next(iter(poison_source_class_dataloader)))
+                gan_data = torch.cat([source_imgs, target_imgs])
+                self.wgan.reset_parameters()
+                self.wgan.train(gan_data)
+                source_encode = self.wgan.get_encode_value(source_imgs, self.poison_num).detach()
+                target_encode = self.wgan.get_encode_value(target_imgs, self.poison_num).detach()
+                interpolation_encode = source_encode * self.tau + target_encode * (1 - self.tau)
+                poison_imgs = self.wgan.G(interpolation_encode).detach()
+                poison_imgs = self.add_mark(poison_imgs)
+
+                poison_label = [self.target_class] * len(poison_imgs)
+                poison_imgs = poison_imgs.to(&quotcpu&quot)
+                x_list.append(poison_imgs)
+                <a id="change">y_list.extend(</a>poison_label<a id="change">)</a>
+            x_list = torch.cat(x_list)
+            final_set<a id="change"> = </a>MyDataset(x_list, y_list)
+        final_loader = self.dataset.get_dataloader(mode=&quottrain&quot, dataset=final_set, num_workers=0)
+        self.model._train(optimizer=optimizer, lr_scheduler=lr_scheduler, save_fn=self.save,
+                          loader_train=final_loader, validate_func=self.validate_func, **kwargs)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/ain-soph/trojanzoo/commit/8983bfb499fcecbf4afd1e1301d4dbe47fa54b45#diff-2703c81ac301c3f9c4206b9498879a8b38485de4b048123eabf0616dbcf33e70L80' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 74271580</div><div id='project'> Project Name: ain-soph/trojanzoo</div><div id='commit'> Commit Name: 8983bfb499fcecbf4afd1e1301d4dbe47fa54b45</div><div id='time'> Time: 2020-08-14</div><div id='author'> Author: ain-soph@live.com</div><div id='file'> File Name: trojanzoo/attack/backdoor/clean_label.py</div><div id='m_class'> M Class Name: Clean_Label</div><div id='n_method'> N Class Name: Clean_Label</div><div id='m_method'> M Method Name: attack(3)</div><div id='n_method'> N Method Name: attack(3)</div><div id='m_parent_class'> M Parent Class: BadNet</div><div id='n_parent_class'> N Parent Class: BadNet</div><div id='m_file'> M File Name: trojanzoo/attack/backdoor/clean_label.py</div><div id='n_file'> N File Name: trojanzoo/attack/backdoor/clean_label.py</div><div id='m_start'> M Start Line: 81</div><div id='m_end'> M End Line: 117</div><div id='n_start'> N Start Line: 89</div><div id='n_end'> N End Line: 122</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        if query_num is None:
+            query_num = self.query_num
+        sigma = self.sigma
+        seq<a id="change"> = </a><a id="change">[</a>X.clone()<a id="change"></a>]
+        if self.grad_method == &quotnes&quot:
+            for i in range(query_num // 2):
+                noise = torch.normal(mean=0.0, std=1.0, size=X.shape, device=X.device)
+                X1 = X + sigma * noise
+                X2 = X - sigma * noise
+                seq.append(X1)
+                <a id="change">seq.append(</a>X2<a id="change">)</a>
+            if query_num % 2 == 1:
+                seq.append(X)
+        elif self.grad_method == &quotsgd&quot:
+            for i in range(query_num):</code></pre><h3>After Change</h3><pre><code class='java'>
+        noise = sigma * torch.normal(mean=0.0, std=1.0, size=shape, device=X.device)
+
+        zeros = torch.zeros_like(X)
+        seq<a id="change"> = </a><a id="change">[</a>zeros<a id="change"></a>]
+        if self.grad_method == &quotnes&quot:
+            <a id="change">seq.extend(</a>[noise, -noise]<a id="change">)</a>
+            if query_num % 2 == 1:
+                seq.append(zeros)
+        elif self.grad_method == &quotsgd&quot:
+            seq.append(noise)
+        elif self.grad_method == &quothess&quot:
+            noise = self.hess.mm(noise.view(-1, 1)).view(X.shape)
+            seq.append(noise)
+        elif self.grad_method == &quotzoo&quot:
+            raise NotImplementedError(self.grad_method)
+        else:
+            print(&quotCurrent method: &quot, self.grad_method)
+            raise ValueError("Argument &quotmethod&quot should be &quotnes&quot, &quotsgd&quot or &quothess&quot!")
+        seq<a id="change"> = </a>torch.cat(seq).add(X)
+        return seq
+
+    def calc_seq(self, f: Callable, seq: torch.Tensor) -&gt; torch.Tensor:</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/ain-soph/trojanzoo/commit/bc3d366258b45942115b6b86ae8466dac52ac154#diff-6329d4702b9ac5d31d2825508b3b5a6c26f879bb018bf95db5b52d825768d67bL150' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 74271585</div><div id='project'> Project Name: ain-soph/trojanzoo</div><div id='commit'> Commit Name: bc3d366258b45942115b6b86ae8466dac52ac154</div><div id='time'> Time: 2020-06-30</div><div id='author'> Author: ain-soph@live.com</div><div id='file'> File Name: trojanzoo/optim/pgd.py</div><div id='m_class'> M Class Name: PGD</div><div id='n_method'> N Class Name: PGD</div><div id='m_method'> M Method Name: gen_seq(3)</div><div id='n_method'> N Method Name: gen_seq(3)</div><div id='m_parent_class'> M Parent Class: Optimizer</div><div id='n_parent_class'> N Parent Class: Optimizer</div><div id='m_file'> M File Name: trojanzoo/optim/pgd.py</div><div id='n_file'> N File Name: trojanzoo/optim/pgd.py</div><div id='m_start'> M Start Line: 152</div><div id='m_end'> M End Line: 174</div><div id='n_start'> N Start Line: 154</div><div id='n_end'> N End Line: 178</div><BR>

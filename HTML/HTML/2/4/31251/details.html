@@ -1,0 +1,59 @@
+<html><h3>Pattern ID :31251
+</h3><img src='91642965.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    positive_label_mask = targets == 1.0
+    cross_entropy = F.binary_cross_entropy_with_logits(logits, targets.to(logits.dtype), reduction=&quotnone&quot)
+    neg_logits = -1.0 * logits
+    modulator = <a id="change">torch.exp(</a>gamma<a id="change"> * </a>targets * neg_logits - gamma * torch.log1p(torch.exp(neg_logits))<a id="change">)</a>
+    loss = modulator * cross_entropy
+    weighted_loss = torch.where(positive_label_mask, alpha * loss, (1.0 - alpha) * loss)
+    weighted_loss /= normalizer
+    return weighted_loss</code></pre><h3>After Change</h3><pre><code class='java'>
+            + (1.0 - targets) * torch.log(1.0 - outputs))
+    loss = focal_weight * bce
+
+    loss<a id="change"> = </a>torch.where(torch.ne(targets, -1.0), loss,
+                       <a id="change">torch.zeros(</a>loss.shape<a id="change">, device=device)</a>)
+    loss /= normalizer
+    return loss
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/sevakon/efficientdet/commit/cc2e5246bcb32e8fd405e64eec12b70088f1f097#diff-217ea1e96fb551669028a03451214681afc74f587f6cf04eff69c306d74bdcb6L74' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 91642965</div><div id='project'> Project Name: sevakon/efficientdet</div><div id='commit'> Commit Name: cc2e5246bcb32e8fd405e64eec12b70088f1f097</div><div id='time'> Time: 2020-05-25</div><div id='author'> Author: sevakonyakhin@gmail.com</div><div id='file'> File Name: utils/tools.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: focal_loss(5)</div><div id='n_method'> N Method Name: focal_loss(5)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: utils/tools.py</div><div id='n_file'> N File Name: utils/tools.py</div><div id='m_start'> M Start Line: 80</div><div id='m_end'> M End Line: 87</div><div id='n_start'> N Start Line: 74</div><div id='n_end'> N End Line: 91</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    def log_prob(self, z):
+        prob = 0.
+        for i in range(self.n_modes):
+            prob += <a id="change">torch.exp(-</a>((z[:, 0] - 2 * np.sin(2 * np.pi / self.n_modes * i)) ** 2
+                                 + (z[:, 1] - 2 * np.cos(2 * np.pi / self.n_modes * i)) ** 2)
+                              / (2 * self.scale ** 2)<a id="change">)</a> / (2 * np.pi * self.scale ** 2 * self.n_modes)
+        return torch.log(prob + 1e-10)
+
+    def sample(self, num_samples=1):</code></pre><h3>After Change</h3><pre><code class='java'>
+        self.register_buffer("scale", torch.tensor(2 / 3 * np.sin(np.pi / self.n_modes)))
+
+    def log_prob(self, z):
+        d = <a id="change">torch.zeros(</a>(len(z), 0)<a id="change">, dtype=self.z.dtype, device=self.z.device)</a>
+        for i in range(self.n_modes):
+            d_ = ((z[:, 0] - 2 * np.sin(2 * np.pi / self.n_modes * i)) ** 2
+                  + (z[:, 1] - 2 * np.cos(2 * np.pi / self.n_modes * i)) ** 2)\
+                 / (2 * self.scale ** 2)
+            d<a id="change"> = </a>torch.cat((d, d_), 1)
+        log_p = - torch.log(2 * np.pi * self.scale ** 2 * self.n_modes) \
+                - torch.logsumexp(-d, 1)
+        return log_p</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/vincentstimper/normalizing-flows/commit/d9e324c6f8307204350588cc5387c7cff82c8274#diff-20a4f88fcf0defe95b0aafe866e47b98d0f1b44e4d1ddad71d8e167be7d44818L904' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 91642962</div><div id='project'> Project Name: vincentstimper/normalizing-flows</div><div id='commit'> Commit Name: d9e324c6f8307204350588cc5387c7cff82c8274</div><div id='time'> Time: 2020-09-22</div><div id='author'> Author: vincent.stimper@gmail.com</div><div id='file'> File Name: normflow/distributions.py</div><div id='m_class'> M Class Name: CircularGaussianMixture</div><div id='n_method'> N Class Name: CircularGaussianMixture</div><div id='m_method'> M Method Name: log_prob(2)</div><div id='n_method'> N Method Name: log_prob(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: normflow/distributions.py</div><div id='n_file'> N File Name: normflow/distributions.py</div><div id='m_start'> M Start Line: 905</div><div id='m_end'> M End Line: 910</div><div id='n_start'> N Start Line: 905</div><div id='n_end'> N End Line: 913</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    Returns:
+    Softmax activated (N,k) ndarray (N: no. of samples, k: no. of nodes)
+    &quot&quot&quot
+    e_x = <a id="change">np.exp(</a>x<a id="change"> - </a>np.max(x)<a id="change">)</a> &#47&#47 For stability as it is prone to overflow and underflow
+&#47&#47     return e_x / e_x.sum(axis=1, keepdims=True) &#47&#47 only difference
+    return e_x / e_x.sum(axis=1).reshape((-1, 1)) &#47&#47 Alternative of keepdims=True for Numba compatibility
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    &#47&#47 e_x = np.exp(x - max_x)
+    &#47&#47 return e_x / e_x.sum(axis=1, keepdims=True) &#47&#47 only difference
+    &#47&#47 Alternative 2
+    max_x = <a id="change">np.zeros(</a>(x.shape[0],1)<a id="change">,dtype=x.dtype)</a>
+    for i in range(x.shape[0]):
+        max_x[i,0] = np.max(x[i,:])
+    e_x<a id="change"> = </a>np.exp(x - max_x)
+    return e_x / e_x.sum(axis=1).reshape((-1, 1)) &#47&#47 Alternative of keepdims=True for Numba compatibility
+
+@njit(cache=True,fastmath=True)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/manassharma07/crysx_nn/commit/c0fedc7df84ead8c1e3f2234f572aa8f25a8e017#diff-c701411ed12fc25fdab6b7c0621c527a4ad0ec8fa642a3e161d28f9d088dea89L35' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 91642943</div><div id='project'> Project Name: manassharma07/crysx_nn</div><div id='commit'> Commit Name: c0fedc7df84ead8c1e3f2234f572aa8f25a8e017</div><div id='time'> Time: 2022-01-14</div><div id='author'> Author: mikeatthetop@gmail.com</div><div id='file'> File Name: crysx_nn/activation.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: Softmax(1)</div><div id='n_method'> N Method Name: Softmax(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: crysx_nn/activation.py</div><div id='n_file'> N File Name: crysx_nn/activation.py</div><div id='m_start'> M Start Line: 46</div><div id='m_end'> M End Line: 46</div><div id='n_start'> N Start Line: 53</div><div id='n_end'> N End Line: 56</div><BR>

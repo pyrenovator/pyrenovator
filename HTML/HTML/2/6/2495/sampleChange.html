@@ -1,0 +1,24 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    def forward(self, state, action=None):
+        a = t.relu(self.fc1(state))
+        a = t.relu(self.fc2(a))
+        mu = <a id="change">t.tanh(</a>self.mu_head(a)<a id="change">) * </a>self.action_range
+        sigma = softplus(self.sigma_head(a))
+        dist = Normal(mu, sigma)
+        act = (action</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 the suggested way to confine your actions within a valid range
+        &#47&#47 is not clamping, but remapping the distribution
+        act_log_prob = dist.log_prob(act)
+        act_tanh = <a id="change">t.tanh(</a>act<a id="change">)</a>
+        act = act_tanh * self.action_range
+
+        &#47&#47 the distribution remapping process used in the original essay.
+        act_log_prob<a id="change"> -= </a>t.log(self<a id="change">.action_range *
+                              (1 - act_tanh.pow(2)) +
+                              </a>1e-6)
+        act_log_prob = act_log_prob.sum(1, keepdim=True)
+
+        &#47&#47 If your distribution is different from "Normal" then you may either:</code></pre>

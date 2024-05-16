@@ -1,0 +1,31 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        self.models = torch.nn.ModuleList(models)
+        self.incremental_states = None
+        if all(hasattr(m, &quotdecoder&quot) and isinstance(m.decoder, FairseqIncrementalDecoder) for m in models):
+            self.incremental_states = <a id="change">{m: {} for m in models}</a>
+
+    def has_encoder(self):
+        return hasattr(self.models[0], &quotencoder&quot)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    def __init__(self, models):
+        super().__init__()
+        self.models_size<a id="change"> = len(models</a><a id="change">)</a>
+        &#47&#47 method &quot__len__&quot is not supported in ModuleList for torch script
+        self.single_model = <a id="change">models[0]</a>
+        self.models = nn.ModuleList(models)
+
+        self.incremental_states<a id="change"> = torch.jit.annotate(
+            List[Dict[str, Dict[str, Optional[Tensor]]]]</a>,
+            <a id="change">[
+                torch.jit.annotate(Dict[str, Dict[str, Optional[Tensor]]], {})
+                for i in range(self.models_size)
+            ]</a><a id="change">,
+        )</a>
+        self.has_incremental: bool = False
+        if all(
+            hasattr(m, "decoder") and isinstance(m.decoder, FairseqIncrementalDecoder)
+            for m in models</code></pre>

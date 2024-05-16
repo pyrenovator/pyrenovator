@@ -1,0 +1,55 @@
+<html><h3>Pattern ID :22567
+</h3><img src='71283037.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        if i &gt; 0:
+            inp = activate(inp)
+        inp = jnp.einsum(f"{original_dims},{reduced_dim}z,{reduced_dim}z-&gt;{new_dims}", inp, wgt, mask)
+    return <a id="change">inp.reshape(</a>original_shape<a id="change">)</a>
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    original_shape = inp.shape
+    max_dims = math.floor(math.log(ctx.dims.sequence, ctx.dims.spatial_mixing_kernel))
+    batch = <a id="change">lax.max(</a>ctx.dims.sequence // ctx.dims.spatial_mixing_kernel ** (depth % max_dims + 1), 1<a id="change">)</a>
+
+    mask = jnp.logical_not(jnp.tri(ctx.dims.spatial_mixing_kernel, k=-1)) if ctx.model.autoregressive else 1
+    out = inp.reshape(ctx.dims.batch * batch, ctx.dims.spatial_mixing_kernel, -1, ctx.dims.features)
+    out = jnp.einsum("bkrf,kg,kg-&gt;bgrf", out, wgt0, mask)
+    out<a id="change"> = </a>activate(ctx, out)
+    out<a id="change"> = </a>jnp.einsum("bkrf,kg,kg-&gt;bgrf", out, wgt1, mask)
+    return out.reshape(original_shape)
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/homebrewnlp/homebrewnlp-jax/commit/acfb8d5fbb1ba8f6b7830832f913663e426b9d09#diff-efcd90cee8fb4dad861da47df28097bc6935541500854b8e2d68e0970e05f748L13' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 71283037</div><div id='project'> Project Name: homebrewnlp/homebrewnlp-jax</div><div id='commit'> Commit Name: acfb8d5fbb1ba8f6b7830832f913663e426b9d09</div><div id='time'> Time: 2022-09-01</div><div id='author'> Author: 39779310+ClashLuke@users.noreply.github.com</div><div id='file'> File Name: src/model/mixer.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: mix(3)</div><div id='n_method'> N Method Name: mix(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/model/mixer.py</div><div id='n_file'> N File Name: src/model/mixer.py</div><div id='m_start'> M Start Line: 14</div><div id='m_end'> M End Line: 32</div><div id='n_start'> N Start Line: 13</div><div id='n_end'> N End Line: 29</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            recon_loss = (
+                F.binary_cross_entropy(
+                    recon_x.reshape(recon_x.shape[0], -1),
+                    <a id="change">x.reshape(</a>x.shape[0], -1<a id="change">)</a>
+                    .unsqueeze(1)
+                    .repeat(1, self.n_samples, 1)
+                    .reshape(recon_x.shape[0], -1),
+                    reduction="none",</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        log_w = -(recon_loss + KLD)
+
+        log_w_minus_max = log_w - <a id="change">log_w.max(</a>1<a id="change">, keepdim=True)</a>[0]
+        w<a id="change"> = </a>log_w_minus_max.exp()
+        w_tilde<a id="change"> = </a>(w / w.sum(axis=1, keepdim=True)).detach()
+
+        return (
+            -(w_tilde * log_w).sum(1).mean(),</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/clementchadebec/benchmark_vae/commit/a1a96c209d3b56f1c72d0409234169cf0b1c1e79#diff-439556118274854a262fe0896388371b54c14ea90867c774f8330662486d511fL89' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 71283036</div><div id='project'> Project Name: clementchadebec/benchmark_vae</div><div id='commit'> Commit Name: a1a96c209d3b56f1c72d0409234169cf0b1c1e79</div><div id='time'> Time: 2022-08-20</div><div id='author'> Author: 47564971+clementchadebec@users.noreply.github.com</div><div id='file'> File Name: src/pythae/models/iwae/iwae_model.py</div><div id='m_class'> M Class Name: IWAE</div><div id='n_method'> N Class Name: IWAE</div><div id='m_method'> M Method Name: loss_function(6)</div><div id='n_method'> N Method Name: loss_function(6)</div><div id='m_parent_class'> M Parent Class: VAE</div><div id='n_parent_class'> N Parent Class: VAE</div><div id='m_file'> M File Name: src/pythae/models/iwae/iwae_model.py</div><div id='n_file'> N File Name: src/pythae/models/iwae/iwae_model.py</div><div id='m_start'> M Start Line: 94</div><div id='m_end'> M End Line: 131</div><div id='n_start'> N Start Line: 97</div><div id='n_end'> N End Line: 127</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    overflow = jnp.concatenate([overflow[:, :, 1:], jnp.zeros_like(overflow[:, :, :1])], -1)
+    top_p_mask = jnp.take_along_axis(overflow, ranks, axis=2)
+
+    min_prob_mask = jax.nn.softmax(sorted_out) &lt; <a id="change">wctx.min_prob.reshape(</a>-1, 1, 1<a id="change">)</a>
+    out_token = out_token + temp + (top_k_mask + top_p_mask) * min_prob_mask * -1e9
+
+    out_token = jnp.argmax(out_token, -1)
+    wctx.data = jnp.where(one_hot(wctx.current_step, wctx.ctx.dims.sequence).reshape(1, -1), out_token, wctx.data)</code></pre><h3>After Change</h3><pre><code class='java'>
+    &#47&#47 https://github.com/BlinkDL/RWKV-LM/blob/4bbee4bb1a26059c6425d25c59e057891ae7c4c7/README.md
+    softmax = jax.nn.softmax(out_token)
+    min_prob_mask = softmax &lt; wctx.max_probability_to_filter.reshape(-1, 1, 1)
+    adaptive_filter<a id="change"> = </a><a id="change">jnp.max(</a>softmax<a id="change">, axis=2, keepdims=True)</a> ** wctx.adaptive_filter_power * wctx.adaptive_filter_scale
+    adaptive_mask<a id="change"> = </a>softmax &gt; adaptive_filter
+
+    out_token = out_token + temp + (top_k_mask + top_p_mask + adaptive_mask) * min_prob_mask * -1e9
+    out_token = jnp.argmax(out_token, -1)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/homebrewnlp/homebrewnlp-jax/commit/c9d89273c7ccac5fcc34c1a4952c10ff0affb32b#diff-6bb87854f62182076b9d47e5a3fa17d5fb46826b979e3292b7ae7bef07022cf4L31' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 71283034</div><div id='project'> Project Name: homebrewnlp/homebrewnlp-jax</div><div id='commit'> Commit Name: c9d89273c7ccac5fcc34c1a4952c10ff0affb32b</div><div id='time'> Time: 2022-05-15</div><div id='author'> Author: 39779310+ClashLuke@users.noreply.github.com</div><div id='file'> File Name: inference.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: body_fn(1)</div><div id='n_method'> N Method Name: body_fn(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: inference.py</div><div id='n_file'> N File Name: inference.py</div><div id='m_start'> M Start Line: 32</div><div id='m_end'> M End Line: 57</div><div id='n_start'> N Start Line: 32</div><div id='n_end'> N End Line: 63</div><BR>

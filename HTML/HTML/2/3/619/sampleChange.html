@@ -1,0 +1,29 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                tensor * ctx.scale, torch.log(w), regularization
+            )
+            ctx.factor = torch.exp(ctx.projection.compute())
+            <a id="change">return </a>ctx.factor
+
+    @staticmethod
+    def backward(ctx, grad_output):</code></pre><h3>After Change</h3><pre><code class='java'>
+        w = _arange_like(tensor, reverse=True) + 1
+        theta = tensor * ctx.scale
+        s, permutation = torch.sort(theta, descending=True)
+        inv_permutation<a id="change"> = </a>_inv_permutation(permutation)
+        if ctx.regularization == "l2":
+            dual_sol = isotonic_l2_cpu(s - w)
+            ret = (s - dual_sol)[inv_permutation]
+            ctx.factor = 1.0
+        else:
+            dual_sol = isotonic_kl_cpu(s, torch.log(w))
+            ret = torch.exp((s - dual_sol)[inv_permutation])
+            ctx.factor = ret
+
+        <a id="change">ctx.save_for_backward(</a>s, dual_sol, permutation, inv_permutation<a id="change">)</a>
+        return ret
+
+    @staticmethod
+    def backward(ctx, grad_output):</code></pre>

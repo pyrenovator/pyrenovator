@@ -1,0 +1,104 @@
+<html><h3>Pattern ID :6414
+</h3><img src='22328245.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    
+
+    if len(x.shape) == 3:
+        x<a id="change"> = </a>flow.transpose(x, 0, 2, 1)
+    elif <a id="change">len(x.shape) == 4</a>:
+        x<a id="change"> = </a>flow.transpose(x, 0, 2, 3, 1)
+    elif <a id="change">len(</a>x.shape<a id="change">)</a> == 5:
+        x = flow.transpose(x, 0, 2, 3, 4, 1)
+    else:
+        raise Exception("Not support shape: {}".format(x.shape))
+    <a id="change">return </a>x
+
+def nhwc_to_nchw(x):
+    </code></pre><h3>After Change</h3><pre><code class='java'>
+    -------
+        channels last tensor data
+    
+    <a id="change">return </a><a id="change">flow.movedim(</a>x, 1, -1<a id="change">)</a>
+
+def nhwc_to_nchw(x):
+    
+    Channles last to channels first</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 8</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/tensorlayer/tensorlayerx/commit/958f723e252dc463b2160658c87b7469f2a85fc9#diff-e6e419177a22416fa7e8fcd4b9bc1c8f447bdfae8a3687016f68513929257833L23' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 22328245</div><div id='project'> Project Name: tensorlayer/tensorlayerx</div><div id='commit'> Commit Name: 958f723e252dc463b2160658c87b7469f2a85fc9</div><div id='time'> Time: 2022-10-16</div><div id='author'> Author: liuyiliang100@sina.com</div><div id='file'> File Name: tensorlayerx/backend/ops/oneflow_nn.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: nchw_to_nhwc(1)</div><div id='n_method'> N Method Name: nchw_to_nhwc(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: tensorlayerx/backend/ops/oneflow_nn.py</div><div id='n_file'> N File Name: tensorlayerx/backend/ops/oneflow_nn.py</div><div id='m_start'> M Start Line: 23</div><div id='m_end'> M End Line: 31</div><div id='n_start'> N Start Line: 141</div><div id='n_end'> N End Line: 141</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    &#47&#47 reshape the grid so that it can be used as a kernel for F.conv1d
+    kernel_shape = [1] * len(tensor.shape)
+    kernel_shape[dim]<a id="change"> = </a>kernel_size_int
+    grid = grid.view(kernel_shape)
+
+    grid = grid.detach()
+
+    padding = [0] * (2 * len(tensor.shape))
+    padding[dim * 2 + 1] = math.ceil((kernel_size_int - 1) / 2)
+    padding[dim * 2] = math.ceil((kernel_size_int - 1) / 2)
+    padding = tuple(reversed(padding))
+
+    <a id="change">if padding_mode == &quotreplicate&quot</a>:
+        &#47&#47 replication padding has some strange constraints...
+        assert len(tensor.shape) - dim &lt;= 2
+        padding<a id="change"> = </a>padding[:(<a id="change">len(</a>tensor.shape<a id="change">)</a> - 2) * 2]
+
+    tensor_ = F.pad(tensor, padding, padding_mode, padding_value)
+
+    &#47&#47 create gaussian kernel from grid using current sigma
+    kernel = torch.exp(-0.5 * (grid / sigma) ** 2)
+    kernel = kernel / kernel.sum()
+
+    &#47&#47 convolve input with gaussian kernel
+    <a id="change">return </a>F.conv1d(tensor_, kernel)
+
+
+class GaussianFilterNd(nn.Module):</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    source_shape = tensor.shape
+
+    tensor = <a id="change">torch.movedim(</a>tensor, dim, len(source_shape)-1<a id="change">)</a>
+    dim_last_shape = tensor.shape
+    assert tensor.shape[-1] == source_shape[dim]
+
+    &#47&#47 we need reshape instead of view for batches like B x C x H x W
+    tensor = tensor.reshape(-1, 1, source_shape[dim])
+
+    padding = (math.ceil((kernel_size_int - 1) / 2), math.ceil((kernel_size_int - 1) / 2))
+    tensor_ = F.pad(tensor, padding, padding_mode, padding_value)
+
+    &#47&#47 create gaussian kernel from grid using current sigma
+    kernel = torch.exp(-0.5 * (grid / sigma) ** 2)
+    kernel = kernel / kernel.sum()
+
+    &#47&#47 convolve input with gaussian kernel
+    tensor_ = F.conv1d(tensor_, kernel)
+    tensor_ = tensor_.view(dim_last_shape)
+    tensor_ = torch.movedim(tensor_, len(source_shape)-1, dim)
+
+    assert tensor_.shape == source_shape
+
+    <a id="change">return </a>tensor_
+
+
+class GaussianFilterNd(nn.Module):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/matthias-k/deepgaze/commit/a2f6037f9ae20086ff19775583ed036167449172#diff-8cfdb877f7ff2043ef6f90638b5f54cc4cd035e95961a7b9da1ddebee120c34fL120' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 22328252</div><div id='project'> Project Name: matthias-k/deepgaze</div><div id='commit'> Commit Name: a2f6037f9ae20086ff19775583ed036167449172</div><div id='time'> Time: 2022-06-20</div><div id='author'> Author: matthias.kuemmerer@bethgelab.org</div><div id='file'> File Name: deepgaze_pytorch/layers.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: gaussian_filter_1d(7)</div><div id='n_method'> N Method Name: gaussian_filter_1d(7)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: deepgaze_pytorch/layers.py</div><div id='n_file'> N File Name: deepgaze_pytorch/layers.py</div><div id='m_start'> M Start Line: 130</div><div id='m_end'> M End Line: 160</div><div id='n_start'> N Start Line: 128</div><div id='n_end'> N End Line: 164</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    
+
+    if len(x.shape) == 3:
+        x<a id="change"> = </a>flow.transpose(x, 0, 2, 1)
+    elif <a id="change">len(x.shape) == 4</a>:
+        x<a id="change"> = </a>flow.transpose(x, 0, 3, 1, 2)
+    elif <a id="change">len(</a>x.shape<a id="change">)</a> == 5:
+        x = flow.transpose(x, 0, 4, 1, 2, 3)
+    else:
+        raise Exception("Not support shape: {}".format(x.shape))
+    <a id="change">return </a>x
+    </code></pre><h3>After Change</h3><pre><code class='java'>
+        channels first tensor data
+    
+
+    <a id="change">return </a><a id="change">flow.movedim(</a>x, -1, 1<a id="change">)</a>
+    
+class ReLU(object):
+
+    def __init__(self):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/tensorlayer/tensorlayerx/commit/958f723e252dc463b2160658c87b7469f2a85fc9#diff-e6e419177a22416fa7e8fcd4b9bc1c8f447bdfae8a3687016f68513929257833L33' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 22328248</div><div id='project'> Project Name: tensorlayer/tensorlayerx</div><div id='commit'> Commit Name: 958f723e252dc463b2160658c87b7469f2a85fc9</div><div id='time'> Time: 2022-10-16</div><div id='author'> Author: liuyiliang100@sina.com</div><div id='file'> File Name: tensorlayerx/backend/ops/oneflow_nn.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: nhwc_to_nchw(1)</div><div id='n_method'> N Method Name: nhwc_to_nchw(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: tensorlayerx/backend/ops/oneflow_nn.py</div><div id='n_file'> N File Name: tensorlayerx/backend/ops/oneflow_nn.py</div><div id='m_start'> M Start Line: 47</div><div id='m_end'> M End Line: 55</div><div id='n_start'> N Start Line: 157</div><div id='n_end'> N End Line: 157</div><BR>

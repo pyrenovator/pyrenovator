@@ -1,0 +1,50 @@
+<html><h3>Pattern ID :42013
+</h3><img src='117750032.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    def _calc_loss(self, loader):
+        Calculate the loss of the entire dataset
+        res = [self(*s) for s in tqdm(loader, leave=False)]
+        pred<a id="change">, truth</a> = list(zip(*res))
+        pred = torch.cat(pred)
+        truth = torch.cat(truth)
+        return self.celoss(pred, truth).item()</code></pre><h3>After Change</h3><pre><code class='java'>
+        truth = []
+        iters = 10000 // self.eval_batch_size
+        for idx, batch in zip(tqdm(range(iters), leave=False), loader):
+            res<a id="change"> = </a><a id="change">self(</a>*<a id="change">batch)</a>
+            pred.append(res[0])
+            truth.append(res[1])
+
+        pred = torch.cat(pred)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/wfondrie/depthcharge/commit/ccf3d34d18f907802f0e4f3daab0845045df0390#diff-7033740cfab4565d25dc2511e3fb9373335c2dafc225b27dd0df7500cc3915a3L431' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 117750032</div><div id='project'> Project Name: wfondrie/depthcharge</div><div id='commit'> Commit Name: ccf3d34d18f907802f0e4f3daab0845045df0390</div><div id='time'> Time: 2021-07-09</div><div id='author'> Author: fondriew@gmail.com</div><div id='file'> File Name: depthcharge/denovo/model.py</div><div id='m_class'> M Class Name: Spec2Pep</div><div id='n_method'> N Class Name: Spec2Pep</div><div id='m_method'> M Method Name: _calc_loss(2)</div><div id='n_method'> N Method Name: _calc_loss(2)</div><div id='m_parent_class'> M Parent Class: torch.nn.Module</div><div id='n_parent_class'> N Parent Class: torch.nn.Module</div><div id='m_file'> M File Name: depthcharge/denovo/model.py</div><div id='n_file'> N File Name: depthcharge/denovo/model.py</div><div id='m_start'> M Start Line: 431</div><div id='m_end'> M End Line: 432</div><div id='n_start'> N Start Line: 454</div><div id='n_end'> N End Line: 462</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 features, projection head features, class
+        features, z, output = self(X, classify_only=False)
+
+        z1<a id="change">, z2</a> = torch.chunk(z, 2)
+        z1 = gather(z1)
+        z2 = gather(z2)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        &#47&#47 features, projection head features, class
+        z1, output = self(X1, classify_only=False)
+        z2<a id="change">, _ = </a><a id="change">self(</a>X2<a id="change">, classify_only=False)</a>
+
+        &#47&#47 ------- contrastive loss -------
+        barlow_loss = barlow_twins_loss(z1, z2, lamb=self.lamb, scale_loss=self.scale_loss)
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/vturrisi/contrastive-learning/commit/cacba77d52d2c0a8f6324aaf4d037f80ba057316#diff-f5760c9b05b9b13c97a8344621c75b901ffeb75d1516f92cb33ad95d09fb97e1L50' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 117750029</div><div id='project'> Project Name: vturrisi/contrastive-learning</div><div id='commit'> Commit Name: cacba77d52d2c0a8f6324aaf4d037f80ba057316</div><div id='time'> Time: 2021-04-10</div><div id='author'> Author: vt.turrisi@gmail.com</div><div id='file'> File Name: models/barlow_twins.py</div><div id='m_class'> M Class Name: BarlowTwins</div><div id='n_method'> N Class Name: BarlowTwins</div><div id='m_method'> M Method Name: training_step(3)</div><div id='n_method'> N Method Name: training_step(3)</div><div id='m_parent_class'> M Parent Class: Model</div><div id='n_parent_class'> N Parent Class: Model</div><div id='m_file'> M File Name: models/barlow_twins.py</div><div id='n_file'> N File Name: models/barlow_twins.py</div><div id='m_start'> M Start Line: 52</div><div id='m_end'> M End Line: 65</div><div id='n_start'> N Start Line: 52</div><div id='n_end'> N End Line: 53</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        else:
+            hiddens1 = None
+            hiddens2 = None
+        lstm_last<a id="change">, hiddens1</a> = self.lstm(x, hiddens1)
+        lstm2_last, hiddens2 = self.lstm2(x, hiddens2)
+        concat_lstm = torch.concat([lstm_last, lstm2_last], dim=-1)
+        logits = self.linear(concat_lstm)</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 training_step is needed 2 step for 1 batch (1 step: 0~99, 2 step: 100~199)
+        &#47&#47 very cleverly, we just using hiddens parameter, lightning&quots tbptt not connected new batch&quots hiddens to past one
+        x, y = batch
+        logits<a id="change">, hiddens1, hiddens2 = </a><a id="change">self(</a>x, hiddens<a id="change">)</a>
+        loss = self.loss_func(logits, y)
+        self.log("train_loss", loss, sync_dist=(self.device != "cpu"))
+        &#47&#47 look this discussion for tbptt experiment (https://github.com/Lightning-AI/lightning/discussions/15643)
+        return {"loss": loss, "hiddens": (hiddens1, hiddens2)}</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/yoosunghyun/pytorch-lightning-template/commit/e31ba2930352623556b022885ef2cb269370c975#diff-aebab7e121236eb0bad629139e9e8b895403caf822ce66eb06e349d8b4827de7L26' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 117750030</div><div id='project'> Project Name: yoosunghyun/pytorch-lightning-template</div><div id='commit'> Commit Name: e31ba2930352623556b022885ef2cb269370c975</div><div id='time'> Time: 2022-12-04</div><div id='author'> Author: shyu0522@hanmail.net</div><div id='file'> File Name: rnn_model.py</div><div id='m_class'> M Class Name: LSTMModel</div><div id='n_method'> N Class Name: LSTMModel</div><div id='m_method'> M Method Name: training_step(4)</div><div id='n_method'> N Method Name: training_step(4)</div><div id='m_parent_class'> M Parent Class: LightningModule</div><div id='n_parent_class'> N Parent Class: LightningModule</div><div id='m_file'> M File Name: rnn_model.py</div><div id='n_file'> N File Name: rnn_model.py</div><div id='m_start'> M Start Line: 34</div><div id='m_end'> M End Line: 42</div><div id='n_start'> N Start Line: 60</div><div id='n_end'> N End Line: 60</div><BR>

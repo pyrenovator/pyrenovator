@@ -1,0 +1,210 @@
+<html><h3>Pattern ID :20129
+</h3><img src='65815032.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    cudnn.benchmark = True
+
+    &#47&#47 Data loading code
+    <a id="change">normalize</a> = <a id="change">T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])</a>
+    train_transform = T.Compose(<a id="change">[
+        </a>ResizeImage(256),
+        T.RandomResizedCrop(224),
+        T.RandomHorizontalFlip(),
+        <a id="change">T.ToTensor()</a>,
+        <a id="change">normalize</a>
+    ])
+    val_transform<a id="change"> = T</a><a id="change">.Compose([
+        </a>ResizeImage(256),
+        T.CenterCrop(224),
+        <a id="change">T.ToTensor()</a>,
+        <a id="change">normalize</a>
+    ]<a id="change">)</a>
+
+    dataset = datasets.__dict__[args.data]
+    train_dataset = dataset(root=args.root, split=&quottrain&quot, sample_rate=args.sample_rate,
+                            download=True, transform=train_transform)</code></pre><h3>After Change</h3><pre><code class='java'>
+    print("train_transform: ", train_transform)
+    print("val_transform: ", val_transform)
+
+    train_dataset<a id="change">, val_dataset, num_classes</a> = utils.get_dataset(args.data, args.root, train_transform,
+                                                                    val_transform, args.sample_rate, args.sample_size)
+    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,
+                              num_workers=args.workers, drop_last=True)
+    train_iter = ForeverDataIterator(train_loader)
+    val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
+    print("training dataset size: {} test dataset size: {}".format(len(train_dataset), len(val_dataset)))
+
+    &#47&#47 create model
+    print("=&gt; using pre-trained model &quot{}&quot".format(args.arch))
+    backbone = utils.get_model(args.arch, args.pretrained)
+    pool_layer = nn.Identity() if args.no_pool else None
+    classifier = <a id="change">Classifier(backbone, num_classes, pool_layer=pool_layer, finetune=args.finetune).to(</a>device<a id="change">)</a>
+    bss_module = BatchSpectralShrinkage(k=args.k)
+
+    &#47&#47 define optimizer and lr scheduler
+    optimizer = SGD(classifier.get_parameters(args.lr), momentum=args.momentum, weight_decay=args.wd, nesterov=True)
+    lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, args.lr_decay_epochs, gamma=args.lr_gamma)
+
+    &#47&#47 resume from the best checkpoint
+    if args.phase == &quottest&quot:
+        checkpoint = torch.load(logger.get_checkpoint_path(&quotbest&quot), map_location=&quotcpu&quot)
+        classifier.load_state_dict(checkpoint)
+        acc1 = utils.validate(val_loader, classifier, args, device)
+        print(acc1)
+        return
+
+    &#47&#47 start training
+    best_acc1 = 0.0
+    for epoch in range(args.epochs):
+        print(lr_scheduler.get_lr())
+        &#47&#47 train for one epoch
+        train(train_iter, classifier, bss_module, optimizer, epoch, args)
+        lr_scheduler.step()
+        &#47&#47 evaluate on validation set
+        acc1<a id="change"> = </a>utils.validate(val_loader, classifier, args, device)
+
+        &#47&#47 remember best acc@1 and save checkpoint
+        torch.save(classifier.state_dict(), logger.get_checkpoint_path(&quotlatest&quot))</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 11</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/thuml/transfer-learning-library/commit/052625393790ff6b5ffcffb9f29a68670054ea93#diff-28b7d12f40c0e0363e65e17af84a0ae6b4ad95f260156802c18714e0289e34d0L46' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 65815032</div><div id='project'> Project Name: thuml/transfer-learning-library</div><div id='commit'> Commit Name: 052625393790ff6b5ffcffb9f29a68670054ea93</div><div id='time'> Time: 2021-08-01</div><div id='author'> Author: 13126830206@163.com</div><div id='file'> File Name: examples/finetune/image_classification/bss.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(1)</div><div id='n_method'> N Method Name: main(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples/finetune/image_classification/bss.py</div><div id='n_file'> N File Name: examples/finetune/image_classification/bss.py</div><div id='m_start'> M Start Line: 46</div><div id='m_end'> M End Line: 100</div><div id='n_start'> N Start Line: 46</div><div id='n_end'> N End Line: 86</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    cudnn.benchmark = True
+
+    &#47&#47 Data loading code
+    <a id="change">normalize</a> = <a id="change">T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])</a>
+    val_transform = T.Compose(<a id="change">[
+        </a>T.Resize(256),
+        T.CenterCrop(224),
+        <a id="change">T.ToTensor()</a>,
+        normalize<a id="change"></a>
+    ])
+    train_augmentation = <a id="change">[
+        </a>T.RandomResizedCrop(224, scale=(0.2, 1.)),
+        T.RandomHorizontalFlip(),
+        <a id="change">T.ToTensor()</a>,
+        normalize<a id="change"></a>
+    ]
+    train_transform<a id="change"> = </a>MultipleApply([T.Compose(train_augmentation), <a id="change">T.Compose(</a>train_augmentation<a id="change">)</a>])
+
+    dataset = datasets.__dict__[args.data]
+    train_dataset = dataset(root=args.root, split=&quottrain&quot, sample_rate=args.sample_rate,</code></pre><h3>After Change</h3><pre><code class='java'>
+    print("train_transform: ", train_transform)
+    print("val_transform: ", val_transform)
+
+    train_dataset<a id="change">, val_dataset, num_classes</a> = utils.get_dataset(args.data, args.root, train_transform,
+                                                                val_transform, args.sample_rate, args.sample_size)
+    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,
+                              num_workers=args.workers, drop_last=True)
+    train_iter = ForeverDataIterator(train_loader)
+    val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
+    print("training dataset size: {} test dataset size: {}".format(len(train_dataset), len(val_dataset)))
+
+    &#47&#47 create model
+    print("=&gt; using pre-trained model &quot{}&quot".format(args.arch))
+    backbone_q = utils.get_model(args.arch, args.pretrained)
+    pool_layer = nn.Identity() if args.no_pool else None
+    classifier_q = Classifier(backbone_q, num_classes, pool_layer=pool_layer, projection_dim=args.projection_dim, finetune=args.finetune)
+    if args.pretrained_fc:
+        print("=&gt; loading pre-trained fc from &quot{}&quot".format(args.pretrained_fc))
+        pretrained_fc_dict = torch.load(args.pretrained_fc)
+        classifier_q.projector.load_state_dict(pretrained_fc_dict, strict=False)
+    classifier_q = classifier_q.to(device)
+    backbone_k = utils.get_model(args.arch)
+    classifier_k<a id="change"> = </a><a id="change">Classifier(backbone_k, num_classes, pool_layer=pool_layer).to(</a>device<a id="change">)</a>
+
+    bituning = Bituning(classifier_q, classifier_k, num_classes, K=args.K, m=args.m, T=args.T)
+
+    &#47&#47 define optimizer and lr scheduler</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/thuml/transfer-learning-library/commit/052625393790ff6b5ffcffb9f29a68670054ea93#diff-8c5c5b3600e42580065fc93ec76aaca26a3f9349717e61f761d9ebfd327cfb9bL28' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 65815033</div><div id='project'> Project Name: thuml/transfer-learning-library</div><div id='commit'> Commit Name: 052625393790ff6b5ffcffb9f29a68670054ea93</div><div id='time'> Time: 2021-08-01</div><div id='author'> Author: 13126830206@163.com</div><div id='file'> File Name: examples/finetune/image_classification/bi_tuning.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(1)</div><div id='n_method'> N Method Name: main(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples/finetune/image_classification/bi_tuning.py</div><div id='n_file'> N File Name: examples/finetune/image_classification/bi_tuning.py</div><div id='m_start'> M Start Line: 45</div><div id='m_end'> M End Line: 84</div><div id='n_start'> N Start Line: 45</div><div id='n_end'> N End Line: 95</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    cudnn.benchmark = True
+
+    &#47&#47 Data loading code
+    <a id="change">normalize</a> = <a id="change">T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])</a>
+    train_transform = T.Compose(<a id="change">[
+        </a>T.Resize(256),
+        T.RandomResizedCrop(224),
+        T.RandomHorizontalFlip(),
+        <a id="change">T.ToTensor()</a>,
+        normalize<a id="change"></a>
+    ])
+    val_transform<a id="change"> = </a><a id="change">T.Compose([
+        </a>T.Resize(256),
+        T.CenterCrop(224),
+        <a id="change">T.ToTensor()</a>,
+        normalize<a id="change"></a>
+    ]<a id="change">)</a>
+
+    dataset = datasets.__dict__[args.data]
+    partial_dataset = partial(dataset)
+    train_source_dataset = dataset(root=args.root, task=args.source, download=True, transform=train_transform)</code></pre><h3>After Change</h3><pre><code class='java'>
+    print("train_transform: ", train_transform)
+    print("val_transform: ", val_transform)
+
+    train_source_dataset<a id="change">, _, val_dataset, test_dataset, num_classes, args.class_names</a> = \
+        utils.get_dataset(args.data, args.root, args.source, args.target, train_transform, val_transform)
+    train_source_loader = DataLoader(train_source_dataset, batch_size=args.batch_size,
+                                     shuffle=True, num_workers=args.workers, drop_last=True)
+    val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
+    test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
+
+    train_source_iter = ForeverDataIterator(train_source_loader)
+
+    &#47&#47 create model
+    print("=&gt; using pre-trained model &quot{}&quot".format(args.arch))
+    backbone = utils.get_model(args.arch)
+    pool_layer = nn.Identity() if args.no_pool else None
+    head = backbone.copy_head() if args.data == &quotImageNetCaltech&quot else None
+    classifier = <a id="change">Classifier(backbone, num_classes, pool_layer=pool_layer, head=head).to(</a>device<a id="change">)</a>
+
+    &#47&#47 define optimizer and lr scheduler
+    optimizer = SGD(classifier.get_parameters(), args.lr, momentum=args.momentum, weight_decay=args.wd, nesterov=True)
+    lr_scheduler = LambdaLR(optimizer, lambda x:  args.lr * (1. + args.lr_gamma * float(x)) ** (-args.lr_decay))
+
+    &#47&#47 resume from the best checkpoint
+    if args.phase != &quottrain&quot:
+        checkpoint = torch.load(logger.get_checkpoint_path(&quotbest&quot), map_location=&quotcpu&quot)
+        classifier.load_state_dict(checkpoint)
+
+    &#47&#47 analysis the model
+    if args.phase == &quotanalysis&quot:
+        &#47&#47 using shuffled val loader
+        val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.workers)
+        &#47&#47 extract features from both domains
+        feature_extractor = nn.Sequential(classifier.backbone, classifier.bottleneck).to(device)
+        source_feature = collect_feature(train_source_loader, feature_extractor, device)
+        target_feature = collect_feature(val_loader, feature_extractor, device)
+        &#47&#47 plot t-SNE
+        tSNE_filename = osp.join(logger.visualize_directory, &quotTSNE.png&quot)
+        tsne.visualize(source_feature, target_feature, tSNE_filename)
+        print("Saving t-SNE to", tSNE_filename)
+        &#47&#47 calculate A-distance, which is a measure for distribution discrepancy
+        A_distance = a_distance.calculate(source_feature, target_feature, device)
+        print("A-distance =", A_distance)
+        return
+
+    if args.phase == &quottest&quot:
+        acc1 = utils.validate(test_loader, classifier, args, device)
+        print(acc1)
+        return
+
+    &#47&#47 start training
+    best_acc1 = 0.
+    for epoch in range(args.epochs):
+        &#47&#47 train for one epoch
+        train(train_source_iter, classifier, optimizer,
+              lr_scheduler, epoch, args)
+
+        &#47&#47 evaluate on validation set
+        acc1 = utils.validate(val_loader, classifier, args, device)
+
+        &#47&#47 remember best acc@1 and save checkpoint
+        torch.save(classifier.state_dict(), logger.get_checkpoint_path(&quotlatest&quot))
+        if acc1 &gt; best_acc1:
+            shutil.copy(logger.get_checkpoint_path(&quotlatest&quot), logger.get_checkpoint_path(&quotbest&quot))
+        best_acc1 = max(acc1, best_acc1)
+
+    print("best_acc1 = {:3.1f}".format(best_acc1))
+
+    &#47&#47 evaluate on test set
+    classifier.load_state_dict(torch.load(logger.get_checkpoint_path(&quotbest&quot)))
+    acc1<a id="change"> = </a>utils.validate(test_loader, classifier, args, device)
+    print("test_acc1 = {:3.1f}".format(acc1))
+
+    logger.close()</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/thuml/transfer-learning-library/commit/1d780e2bcc7b08075283ebaf2160f7f2b09dabef#diff-44a7b2d04f3ac3a16ba2bf561d87b80398fc966e3fb0d923d9f5cdea6daefa59L32' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 65815034</div><div id='project'> Project Name: thuml/transfer-learning-library</div><div id='commit'> Commit Name: 1d780e2bcc7b08075283ebaf2160f7f2b09dabef</div><div id='time'> Time: 2021-08-11</div><div id='author'> Author: 13126830206@163.com</div><div id='file'> File Name: examples/domain_adaptation/partial/source_only.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(1)</div><div id='n_method'> N Method Name: main(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples/domain_adaptation/partial/source_only.py</div><div id='n_file'> N File Name: examples/domain_adaptation/partial/source_only.py</div><div id='m_start'> M Start Line: 49</div><div id='m_end'> M End Line: 139</div><div id='n_start'> N Start Line: 48</div><div id='n_end'> N End Line: 120</div><BR>

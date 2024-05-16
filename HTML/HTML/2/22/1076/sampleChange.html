@@ -1,0 +1,31 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        loss = self.loss_func(outputs.view(-1, self.args.vocab_size), trg_idxs[:, 1:].view(-1))
+        ppl = torch.exp(loss)
+        
+        <a id="change">return </a><a id="change">{</a>&quotloss&quot: loss, &quotppl&quot: ppl<a id="change">}</a>
+    
+    def training_epoch_end(self, training_step_outputs):
+        train_ppls = [], []
+        for result in training_step_outputs:</code></pre><h3>After Change</h3><pre><code class='java'>
+    
+    def training_step(self, batch, batch_idx):
+        src_idxs, num_valid_turns, trg_idxs = batch  &#47&#47 src_idxs: (B, T, S_L), num_valid_turns: (B), trg_idxs: (B, T_L)
+        <a id="change">batch_size</a><a id="change">, num_contexts, trg_len</a> = src_idxs.shape[0], src_idxs.shape[1], trg_idxs.shape[1]
+        e_masks = self.make_encoder_mask(num_valid_turns, num_contexts)  &#47&#47 (B, 1, T)
+        d_masks = self.make_decoder_mask(trg_idxs[:, :-1], self.args.pad_id)  &#47&#47 (B, T_L, T_L)
+        src_poses<a id="change"> = torch</a><a id="change">.arange(num_contexts, device=src_idxs.device).unsqueeze(0).expand(batch_size</a>, <a id="change">num_contexts</a><a id="change">)</a>  &#47&#47 (B, T)
+        trg_poses<a id="change"> = torch.arange(trg_len-1, device=trg_idxs.device).unsqueeze(0</a><a id="change">).expand(batch_size</a>, <a id="change">trg_len</a><a id="change">-1</a><a id="change">)</a>  &#47&#47 (B, T_L)
+        
+        outputs = self.model(src_idxs, trg_idxs[:, :-1], src_poses, trg_poses, e_masks, d_masks)  &#47&#47 (B, T_L, V)
+        
+        preds = torch.max(outputs, dim=-1).indices  &#47&#47 (B, T_L)
+        loss = self.loss_func(outputs.contiguous().view(-1, self.args.vocab_size), trg_idxs[:, 1:].contiguous().view(-1))
+        ppl = torch.exp(loss)
+        
+        return {&quotloss&quot: loss, &quotppl&quot: <a id="change">ppl.detach()</a>}
+    
+    def training_epoch_end(self, training_step_outputs):
+        train_ppls = []</code></pre>

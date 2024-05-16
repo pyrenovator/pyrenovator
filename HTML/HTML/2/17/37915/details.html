@@ -1,0 +1,153 @@
+<html><h3>Pattern ID :37915
+</h3><img src='108662872.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                reward = discriminator_out.reshape(self.batch_size, self.monte_carlo_num).mean(dim = 1) &#47&#47 b
+            
+            self.train()
+            mask = <a id="change">(word_t != self.pad_idx) & </a><a id="change">(word_t != self.end_idx)</a>
+            <a id="change">reward</a> = reward * P_t * mask
+            reward = <a id="change">reward[reward.nonzero(as_tuple = True)]</a>
+            if <a id="change">(reward.shape[0])</a>:
+                rewards += <a id="change">reward.mean()</a>
+    
+        return -rewards
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            output, (h_prev, o_prev) = self.LSTM(X, (h_prev, o_prev))
+            logits = self.vocab_projection(output).squeeze(0) &#47&#47 b * v
+            P = F.log_softmax(logits, dim = -1) &#47&#47 b * v
+            <a id="change">word_t</a> = fake_samples[ : , t] &#47&#47 b
+            P_t = torch.gather(P, 1, word_t.unsqueeze(1)).squeeze(1) &#47&#47 b
+            X = self.word_embedding(word_t).unsqueeze(0) &#47&#47 1 * b * e
+
+            self.eval()
+            with torch.no_grad():
+                monte_carlo_X = word_t.repeat_interleave(self.monte_carlo_num) &#47&#47 (b * M)
+                monte_carlo_X = self.word_embedding(monte_carlo_X).unsqueeze(0) &#47&#47 1 * (b * M) * e
+                monte_carlo_h_prev = h_prev.clone().detach().repeat_interleave(self.monte_carlo_num, dim = 1) &#47&#47 1 * (b * M) * h
+                monte_carlo_o_prev = o_prev.clone().detach().repeat_interleave(self.monte_carlo_num, dim = 1) &#47&#47 1 * (b * M) * h
+                monte_carlo_output = torch.zeros(self.max_length, self.batch_size * self.monte_carlo_num, dtype = torch.long, device = self.device) &#47&#47 len * (b * M)
+
+                for i in range(self.max_length - t - 1):
+                    output, (monte_carlo_h_prev, monte_carlo_o_prev) = self.LSTM(monte_carlo_X, (monte_carlo_h_prev, monte_carlo_o_prev))
+                    P = F.softmax(self.vocab_projection(output), dim = -1).squeeze(0) &#47&#47 (b * M) * v
+                    for j in range(P.shape[0]):
+                        monte_carlo_output[i + t + 1][j] = torch.multinomial(P[j], 1)[0]
+                    monte_carlo_X = self.word_embedding(monte_carlo_output[i + t + 1]).unsqueeze(0) &#47&#47 1 * (b * M) * e
+
+                monte_carlo_output = monte_carlo_output.permute(1, 0) &#47&#47 (b * M) * len
+                monte_carlo_output[ : , : t + 1] = fake_samples[ : , : t + 1].repeat_interleave(self.monte_carlo_num, dim = 0)
+
+                discriminator_out = discriminator_func(monte_carlo_output) &#47&#47 (b * M)
+                reward = discriminator_out.reshape(self.batch_size, self.monte_carlo_num).mean(dim = 1) &#47&#47 b
+
+            self.train()
+            mask = <a id="change">word_t != self.pad_idx</a>
+            reward = reward * P_t * mask
+            <a id="change">mask_sum</a> = <a id="change">mask.sum()</a>
+            if (<a id="change">mask_sum</a>):
+                rewards += <a id="change">reward.sum()</a><a id="change"> / mask_sum</a>
+    
+        return -rewards
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 11</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/rucaibox/textbox/commit/16d2d48c4c526dfe69081f80577f47895a2a756c#diff-b1528940160f8ae169869a37cb92b55928ff641d58de96bc444a721a4eb5195fL119' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 108662872</div><div id='project'> Project Name: rucaibox/textbox</div><div id='commit'> Commit Name: 16d2d48c4c526dfe69081f80577f47895a2a756c</div><div id='time'> Time: 2020-11-24</div><div id='author'> Author: 1020139164@qq.com</div><div id='file'> File Name: textbox/module/Generator/SeqGANGenerator.py</div><div id='m_class'> M Class Name: SeqGANGenerator</div><div id='n_method'> N Class Name: SeqGANGenerator</div><div id='m_method'> M Method Name: adversarial_loss(2)</div><div id='n_method'> N Method Name: adversarial_loss(2)</div><div id='m_parent_class'> M Parent Class: UnconditionalGenerator</div><div id='n_parent_class'> N Parent Class: UnconditionalGenerator</div><div id='m_file'> M File Name: textbox/module/Generator/SeqGANGenerator.py</div><div id='n_file'> N File Name: textbox/module/Generator/SeqGANGenerator.py</div><div id='m_start'> M Start Line: 119</div><div id='m_end'> M End Line: 149</div><div id='n_start'> N Start Line: 119</div><div id='n_end'> N End Line: 149</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            output, (h_prev, o_prev) = self.LSTM(X, (h_prev, o_prev))
+            logits = self.vocab_projection(output).squeeze(0) &#47&#47 b * v
+            P = F.log_softmax(logits, dim = -1) &#47&#47 b * v
+            <a id="change">word_t</a> = fake_samples[ : , t] &#47&#47 b
+            P_t = torch.gather(P, 1, word_t.unsqueeze(1)).squeeze(1) &#47&#47 b
+            X = self.word_embedding(word_t).unsqueeze(0) &#47&#47 1 * b * e
+
+            self.eval()
+            with torch.no_grad():
+                monte_carlo_X = word_t.repeat_interleave(self.monte_carlo_num) &#47&#47 (b * M)
+                monte_carlo_X = self.word_embedding(monte_carlo_X).unsqueeze(0) &#47&#47 1 * (b * M) * e
+                monte_carlo_h_prev = h_prev.clone().detach().repeat_interleave(self.monte_carlo_num, dim = 1) &#47&#47 1 * (b * M) * h
+                monte_carlo_o_prev = o_prev.clone().detach().repeat_interleave(self.monte_carlo_num, dim = 1) &#47&#47 1 * (b * M) * h
+                monte_carlo_output = torch.zeros(self.max_length, self.batch_size * self.monte_carlo_num, dtype = torch.long, device = self.device) &#47&#47 len * (b * M)
+
+                for i in range(self.max_length - t - 1):
+                    output, (monte_carlo_h_prev, monte_carlo_o_prev) = self.LSTM(monte_carlo_X, (monte_carlo_h_prev, monte_carlo_o_prev))
+                    P = F.softmax(self.vocab_projection(output), dim = -1).squeeze(0) &#47&#47 (b * M) * v
+                    for j in range(P.shape[0]):
+                        monte_carlo_output[i + t + 1][j] = torch.multinomial(P[j], 1)[0]
+                    monte_carlo_X = self.word_embedding(monte_carlo_output[i + t + 1]).unsqueeze(0) &#47&#47 1 * (b * M) * e
+
+                monte_carlo_output = monte_carlo_output.permute(1, 0) &#47&#47 (b * M) * len
+                monte_carlo_output[ : , : t + 1] = fake_samples[ : , : t + 1].repeat_interleave(self.monte_carlo_num, dim = 0)
+    
+                discriminator_out = discriminator_func(monte_carlo_output) &#47&#47 (b * M)
+                reward = discriminator_out.reshape(self.batch_size, self.monte_carlo_num).mean(dim = 1) &#47&#47 b
+            
+            self.train()
+            mask = <a id="change">(word_t != self.pad_idx) & </a><a id="change">(word_t != self.end_idx)</a>
+            <a id="change">reward</a> = reward * P_t * mask
+            reward = <a id="change">reward[reward.nonzero(as_tuple = True)]</a>
+            if <a id="change">(reward.shape[0])</a>:
+                rewards += <a id="change">reward.mean()</a>
+    
+        return -rewards
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            output, (h_prev, o_prev) = self.LSTM(X, (h_prev, o_prev))
+            logits = self.vocab_projection(output).squeeze(0) &#47&#47 b * v
+            P = F.log_softmax(logits, dim = -1) &#47&#47 b * v
+            <a id="change">word_t</a> = fake_samples[ : , t] &#47&#47 b
+            P_t = torch.gather(P, 1, word_t.unsqueeze(1)).squeeze(1) &#47&#47 b
+            X = self.word_embedding(word_t).unsqueeze(0) &#47&#47 1 * b * e
+
+            self.eval()
+            with torch.no_grad():
+                monte_carlo_X = word_t.repeat_interleave(self.monte_carlo_num) &#47&#47 (b * M)
+                monte_carlo_X = self.word_embedding(monte_carlo_X).unsqueeze(0) &#47&#47 1 * (b * M) * e
+                monte_carlo_h_prev = h_prev.clone().detach().repeat_interleave(self.monte_carlo_num, dim = 1) &#47&#47 1 * (b * M) * h
+                monte_carlo_o_prev = o_prev.clone().detach().repeat_interleave(self.monte_carlo_num, dim = 1) &#47&#47 1 * (b * M) * h
+                monte_carlo_output = torch.zeros(self.max_length, self.batch_size * self.monte_carlo_num, dtype = torch.long, device = self.device) &#47&#47 len * (b * M)
+
+                for i in range(self.max_length - t - 1):
+                    output, (monte_carlo_h_prev, monte_carlo_o_prev) = self.LSTM(monte_carlo_X, (monte_carlo_h_prev, monte_carlo_o_prev))
+                    P = F.softmax(self.vocab_projection(output), dim = -1).squeeze(0) &#47&#47 (b * M) * v
+                    for j in range(P.shape[0]):
+                        monte_carlo_output[i + t + 1][j] = torch.multinomial(P[j], 1)[0]
+                    monte_carlo_X = self.word_embedding(monte_carlo_output[i + t + 1]).unsqueeze(0) &#47&#47 1 * (b * M) * e
+
+                monte_carlo_output = monte_carlo_output.permute(1, 0) &#47&#47 (b * M) * len
+                monte_carlo_output[ : , : t + 1] = fake_samples[ : , : t + 1].repeat_interleave(self.monte_carlo_num, dim = 0)
+    
+                discriminator_out = discriminator_func(monte_carlo_output) &#47&#47 (b * M)
+                reward = discriminator_out.reshape(self.batch_size, self.monte_carlo_num).mean(dim = 1) &#47&#47 b
+            
+            self.train()
+            mask = <a id="change">word_t != self.pad_idx</a>
+            reward = reward * P_t * mask
+            <a id="change">mask_sum</a> = <a id="change">mask.sum()</a>
+            if (<a id="change">mask_sum</a>):
+                rewards += <a id="change">reward.sum()</a><a id="change"> / </a>mask_sum
+    
+        return -rewards
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/rucaibox/textbox/commit/ed89dd8e5f5c4902c95146ca9722bda3fa880ceb#diff-b1528940160f8ae169869a37cb92b55928ff641d58de96bc444a721a4eb5195fL108' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 108662870</div><div id='project'> Project Name: rucaibox/textbox</div><div id='commit'> Commit Name: ed89dd8e5f5c4902c95146ca9722bda3fa880ceb</div><div id='time'> Time: 2020-11-24</div><div id='author'> Author: 1020139164@qq.com</div><div id='file'> File Name: textbox/module/Generator/SeqGANGenerator.py</div><div id='m_class'> M Class Name: SeqGANGenerator</div><div id='n_method'> N Class Name: SeqGANGenerator</div><div id='m_method'> M Method Name: adversarial_loss(2)</div><div id='n_method'> N Method Name: adversarial_loss(2)</div><div id='m_parent_class'> M Parent Class: UnconditionalGenerator</div><div id='n_parent_class'> N Parent Class: UnconditionalGenerator</div><div id='m_file'> M File Name: textbox/module/Generator/SeqGANGenerator.py</div><div id='n_file'> N File Name: textbox/module/Generator/SeqGANGenerator.py</div><div id='m_start'> M Start Line: 119</div><div id='m_end'> M End Line: 149</div><div id='n_start'> N Start Line: 119</div><div id='n_end'> N End Line: 149</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            output, (h_prev, o_prev) = self.LSTM(X, (h_prev, o_prev))
+            logits = self.vocab_projection(output).squeeze(0)  &#47&#47 b * v
+            P = F.log_softmax(logits, dim = -1)  &#47&#47 b * v
+            <a id="change">word_t</a> = fake_samples[ : , t]  &#47&#47 b
+            P_t = torch.gather(P, 1, word_t.unsqueeze(1)).squeeze(1)  &#47&#47 b
+            X = self.word_embedding(word_t).unsqueeze(0)  &#47&#47 1 * b * e
+
+            mask = <a id="change">(word_t != self.pad_idx) & </a><a id="change">(word_t != self.end_idx)</a>
+            <a id="change">loss</a> = - rewards * P_t * mask
+            loss = <a id="change">loss[loss.nonzero(as_tuple = True)]</a>
+            if <a id="change">(loss.shape[0])</a>:
+                losses += <a id="change">loss.mean()</a>
+        return losses</code></pre><h3>After Change</h3><pre><code class='java'>
+            output, (h_prev, o_prev) = self.LSTM(X, (h_prev, o_prev))
+            logits = self.vocab_projection(output).squeeze(0)  &#47&#47 b * v
+            P = F.log_softmax(logits, dim = -1)  &#47&#47 b * v
+            <a id="change">word_t</a> = fake_samples[ : , t]  &#47&#47 b
+            P_t = torch.gather(P, 1, word_t.unsqueeze(1)).squeeze(1)  &#47&#47 b
+            X = self.word_embedding(word_t).unsqueeze(0)  &#47&#47 1 * b * e
+
+            mask = <a id="change">word_t != self.pad_idx</a>
+            loss = - rewards * P_t * mask
+            <a id="change">mask_sum</a> = <a id="change">mask.sum()</a>
+            if (<a id="change">mask_sum</a>):
+                losses += <a id="change">loss.sum()</a><a id="change"> / </a>mask_sum
+        return losses</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/rucaibox/textbox/commit/b987f7f32dc1f5ccb97e2c239fa046ae950a74a5#diff-85660321849eec891533d6920f950cbf7bad3caabcbc202fdb25f20f2c2e6d13L108' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 108662871</div><div id='project'> Project Name: rucaibox/textbox</div><div id='commit'> Commit Name: b987f7f32dc1f5ccb97e2c239fa046ae950a74a5</div><div id='time'> Time: 2020-11-24</div><div id='author'> Author: 1020139164@qq.com</div><div id='file'> File Name: textbox/module/Generator/MaliGANGenerator.py</div><div id='m_class'> M Class Name: MaliGANGenerator</div><div id='n_method'> N Class Name: MaliGANGenerator</div><div id='m_method'> M Method Name: adversarial_loss(2)</div><div id='n_method'> N Method Name: adversarial_loss(2)</div><div id='m_parent_class'> M Parent Class: UnconditionalGenerator</div><div id='n_parent_class'> N Parent Class: UnconditionalGenerator</div><div id='m_file'> M File Name: textbox/module/Generator/MaliGANGenerator.py</div><div id='n_file'> N File Name: textbox/module/Generator/MaliGANGenerator.py</div><div id='m_start'> M Start Line: 133</div><div id='m_end'> M End Line: 141</div><div id='n_start'> N Start Line: 133</div><div id='n_end'> N End Line: 141</div><BR>

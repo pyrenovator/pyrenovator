@@ -1,0 +1,64 @@
+<html><h3>Pattern ID :11359
+</h3><img src='38804513.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            output_descs = self.outputs
+
+            &#47&#47 If this model has flexible input shapes, it also needs flexible output shapes.
+            if <a id="change">getattr(</a>self, "use_past", False<a id="change">)</a>:
+                min_length, max_length = 1, -1
+            elif "input_ids" in input_descs and isinstance(input_descs["input_ids"].sequence_length, tuple):
+                min_length, max_length = input_descs["input_ids"].sequence_length</code></pre><h3>After Change</h3><pre><code class='java'>
+                        output_shapes[key] = [{ "axis": 1, "min": min_length, "max": max_length }]
+
+        if self.use_past:
+            <a id="change">for i</a> in <a id="change">range(</a>self.num_layers<a id="change">):
+                </a>output_shapes[f"present_{i}_key"]<a id="change"> = </a>[{ "axis": 2, "min": 1, "max": -1 }]
+                output_shapes[f"present_{i}_value"] = [{ "axis": 2, "min": 1, "max": -1 }]
+
+        return output_shapes</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/huggingface/exporters/commit/74b62bdf3667e793d235956a6a7565f3c342597c#diff-9efb11cf718ed446ee8267cf92b9821a82990cbd1065fff1622e9c347464e3d3L389' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 38804513</div><div id='project'> Project Name: huggingface/exporters</div><div id='commit'> Commit Name: 74b62bdf3667e793d235956a6a7565f3c342597c</div><div id='time'> Time: 2022-09-26</div><div id='author'> Author: mail@hollance.com</div><div id='file'> File Name: src/exporters/coreml/config.py</div><div id='m_class'> M Class Name: CoreMLConfig</div><div id='n_method'> N Class Name: CoreMLConfig</div><div id='m_method'> M Method Name: get_flexible_outputs(1)</div><div id='n_method'> N Method Name: get_flexible_outputs(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/exporters/coreml/config.py</div><div id='n_file'> N File Name: src/exporters/coreml/config.py</div><div id='m_start'> M Start Line: 559</div><div id='m_end'> M End Line: 559</div><div id='n_start'> N Start Line: 389</div><div id='n_end'> N End Line: 414</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        self.head = copy.deepcopy(getattr(plm, head_name))
+        if isinstance(self.head, torch.nn.Linear):
+            self.hidden_dims = self.head.weight.shape[-1]
+            self.original_head_last_layer = <a id="change">getattr(</a>plm, head_name<a id="change">)</a>
+            self.head = torch.nn.Linear(self.hidden_dims, self.num_classes, bias=False)
+        else: &#47&#47 The head contains multiple layer
+            self.head_last_layer_name = [n for n,c in self.head.named_children()][-1]
+            head_last_layer = getattr(self.head, self.head_last_layer_name)</code></pre><h3>After Change</h3><pre><code class='java'>
+            module = self.head
+            found = False
+            last_layer_full_name = []
+            <a id="change">for i</a> in <a id="change">range(</a>max_loop<a id="change">):
+                </a>last_layer_name = [n for n,c in module.named_children()][-1]
+                last_layer_full_name.append(last_layer_name)
+                parent_module = module
+                module = getattr(module, last_layer_name)
+                if isinstance(module, torch.nn.Linear):
+                    found = True
+                    break
+            if not found:
+                raise RuntimeError(f"Can&quott not retrieve a linear layer in {max_loop} loop from the plm.")
+            self.original_head_last_layer = module.weight.data
+            self.hidden_dims = self.original_head_last_layer.shape[-1]
+            self.head_last_layer_full_name<a id="change"> = </a>".".join(last_layer_full_name)
+            setattr(parent_module, last_layer_name, torch.nn.Linear(self.hidden_dims, self.num_classes, bias=False))
+        else:
+            self.hidden_dims = self.head.weight.shape[-1]</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/thunlp/openprompt/commit/e13980ab1a1b37f25c2ebbc58a3a5fee76e87ed9#diff-7a92838d06840854c72f2e47bd966019f58eab60dcb83efeda1a76cb7b357a30L32' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 38804514</div><div id='project'> Project Name: thunlp/openprompt</div><div id='commit'> Commit Name: e13980ab1a1b37f25c2ebbc58a3a5fee76e87ed9</div><div id='time'> Time: 2021-11-05</div><div id='author'> Author: shengdinghu@gmail.com</div><div id='file'> File Name: openprompt/prompts/soft_verbalizer.py</div><div id='m_class'> M Class Name: SoftVerbalizer</div><div id='n_method'> N Class Name: SoftVerbalizer</div><div id='m_method'> M Method Name: __init__(8)</div><div id='n_method'> N Method Name: __init__(8)</div><div id='m_parent_class'> M Parent Class: Verbalizer</div><div id='n_parent_class'> N Parent Class: Verbalizer</div><div id='m_file'> M File Name: openprompt/prompts/soft_verbalizer.py</div><div id='n_file'> N File Name: openprompt/prompts/soft_verbalizer.py</div><div id='m_start'> M Start Line: 45</div><div id='m_end'> M End Line: 59</div><div id='n_start'> N Start Line: 46</div><div id='n_end'> N End Line: 70</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    logger.info(model)
+
+    &#47&#47 get function handles of loss and metrics
+    loss_fn = <a id="change">getattr(</a>module_loss, config[&quotloss&quot]<a id="change">)</a>
+    metric_fns = [getattr(module_metric, met) for met in config[&quotmetrics&quot]]
+
+    logger.info(&quotLoading checkpoint: {} ...&quot.format(config.resume))
+    checkpoint = torch.load(config.resume)</code></pre><h3>After Change</h3><pre><code class='java'>
+            &#47&#47 save sample images, or do something with output here
+            &#47&#47
+            &#47&#47 cal test metric
+            <a id="change">for i</a> in <a id="change">range(</a>Y_fake.shape[0]<a id="change">):
+                </a>IOU+=IOU_metric(Y_fake[i],Y[i])
+                count<a id="change">+=</a>1
+            &#47&#47 output voxel dimension : 64
+            CE+=cross_entropy(Y_fake,Y)/(64*64*64)
+    log = {&quotIOU&quot: IOU / count,&quotCE&quot: CE / count}</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/zxpzhong/3d-recgan-pytorch/commit/63d82c1f333db58fe483cdcf29378a12e2155f6b#diff-3665d65394f4f58a56a256ad6dd8621c68118d90fe56a19387e251c19cec2d2eL11' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 38804518</div><div id='project'> Project Name: zxpzhong/3d-recgan-pytorch</div><div id='commit'> Commit Name: 63d82c1f333db58fe483cdcf29378a12e2155f6b</div><div id='time'> Time: 2020-06-27</div><div id='author'> Author: zxpzhong@qq.com</div><div id='file'> File Name: test.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(1)</div><div id='n_method'> N Method Name: main(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: test.py</div><div id='n_file'> N File Name: test.py</div><div id='m_start'> M Start Line: 12</div><div id='m_end'> M End Line: 67</div><div id='n_start'> N Start Line: 34</div><div id='n_end'> N End Line: 54</div><BR>

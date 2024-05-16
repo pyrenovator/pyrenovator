@@ -1,0 +1,181 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    &#47&#47 Computing the generator and fnet losses
+    diff1_mse = s_gen_output - s_targets
+
+    content_loss<a id="change"> = </a>torch.mean(torch.sum(torch.square(diff1_mse), dim=[3]))
+    update_list += [content_loss]
+    update_list_name += ["l2_content_loss"]
+    gen_loss = content_loss
+    fnet_loss = content_loss
+
+    diff2_mse = input_frames - s_input_warp
+
+    warp_loss = torch.mean(torch.sum(torch.square(diff2_mse), dim=[3]))
+    update_list += [warp_loss]
+    update_list_name += ["l2_warp_loss"]
+
+    vgg_loss = None
+    vgg_loss_list = []
+    if args.vgg_scaling &gt; 0.0:
+        vgg_wei_list = [1.0, 1.0, 1.0, 1.0]
+        vgg_loss = 0
+        vgg_layer_n = len(vgg_layer_labels)
+
+        for layer_i in range(vgg_layer_n):
+            curvgg_diff = torch.sum(gen_vgg[vgg_layer_labels[layer_i]] * target_vgg[vgg_layer_labels[layer_i]], dim=[3])
+            scaled_layer_loss = vgg_wei_list[layer_i] * curvgg_diff
+            vgg_loss_list += [curvgg_diff]
+            vgg_loss += scaled_layer_loss
+
+        gen_loss += args.vgg_scaling * vgg_loss
+        fnet_loss += args.vgg_scaling * vgg_loss.detach()
+        vgg_loss_list += [vgg_loss]
+
+        update_list += vgg_loss_list
+        update_list_name += ["vgg_loss_%d" % (_ + 2) for _ in range(len(vgg_loss_list) - 1)]
+        update_list_name += ["vgg_all"]
+
+    if args.pingpang:
+        gen_out_first = gen_outputs[:, 0:args.RNN_N - 1, :, :, :]
+        gen_out_last_rev = torch.flip(gen_outputs, dims=[1])[:, :args.RNN_N - 1:1, :, :, :]
+
+        pploss = torch.mean(torch.abs(gen_out_first - gen_out_last_rev))
+
+        if args.pp_scaling &gt; 0:
+            gen_loss += pploss.cpu() * args.pp_scaling
+            fnet_loss += pploss.cpu() * args.pp_scaling
+        update_list += [pploss]
+        update_list_name += ["PingPang"]
+
+    if (GAN_FLAG):
+        t_adversarial_loss = torch.mean(-torch.log(tdiscrim_fake_output.detach() + args.EPS))
+        d_adversarial_loss = torch.mean(-torch.log(tdiscrim_fake_output + args.EPS))
+        dt_ratio = torch.min(torch.tensor(args.Dt_ratio_max),
+                             args.Dt_ratio_0 + args.Dt_ratio_add * torch.tensor(Global_step, dtype=torch.float32))
+
+    gen_loss += args.ratio * t_adversarial_loss.cpu()
+    fnet_loss += args.ratio * t_adversarial_loss.cpu()
+    update_list += [t_adversarial_loss]
+    update_list_name += ["t_adversarial_loss"]
+    &#47&#47 Computing gradients for Generator and updating weights
+    if (args.D_LAYERLOSS):
+        gen_loss += sum_layer_loss.cpu() * dt_ratio
+    gen_loss<a id="change"> = </a>gen_loss.cuda()
+    optimizer_g.zero_grad()
+    <a id="change">gen_loss.backward()</a>
+    optimizer_g.step()
+
+    &#47&#47 Computing discriminator loss
+    if (GAN_FLAG):</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 Computing the generator and fnet losses
+        diff1_mse = s_gen_output - s_targets
+
+        content_loss<a id="change"> = </a>torch.mean(torch.sum(torch.square(diff1_mse), dim=[3]))
+        update_list += [content_loss]
+        update_list_name += ["l2_content_loss"]
+        gen_loss = content_loss
+        fnet_loss = content_loss
+
+        diff2_mse = input_frames - s_input_warp
+
+        warp_loss = torch.mean(torch.sum(torch.square(diff2_mse), dim=[3]))
+        update_list += [warp_loss]
+        update_list_name += ["l2_warp_loss"]
+
+        vgg_loss = None
+        vgg_loss_list = []
+        if args.vgg_scaling &gt; 0.0:
+            vgg_wei_list = [1.0, 1.0, 1.0, 1.0]
+            vgg_loss = 0
+            vgg_layer_n = len(vgg_layer_labels)
+
+            for layer_i in range(vgg_layer_n):
+                curvgg_diff = torch.sum(gen_vgg[vgg_layer_labels[layer_i]] * target_vgg[vgg_layer_labels[layer_i]], dim=[3])
+                scaled_layer_loss = vgg_wei_list[layer_i] * curvgg_diff
+                vgg_loss_list += [curvgg_diff]
+                vgg_loss += scaled_layer_loss
+
+            gen_loss += args.vgg_scaling * vgg_loss
+            fnet_loss += args.vgg_scaling * vgg_loss.detach()
+            vgg_loss_list += [vgg_loss]
+
+            update_list += vgg_loss_list
+            update_list_name += ["vgg_loss_%d" % (_ + 2) for _ in range(len(vgg_loss_list) - 1)]
+            update_list_name += ["vgg_all"]
+
+        if args.pingpang:
+            gen_out_first = gen_outputs[:, 0:args.RNN_N - 1, :, :, :]
+            gen_out_last_rev = torch.flip(gen_outputs, dims=[1])[:, :args.RNN_N - 1:1, :, :, :]
+
+            pploss = torch.mean(torch.abs(gen_out_first - gen_out_last_rev))
+
+            if args.pp_scaling &gt; 0:
+                gen_loss += pploss.cpu() * args.pp_scaling
+                fnet_loss += pploss.cpu() * args.pp_scaling
+            update_list += [pploss]
+            update_list_name += ["PingPang"]
+
+        if (GAN_FLAG):
+            t_adversarial_loss = torch.mean(-torch.log(tdiscrim_fake_output.detach() + args.EPS))
+            d_adversarial_loss = torch.mean(-torch.log(tdiscrim_fake_output + args.EPS))
+            dt_ratio = torch.min(torch.tensor(args.Dt_ratio_max),
+                                 args.Dt_ratio_0 + args.Dt_ratio_add * torch.tensor(Global_step, dtype=torch.float32))
+
+        gen_loss += args.ratio * t_adversarial_loss.cpu()
+        fnet_loss += args.ratio * t_adversarial_loss.cpu()
+        update_list += [t_adversarial_loss]
+        update_list_name += ["t_adversarial_loss"]
+        &#47&#47 Computing gradients for Generator and updating weights
+        if (args.D_LAYERLOSS):
+            gen_loss += sum_layer_loss.cpu() * dt_ratio
+        gen_loss<a id="change"> = </a>gen_loss.cuda()
+
+
+        &#47&#47 Computing discriminator loss
+        if (GAN_FLAG):
+            t_discrim_fake_loss = torch.log(1 - tdiscrim_fake_output + args.EPS)
+            t_discrim_real_loss = torch.log(tdiscrim_real_output + args.EPS)
+
+            t_discrim_loss = torch.mean(-(t_discrim_fake_loss + t_discrim_real_loss))
+            t_balance = torch.mean(t_discrim_real_loss) + d_adversarial_loss
+
+            update_list += [t_discrim_loss]
+            update_list_name += ["t_discrim_loss"]
+
+            update_list += [torch.mean(tdiscrim_real_output), torch.mean(tdiscrim_fake_output)]
+            update_list_name += ["t_discrim_real_output", "t_discrim_fake_output"]
+
+            if (args.D_LAYERLOSS and Fix_margin &gt; 0.0):
+                discrim_loss = t_discrim_loss + d_layer_loss * dt_ratio
+
+            &#47&#47 Computing gradients for Discriminator and updating weights
+            else:
+                discrim_loss = t_discrim_loss
+            discrim_loss = discrim_loss.cuda()
+
+            tb_exp_averager = EMA(0.99)
+            init_average = torch.zeros_like(t_balance)
+            tb_exp_averager.register("TB_average", init_average)
+            tb = tb_exp_averager.forward("TB_average", t_balance)
+
+            update_list += [gen_loss]
+            update_list_name += ["All_loss_Gen"]
+
+            tb_exp_averager.register("Loss_average", init_average)
+            update_list_avg = [tb_exp_averager.forward("Loss_average", _) for _ in update_list]
+        &#47&#47 Computing gradients for fnet and updating weights
+        optimizer_g.zero_grad()
+        <a id="change">scaler.scale(gen_loss).backward()</a>
+        <a id="change">scaler.step(</a>optimizer_g<a id="change">)</a>
+        scaler.update()
+        optimizer_d.zero_grad()
+        scaler.scale(discrim_loss).backward()
+        scaler.step(optimizer_d)
+        <a id="change">scaler.update()</a>
+        &#47&#47fnet_loss = fnet_loss.cuda()
+        &#47&#47fnet_optimizer.zero_grad()
+        &#47&#47fnet_loss.backward()
+        &#47&#47fnet_optimizer.step()</code></pre>

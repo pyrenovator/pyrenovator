@@ -1,0 +1,79 @@
+<html><h3>Pattern ID :22432
+</h3><img src='70947416.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    if (loc is not None) and (scale is not None):
+        &#47&#47 total_count = (total_count * scale) + loc
+        probs += scale.log() / 10
+    total_count = <a id="change">F.softplus(</a>total_count<a id="change">)</a>
+    probs = F.sigmoid(probs)
+    return (total_count, probs)
+
+&#47&#47 %% ../../nbs/losses.pytorch.ipynb 61</code></pre><h3>After Change</h3><pre><code class='java'>
+    Also adds Negative Binomial domain protection to the distribution parameters.
+    
+    mu, alpha = output
+    mu = <a id="change">F.softplus(</a>mu<a id="change">)</a> + 1e-8
+    alpha = F.softplus(alpha) + 1e-8  &#47&#47 alpha = 1/total_counts
+    if (loc is not None) and (scale is not None):
+        mu *= loc
+        alpha /= loc + 1.0
+
+    &#47&#47 mu = total_count * (probs/(1-probs))
+    &#47&#47 =&gt; probs = mu / (total_count + mu)
+    &#47&#47 =&gt; probs = mu / [total_count * (1 + mu * (1/total_count))]
+    total_count = 1.0 / alpha
+    probs = (mu * alpha / (<a id="change">1.0</a><a id="change"> + </a>mu * alpha)) + 1e-8
+    return (total_count, probs)
+
+&#47&#47 %% ../../nbs/losses.pytorch.ipynb 65</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/nixtla/neuralforecast/commit/4821277708ea4584d61ae5c99e938efc34dc0bf5#diff-b802b4aae962f9e4c5e03302b63a22d5ed334b8e60bc54cfdb206ee1ac4d25dfL798' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 70947416</div><div id='project'> Project Name: nixtla/neuralforecast</div><div id='commit'> Commit Name: 4821277708ea4584d61ae5c99e938efc34dc0bf5</div><div id='time'> Time: 2023-02-02</div><div id='author'> Author: kin.gtz.olivares@gmail.com</div><div id='file'> File Name: neuralforecast/losses/pytorch.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: nbinomial_scale_decouple(3)</div><div id='n_method'> N Method Name: nbinomial_scale_decouple(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: neuralforecast/losses/pytorch.py</div><div id='n_file'> N File Name: neuralforecast/losses/pytorch.py</div><div id='m_start'> M Start Line: 798</div><div id='m_end'> M End Line: 803</div><div id='n_start'> N Start Line: 873</div><div id='n_end'> N End Line: 884</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 normalize mean
+        loc = loc / loc.norm(dim=-1, keepdim=True)
+
+        concentration = <a id="change">torch.nn.functional.softplus(</a>log_concentration<a id="change">)</a>
+        z = self._sample_von_mises(loc, concentration)
+        recon_x = self.decoder(z)["reconstruction"]
+
+        loss, recon_loss, kld = self.loss_function(recon_x, x, loc, concentration, z)</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 normalize mean
+        loc = loc / loc.norm(dim=-1, keepdim=True)
+
+        concentration = <a id="change">torch.nn.functional.softplus(</a>log_concentration<a id="change">) + 1</a>
+        z = self._sample_von_mises(loc, concentration)
+        recon_x = self.decoder(z)["reconstruction"]
+
+        loss, recon_loss, kld = self.loss_function(recon_x, x, loc, concentration, z)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/clementchadebec/benchmark_vae/commit/a1a96c209d3b56f1c72d0409234169cf0b1c1e79#diff-1eec5250123cd104fbea3b083ceaa99eabe42be33dd8c9fe0e10c9a056eb49f5L61' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 70947411</div><div id='project'> Project Name: clementchadebec/benchmark_vae</div><div id='commit'> Commit Name: a1a96c209d3b56f1c72d0409234169cf0b1c1e79</div><div id='time'> Time: 2022-08-20</div><div id='author'> Author: 47564971+clementchadebec@users.noreply.github.com</div><div id='file'> File Name: src/pythae/models/svae/svae_model.py</div><div id='m_class'> M Class Name: SVAE</div><div id='n_method'> N Class Name: SVAE</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: VAE</div><div id='n_parent_class'> N Parent Class: VAE</div><div id='m_file'> M File Name: src/pythae/models/svae/svae_model.py</div><div id='n_file'> N File Name: src/pythae/models/svae/svae_model.py</div><div id='m_start'> M Start Line: 85</div><div id='m_end'> M End Line: 85</div><div id='n_start'> N Start Line: 84</div><div id='n_end'> N End Line: 84</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        neg_weight = torch.max(torch.zeros_like(neg_weight), neg_weight)
+        lse_negative = torch.logsumexp(self.log_scale * (neg - self.neg_margin) * neg_weight, dim=-1)
+
+        loss = <a id="change">F.softplus(</a>lse_positive + lse_negative<a id="change">)</a> / self.log_scale
+
+        return torch.mean(loss), accuracy, furthest_positive.tolist(), average_negative.tolist(), 0, dists
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        lse_negative_row = torch.logsumexp(self.log_scale * (neg - self.neg_margin) * neg_weight, dim=-1)
+        lse_negative_col = torch.logsumexp(self.log_scale * (neg - self.neg_margin) * neg_weight, dim=-2)
+
+        loss_row = <a id="change">F.softplus(</a>lse_positive + lse_negative_row<a id="change">)</a> / self.log_scale
+        loss_col = F.softplus(lse_positive + lse_negative_col) / self.log_scale
+        loss = (loss_row + loss_col)<a id="change"> / 2</a>
+
+        return torch.mean(loss), accuracy, furthest_positive.tolist(), average_negative.tolist(), 0, dists
+
+class DetLoss(nn.Module):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/xuyangbai/d3feat.pytorch/commit/6b04056015be694539faaea65d814b508e6a265b#diff-afc9c0f856a1fa54a2d35dfcd375a176b7b736953195238a3a51870eef4314bbL122' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 70947412</div><div id='project'> Project Name: xuyangbai/d3feat.pytorch</div><div id='commit'> Commit Name: 6b04056015be694539faaea65d814b508e6a265b</div><div id='time'> Time: 2020-07-17</div><div id='author'> Author: 653823597@qq.com</div><div id='file'> File Name: utils/loss.py</div><div id='m_class'> M Class Name: CircleLoss</div><div id='n_method'> N Class Name: CircleLoss</div><div id='m_method'> M Method Name: forward(4)</div><div id='n_method'> N Method Name: forward(4)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: utils/loss.py</div><div id='n_file'> N File Name: utils/loss.py</div><div id='m_start'> M Start Line: 144</div><div id='m_end'> M End Line: 159</div><div id='n_start'> N Start Line: 125</div><div id='n_end'> N End Line: 161</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            output = torch.nan_to_num(F.logsigmoid(pos_score), nan=0.0).sum(-1)\
+                 / notpadnum
+            return torch.mean(-output + \
+                torch.sum(<a id="change">F.softplus(</a>neg_score<a id="change">)</a> * weight, dim=-1))
+        else:
+            return torch.mean(-F.logsigmoid(pos_score) + \
+                F.softplus(torch.max(neg_score, dim=-1)))</code></pre><h3>After Change</h3><pre><code class='java'>
+            weight = self._cal_weight(neg_score, log_neg_prob)
+            notpadnum = torch.logical_not(torch.isinf(pos_score)).float().sum()
+            output = torch.nan_to_num(F.logsigmoid(pos_score), nan=0.0).sum() / notpadnum
+            neg_score = <a id="change">F.softplus(</a>neg_score<a id="change">)</a> * weight
+            neg_score_sum = neg_score.sum(-1)
+            if pos_score.dim() == neg_score.dim()<a id="change">-1</a>:
+                padding_mask = torch.isinf(pos_score)
+                neg_score_sum.masked_fill_(padding_mask, 0.0)
+            return -output + torch.mean(neg_score_sum)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/ustcml/recstudio/commit/d105308841df24997fabad0bcbe394d8ae46a729#diff-d049d95be678e47f8bdff9aac0c68d411711eaed88f870b109e68ca1650e203cL92' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 70947413</div><div id='project'> Project Name: ustcml/recstudio</div><div id='commit'> Commit Name: d105308841df24997fabad0bcbe394d8ae46a729</div><div id='time'> Time: 2022-08-15</div><div id='author'> Author: angus_huang@mail.ustc.edu.cn</div><div id='file'> File Name: recstudio/model/loss_func.py</div><div id='m_class'> M Class Name: BinaryCrossEntropyLoss</div><div id='n_method'> N Class Name: BinaryCrossEntropyLoss</div><div id='m_method'> M Method Name: forward(6)</div><div id='n_method'> N Method Name: forward(6)</div><div id='m_parent_class'> M Parent Class: PairwiseLoss</div><div id='n_parent_class'> N Parent Class: PairwiseLoss</div><div id='m_file'> M File Name: recstudio/model/loss_func.py</div><div id='n_file'> N File Name: recstudio/model/loss_func.py</div><div id='m_start'> M Start Line: 93</div><div id='m_end'> M End Line: 99</div><div id='n_start'> N Start Line: 108</div><div id='n_end'> N End Line: 119</div><BR>

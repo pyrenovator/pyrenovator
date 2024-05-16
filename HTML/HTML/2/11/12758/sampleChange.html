@@ -1,0 +1,38 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        raise ValueError("unkown padding type.")
+
+    row_indices = []
+    column_indices<a id="change"> = []</a>
+    values = []
+    for column in range(0, input_rows):
+        <a id="change">for </a>row in range(0, filter_length)<a id="change">:
+            </a>check_row = column + row
+            if (check_row &gt;= start_row) and (check_row &lt;= stop_row):
+                row_indices.append(row + column - start_row)
+                <a id="change">column_indices.append(</a>column<a id="change">)</a>
+                values.append(filter[row])
+    indices = torch.tensor(
+        np.stack([row_indices, column_indices]), device=filter.device
+    )</code></pre><h3>After Change</h3><pre><code class='java'>
+    else:
+        raise ValueError("unkown padding type.")
+
+    product_lst = <a id="change">[
+        (row, col)
+        for col, row in product(range(input_rows), range(filter_length))
+        if row + col in range(start_row, stop_row + 1)
+    ]</a>
+
+    row_indices = torch.tensor(
+        [row + col - start_row for row, col in product_lst], device=filter.device
+    )
+    col_indices = torch.tensor([col for row, col in product_lst], device=filter.device)
+    indices = torch.stack([row_indices, col_indices])
+    values<a id="change"> = </a><a id="change">torch.stack([filter[row] for row, col in product_lst]</a><a id="change">)</a>
+
+    return torch.sparse_coo_tensor(
+        indices, values, device=filter.device, dtype=filter.dtype
+    )</code></pre>

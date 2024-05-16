@@ -1,0 +1,18 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        b = torch.bmm(fn_input, linear_param[0:1, :features].expand(batch, -1, -1))
+        c = torch.bmm(sequence_input, linear_param[0:1, features:].expand(batch, -1, -1))
+        a = torch.bmm(b, c)
+        o<a id="change"> = </a><a id="change">a.clamp(min=0)</a> &#47&#47 torch.bmm(a, activate.expand(batch, -1, -1))
+        o, _ = o.qr()
+        return o
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        c = torch.bmm(sequence_input, linear_param[0:1, features:features * 2].expand(batch, -1, -1))
+        o = torch.nn.functional.instance_norm(b * c)
+        o = torch.nn.functional.relu(o)
+        o = torch.bmm(o, <a id="change">linear_param[0:1, features * 2:]</a>.expand(batch, -1, -1))
+        o, _ = o.qr()
+        return o
+</code></pre>

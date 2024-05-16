@@ -1,0 +1,20 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            iRnn = torch.linalg.inv(iRnn)
+        ifc = torch.view_as_complex(ifc.unflatten(3, (self.frame_size, 2)))
+        if self.normalize_ifc:
+            ifc0 = <a id="change">ifc[..., -1]</a>
+            ifc = ifc / (ifc0.unsqueeze(-1) + self.eps)
+        spec_f = spec_u.narrow(-2, 0, self.num_freqs)
+        numerator = torch.einsum("...nm,...m-&gt;...n", iRnn, ifc)  &#47&#47 [B, C, F, N]
+        denumerator = torch.einsum("...n,...n-&gt;...", ifc.conj(), numerator)</code></pre><h3>After Change</h3><pre><code class='java'>
+            numerator = torch.einsum("...nm,...m-&gt;...n", iRnn, ifc)  &#47&#47 [B, C, F, N]
+        denumerator = torch.einsum("...n,...n-&gt;...", ifc.conj(), numerator)
+        &#47&#47 Normalize numerator
+        scale = <a id="change">ifc[..., -1, None].conj()</a>
+        w = (numerator<a id="change"> * </a>scale / (denumerator.real.unsqueeze(-1) + self.eps)).unsqueeze(1)
+        spec_f = self.apply_coefs(spec_f, w)
+        if self.training:
+            spec = spec.clone()</code></pre>

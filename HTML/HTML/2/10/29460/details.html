@@ -1,0 +1,125 @@
+<html><h3>Pattern ID :29460
+</h3><img src='87409329.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        
+    def select_control_points(self):
+        &#47&#47 Select the center of the mass to be the first control point
+        contPts_w_1<a id="change"> = </a>np.mean(self.objPts, axis=0).reshape((1, 3))
+        center_objPts = np.tile(contPts_w_1, (self.n, 1))
+        
+        &#47&#47 Use the first control point and PCA to select the other three control points
+        objPts_w_cent = self.objPts.reshape((self.n, 3)) - center_objPts
+        u, s, vh = np.linalg.svd(np.matmul(objPts_w_cent.T, objPts_w_cent), full_matrices=True)
+        contPts_w_2<a id="change"> = </a>contPts_w_1<a id="change"> + </a><a id="change">np.sqrt(</a>s[0]<a id="change">)*</a>vh[0]
+        contPts_w_3 = contPts_w_1 + np.sqrt(s[1])*vh[1]
+        contPts_w_4<a id="change"> = </a>contPts_w_1 + np.sqrt(s[2])*vh[2]
+
+        <a id="change">return </a>np.array([contPts_w_1, contPts_w_2, contPts_w_3, contPts_w_4]).reshape(4, 3)
+        
+    def compute_alphas(self):
+        &#47&#47 Construct matrix for alpha calculation</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 produce points TODO: change to batch implementation
+        res = []
+        res.append(center)
+        <a id="change">for </a>i in range(3)<a id="change">:
+            </a>another_pt<a id="change"> = </a>center + torch.sqrt(s[:, i])*vh[:, i]
+            res.append(another_pt)
+
+        return torch.stack(res, dim=1)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 9</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/pypose/pypose/commit/762381a1eb57de9a7b7ffad5293e3bb33c859006#diff-052b8dfcb4f5d16ac2df9676fd039e877588b354a969db2f245a098529fc6d31L104' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 87409329</div><div id='project'> Project Name: pypose/pypose</div><div id='commit'> Commit Name: 762381a1eb57de9a7b7ffad5293e3bb33c859006</div><div id='time'> Time: 2023-02-24</div><div id='author'> Author: ztzhan1108@gmail.com</div><div id='file'> File Name: pypose/module/pnp.py</div><div id='m_class'> M Class Name: EPnP</div><div id='n_method'> N Class Name: EPnP</div><div id='m_method'> M Method Name: select_control_points(2)</div><div id='n_method'> N Method Name: select_control_points(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: pypose/module/pnp.py</div><div id='n_file'> N File Name: pypose/module/pnp.py</div><div id='m_start'> M Start Line: 108</div><div id='m_end'> M End Line: 118</div><div id='n_start'> N Start Line: 104</div><div id='n_end'> N End Line: 125</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 - pred_prev_image -&gt; "x_t-1"
+        for t in tqdm.tqdm(reversed(range(num_inference_steps)), total=num_inference_steps):
+            &#47&#47 1. predict noise residual
+            timesteps<a id="change"> = </a>torch.tensor([inference_step_times[t]] * image.shape[0], device=torch_device)
+            pred_noise_t = self.unet(image, timesteps)
+
+            if isinstance(pred_noise_t, dict):
+                pred_noise_t = pred_noise_t["sample"]
+
+            &#47&#47 2. predict previous mean of image x_t-1
+            pred_prev_image = self.noise_scheduler.step(pred_noise_t, image, t, num_inference_steps, eta)
+
+            &#47&#47 3. optionally sample variance
+            variance = 0
+            if eta &gt; 0:
+                noise<a id="change"> = </a>torch.randn(image.shape, generator=generator).to(image.device)
+                variance = <a id="change">self.noise_scheduler.get_variance(t, num_inference_steps).sqrt() * eta * </a>noise
+
+            &#47&#47 4. set current image to prev_image: x_t -&gt; x_t-1
+            image<a id="change"> = </a>pred_prev_image + variance
+
+        &#47&#47 decode image with vae
+        image = self.vqvae.decode(image)
+        <a id="change">return </a>image
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        self.scheduler.set_timesteps(num_inference_steps)
+
+        <a id="change">for t</a> in tqdm.tqdm(self.scheduler.timesteps)<a id="change">:
+            </a>residual = self.unet(image, t)
+
+            if isinstance(residual, dict):
+                residual = residual["sample"]
+
+            &#47&#47 2. predict previous mean of image x_t-1 and add variance depending on eta
+            &#47&#47 do x_t -&gt; x_t-1
+            image<a id="change"> = </a>self.scheduler.step(residual, t, image, eta)["prev_sample"]
+
+        &#47&#47 decode image with vae
+        image = self.vqvae.decode(image)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/huggingface/diffusers/commit/f448360bd0dfe5e28ee65ab2130532db91d5eafe#diff-5a7ee70ffdbd476077b691c023447641dd657f00acfc79868f392d410574c691L15' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 87409317</div><div id='project'> Project Name: huggingface/diffusers</div><div id='commit'> Commit Name: f448360bd0dfe5e28ee65ab2130532db91d5eafe</div><div id='time'> Time: 2022-07-15</div><div id='author'> Author: patrick.v.platen@gmail.com</div><div id='file'> File Name: src/diffusers/pipelines/latent_diffusion_uncond/pipeline_latent_diffusion_uncond.py</div><div id='m_class'> M Class Name: LatentDiffusionUncondPipeline</div><div id='n_method'> N Class Name: LatentDiffusionUncondPipeline</div><div id='m_method'> M Method Name: __call__(6)</div><div id='n_method'> N Method Name: __call__(6)</div><div id='m_parent_class'> M Parent Class: DiffusionPipeline</div><div id='n_parent_class'> N Parent Class: DiffusionPipeline</div><div id='m_file'> M File Name: src/diffusers/pipelines/latent_diffusion_uncond/pipeline_latent_diffusion_uncond.py</div><div id='n_file'> N File Name: src/diffusers/pipelines/latent_diffusion_uncond/pipeline_latent_diffusion_uncond.py</div><div id='m_start'> M Start Line: 31</div><div id='m_end'> M End Line: 71</div><div id='n_start'> N Start Line: 31</div><div id='n_end'> N End Line: 50</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        
+    def select_control_points(self):
+        &#47&#47 Select the center of the mass to be the first control point
+        contPts_w_1<a id="change"> = </a>np.mean(self.objPts, axis=0).reshape((1, 3))
+        center_objPts = np.tile(contPts_w_1, (self.n, 1))
+        
+        &#47&#47 Use the first control point and PCA to select the other three control points
+        objPts_w_cent = self.objPts.reshape((self.n, 3)) - center_objPts
+        u, s, vh = np.linalg.svd(np.matmul(objPts_w_cent.T, objPts_w_cent), full_matrices=True)
+        contPts_w_2<a id="change"> = </a>contPts_w_1 + np.sqrt(s[0])*vh[0]
+        contPts_w_3 = contPts_w_1 + np.sqrt(s[1])*vh[1]
+        contPts_w_4<a id="change"> = </a>contPts_w_1<a id="change"> + </a><a id="change">np.sqrt(</a>s[2]<a id="change">)*</a>vh[2]
+
+        <a id="change">return </a>np.array([contPts_w_1, contPts_w_2, contPts_w_3, contPts_w_4]).reshape(4, 3)
+        
+    def compute_alphas(self):
+        &#47&#47 Construct matrix for alpha calculation</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 produce points TODO: change to batch implementation
+        res = []
+        res.append(center)
+        <a id="change">for i</a> in range(3)<a id="change">:
+            </a>another_pt<a id="change"> = </a>center + torch.sqrt(s[:, i])*vh[:, i]
+            res.append(another_pt)
+
+        return torch.stack(res, dim=1)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/pypose/pypose/commit/762381a1eb57de9a7b7ffad5293e3bb33c859006#diff-052b8dfcb4f5d16ac2df9676fd039e877588b354a969db2f245a098529fc6d31L106' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 87409319</div><div id='project'> Project Name: pypose/pypose</div><div id='commit'> Commit Name: 762381a1eb57de9a7b7ffad5293e3bb33c859006</div><div id='time'> Time: 2023-02-24</div><div id='author'> Author: ztzhan1108@gmail.com</div><div id='file'> File Name: pypose/module/pnp.py</div><div id='m_class'> M Class Name: EPnP</div><div id='n_method'> N Class Name: EPnP</div><div id='m_method'> M Method Name: select_control_points(2)</div><div id='n_method'> N Method Name: select_control_points(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: pypose/module/pnp.py</div><div id='n_file'> N File Name: pypose/module/pnp.py</div><div id='m_start'> M Start Line: 108</div><div id='m_end'> M End Line: 118</div><div id='n_start'> N Start Line: 104</div><div id='n_end'> N End Line: 125</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            pred_prev_image = self.noise_scheduler.step(residual, image, t, num_inference_steps, eta)
+
+            &#47&#47 3. optionally sample variance
+            variance<a id="change"> = </a>0
+            if eta &gt; 0:
+                noise<a id="change"> = </a>torch.randn(image.shape, generator=generator).to(image.device)
+                variance = <a id="change">self.noise_scheduler.get_variance(t, num_inference_steps).sqrt() * eta * </a>noise
+
+            &#47&#47 4. set current image to prev_image: x_t -&gt; x_t-1
+            image<a id="change"> = </a>pred_prev_image + variance
+
+        <a id="change">return </a>image
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 set step values
+        self.scheduler.set_timesteps(num_inference_steps)
+
+        <a id="change">for t</a> in tqdm.tqdm(self.scheduler.timesteps)<a id="change">:
+            &#47&#47 1. predict noise residual
+            </a>with torch.no_grad():
+                residual = self.unet(image, t)
+
+                if isinstance(residual, dict):
+                    residual = residual["sample"]
+
+            &#47&#47 2. predict previous mean of image x_t-1 and add variance depending on eta
+            &#47&#47 do x_t -&gt; x_t-1
+            image<a id="change"> = </a>self.scheduler.step(residual, t, image, eta)["prev_sample"]
+
+        return {"sample": image}
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/huggingface/diffusers/commit/f448360bd0dfe5e28ee65ab2130532db91d5eafe#diff-e50584b7225637d287e815f280f5d4eba5415903cafc62f029cd5f03b738f577L30' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 87409328</div><div id='project'> Project Name: huggingface/diffusers</div><div id='commit'> Commit Name: f448360bd0dfe5e28ee65ab2130532db91d5eafe</div><div id='time'> Time: 2022-07-15</div><div id='author'> Author: patrick.v.platen@gmail.com</div><div id='file'> File Name: src/diffusers/pipelines/ddim/pipeline_ddim.py</div><div id='m_class'> M Class Name: DDIMPipeline</div><div id='n_method'> N Class Name: DDIMPipeline</div><div id='m_method'> M Method Name: __call__(6)</div><div id='n_method'> N Method Name: __call__(6)</div><div id='m_parent_class'> M Parent Class: DiffusionPipeline</div><div id='n_parent_class'> N Parent Class: DiffusionPipeline</div><div id='m_file'> M File Name: src/diffusers/pipelines/ddim/pipeline_ddim.py</div><div id='n_file'> N File Name: src/diffusers/pipelines/ddim/pipeline_ddim.py</div><div id='m_start'> M Start Line: 35</div><div id='m_end'> M End Line: 77</div><div id='n_start'> N Start Line: 42</div><div id='n_end'> N End Line: 59</div><BR>

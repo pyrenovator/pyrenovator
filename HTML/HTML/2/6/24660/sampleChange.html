@@ -1,0 +1,43 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                self._env,
+                self.device,
+            )
+            if <a id="change">path</a>:
+                leaf_module = self._dmp_wrapped_module
+                split_path = path.split(".")
+                <a id="change">for </a>name in split_path[:-1]<a id="change">:
+                    </a>leaf_module<a id="change"> = </a>getattr(leaf_module, name)
+                setattr(leaf_module, split_path[-1], sharded_module)
+            else:
+                self._dmp_wrapped_module = sharded_module</code></pre><h3>After Change</h3><pre><code class='java'>
+    ) -&gt; nn.Module:
+
+        &#47&#47 pre-sharded module
+        <a id="change">if </a>isinstance(module, ShardedModule):
+            return module
+
+        &#47&#47 shardable module
+        module_sharding_plan = self._plan.get_plan_for_module(path)
+        if module_sharding_plan:
+            sharder_key = sharder_name(type(module))
+            module = self._sharder_map[sharder_key].shard(
+                module,
+                module_sharding_plan,
+                self._env,
+                self.device,
+            )
+            return module
+
+        for name, child in module.named_children():
+            child = self._shard_modules_impl(
+                child,
+                path + "." + name if path else name,
+            )
+            <a id="change">setattr(</a>module, name, child<a id="change">)</a>
+
+        return module
+
+    def _init_parameters(self, module: nn.Module) -&gt; None:</code></pre>

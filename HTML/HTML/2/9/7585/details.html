@@ -1,0 +1,76 @@
+<html><h3>Pattern ID :7585
+</h3><img src='25268355.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                bin_mask = segmask_array_iter == int(_class)
+                bin_mask = bin_mask.long()
+            one_hot_stack.append(bin_mask)
+        one_hot_stack<a id="change"> = </a><a id="change">torch.stack(</a>one_hot_stack<a id="change">)</a>
+        batch_stack.append(one_hot_stack)
+    batch_stack = torch.stack(batch_stack)
+    if batch_stack.shape[-1] == 1:
+        batch_stack = batch_stack.squeeze(-1)</code></pre><h3>After Change</h3><pre><code class='java'>
+                &#47&#47 we always ensure the append happens in dim 0, which is blank
+                bin_mask = bin_mask.unsqueeze(0)
+                
+            <a id="change">if one_hot_stack is None</a>:
+                one_hot_stack<a id="change"> = </a>bin_mask
+            else:
+                one_hot_stack<a id="change"> = </a>torch.cat((one_hot_stack, bin_mask))
+                
+        <a id="change">if batch_stack is None</a>:
+            batch_stack<a id="change"> = </a>one_hot_stack
+        else:
+            batch_stack = torch.stack([batch_stack, one_hot_stack])
+    &#47&#47 always ensure we are returning a tensor with batch_size encoded</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 9</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/cbica/gandlf/commit/7e55f84b996834a00df755fe6620a3f514b044d8#diff-bb94cfa3aa2c4896ffc51250bc8aaa76a69755d33e3ec31c80f29b9c9353119bL20' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 25268355</div><div id='project'> Project Name: cbica/gandlf</div><div id='commit'> Commit Name: 7e55f84b996834a00df755fe6620a3f514b044d8</div><div id='time'> Time: 2021-10-04</div><div id='author'> Author: sarthak.pati@hotmail.com</div><div id='file'> File Name: GANDLF/utils/tensor.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: one_hot(2)</div><div id='n_method'> N Method Name: one_hot(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: GANDLF/utils/tensor.py</div><div id='n_file'> N File Name: GANDLF/utils/tensor.py</div><div id='m_start'> M Start Line: 20</div><div id='m_end'> M End Line: 53</div><div id='n_start'> N Start Line: 20</div><div id='n_end'> N End Line: 62</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        return dense_to_sparse(adj)
+    else:
+        idxs = np.nonzero(adj)
+        edge_index<a id="change"> = </a><a id="change">np.stack(</a>idxs<a id="change">)</a>
+        edge_weights = adj[idxs]
+        return edge_index, edge_weights
+
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    assert 2 &lt;= adj.ndim &lt;= 3
+    assert adj.shape[-1] == adj.shape[-2]
+
+    <a id="change">if backend is torch</a>:
+        adj<a id="change"> = </a>torch.transpose(adj, -2, -1)
+        index = adj.nonzero(as_tuple=True)
+    else:
+        adj<a id="change"> = </a>np.swapaxes(adj, -2, -1)  &#47&#47 transpose
+        index = adj.nonzero()
+
+    edge_attr = adj[index]
+
+    <a id="change">if len(index) == 3</a>:
+        batch<a id="change"> = </a>index[0] * adj.shape[-1]
+        index = (batch + index[1], batch + index[2])
+
+    edge_index = backend.stack(index, 0)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/torchspatiotemporal/tsl/commit/50089afdf23de12eb6d11e9d5e7e64d949d45611#diff-06bf001f44c985548f88f63f6218b0ffef4949bcba885086f99529d813e75099L92' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 25268357</div><div id='project'> Project Name: torchspatiotemporal/tsl</div><div id='commit'> Commit Name: 50089afdf23de12eb6d11e9d5e7e64d949d45611</div><div id='time'> Time: 2022-08-18</div><div id='author'> Author: ivan.marisca@hotmail.it</div><div id='file'> File Name: tsl/ops/connectivity.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: adj_to_edge_index(2)</div><div id='n_method'> N Method Name: adj_to_edge_index(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: tsl/ops/connectivity.py</div><div id='n_file'> N File Name: tsl/ops/connectivity.py</div><div id='m_start'> M Start Line: 92</div><div id='m_end'> M End Line: 114</div><div id='n_start'> N Start Line: 106</div><div id='n_end'> N End Line: 145</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        return dense_to_sparse(adj)
+    else:
+        idxs = np.nonzero(adj)
+        edge_index<a id="change"> = </a><a id="change">np.stack(</a>idxs<a id="change">)</a>
+        edge_weights = adj[idxs]
+        return edge_index, edge_weights
+
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    assert 2 &lt;= adj.ndim &lt;= 3
+    assert adj.shape[-1] == adj.shape[-2]
+
+    <a id="change">if backend is torch</a>:
+        adj<a id="change"> = </a>torch.transpose(adj, -2, -1)
+        index = adj.nonzero(as_tuple=True)
+    else:
+        adj<a id="change"> = </a>np.swapaxes(adj, -2, -1)  &#47&#47 transpose
+        index = adj.nonzero()
+
+    edge_attr = adj[index]
+
+    <a id="change">if len(index) == 3</a>:
+        batch<a id="change"> = </a>index[0] * adj.shape[-1]
+        index = (batch + index[1], batch + index[2])
+
+    edge_index = backend.stack(index, 0)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/torchspatiotemporal/tsl/commit/f28e5a2fddc34eeb90a13c113512c8ab12b6138b#diff-06bf001f44c985548f88f63f6218b0ffef4949bcba885086f99529d813e75099L92' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 25268356</div><div id='project'> Project Name: torchspatiotemporal/tsl</div><div id='commit'> Commit Name: f28e5a2fddc34eeb90a13c113512c8ab12b6138b</div><div id='time'> Time: 2022-07-20</div><div id='author'> Author: ivan.marisca@hotmail.it</div><div id='file'> File Name: tsl/ops/connectivity.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: adj_to_edge_index(2)</div><div id='n_method'> N Method Name: adj_to_edge_index(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: tsl/ops/connectivity.py</div><div id='n_file'> N File Name: tsl/ops/connectivity.py</div><div id='m_start'> M Start Line: 92</div><div id='m_end'> M End Line: 114</div><div id='n_start'> N Start Line: 106</div><div id='n_end'> N End Line: 145</div><BR>

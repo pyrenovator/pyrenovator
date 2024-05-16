@@ -1,0 +1,79 @@
+<html><h3>Pattern ID :6794
+</h3><img src='23177019.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        else:
+            source_tt = source_layer.relative_position_bias_table  &#47&#47 layer
+        &#47&#47 self.relative_position_bias_table.assign(tf.transpose(source_tt))
+        hh = ww = int(<a id="change">tf.math.sqrt(</a>float(source_tt.shape[1] - self.cls_token_pos_len)<a id="change">)</a>)  &#47&#47 assume source weights are all square shape
+        num_heads = source_tt.shape[0]
+        ss = tf.reshape(source_tt[:, : hh * ww], (num_heads, hh, ww))  &#47&#47 [num_heads, hh, ww]
+        ss = tf.transpose(ss, [1, 2, 0])  &#47&#47 [hh, ww, num_heads]
+
+        if self.attn_height == -1:
+            target_hh = target_ww = int(tf.math.sqrt(float(self.relative_position_bias_table.shape[1] - self.cls_token_pos_len)))
+        else:
+            target_hh = 2 * self.attn_height - 1
+            target_ww = int(float(self.relative_position_bias_table.shape[1] - self.cls_token_pos_len) / target_hh)
+        tt = tf.image.resize(ss, [target_hh, target_ww], method=method)  &#47&#47 [target_hh, target_ww, num_heads]
+        tt = tf.reshape(tt, (tt.shape[0] * tt.shape[1], num_heads))  &#47&#47 [target_hh * target_ww, num_heads]
+        tt = tf.transpose(tt)  &#47&#47 [num_heads, target_hh * target_ww]
+        if self.with_cls_token:
+            tt = tf.concat([tt, source_tt[:, -self.cls_token_pos_len :]], axis=1)
+        <a id="change">self.relative_position_bias_table.assign(</a>tt<a id="change">)</a>
+
+    def show_pos_emb(self, rows=1, base_size=2):
+        import matplotlib.pyplot as plt
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    def load_resized_weights(self, source_layer, method="nearest"):
+        if isinstance(source_layer, dict):
+            source_tt = <a id="change">list(source_layer.values())[0]</a>  &#47&#47 weights
+            &#47&#47 source_tt = source_layer["pos_emb:0"]  &#47&#47 weights
+        else:
+            source_tt = source_layer.get_weights()[0]  &#47&#47 layer</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 5</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/leondgarse/keras_cv_attention_models/commit/1aa29dc686f862bc1ff66a11700fa8ef16bd2b8a#diff-02508ae7c53082aa4dbb63a5c5fd259b84bc5bdbf0b1971ed6cb2060ef9b9779L101' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 23177019</div><div id='project'> Project Name: leondgarse/keras_cv_attention_models</div><div id='commit'> Commit Name: 1aa29dc686f862bc1ff66a11700fa8ef16bd2b8a</div><div id='time'> Time: 2023-02-03</div><div id='author'> Author: leondgarse@gmail.com</div><div id='file'> File Name: keras_cv_attention_models/beit/beit.py</div><div id='m_class'> M Class Name: MultiHeadRelativePositionalEmbedding</div><div id='n_method'> N Class Name: MultiHeadRelativePositionalEmbedding</div><div id='m_method'> M Method Name: load_resized_weights(3)</div><div id='n_method'> N Method Name: load_resized_weights(3)</div><div id='m_parent_class'> M Parent Class: layers.Layer</div><div id='n_parent_class'> N Parent Class: keras.layers.Layer</div><div id='m_file'> M File Name: keras_cv_attention_models/beit/beit.py</div><div id='n_file'> N File Name: keras_cv_attention_models/beit/beit.py</div><div id='m_start'> M Start Line: 101</div><div id='m_end'> M End Line: 121</div><div id='n_start'> N Start Line: 104</div><div id='n_end'> N End Line: 124</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            source_tt = source_layer.bb  &#47&#47 layer
+        num_heads = source_tt.shape[0]
+        source_query_hh = source_query_ww = int(tf.math.sqrt(float(source_tt.shape[1])))  &#47&#47 assume source weights are all square shape
+        source_kv_hh = source_kv_ww = int(<a id="change">tf.math.sqrt(</a>float(source_tt.shape[2])<a id="change">)</a>)  &#47&#47 assume source weights are all square shape
+
+        tt = tf.reshape(source_tt, [num_heads, source_query_hh, source_query_ww, source_kv_hh * source_kv_ww])  &#47&#47 resize on query dimension first
+        tt = tf.image.resize(tt, [self.query_hh, self.query_ww], method=method)  &#47&#47 [num_heads, self.query_hh, self.query_ww, source_kv_hh * source_kv_ww]
+        tt = tf.reshape(tt, [num_heads, self.query_hh * self.query_ww, source_kv_hh, source_kv_ww])  &#47&#47 resize on key_value dimension
+        tt = tf.transpose(tt, [0, 2, 3, 1])  &#47&#47 [num_heads, source_kv_hh, source_kv_ww, self.query_hh * self.query_ww]
+        tt = tf.image.resize(tt, [self.kv_hh, self.kv_ww], method=method)  &#47&#47 [num_heads, self.kv_hh, self.kv_ww, self.query_hh * self.query_ww]
+        tt = tf.reshape(tt, [num_heads, self.kv_hh * self.kv_ww, self.query_hh * self.query_ww])
+        tt = tf.transpose(tt, [0, 2, 1])  &#47&#47 [num_heads, self.query_hh * self.query_ww, self.kv_hh * self.kv_ww]
+        <a id="change">self.bb.assign(</a>tt<a id="change">)</a>
+
+
+def light_mhsa_with_multi_head_relative_position_embedding(
+    inputs, num_heads=4, key_dim=0, sr_ratio=1, qkv_bias=False, pos_emb=None, use_bn=False, out_shape=None, out_weight=True, out_bias=False, dropout=0, name=""</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    def load_resized_weights(self, source_layer, method="nearest"):
+        if isinstance(source_layer, dict):
+            source_tt = <a id="change">list(source_layer.values())[0]</a>  &#47&#47 weights
+            &#47&#47 source_tt = source_layer["pos_emb:0"]  &#47&#47 weights
+        else:
+            source_tt = source_layer.bb  &#47&#47 layer</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/leondgarse/keras_cv_attention_models/commit/2ba27b0132168f3590dd4b3bead9edc15a70ba7d#diff-f52477ea03b2a8f18695211ce6217a2ea1e5dd5afaa7adfd75a231c5a04692bcL57' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 23177021</div><div id='project'> Project Name: leondgarse/keras_cv_attention_models</div><div id='commit'> Commit Name: 2ba27b0132168f3590dd4b3bead9edc15a70ba7d</div><div id='time'> Time: 2023-02-11</div><div id='author'> Author: leondgarse@gmail.com</div><div id='file'> File Name: keras_cv_attention_models/cmt/cmt.py</div><div id='m_class'> M Class Name: BiasPositionalEmbedding</div><div id='n_method'> N Class Name: BiasPositionalEmbedding</div><div id='m_method'> M Method Name: load_resized_weights(3)</div><div id='n_method'> N Method Name: load_resized_weights(3)</div><div id='m_parent_class'> M Parent Class: layers.Layer</div><div id='n_parent_class'> N Parent Class: keras.layers.Layer</div><div id='m_file'> M File Name: keras_cv_attention_models/cmt/cmt.py</div><div id='n_file'> N File Name: keras_cv_attention_models/cmt/cmt.py</div><div id='m_start'> M Start Line: 59</div><div id='m_end'> M End Line: 74</div><div id='n_start'> N Start Line: 61</div><div id='n_end'> N End Line: 79</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            source_bb = source_layer["positional_embedding:0"]  &#47&#47 weights
+        else:
+            source_bb = source_layer.bb  &#47&#47 layer
+        hh = ww = int(<a id="change">tf.math.sqrt(</a>float(source_bb.shape[0])<a id="change">)</a>)
+        ss = tf.reshape(source_bb, (hh, ww, source_bb.shape[-1]))  &#47&#47 [hh, ww, num_heads]
+        &#47&#47 target_hh = target_ww = int(tf.math.sqrt(float(self.bb.shape[0])))
+        tt = tf.image.resize(ss, [self.k_blocks_h, self.k_blocks_w], method=method)  &#47&#47 [target_hh, target_ww, num_heads]
+        tt = tf.reshape(tt, (self.bb.shape))  &#47&#47 [target_hh * target_ww, num_heads]
+        <a id="change">self.bb.assign(</a>tt<a id="change">)</a>
+
+    def show_pos_emb(self, rows=1, base_size=2):
+        import matplotlib.pyplot as plt
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    def load_resized_weights(self, source_layer, method="nearest"):
+        if isinstance(source_layer, dict):
+            source_bb = <a id="change">list(source_layer.values())[0]</a>  &#47&#47 weights
+        else:
+            source_bb = source_layer.bb  &#47&#47 layer
+        source_tt = np.array(source_tt.detach() if hasattr(source_tt, "detach") else source_tt)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/leondgarse/keras_cv_attention_models/commit/c870bf2e8d3e6b8b0e969d5468d550085414c0cd#diff-419ea771811e38fb2e106cf19724ad992d4d6f2fbae3c511c734548a78b6d63bL64' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 23177020</div><div id='project'> Project Name: leondgarse/keras_cv_attention_models</div><div id='commit'> Commit Name: c870bf2e8d3e6b8b0e969d5468d550085414c0cd</div><div id='time'> Time: 2023-02-05</div><div id='author'> Author: leondgarse@gmail.com</div><div id='file'> File Name: keras_cv_attention_models/levit/levit.py</div><div id='m_class'> M Class Name: MultiHeadPositionalEmbedding</div><div id='n_method'> N Class Name: MultiHeadPositionalEmbedding</div><div id='m_method'> M Method Name: load_resized_weights(3)</div><div id='n_method'> N Method Name: load_resized_weights(3)</div><div id='m_parent_class'> M Parent Class: layers.Layer</div><div id='n_parent_class'> N Parent Class: keras.layers.Layer</div><div id='m_file'> M File Name: keras_cv_attention_models/levit/levit.py</div><div id='n_file'> N File Name: keras_cv_attention_models/levit/levit.py</div><div id='m_start'> M Start Line: 66</div><div id='m_end'> M End Line: 74</div><div id='n_start'> N Start Line: 73</div><div id='n_end'> N End Line: 82</div><BR>

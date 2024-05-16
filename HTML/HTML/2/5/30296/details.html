@@ -1,0 +1,106 @@
+<html><h3>Pattern ID :30296
+</h3><img src='89748376.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        return torch.sigmoid(self.fc4(h3))
+
+    def forward(self, x):
+        mu<a id="change">, logvar</a> = self.encode(x.view(-1, 784))
+        z = self.reparameterize(mu, logvar)
+        return self.decode(z), mu, logvar
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            z = self.reparameterize(mu, logvar)
+        else:
+            z = mu
+        output<a id="change"> = </a>self.output(<a id="change">self.decoder(</a>z<a id="change">)</a>)
+        <a id="change">return </a>output<a id="change">, mu, logvar</a>
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 5</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/deeperlearner/pytorch-template/commit/576d9f329d45ddf4af2b320655eb909c48d5cb34#diff-21e2f9b1076c045f58e4d63e63a3fbd9155d7b3256dd8398c7e7a33b4dadcda8L30' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 89748376</div><div id='project'> Project Name: deeperlearner/pytorch-template</div><div id='commit'> Commit Name: 576d9f329d45ddf4af2b320655eb909c48d5cb34</div><div id='time'> Time: 2020-11-24</div><div id='author'> Author: b04202035@g.ntu.edu.tw</div><div id='file'> File Name: model/VAE.py</div><div id='m_class'> M Class Name: VAE</div><div id='n_method'> N Class Name: VAE</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: model/VAE.py</div><div id='n_file'> N File Name: model/VAE.py</div><div id='m_start'> M Start Line: 30</div><div id='m_end'> M End Line: 32</div><div id='n_start'> N Start Line: 52</div><div id='n_end'> N End Line: 60</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                                        encoded_texts=encoded_texts,
+                                        device=device)
+
+        return before_outs<a id="change">, after_outs, duration_predictions, pitch_predictions, energy_predictions</a>
+
+    @torch.inference_mode()
+    def forward(self,
+                text,</code></pre><h3>After Change</h3><pre><code class='java'>
+        duration_z = self.duration_vae(cond=encoded_texts.transpose(1, 2),
+                                       infer=True)
+
+        pitch_predictions = <a id="change">self.pitch_vae.decoder(</a>pitch_z<a id="change">,
+                                                   nonpadding=None,
+                                                   cond=encoded_texts.transpose(1, 2).detach(),
+                                                   utt_emb=utterance_embedding)</a>.transpose(1, 2)
+        energy_predictions = self.energy_vae.decoder(energy_z,
+                                                     nonpadding=None,
+                                                     cond=encoded_texts.transpose(1, 2).detach(),
+                                                     utt_emb=utterance_embedding).transpose(1, 2)
+        predicted_durations = self.duration_vae.decoder(duration_z,
+                                                        nonpadding=None,
+                                                        cond=encoded_texts.transpose(1, 2).detach(),
+                                                        utt_emb=utterance_embedding).squeeze(1)
+
+        if gold_durations is not None:
+            predicted_durations = gold_durations
+        else:
+            predicted_durations = make_estimated_durations_usable_for_inference(predicted_durations)
+        if gold_pitch is not None:
+            pitch_predictions = gold_pitch
+        if gold_energy is not None:
+            energy_predictions = gold_energy
+
+        for phoneme_index, phoneme_vector in enumerate(text_tensors.squeeze(0)):
+            if phoneme_vector[get_feature_to_index_lookup()["voiced"]] == 0:
+                &#47&#47 this means the phoneme is unvoiced
+                pitch_predictions[0][phoneme_index] = 0.0
+            if phoneme_vector[get_feature_to_index_lookup()["silence"]] == 1 and pause_duration_scaling_factor != 1.0:
+                predicted_durations[0][phoneme_index] = torch.round(
+                    predicted_durations[0][phoneme_index].float() * pause_duration_scaling_factor)
+        pitch_predictions = _scale_variance(pitch_predictions, pitch_variance_scale)
+        energy_predictions = _scale_variance(energy_predictions, energy_variance_scale)
+
+        embedded_pitch_curve = self.pitch_embed(pitch_predictions.transpose(1, 2)).transpose(1, 2)
+        embedded_energy_curve = self.energy_embed(energy_predictions.transpose(1, 2)).transpose(1, 2)
+        encoded_texts<a id="change"> = </a>encoded_texts + embedded_energy_curve + embedded_pitch_curve
+        encoded_texts = self.length_regulator(encoded_texts, predicted_durations,
+                                              duration_scaling_factor)  &#47&#47 (B, Lmax, adim)
+        predicted_spectrogram_before_postnet = self.decoder(encoded_texts, nonpadding=None,
+                                                            utt_emb=utterance_embedding).transpose(1, 2)
+        predicted_spectrogram_before_postnet = self.out_proj(predicted_spectrogram_before_postnet).transpose(1, 2)
+
+        &#47&#47 forward flow post-net
+        predicted_spectrogram_after_postnet = self.run_post_glow(tgt_mels=None,
+                                                                 infer=True,
+                                                                 mel_out=predicted_spectrogram_before_postnet,
+                                                                 encoded_texts=encoded_texts,
+                                                                 tgt_nonpadding=None)
+
+        <a id="change">return </a>predicted_spectrogram_before_postnet<a id="change">, predicted_spectrogram_after_postnet, predicted_durations, pitch_predictions, energy_predictions</a>
+
+    @torch.inference_mode()
+    def forward(self,
+                text,</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/digitalphonetics/ims-toucan/commit/b94d11dc36ef0e5795446826678e202ad390f50b#diff-e3c4143cb425acc1cbdda5567d276c7b7759839b0680a60454efa104d720661eL156' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 89748371</div><div id='project'> Project Name: digitalphonetics/ims-toucan</div><div id='commit'> Commit Name: b94d11dc36ef0e5795446826678e202ad390f50b</div><div id='time'> Time: 2023-01-10</div><div id='author'> Author: lux.florian@gmail.com</div><div id='file'> File Name: InferenceInterfaces/InferenceArchitectures/InferencePortaSpeech.py</div><div id='m_class'> M Class Name: PortaSpeech</div><div id='n_method'> N Class Name: PortaSpeech</div><div id='m_method'> M Method Name: _forward(13)</div><div id='n_method'> N Method Name: _forward(13)</div><div id='m_parent_class'> M Parent Class: torch.nn.Module</div><div id='n_parent_class'> N Parent Class: torch.nn.Module</div><div id='m_file'> M File Name: InferenceInterfaces/InferenceArchitectures/InferencePortaSpeech.py</div><div id='n_file'> N File Name: InferenceInterfaces/InferenceArchitectures/InferencePortaSpeech.py</div><div id='m_start'> M Start Line: 185</div><div id='m_end'> M End Line: 231</div><div id='n_start'> N Start Line: 228</div><div id='n_end'> N End Line: 283</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47        x: [B, C_in_out, T]
+        &#47&#47        nonpadding: [B, 1, T]
+        &#47&#47        cond: [B, C_g, T]
+        zs<a id="change">, _</a> = self.decoder(x=encoded_texts.transpose(1, 2), nonpadding=text_lens, cond=utterance_embedding, infer=False, noise_scale=1.0)  &#47&#47 (B, Lmax, adim)
+        before_outs = self.feat_out(zs).view(zs.size(0), -1, self.odim)  &#47&#47 (B, Lmax, odim)
+
+        &#47&#47 postnet -&gt; (B, Lmax//r * r, odim)</code></pre><h3>After Change</h3><pre><code class='java'>
+            if not use_posterior:
+                z = torch.randn_like(z)
+
+        before_outs<a id="change"> = </a><a id="change">self.decoder.decoder(</a>z<a id="change">, nonpadding=speech_lens, cond=encoded_texts)</a>.transpose(1, 2)
+
+        &#47&#47 forward flow post-net
+        if run_glow:
+            after_outs = before_outs + self.post_flow(before_outs.transpose(1, 2)).transpose(1, 2)  &#47&#47 postnet -&gt; (B, Lmax, odim)
+        else:
+            after_outs = before_outs
+
+        if not is_inference:
+            <a id="change">return </a>before_outs<a id="change">, after_outs, predicted_durations, pitch_predictions, energy_predictions, kl_loss</a>
+        else:
+            return before_outs, after_outs, predicted_durations, pitch_predictions, energy_predictions
+
+    def inference(self,</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/digitalphonetics/ims-toucan/commit/1f6ef3294b6593510f03bf07885afb4754888c42#diff-12643f5b2c8b9a82605c22c3f362317aa32afc7f0c07d080244ac4cefb2f5794L244' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 89748374</div><div id='project'> Project Name: digitalphonetics/ims-toucan</div><div id='commit'> Commit Name: 1f6ef3294b6593510f03bf07885afb4754888c42</div><div id='time'> Time: 2022-11-29</div><div id='author'> Author: florian.lux@ims.uni-stuttgart.de</div><div id='file'> File Name: TrainingInterfaces/Text_to_Spectrogram/PortaSpeech/PortaSpeech.py</div><div id='m_class'> M Class Name: PortaSpeech</div><div id='n_method'> N Class Name: PortaSpeech</div><div id='m_method'> M Method Name: _forward(14)</div><div id='n_method'> N Method Name: _forward(12)</div><div id='m_parent_class'> M Parent Class: torch.nn.Module,ABC</div><div id='n_parent_class'> N Parent Class: torch.nn.Module,ABC</div><div id='m_file'> M File Name: TrainingInterfaces/Text_to_Spectrogram/PortaSpeech/PortaSpeech.py</div><div id='n_file'> N File Name: TrainingInterfaces/Text_to_Spectrogram/PortaSpeech/PortaSpeech.py</div><div id='m_start'> M Start Line: 303</div><div id='m_end'> M End Line: 309</div><div id='n_start'> N Start Line: 258</div><div id='n_end'> N End Line: 330</div><BR>

@@ -1,0 +1,48 @@
+<html><h3>Pattern ID :16253
+</h3><img src='54491195.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+def inverse_rotation_warp(img, rot, intrinsics, padding_mode=&quotzeros&quot):
+
+    b, _, h, w = img.size()
+    cam_coords = pixel2cam(<a id="change">torch.ones(</a>b, h, w<a id="change">)</a>.type_as(
+        img), intrinsics.inverse())  &#47&#47 [B,3,H,W]
+
+    rot_mat = euler2mat(rot)  &#47&#47 [B, 3, 3]</code></pre><h3>After Change</h3><pre><code class='java'>
+    world_points = depth_to_3d(torch.ones(B, 1, H, W).type_as(img), intrinsics) &#47&#47 B 3 H W
+    cam_points = torch.matmul(P, world_points.view(B, 3, -1))
+
+    pix_coords = <a id="change">cam_points[:, :2, :]</a> / (cam_points[:, 2, :].unsqueeze(1) + 1e-7)
+    pix_coords = pix_coords.view(B, 2, H, W)
+    pix_coords = pix_coords.permute(0, 2, 3, 1)
+    pix_coords[..., 0] /= W - 1</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/jiawangbian/sc_depth_pl/commit/6a50fb9e99035b26acd8d44a2965c6a5b8eaa4da#diff-12ed95b9590ddbd0f5c333ed7040c3d303665bcf30f4e792d00566aaa13eb00cL129' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 54491195</div><div id='project'> Project Name: jiawangbian/sc_depth_pl</div><div id='commit'> Commit Name: 6a50fb9e99035b26acd8d44a2965c6a5b8eaa4da</div><div id='time'> Time: 2022-08-18</div><div id='author'> Author: jiawang.bian@gmail.com</div><div id='file'> File Name: losses/inverse_warp.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: inverse_rotation_warp(4)</div><div id='n_method'> N Method Name: inverse_rotation_warp(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: losses/inverse_warp.py</div><div id='n_file'> N File Name: losses/inverse_warp.py</div><div id='m_start'> M Start Line: 275</div><div id='m_end'> M End Line: 284</div><div id='n_start'> N Start Line: 129</div><div id='n_end'> N End Line: 140</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        Outputs: whole coordinates of shape (batch, L, n_atoms, 3)
+    
+    batch, length = backbones.shape[0], backbones.shape[1] // 3
+    new_coords = <a id="change">torch.ones(</a>batch, length, NUM_COORDS_PER_RES, 3<a id="change">, device=backbones.device)</a> * padding
+    new_coords[:, :, :3] = rearrange(backbones, &quotb (l back) d -&gt; b l back d&quot, l=length)
+    &#47&#47 set the rest of positions to c_alpha
+    new_coords[:, :, 3:] = repeat(new_coords[:, :, 2], &quotb l d -&gt; b l scn d&quot, scn=11)</code></pre><h3>After Change</h3><pre><code class='java'>
+    new_coords = torch.zeros(batch, length, NUM_COORDS_PER_RES, 3).to(device)
+    predicted  = rearrange(backbones, &quotb (l back) d -&gt; b l back d&quot, l=length)
+    &#47&#47 set backbone positions
+    new_coords[:, :, :3] = <a id="change">predicted[:, :, :3]</a>
+    &#47&#47 set rest of positions to c_alpha
+    new_coords[:, :, 3:] = repeat(new_coords[:, :, 1], &quotb l d -&gt; b l scn d&quot, scn=11)
+    new_coords[torch.logical_not(cloud_mask)] = 0.
+    &#47&#47 overwrite cbeta</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lucidrains/alphafold2/commit/3fbddf2be348b349186c787bbf30d1da2f2cd541#diff-f9b2e05be1f80257f9a80ec7cc1290e3337a54fcc62aeee31b23a4cb827f12efL231' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 54491190</div><div id='project'> Project Name: lucidrains/alphafold2</div><div id='commit'> Commit Name: 3fbddf2be348b349186c787bbf30d1da2f2cd541</div><div id='time'> Time: 2021-03-03</div><div id='author'> Author: ericalcaide1@gmail.com</div><div id='file'> File Name: alphafold2_pytorch/utils.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: sidechain_container(6)</div><div id='n_method'> N Method Name: sidechain_container(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: alphafold2_pytorch/utils.py</div><div id='n_file'> N File Name: alphafold2_pytorch/utils.py</div><div id='m_start'> M Start Line: 244</div><div id='m_end'> M End Line: 246</div><div id='n_start'> N Start Line: 291</div><div id='n_end'> N End Line: 317</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    flat = samples.view(-1)
+
+    print(_multinomial_prob(flat, <a id="change">torch.ones(</a>10<a id="change">)</a>))
+
+    &#47&#47 plt.hist(flat.int().numpy(), 10, density=True)
+    &#47&#47 plt.show()</code></pre><h3>After Change</h3><pre><code class='java'>
+    assert chi2_test(samples.view(-1), torch.ones(10) * 0.1)
+
+    logits = torch.rand(2, 10, 10000)
+    <a id="change">logits[:, :2, :]</a> += 0.1
+    samples = sampling.GreedySampler()(logits)
+    assert not chi2_test(samples.view(-1), torch.ones(10) * 0.1)
+    assert chi2_test(</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/cheind/autoregressive/commit/bd9eb01183a89771ea325551b59720b4f8ce0140#diff-a0b4514aac5190e4b09584f86c51f7c4974d218db9bdd7a68522534959736ce6L40' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 54491189</div><div id='project'> Project Name: cheind/autoregressive</div><div id='commit'> Commit Name: bd9eb01183a89771ea325551b59720b4f8ce0140</div><div id='time'> Time: 2021-11-11</div><div id='author'> Author: christoph.heindl@gmail.com</div><div id='file'> File Name: autoregressive/tests/test_sampling.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: test_greedy_sampler(0)</div><div id='n_method'> N Method Name: test_greedy_sampler(0)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: autoregressive/tests/test_sampling.py</div><div id='n_file'> N File Name: autoregressive/tests/test_sampling.py</div><div id='m_start'> M Start Line: 48</div><div id='m_end'> M End Line: 50</div><div id='n_start'> N Start Line: 34</div><div id='n_end'> N End Line: 46</div><BR>

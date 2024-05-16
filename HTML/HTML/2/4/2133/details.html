@@ -1,0 +1,78 @@
+<html><h3>Pattern ID :2133
+</h3><img src='9153320.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        advantage_lst.reverse()
+        advantage_ = torch.tensor(advantage_lst, dtype=torch.float).to(self.device)
+        returns_ = advantage_ + old_value_
+        advantage_ = (advantage_ - <a id="change">advantage_.mean()</a>)/(advantage_.std()+1e-3)
+        for i in range(self.K_epoch):
+            for state,action,reward,next_state,done_mask,old_log_prob,advantage,return_,old_value \
+            in self.data.choose_mini_batch(self.minibatch_size ,state_, action_, reward_, next_state_, done_mask_, \</code></pre><h3>After Change</h3><pre><code class='java'>
+        data = self.data.sample(self.T_horizon)
+        states, actions, rewards, next_states, done_masks, old_log_probs = data[&quotstate&quot], data[&quotaction&quot], data[&quotreward&quot], data[&quotnext_state&quot], data[&quotdone&quot], data[&quotlog_prob&quot]
+        
+        states<a id="change"> = </a><a id="change">torch.tensor(</a>states<a id="change">)</a>.float()
+        actions = torch.tensor(actions).float()
+        rewards = torch.tensor(rewards).float()
+        next_states = torch.tensor(next_states).float()
+        done_masks = torch.tensor(done_masks).float()
+        old_log_probs = torch.tensor(old_log_probs).float()
+        
+        old_values = self.v(states).detach()
+        td_target = rewards + self.gamma * self.v(next_states) * done_masks
+        delta = td_target - old_values
+        delta = delta.detach().cpu().numpy()
+        advantage_lst = []
+        advantage = 0.0
+        for idx in reversed(range(len(delta))):
+            if done_masks[idx] == 0:
+                advantage = 0.0
+            advantage = self.gamma * self.lmbda * advantage + delta[idx][0]
+            advantage_lst.append([advantage])
+        advantage_lst.reverse()
+        advantages = torch.tensor(advantage_lst, dtype=torch.float).to(self.device)
+        returns<a id="change"> = </a>advantages + old_values
+        advantages = (advantages - advantages.mean())/(advantages.std()+1e-3)
+        for i in range(self.K_epoch):
+            for state,action,reward,next_state,done_mask,old_log_prob,advantage,return_,old_value \</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/seolhokim/mujoco-pytorch/commit/87e9db1820bc2af3e9af6d55a55dbe4e6dd00bf4#diff-5f5933f2ca262b18d3bbf61a15941bdcb093728d17eabba09ba2142f6ce9e2deL41' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 9153320</div><div id='project'> Project Name: seolhokim/mujoco-pytorch</div><div id='commit'> Commit Name: 87e9db1820bc2af3e9af6d55a55dbe4e6dd00bf4</div><div id='time'> Time: 2021-05-09</div><div id='author'> Author: kilmya1@naver.com</div><div id='file'> File Name: agent.py</div><div id='m_class'> M Class Name: PPO</div><div id='n_method'> N Class Name: PPO</div><div id='m_method'> M Method Name: train_net(3)</div><div id='n_method'> N Method Name: train_net(3)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: agent.py</div><div id='n_file'> N File Name: agent.py</div><div id='m_start'> M Start Line: 41</div><div id='m_end'> M End Line: 60</div><div id='n_start'> N Start Line: 42</div><div id='n_end'> N End Line: 70</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 avg_loss among all data
+        loss_dict = {
+            f&quotval/{k}&quot:
+            <a id="change">torch.stack([output[k] for output in outputs]).mean()</a>.item()
+            for k in outputs[0].keys()
+        }
+        self.log_dict(loss_dict, sync_dist=True)</code></pre><h3>After Change</h3><pre><code class='java'>
+    def validation_epoch_end(self, outputs):
+        &#47&#47 avg_loss among all data
+        &#47&#47 we need to consider different batch_size
+        batch_sizes<a id="change"> = </a><a id="change">torch.tensor(</a>[
+            output.pop(&quotbatch_size&quot) for output in outputs
+        ]<a id="change">)</a>.type_as(outputs[0][&quotloss&quot])  &#47&#47 [num_batches]
+        losses = {
+            f&quotval/{k}&quot: torch.stack([output[k] for output in outputs])
+            for k in outputs[0].keys()
+        }  &#47&#47 each is [num_batches], stacked avg loss in each batch
+        avg_loss<a id="change"> = </a>{
+            k: (v * batch_sizes).sum() / batch_sizes.sum()
+            for k, v in losses.items()
+        }</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/wuziyi616/multi_part_assembly/commit/0148c98759e6c3ff6b944136ebc93aeb67f0d421#diff-a3ad4747602b92d4c95922c1168436b29f062f2b231f1c5c31a818c978e6bc4dL118' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 9153326</div><div id='project'> Project Name: wuziyi616/multi_part_assembly</div><div id='commit'> Commit Name: 0148c98759e6c3ff6b944136ebc93aeb67f0d421</div><div id='time'> Time: 2022-03-08</div><div id='author'> Author: dazitu616@gmail.com</div><div id='file'> File Name: multi_part_assembly/models/pn_transformer/network.py</div><div id='m_class'> M Class Name: PNTransformer</div><div id='n_method'> N Class Name: PNTransformer</div><div id='m_method'> M Method Name: validation_epoch_end(2)</div><div id='n_method'> N Method Name: validation_epoch_end(2)</div><div id='m_parent_class'> M Parent Class: pl.LightningModule</div><div id='n_parent_class'> N Parent Class: pl.LightningModule</div><div id='m_file'> M File Name: multi_part_assembly/models/pn_transformer/network.py</div><div id='n_file'> N File Name: multi_part_assembly/models/pn_transformer/network.py</div><div id='m_start'> M Start Line: 120</div><div id='m_end'> M End Line: 125</div><div id='n_start'> N Start Line: 122</div><div id='n_end'> N End Line: 133</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+def normalize_mad(values: torch.Tensor) -&gt; torch.Tensor:
+    median = values.median()
+    abs_dev = (values - median).abs()
+    mad = <a id="change">abs_dev.mean()</a>
+
+    measures = abs_dev / mad / 1.4826
+    return measures
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+def normalize_mad(values: torch.Tensor) -&gt; torch.Tensor:
+    if not isinstance(values, torch.Tensor):
+        values<a id="change"> = </a><a id="change">torch.tensor(</a>values<a id="change">)</a>
+    median = values.median()
+    abs_dev = (values - median).abs()
+    mad<a id="change"> = </a>abs_dev.median()
+    measures = abs_dev / mad / 1.4826
+    return measures
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/ain-soph/trojanzoo/commit/89acaa6879f3ec45a3ba41004117c368ce92fd65#diff-59110220d7b2e9e917330943a1e1f68a8553b17e10ecd1de679b4ca60cdeb606L195' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 9153331</div><div id='project'> Project Name: ain-soph/trojanzoo</div><div id='commit'> Commit Name: 89acaa6879f3ec45a3ba41004117c368ce92fd65</div><div id='time'> Time: 2020-11-16</div><div id='author'> Author: ain-soph@live.com</div><div id='file'> File Name: trojanzoo/utils/tensor.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: normalize_mad(1)</div><div id='n_method'> N Method Name: normalize_mad(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: trojanzoo/utils/tensor.py</div><div id='n_file'> N File Name: trojanzoo/utils/tensor.py</div><div id='m_start'> M Start Line: 197</div><div id='m_end'> M End Line: 198</div><div id='n_start'> N Start Line: 196</div><div id='n_end'> N End Line: 200</div><BR>

@@ -1,0 +1,24 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        base_optimizer_group_states = []
+        for i in range(len(self.optimizer.param_groups)):
+            partition_states = {}
+            all_partition_group_states = <a id="change">[
+                sd[&quotbase_optimizer_state&quot][i] for sd in all_state_dict
+            ]</a>
+
+            if self.is_moe_group(self.optimizer.param_groups[i]):
+                ranks = self.get_ep_ranks()
+                all_partition_group_states<a id="change"> = </a>[
+                    all_partition_group_states[i] for i in ranks
+                ]
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            for key, saved in base_optimizer_group_states[i].items():
+                if torch.is_tensor(self.optimizer.state[p][key]):
+                    dst_tensor = self.optimizer.state[p][key]
+                    src_tensor = _get_padded_tensor(saved, <a id="change">dst_tensor.numel()</a>)
+                    self.optimizer.state[p][key].data.copy_(src_tensor.data)
+                else:
+                    self.optimizer.state[p][key] = saved</code></pre>

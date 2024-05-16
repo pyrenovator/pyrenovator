@@ -1,0 +1,54 @@
+<html><h3>Pattern ID :10033
+</h3><img src='35723297.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    mask = ~torch.isinf(input)
+    max = input[mask].max().item()
+    min = input[mask].min().item()
+    safe_input = <a id="change">input.clamp(</a>2 * min - max, 2 * max - min<a id="change">)</a>
+    offset = (max - min) * 4
+    if descending:
+        offset = -offset
+    input_ext = safe_input + offset * index2sample</code></pre><h3>After Change</h3><pre><code class='java'>
+    mask = ~torch.isinf(input)
+    max = input[mask].max().item()
+    min = input[mask].min().item()
+    abs_max = <a id="change">input[mask].abs().max()</a>.item()
+    &#47&#47 special case: max = min
+    gap = max - min + abs_max * 1e-6
+    safe_input<a id="change"> = </a>input.clamp(min - gap, max + gap)
+    offset = gap * 4
+    if descending:
+        offset = -offset</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/deepgraphlearning/torchdrug/commit/786d23879f7003cdb8b21142e0cf8f0cac0ac00c#diff-5fb65284f0a2fad6dc15ff17d4ad957078f9f30dd57bb0aae87942809fccac25L385' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 35723297</div><div id='project'> Project Name: deepgraphlearning/torchdrug</div><div id='commit'> Commit Name: 786d23879f7003cdb8b21142e0cf8f0cac0ac00c</div><div id='time'> Time: 2022-09-16</div><div id='author'> Author: 17300240035@fudan.edu.cn</div><div id='file'> File Name: torchdrug/layers/functional/functional.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: variadic_sort(3)</div><div id='n_method'> N Method Name: variadic_sort(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: torchdrug/layers/functional/functional.py</div><div id='n_file'> N File Name: torchdrug/layers/functional/functional.py</div><div id='m_start'> M Start Line: 386</div><div id='m_end'> M End Line: 389</div><div id='n_start'> N Start Line: 385</div><div id='n_end'> N End Line: 392</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        weights_sum = weights.sum(dim=-1) &#47&#47 [N]
+        
+        &#47&#47 calculate depth 
+        ori_z_vals = <a id="change">((z_vals - near) / (far - near)).clamp(</a>0, 1<a id="change">)</a>
+        depth = torch.sum(weights * ori_z_vals, dim=-1)
+
+        &#47&#47 calculate color
+        image = torch.sum(weights.unsqueeze(-1) * rgbs, dim=-2) &#47&#47 [N, 3], in [0, 1]</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 generate xyzs
+        xyzs = rays_o.unsqueeze(-2) + rays_d.unsqueeze(-2) * z_vals.unsqueeze(-1) &#47&#47 [N, 1, 3] * [N, T, 1] -&gt; [N, T, 3]
+        &#47&#47xyzs = xyzs.clamp(-self.bound, self.bound) &#47&#47 must be strictly inside the bounds, else lead to nan in hashgrid encoder!
+        xyzs<a id="change"> = </a>torch.min(<a id="change">torch.max(</a>xyzs, aabb[:3]<a id="change">)</a>, aabb[3:]) &#47&#47 a manual clip.
+
+        &#47&#47 print(&quot[xyzs]&quot, xyzs.shape, xyzs.dtype, xyzs.min().item(), xyzs.max().item())
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/ashawkey/torch-ngp/commit/24915ef545b4c45b537c4e3b974b4cde50989dfa#diff-96330057ed34864879e5c07ca3b71aa0415cc9281c388c0ec9d3d6892d48343aL104' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 35723300</div><div id='project'> Project Name: ashawkey/torch-ngp</div><div id='commit'> Commit Name: 24915ef545b4c45b537c4e3b974b4cde50989dfa</div><div id='time'> Time: 2022-04-09</div><div id='author'> Author: ashawkey1999@gmail.com</div><div id='file'> File Name: nerf/renderer.py</div><div id='m_class'> M Class Name: NeRFRenderer</div><div id='n_method'> N Class Name: NeRFRenderer</div><div id='m_method'> M Method Name: run(7)</div><div id='n_method'> N Method Name: run(7)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: nerf/renderer.py</div><div id='n_file'> N File Name: nerf/renderer.py</div><div id='m_start'> M Start Line: 110</div><div id='m_end'> M End Line: 202</div><div id='n_start'> N Start Line: 117</div><div id='n_end'> N End Line: 216</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            item = self.item_fc_layers[idx](item)
+
+        vector = torch.cosine_similarity(user, item).view(-1,)
+        vector = <a id="change">torch.clamp(</a>vector<a id="change">, min=1e-6, max=1)</a>
+        &#47&#47print(vector.shape)
+        return vector
+
+    def calculate_loss(self, interaction):</code></pre><h3>After Change</h3><pre><code class='java'>
+        item = self.item_fc_layers(item)
+
+        vector = torch.cosine_similarity(user, item).view(-1,)
+        vector<a id="change"> = </a><a id="change">torch.max(</a>vector, torch.tensor([self.min_y_hat])<a id="change">)</a>
+        return vector
+
+    def calculate_loss(self, interaction):
+        user = interaction[self.USER_ID]</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/rucaibox/recbole/commit/651670713d8b7b348dfa878bfb4ca231a1289c91#diff-c0fe1d45c47ca036a8c10b653717b9e13ef033a28d761ee73169dd2741cf1ae5L48' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 35723287</div><div id='project'> Project Name: rucaibox/recbole</div><div id='commit'> Commit Name: 651670713d8b7b348dfa878bfb4ca231a1289c91</div><div id='time'> Time: 2020-08-23</div><div id='author'> Author: 1024425445@qq.com</div><div id='file'> File Name: recbox/model/general_recommender/dmf.py</div><div id='m_class'> M Class Name: DMF</div><div id='n_method'> N Class Name: DMF</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: GeneralRecommender</div><div id='n_parent_class'> N Parent Class: GeneralRecommender</div><div id='m_file'> M File Name: recbox/model/general_recommender/dmf.py</div><div id='n_file'> N File Name: recbox/model/general_recommender/dmf.py</div><div id='m_start'> M Start Line: 49</div><div id='m_end'> M End Line: 63</div><div id='n_start'> N Start Line: 50</div><div id='n_end'> N End Line: 62</div><BR>

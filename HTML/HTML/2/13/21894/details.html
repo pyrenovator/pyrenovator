@@ -1,0 +1,285 @@
+<html><h3>Pattern ID :21894
+</h3><img src='69699814.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+        while self.num_timesteps &lt; total_timesteps:
+
+            <a id="change">if callback is not None</a>:
+                &#47&#47 Only stop training if return value is False, not when it is None.
+                <a id="change">if callback(locals(), globals()) is False</a>:
+                    <a id="change">break</a>
+
+            rollout = self.collect_rollouts(self.env, n_episodes=self.n_episodes_rollout,
+                                            n_steps=self.train_freq, action_noise=self.action_noise,
+                                            deterministic=False, callback=None,</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        timesteps_since_eval, episode_num, evaluations, obs, eval_env, callback = self._setup_learn(eval_env, callback)
+
+        <a id="change">callback.on_training_start(locals()</a>, <a id="change">globals()</a><a id="change">)</a>
+
+        while self.num_timesteps &lt; total_timesteps:
+
+            rollout = self.collect_rollouts(self.env, n_episodes=self.n_episodes_rollout,
+                                            n_steps=self.train_freq, action_noise=self.action_noise,
+                                            deterministic=False, callback=callback,
+                                            learning_starts=self.learning_starts,
+                                            num_timesteps=self.num_timesteps,
+                                            replay_buffer=self.replay_buffer,
+                                            obs=obs, episode_num=episode_num,
+                                            log_interval=log_interval)
+            &#47&#47 Unpack
+            episode_reward, episode_timesteps, n_episodes, obs, continue_training = rollout
+
+            if continue_training is False:
+                break
+
+            episode_num += n_episodes
+            self.num_timesteps += episode_timesteps
+            timesteps_since_eval += episode_timesteps
+            self._update_current_progress(self.num_timesteps, total_timesteps)
+
+            if self.num_timesteps &gt; 0 and self.num_timesteps &gt; self.learning_starts:
+
+                if self.use_sde:
+                    if self.sde_log_std_scheduler is not None:
+                        &#47&#47 Call the scheduler
+                        value = self.sde_log_std_scheduler(self._current_progress)
+                        self.actor.log_std.data = th.ones_like(self.actor.log_std) * value
+                    else:
+                        &#47&#47 On-policy gradient
+                        self.train_sde()
+
+                gradient_steps = self.gradient_steps if self.gradient_steps &gt; 0 else episode_timesteps
+                self.train(gradient_steps, batch_size=self.batch_size, policy_delay=self.policy_delay)
+
+            &#47&#47 Evaluate the agent
+            timesteps_since_eval = self._eval_policy(eval_freq, eval_env, n_eval_episodes,
+                                                     timesteps_since_eval, deterministic=True)
+
+        <a id="change">callback.on_training_end()</a>
+
+        return self
+
+    def get_opt_parameters(self):</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 12</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/dlr-rm/stable-baselines3/commit/b66003cfb37a4af9062289c964ff5c6f43927615#diff-5c42912597f7d995bbb7bf4d154d4e6a0171371036a631278ad5d1fa6e549b2cL254' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 69699814</div><div id='project'> Project Name: dlr-rm/stable-baselines3</div><div id='commit'> Commit Name: b66003cfb37a4af9062289c964ff5c6f43927615</div><div id='time'> Time: 2020-01-27</div><div id='author'> Author: antonin.raffin@dlr.de</div><div id='file'> File Name: torchy_baselines/td3/td3.py</div><div id='m_class'> M Class Name: TD3</div><div id='n_method'> N Class Name: TD3</div><div id='m_method'> M Method Name: learn(9)</div><div id='n_method'> N Method Name: learn(9)</div><div id='m_parent_class'> M Parent Class: BaseRLModel</div><div id='n_parent_class'> N Parent Class: BaseRLModel</div><div id='m_file'> M File Name: torchy_baselines/td3/td3.py</div><div id='n_file'> N File Name: torchy_baselines/td3/td3.py</div><div id='m_start'> M Start Line: 258</div><div id='m_end'> M End Line: 272</div><div id='n_start'> N Start Line: 254</div><div id='n_end'> N End Line: 297</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+        while self.num_timesteps &lt; total_timesteps:
+
+            <a id="change">if callback is not None</a>:
+                &#47&#47 Only stop training if return value is False, not when it is None.
+                <a id="change">if callback(locals(), globals()) is False</a>:
+                    <a id="change">break</a>
+
+            obs = self.collect_rollouts(self.env, self.rollout_buffer, n_rollout_steps=self.n_steps,
+                                        obs=obs)
+            iteration += 1</code></pre><h3>After Change</h3><pre><code class='java'>
+        if self.tensorboard_log is not None and SummaryWriter is not None:
+            self.tb_writer = SummaryWriter(log_dir=os.path.join(self.tensorboard_log, tb_log_name))
+
+        <a id="change">callback.on_training_start(locals()</a>, <a id="change">globals()</a><a id="change">)</a>
+
+        while self.num_timesteps &lt; total_timesteps:
+
+            obs, continue_training = self.collect_rollouts(self.env, callback, self.rollout_buffer, n_rollout_steps=self.n_steps,
+                                                           obs=obs)
+
+            if continue_training is False:
+                break
+
+            iteration += 1
+            self.num_timesteps += self.n_steps * self.n_envs
+            timesteps_since_eval += self.n_steps * self.n_envs
+            self._update_current_progress(self.num_timesteps, total_timesteps)
+
+            &#47&#47 Display training infos
+            if self.verbose &gt;= 1 and log_interval is not None and iteration % log_interval == 0:
+                fps = int(self.num_timesteps / (time.time() - self.start_time))
+                logger.logkv("iterations", iteration)
+                if len(self.ep_info_buffer) &gt; 0 and len(self.ep_info_buffer[0]) &gt; 0:
+                    logger.logkv(&quotep_rew_mean&quot, self.safe_mean([ep_info[&quotr&quot] for ep_info in self.ep_info_buffer]))
+                    logger.logkv(&quotep_len_mean&quot, self.safe_mean([ep_info[&quotl&quot] for ep_info in self.ep_info_buffer]))
+                logger.logkv("fps", fps)
+                logger.logkv(&quottime_elapsed&quot, int(time.time() - self.start_time))
+                logger.logkv("total timesteps", self.num_timesteps)
+                logger.dumpkvs()
+
+            self.train(self.n_epochs, batch_size=self.batch_size)
+
+            &#47&#47 Evaluate the agent
+            timesteps_since_eval = self._eval_policy(eval_freq, eval_env, n_eval_episodes,
+                                                     timesteps_since_eval, deterministic=True)
+            &#47&#47 For tensorboard integration
+            &#47&#47 if self.tb_writer is not None:
+            &#47&#47     self.tb_writer.add_scalar(&quotEval/reward&quot, mean_reward, self.num_timesteps)
+
+        <a id="change">callback.on_training_end()</a>
+
+        return self
+
+    def get_opt_parameters(self):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/dlr-rm/stable-baselines3/commit/b66003cfb37a4af9062289c964ff5c6f43927615#diff-f8bbda9f9732c12b0ea5e52bd22588b6acc3977b6fa5bfa6fd8ef3a8a3021f97L268' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 69699813</div><div id='project'> Project Name: dlr-rm/stable-baselines3</div><div id='commit'> Commit Name: b66003cfb37a4af9062289c964ff5c6f43927615</div><div id='time'> Time: 2020-01-27</div><div id='author'> Author: antonin.raffin@dlr.de</div><div id='file'> File Name: torchy_baselines/ppo/ppo.py</div><div id='m_class'> M Class Name: PPO</div><div id='n_method'> N Class Name: PPO</div><div id='m_method'> M Method Name: learn(9)</div><div id='n_method'> N Method Name: learn(9)</div><div id='m_parent_class'> M Parent Class: BaseRLModel</div><div id='n_parent_class'> N Parent Class: BaseRLModel</div><div id='m_file'> M File Name: torchy_baselines/ppo/ppo.py</div><div id='n_file'> N File Name: torchy_baselines/ppo/ppo.py</div><div id='m_start'> M Start Line: 278</div><div id='m_end'> M End Line: 283</div><div id='n_start'> N Start Line: 289</div><div id='n_end'> N End Line: 330</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            self.fitnesses = []
+            self.es_params = self.es.ask(self.pop_size)
+
+            <a id="change">if callback is not None</a>:
+                &#47&#47 Only stop training if return value is False, not when it is None.
+                <a id="change">if callback(locals(), globals()) is False</a>:
+                    <a id="change">break</a>
+
+            if self.num_timesteps &gt; 0:
+                &#47&#47 self.train(episode_timesteps)
+                &#47&#47 Gradient steps for half of the population</code></pre><h3>After Change</h3><pre><code class='java'>
+        actor_steps = 0
+        continue_training = True
+
+        <a id="change">callback.on_training_start(locals()</a>, <a id="change">globals()</a><a id="change">)</a>
+
+        while self.num_timesteps &lt; total_timesteps:
+
+            self.fitnesses = []
+            self.es_params = self.es.ask(self.pop_size)
+
+            if self.num_timesteps &gt; 0:
+                &#47&#47 self.train(episode_timesteps)
+                &#47&#47 Gradient steps for half of the population
+                for i in range(self.n_grad):
+                    &#47&#47 set params
+                    self.actor.load_from_vector(self.es_params[i])
+                    self.actor_target.load_from_vector(self.es_params[i])
+                    self.actor.optimizer = th.optim.Adam(self.actor.parameters(),
+                                                         lr=self.learning_rate(self._current_progress))
+
+                    &#47&#47 In the paper: 2 * actor_steps // self.n_grad
+                    &#47&#47 In the original implementation: actor_steps // self.n_grad
+                    &#47&#47 Difference with TD3 implementation:
+                    &#47&#47 the target critic is updated in the train_critic()
+                    &#47&#47 instead of the train_actor() and no policy delay
+                    &#47&#47 Issue with this update style: the bigger the population, the slower the code
+                    if self.update_style == &quotoriginal&quot:
+                        self.train_critic(actor_steps // self.n_grad, tau=self.tau)
+                        self.train_actor(actor_steps, tau_actor=self.tau, tau_critic=0.0)
+                    elif self.update_style == &quotoriginal_td3&quot:
+                        self.train_critic(actor_steps // self.n_grad, tau=0.0)
+                        self.train_actor(actor_steps, tau_actor=self.tau, tau_critic=self.tau)
+                    else:
+                        &#47&#47 Closer to td3: with policy delay
+                        if self.update_style == &quottd3_like&quot:
+                            n_training_steps = actor_steps
+                        else:
+                            &#47&#47 scales with a bigger population
+                            &#47&#47 but less training steps per agent
+                            n_training_steps = 2 * (actor_steps // self.n_grad)
+                        for it in range(n_training_steps):
+                            &#47&#47 Sample replay buffer
+                            replay_data = self.replay_buffer.sample(self.batch_size, env=self._vec_normalize_env)
+                            self.train_critic(replay_data=replay_data)
+
+                            &#47&#47 Delayed policy updates
+                            if it % self.policy_delay == 0:
+                                self.train_actor(replay_data=replay_data, tau_actor=self.tau, tau_critic=self.tau)
+
+                    &#47&#47 Get the params back in the population
+                    self.es_params[i] = self.actor.parameters_to_vector()
+
+            &#47&#47 Evaluate agent
+            if 0 &lt; eval_freq &lt;= timesteps_since_eval and eval_env is not None:
+                timesteps_since_eval %= eval_freq
+
+                self.actor.load_from_vector(self.es.mu)
+                sync_envs_normalization(self.env, eval_env)
+
+                mean_reward, std_reward = evaluate_policy(self, eval_env, n_eval_episodes)
+                evaluations.append(mean_reward)
+
+                if self.verbose &gt; 0:
+                    print("Eval num_timesteps={}, "
+                          "episode_reward={:.2f} +/- {:.2f}".format(self.num_timesteps, mean_reward, std_reward))
+                    print("FPS: {:.2f}".format(self.num_timesteps / (time.time() - self.start_time)))
+
+            actor_steps = 0
+            &#47&#47 evaluate all actors
+            for params in self.es_params:
+
+                self.actor.load_from_vector(params)
+
+                rollout = self.collect_rollouts(self.env, n_episodes=self.n_episodes_rollout,
+                                                n_steps=-1, action_noise=self.action_noise,
+                                                deterministic=False, callback=callback,
+                                                learning_starts=self.learning_starts,
+                                                num_timesteps=self.num_timesteps,
+                                                replay_buffer=self.replay_buffer,
+                                                obs=obs, episode_num=episode_num,
+                                                log_interval=log_interval)
+
+                &#47&#47 Unpack
+                episode_reward, episode_timesteps, n_episodes, obs, continue_training = rollout
+
+                if continue_training is False:
+                    break
+
+                episode_num += n_episodes
+                self.num_timesteps += episode_timesteps
+                timesteps_since_eval += episode_timesteps
+                actor_steps += episode_timesteps
+                self.fitnesses.append(episode_reward)
+
+            if continue_training is False:
+                break
+
+            self._update_current_progress(self.num_timesteps, total_timesteps)
+            self.es.tell(self.es_params, self.fitnesses)
+            timesteps_since_eval += actor_steps
+
+        <a id="change">callback.on_training_end()</a>
+
+        return self
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/dlr-rm/stable-baselines3/commit/b66003cfb37a4af9062289c964ff5c6f43927615#diff-3058c36c77f0574f580eb3320d8421e429d0b4f233214b283498816ef3332c36L102' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 69699819</div><div id='project'> Project Name: dlr-rm/stable-baselines3</div><div id='commit'> Commit Name: b66003cfb37a4af9062289c964ff5c6f43927615</div><div id='time'> Time: 2020-01-27</div><div id='author'> Author: antonin.raffin@dlr.de</div><div id='file'> File Name: torchy_baselines/cem_rl/cem_rl.py</div><div id='m_class'> M Class Name: CEMRL</div><div id='n_method'> N Class Name: CEMRL</div><div id='m_method'> M Method Name: learn(9)</div><div id='n_method'> N Method Name: learn(9)</div><div id='m_parent_class'> M Parent Class: TD3</div><div id='n_parent_class'> N Parent Class: TD3</div><div id='m_file'> M File Name: torchy_baselines/cem_rl/cem_rl.py</div><div id='n_file'> N File Name: torchy_baselines/cem_rl/cem_rl.py</div><div id='m_start'> M Start Line: 113</div><div id='m_end'> M End Line: 118</div><div id='n_start'> N Start Line: 105</div><div id='n_end'> N End Line: 207</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+        while self.num_timesteps &lt; total_timesteps:
+
+            <a id="change">if callback is not None</a>:
+                &#47&#47 Only stop training if return value is False, not when it is None.
+                <a id="change">if callback(locals(), globals()) is False</a>:
+                    <a id="change">break</a>
+
+            rollout = self.collect_rollouts(self.env, n_episodes=self.n_episodes_rollout,
+                                            n_steps=self.train_freq, action_noise=self.action_noise,
+                                            deterministic=False, callback=None,</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        timesteps_since_eval, episode_num, evaluations, obs, eval_env, callback = self._setup_learn(eval_env, callback)
+
+        <a id="change">callback.on_training_start(locals()</a>, <a id="change">globals()</a><a id="change">)</a>
+
+        while self.num_timesteps &lt; total_timesteps:
+            rollout = self.collect_rollouts(self.env, n_episodes=self.n_episodes_rollout,
+                                            n_steps=self.train_freq, action_noise=self.action_noise,
+                                            deterministic=False, callback=callback,
+                                            learning_starts=self.learning_starts,
+                                            num_timesteps=self.num_timesteps,
+                                            replay_buffer=self.replay_buffer,
+                                            obs=obs, episode_num=episode_num,
+                                            log_interval=log_interval)
+            &#47&#47 Unpack
+            episode_reward, episode_timesteps, n_episodes, obs, continue_training = rollout
+
+            if continue_training is False:
+                break
+
+            self.num_timesteps += episode_timesteps
+            episode_num += n_episodes
+            timesteps_since_eval += episode_timesteps
+            self._update_current_progress(self.num_timesteps, total_timesteps)
+
+            if self.num_timesteps &gt; 0 and self.num_timesteps &gt; self.learning_starts:
+                gradient_steps = self.gradient_steps if self.gradient_steps &gt; 0 else episode_timesteps
+
+                self.train(gradient_steps, batch_size=self.batch_size)
+
+            timesteps_since_eval = self._eval_policy(eval_freq, eval_env, n_eval_episodes,
+                                                     timesteps_since_eval, deterministic=True)
+
+        <a id="change">callback.on_training_end()</a>
+        return self
+
+    def get_opt_parameters(self):
+        </code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/dlr-rm/stable-baselines3/commit/b66003cfb37a4af9062289c964ff5c6f43927615#diff-ace7082ddb02987587afd18b50d1bebc77d97a1c15fdef1fe5d602ffe5993fd2L258' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 69699817</div><div id='project'> Project Name: dlr-rm/stable-baselines3</div><div id='commit'> Commit Name: b66003cfb37a4af9062289c964ff5c6f43927615</div><div id='time'> Time: 2020-01-27</div><div id='author'> Author: antonin.raffin@dlr.de</div><div id='file'> File Name: torchy_baselines/sac/sac.py</div><div id='m_class'> M Class Name: SAC</div><div id='n_method'> N Class Name: SAC</div><div id='m_method'> M Method Name: learn(9)</div><div id='n_method'> N Method Name: learn(9)</div><div id='m_parent_class'> M Parent Class: BaseRLModel</div><div id='n_parent_class'> N Parent Class: BaseRLModel</div><div id='m_file'> M File Name: torchy_baselines/sac/sac.py</div><div id='n_file'> N File Name: torchy_baselines/sac/sac.py</div><div id='m_start'> M Start Line: 266</div><div id='m_end'> M End Line: 280</div><div id='n_start'> N Start Line: 262</div><div id='n_end'> N End Line: 294</div><BR>

@@ -1,0 +1,87 @@
+<html><h3>Pattern ID :19147
+</h3><img src='62296244.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+  &#47&#47 TODO: use something like np.take for speed
+  tx = np.empty((bs, oy, ox, cin*W*H), dtype=x.dtype)
+  <a id="change">for Y</a> in <a id="change">range(</a>oy<a id="change">):
+    </a><a id="change">for X</a> in <a id="change">range(</a>ox<a id="change">)</a><a id="change">:
+      </a>tx[:, Y, X] = <a id="change">x</a>[:, :, <a id="change">Y</a>:Y+H, <a id="change">X</a>:X+W].reshape(bs, -1)
+  return tx.reshape(-1, cin*W*H)
+
+def col2im(tx, H, W, OY, OX):</code></pre><h3>After Change</h3><pre><code class='java'>
+def im2col(x, H, W):
+  bs,cin,oy,ox = x.shape[0], x.shape[1], x.shape[2]-(H-1), x.shape[3]-(W-1)
+  ic, iy, ix = get_im2col_indexes(oy, ox, cin, H, W)
+  tx = <a id="change">x[:, ic, iy, ix]</a>
+  return tx.reshape(-1, cin*W*H)
+
+def col2im(tx, H, W, OY, OX):
+  oy, ox = OY-(H-1), OX-(W-1)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 9</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/geohot/tinygrad/commit/67506eb6bacded2bb153591db066ca742e12f67a#diff-088bb603a2481de6c6831ead79c59d04d32f0befb15fdb2da1d4a0f64621c587L38' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 62296244</div><div id='project'> Project Name: geohot/tinygrad</div><div id='commit'> Commit Name: 67506eb6bacded2bb153591db066ca742e12f67a</div><div id='time'> Time: 2020-10-25</div><div id='author'> Author: geohot@gmail.com</div><div id='file'> File Name: tinygrad/utils.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: im2col(3)</div><div id='n_method'> N Method Name: im2col(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: tinygrad/utils.py</div><div id='n_file'> N File Name: tinygrad/utils.py</div><div id='m_start'> M Start Line: 38</div><div id='m_end'> M End Line: 42</div><div id='n_start'> N Start Line: 44</div><div id='n_end'> N End Line: 45</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+  &#47&#47 sadly, this is faster
+  x = np.zeros((bs, cin, OY, OX), dtype=tx.dtype)
+  tx = tx.reshape(bs, oy, ox, cin, H, W)
+  <a id="change">for Y</a> in <a id="change">range(</a>oy<a id="change">):
+    </a><a id="change">for X</a> in <a id="change">range(</a>ox<a id="change">)</a><a id="change">:
+      </a><a id="change">x</a>[:, :, <a id="change">Y</a>:Y+H, <a id="change">X</a>:X+W] += tx[:, Y, X]
+
+  return x.reshape(bs, cin, OY, OX)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+  ridx = swizzle_col2im_index(oy, ox, cin, H, W)
+  &#47&#47 -1 has to be 0s
+  x = <a id="change">np.pad(tx.reshape(bs, -1), ((0,0),(0,1)))[:, ridx]</a>.sum(axis=2)
+
+  
+  &#47&#47 col2im is just im2col in reverse, but np.add.at is SLOW</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/geohot/tinygrad/commit/ef24aac09e0b1bd430c138b2c57ede6528facc11#diff-088bb603a2481de6c6831ead79c59d04d32f0befb15fdb2da1d4a0f64621c587L62' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 62296245</div><div id='project'> Project Name: geohot/tinygrad</div><div id='commit'> Commit Name: ef24aac09e0b1bd430c138b2c57ede6528facc11</div><div id='time'> Time: 2020-10-25</div><div id='author'> Author: geohot@gmail.com</div><div id='file'> File Name: tinygrad/utils.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: col2im(5)</div><div id='n_method'> N Method Name: col2im(5)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: tinygrad/utils.py</div><div id='n_file'> N File Name: tinygrad/utils.py</div><div id='m_start'> M Start Line: 64</div><div id='m_end'> M End Line: 81</div><div id='n_start'> N Start Line: 75</div><div id='n_end'> N End Line: 80</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    s, = ctx.saved_tensors
+    my, mx = (s[2]//2)*2, (s[3]//2)*2
+    ret = np.zeros(s, dtype=grad_output.dtype)
+    <a id="change">for Y</a> in <a id="change">range(</a>2<a id="change">):
+      </a><a id="change">for X</a> in <a id="change">range(</a>2<a id="change">)</a><a id="change">:
+        </a><a id="change">ret</a>[:, :, <a id="change">Y</a>:my:2, <a id="change">X</a>:mx:2] = grad_output/4
+    return ret
+register(&quotavg_pool2d&quot, AvgPool2D)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    ret = np.zeros(s, dtype=grad_output.dtype)
+    for Y in range(py):
+      for X in range(px):
+        <a id="change">ret[:, :, Y:my:py, X:mx:px]</a> = grad_output/py/px
+    return ret
+register(&quotavg_pool2d&quot, AvgPool2D)
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/geohot/tinygrad/commit/15e59883232642c5f80643b407829f05a39be4b0#diff-5736814df0b2c07a42d5c1bfef6b5aa5635ce18043f4aa030e21768694259ca3L163' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 62296242</div><div id='project'> Project Name: geohot/tinygrad</div><div id='commit'> Commit Name: 15e59883232642c5f80643b407829f05a39be4b0</div><div id='time'> Time: 2020-10-26</div><div id='author'> Author: timothy@mcalister.ch</div><div id='file'> File Name: tinygrad/ops.py</div><div id='m_class'> M Class Name: AvgPool2D</div><div id='n_method'> N Class Name: AvgPool2D</div><div id='m_method'> M Method Name: backward(2)</div><div id='n_method'> N Method Name: backward(2)</div><div id='m_parent_class'> M Parent Class: Function</div><div id='n_parent_class'> N Parent Class: Function</div><div id='m_file'> M File Name: tinygrad/ops.py</div><div id='n_file'> N File Name: tinygrad/ops.py</div><div id='m_start'> M Start Line: 165</div><div id='m_end'> M End Line: 170</div><div id='n_start'> N Start Line: 166</div><div id='n_end'> N End Line: 172</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    idxs,s = ctx.saved_tensors
+    my, mx = (s[2]//2)*2, (s[3]//2)*2
+    ret = np.zeros(s, dtype=grad_output.dtype)
+    <a id="change">for Y</a> in <a id="change">range(</a>2<a id="change">):
+      </a><a id="change">for X</a> in <a id="change">range(</a>2<a id="change">)</a><a id="change">:
+        </a><a id="change">ret</a>[:, :, <a id="change">Y</a>:my:2, <a id="change">X</a>:mx:2] = grad_output * (idxs == (Y*2+X))
+    return ret
+register(&quotmax_pool2d&quot, MaxPool2D)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    ret = np.zeros(s, dtype=grad_output.dtype)
+    for Y in range(py):
+      for X in range(px):
+        <a id="change">ret[:, :, Y:my:py, X:mx:px]</a> = grad_output * (idxs == (Y*px+X))
+    return ret
+register(&quotmax_pool2d&quot, MaxPool2D)
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/geohot/tinygrad/commit/15e59883232642c5f80643b407829f05a39be4b0#diff-5736814df0b2c07a42d5c1bfef6b5aa5635ce18043f4aa030e21768694259ca3L145' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 62296243</div><div id='project'> Project Name: geohot/tinygrad</div><div id='commit'> Commit Name: 15e59883232642c5f80643b407829f05a39be4b0</div><div id='time'> Time: 2020-10-26</div><div id='author'> Author: timothy@mcalister.ch</div><div id='file'> File Name: tinygrad/ops.py</div><div id='m_class'> M Class Name: MaxPool2D</div><div id='n_method'> N Class Name: MaxPool2D</div><div id='m_method'> M Method Name: backward(2)</div><div id='n_method'> N Method Name: backward(2)</div><div id='m_parent_class'> M Parent Class: Function</div><div id='n_parent_class'> N Parent Class: Function</div><div id='m_file'> M File Name: tinygrad/ops.py</div><div id='n_file'> N File Name: tinygrad/ops.py</div><div id='m_start'> M Start Line: 147</div><div id='m_end'> M End Line: 152</div><div id='n_start'> N Start Line: 147</div><div id='n_end'> N End Line: 153</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+  &#47&#47 TODO: use something like np.take for speed
+  tx = np.empty((bs, oy, ox, cin*W*H), dtype=x.dtype)
+  <a id="change">for Y</a> in <a id="change">range(</a>oy<a id="change">):
+    </a><a id="change">for X</a> in <a id="change">range(</a>ox<a id="change">)</a><a id="change">:
+      </a>tx[:, Y, X] = <a id="change">x</a>[:, :, <a id="change">Y</a>:Y+H, <a id="change">X</a>:X+W].reshape(bs, -1)
+  return tx.reshape(-1, cin*W*H)
+
+def col2im(tx, H, W, OY, OX):</code></pre><h3>After Change</h3><pre><code class='java'>
+def im2col(x, H, W):
+  bs,cin,oy,ox = x.shape[0], x.shape[1], x.shape[2]-(H-1), x.shape[3]-(W-1)
+  ic, iy, ix = get_im2col_indexes(oy, ox, cin, H, W)
+  tx = <a id="change">x[:, ic, iy, ix]</a>
+  return tx.reshape(-1, cin*W*H)
+
+def col2im(tx, H, W, OY, OX):
+  oy, ox = OY-(H-1), OX-(W-1)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/geohot/tinygrad/commit/67506eb6bacded2bb153591db066ca742e12f67a#diff-088bb603a2481de6c6831ead79c59d04d32f0befb15fdb2da1d4a0f64621c587L34' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 62296240</div><div id='project'> Project Name: geohot/tinygrad</div><div id='commit'> Commit Name: 67506eb6bacded2bb153591db066ca742e12f67a</div><div id='time'> Time: 2020-10-25</div><div id='author'> Author: geohot@gmail.com</div><div id='file'> File Name: tinygrad/utils.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: im2col(3)</div><div id='n_method'> N Method Name: im2col(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: tinygrad/utils.py</div><div id='n_file'> N File Name: tinygrad/utils.py</div><div id='m_start'> M Start Line: 38</div><div id='m_end'> M End Line: 42</div><div id='n_start'> N Start Line: 44</div><div id='n_end'> N End Line: 45</div><BR>

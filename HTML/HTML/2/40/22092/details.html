@@ -1,0 +1,186 @@
+<html><h3>Pattern ID :22092
+</h3><img src='70050189.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            layer_outputs = layer(hidden_states, attention_mask=attention_mask, output_attentions=output_attentions)
+
+            &#47&#47 add LayerDrop (see https://arxiv.org/abs/1909.11556 for description)
+            dropout_probability<a id="change"> = </a>torch.rand(tuple())
+            <a id="change">skip_the_layer = </a><a id="change">torch.tensor(self.training) and (dropout_probability &lt; self.config.layerdrop)</a>
+            if self.config.layerdrop &gt; 0.0:
+                hidden_states = <a id="change">torch.where(skip_the_layer</a>, hidden_states, <a id="change">layer_outputs[0]</a><a id="change">)</a>
+            else:
+                hidden_states = layer_outputs[0]
+
+            <a id="change">if skip_the_layer</a>:
+                layer_outputs = (None<a id="change">, None</a>)
+
+            if output_attentions:
+                all_self_attentions<a id="change"> = </a>all_self_attentions + (layer_outputs[1],)
+
+        if output_hidden_states:
+            all_hidden_states = all_hidden_states + (hidden_states,)</code></pre><h3>After Change</h3><pre><code class='java'>
+            if output_hidden_states:
+                all_hidden_states = all_hidden_states + (hidden_states,)
+
+            <a id="change">layer_outputs</a> = layer(hidden_states, attention_mask=attention_mask, output_attentions=output_attentions)
+
+            &#47&#47 add LayerDrop (see https://arxiv.org/abs/1909.11556 for description)
+            &#47&#47 Modify LayerDrop so it can be statically compiled without eager mode
+            if self.config.layerdrop &gt; 0.0:
+                dropout_probability<a id="change"> = </a>torch.rand(tuple(), device=hidden_states.device)
+                <a id="change">skip_the_layer = </a><a id="change">(
+                    torch.tensor(self.training, device=hidden_states.device)
+                    & (dropout_probability &lt; self.config.layerdrop)
+                ).to(dtype=hidden_states.dtype)</a>
+                hidden_states = hidden_states<a id="change"> * skip_the_layer + layer_outputs</a><a id="change">[0]</a><a id="change"> * </a>(<a id="change">1</a><a id="change"> - skip_the_layer</a>)
+            else:
+                hidden_states = layer_outputs[0]
+
+            if output_attentions:
+                <a id="change">if self.config.layerdrop &gt; 0.0</a>:
+                    all_self_attentions<a id="change"> = </a>all_self_attentions<a id="change"> + </a>((<a id="change">1</a><a id="change"> - </a>skip_the_layer)<a id="change"> * layer_outputs</a><a id="change">[1]</a>,)
+                else:
+                    all_self_attentions<a id="change"> = </a>all_self_attentions + (layer_outputs[1],)
+
+        if output_hidden_states:
+            all_hidden_states = all_hidden_states + (hidden_states,)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 30</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/huggingface/optimum-graphcore/commit/14c3842bd5a259b70093f647a77e7e765687a6c0#diff-78e7e62156963de0a5dbf323a0121639c4ddfcd5d6364518045269e8263e5b12L42' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 70050189</div><div id='project'> Project Name: huggingface/optimum-graphcore</div><div id='commit'> Commit Name: 14c3842bd5a259b70093f647a77e7e765687a6c0</div><div id='time'> Time: 2022-10-06</div><div id='author'> Author: jamesbr@graphcore.ai</div><div id='file'> File Name: optimum/graphcore/models/wav2vec2/ipu_layer_drop.py</div><div id='m_class'> M Class Name: IPUWav2Vec2Encoder</div><div id='n_method'> N Class Name: IPUWav2Vec2Encoder</div><div id='m_method'> M Method Name: forward(6)</div><div id='n_method'> N Method Name: forward(6)</div><div id='m_parent_class'> M Parent Class: Wav2Vec2Encoder</div><div id='n_parent_class'> N Parent Class: Wav2Vec2Encoder</div><div id='m_file'> M File Name: optimum/graphcore/models/wav2vec2/ipu_layer_drop.py</div><div id='n_file'> N File Name: optimum/graphcore/models/wav2vec2/ipu_layer_drop.py</div><div id='m_start'> M Start Line: 58</div><div id='m_end'> M End Line: 78</div><div id='n_start'> N Start Line: 42</div><div id='n_end'> N End Line: 84</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            if output_hidden_states:
+                all_hidden_states = all_hidden_states + (hidden_states,)
+
+            <a id="change">layer_outputs</a> = layer(hidden_states, attention_mask=attention_mask, output_attentions=output_attentions)
+
+            &#47&#47 add LayerDrop (see https://arxiv.org/abs/1909.11556 for description)
+            dropout_probability<a id="change"> = </a>torch.rand(tuple())
+            <a id="change">skip_the_layer = </a><a id="change">torch.tensor(self.training) and (dropout_probability &lt; self.config.layerdrop)</a>
+            if self.config.layerdrop &gt; 0.0:
+                hidden_states = <a id="change">torch.where(</a>skip_the_layer, hidden_states, <a id="change">layer_outputs[0]</a><a id="change">)</a>
+            else:
+                hidden_states = layer_outputs[0]
+
+            <a id="change">if skip_the_layer</a>:
+                layer_outputs = (None<a id="change">, None</a>)
+
+            if output_attentions:
+                all_self_attentions<a id="change"> = </a>all_self_attentions + (layer_outputs[1],)
+
+        hidden_states = self.layer_norm(hidden_states)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            if output_hidden_states:
+                all_hidden_states = all_hidden_states + (hidden_states,)
+
+            <a id="change">layer_outputs</a> = layer(hidden_states, attention_mask=attention_mask, output_attentions=output_attentions)
+
+            &#47&#47 add LayerDrop (see https://arxiv.org/abs/1909.11556 for description)
+            &#47&#47 Modify LayerDrop so it can be statically compiled without eager mode
+            if self.config.layerdrop &gt; 0.0:
+                dropout_probability<a id="change"> = </a>torch.rand(tuple(), device=hidden_states.device)
+                <a id="change">skip_the_layer = </a><a id="change">(
+                    torch.tensor(self.training, device=hidden_states.device)
+                    & (dropout_probability &lt; self.config.layerdrop)
+                ).to(dtype=hidden_states.dtype)</a>
+                hidden_states = hidden_states<a id="change"> * skip_the_layer + </a><a id="change">layer_outputs[0]</a><a id="change"> * </a>(<a id="change">1</a><a id="change"> - </a>skip_the_layer)
+            else:
+                hidden_states = layer_outputs[0]
+
+            if output_attentions:
+                <a id="change">if self.config.layerdrop &gt; 0.0</a>:
+                    all_self_attentions<a id="change"> = </a>all_self_attentions<a id="change"> + </a>((<a id="change">1</a><a id="change"> - </a>skip_the_layer)<a id="change"> * </a><a id="change">layer_outputs[1]</a>,)
+                else:
+                    all_self_attentions<a id="change"> = </a>all_self_attentions + (layer_outputs[1],)
+
+        hidden_states = self.layer_norm(hidden_states)
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/huggingface/optimum-graphcore/commit/14c3842bd5a259b70093f647a77e7e765687a6c0#diff-78e7e62156963de0a5dbf323a0121639c4ddfcd5d6364518045269e8263e5b12L93' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 70050185</div><div id='project'> Project Name: huggingface/optimum-graphcore</div><div id='commit'> Commit Name: 14c3842bd5a259b70093f647a77e7e765687a6c0</div><div id='time'> Time: 2022-10-06</div><div id='author'> Author: jamesbr@graphcore.ai</div><div id='file'> File Name: optimum/graphcore/models/wav2vec2/ipu_layer_drop.py</div><div id='m_class'> M Class Name: IPUWav2Vec2EncoderStableLayerNorm</div><div id='n_method'> N Class Name: IPUWav2Vec2EncoderStableLayerNorm</div><div id='m_method'> M Method Name: forward(6)</div><div id='n_method'> N Method Name: forward(6)</div><div id='m_parent_class'> M Parent Class: Wav2Vec2EncoderStableLayerNorm</div><div id='n_parent_class'> N Parent Class: Wav2Vec2EncoderStableLayerNorm</div><div id='m_file'> M File Name: optimum/graphcore/models/wav2vec2/ipu_layer_drop.py</div><div id='n_file'> N File Name: optimum/graphcore/models/wav2vec2/ipu_layer_drop.py</div><div id='m_start'> M Start Line: 117</div><div id='m_end'> M End Line: 137</div><div id='n_start'> N Start Line: 106</div><div id='n_end'> N End Line: 147</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            if output_hidden_states:
+                all_hidden_states = all_hidden_states + (hidden_states,)
+
+            <a id="change">layer_outputs</a> = layer(hidden_states, attention_mask=attention_mask, output_attentions=output_attentions)
+
+            &#47&#47 add LayerDrop (see https://arxiv.org/abs/1909.11556 for description)
+            dropout_probability<a id="change"> = </a>torch.rand(tuple())
+            <a id="change">skip_the_layer = </a><a id="change">torch.tensor(self.training) and (dropout_probability &lt; self.config.layerdrop)</a>
+            if self.config.layerdrop &gt; 0.0:
+                hidden_states = <a id="change">torch.where(</a>skip_the_layer, hidden_states, <a id="change">layer_outputs[0]</a><a id="change">)</a>
+            else:
+                hidden_states = layer_outputs[0]
+
+            <a id="change">if skip_the_layer</a>:
+                layer_outputs = (None<a id="change">, None</a>)
+
+            if output_attentions:
+                all_self_attentions<a id="change"> = </a>all_self_attentions + (layer_outputs[1],)
+
+        hidden_states = self.layer_norm(hidden_states)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            if output_hidden_states:
+                all_hidden_states = all_hidden_states + (hidden_states,)
+
+            <a id="change">layer_outputs</a> = layer(hidden_states, attention_mask=attention_mask, output_attentions=output_attentions)
+
+            &#47&#47 add LayerDrop (see https://arxiv.org/abs/1909.11556 for description)
+            &#47&#47 Modify LayerDrop so it can be statically compiled without eager mode
+            if self.config.layerdrop &gt; 0.0:
+                dropout_probability<a id="change"> = </a>torch.rand(tuple(), device=hidden_states.device)
+                <a id="change">skip_the_layer = </a><a id="change">(
+                    torch.tensor(self.training, device=hidden_states.device)
+                    & (dropout_probability &lt; self.config.layerdrop)
+                ).to(dtype=hidden_states.dtype)</a>
+                hidden_states = hidden_states<a id="change"> * skip_the_layer + </a><a id="change">layer_outputs[0]</a><a id="change"> * </a>(<a id="change">1</a><a id="change"> - </a>skip_the_layer)
+            else:
+                hidden_states = layer_outputs[0]
+
+            if output_attentions:
+                <a id="change">if self.config.layerdrop &gt; 0.0</a>:
+                    all_self_attentions<a id="change"> = </a>all_self_attentions<a id="change"> + </a>((<a id="change">1</a><a id="change"> - </a>skip_the_layer)<a id="change"> * </a><a id="change">layer_outputs[1]</a>,)
+                else:
+                    all_self_attentions<a id="change"> = </a>all_self_attentions + (layer_outputs[1],)
+
+        hidden_states = self.layer_norm(hidden_states)
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/huggingface/optimum-graphcore/commit/14c3842bd5a259b70093f647a77e7e765687a6c0#diff-3c1a4ff2b3d1bbfe361661ed784a3290269fbe74bbf2a7747b834e8219a018a7L89' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 70050186</div><div id='project'> Project Name: huggingface/optimum-graphcore</div><div id='commit'> Commit Name: 14c3842bd5a259b70093f647a77e7e765687a6c0</div><div id='time'> Time: 2022-10-06</div><div id='author'> Author: jamesbr@graphcore.ai</div><div id='file'> File Name: optimum/graphcore/models/hubert/ipu_layer_drop.py</div><div id='m_class'> M Class Name: IPUHubertEncoderStableLayerNorm</div><div id='n_method'> N Class Name: IPUHubertEncoderStableLayerNorm</div><div id='m_method'> M Method Name: forward(6)</div><div id='n_method'> N Method Name: forward(6)</div><div id='m_parent_class'> M Parent Class: HubertEncoderStableLayerNorm</div><div id='n_parent_class'> N Parent Class: HubertEncoderStableLayerNorm</div><div id='m_file'> M File Name: optimum/graphcore/models/hubert/ipu_layer_drop.py</div><div id='n_file'> N File Name: optimum/graphcore/models/hubert/ipu_layer_drop.py</div><div id='m_start'> M Start Line: 113</div><div id='m_end'> M End Line: 133</div><div id='n_start'> N Start Line: 102</div><div id='n_end'> N End Line: 143</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            if output_hidden_states:
+                all_hidden_states = all_hidden_states + (hidden_states,)
+
+            <a id="change">layer_outputs</a> = layer(hidden_states, attention_mask=attention_mask, output_attentions=output_attentions)
+
+            &#47&#47 add LayerDrop (see https://arxiv.org/abs/1909.11556 for description)
+            dropout_probability<a id="change"> = </a>torch.rand(tuple())
+            <a id="change">skip_the_layer = </a><a id="change">torch.tensor(self.training) and (dropout_probability &lt; self.config.layerdrop)</a>
+            if self.config.layerdrop &gt; 0.0:
+                hidden_states = <a id="change">torch.where(</a>skip_the_layer, hidden_states, <a id="change">layer_outputs[0]</a><a id="change">)</a>
+            else:
+                hidden_states = layer_outputs[0]
+
+            <a id="change">if skip_the_layer</a>:
+                layer_outputs = (None<a id="change">, None</a>)
+
+            if output_attentions:
+                all_self_attentions<a id="change"> = </a>all_self_attentions + (layer_outputs[1],)
+
+        if output_hidden_states:
+            all_hidden_states = all_hidden_states + (hidden_states,)</code></pre><h3>After Change</h3><pre><code class='java'>
+            if output_hidden_states:
+                all_hidden_states = all_hidden_states + (hidden_states,)
+
+            <a id="change">layer_outputs</a> = layer(hidden_states, attention_mask=attention_mask, output_attentions=output_attentions)
+
+            &#47&#47 add LayerDrop (see https://arxiv.org/abs/1909.11556 for description)
+            &#47&#47 Modify LayerDrop so it can be statically compiled without eager mode
+            if self.config.layerdrop &gt; 0.0:
+                dropout_probability<a id="change"> = </a>torch.rand(tuple(), device=hidden_states.device)
+                <a id="change">skip_the_layer = </a><a id="change">(
+                    torch.tensor(self.training, device=hidden_states.device)
+                    & (dropout_probability &lt; self.config.layerdrop)
+                ).to(dtype=hidden_states.dtype)</a>
+                hidden_states = hidden_states<a id="change"> * skip_the_layer + </a><a id="change">layer_outputs[0]</a><a id="change"> * </a>(<a id="change">1</a><a id="change"> - </a>skip_the_layer)
+            else:
+                hidden_states = layer_outputs[0]
+
+            if output_attentions:
+                <a id="change">if self.config.layerdrop &gt; 0.0</a>:
+                    all_self_attentions<a id="change"> = </a>all_self_attentions<a id="change"> + </a>((<a id="change">1</a><a id="change"> - </a>skip_the_layer)<a id="change"> * </a><a id="change">layer_outputs[1]</a>,)
+                else:
+                    all_self_attentions<a id="change"> = </a>all_self_attentions + (layer_outputs[1],)
+
+        if output_hidden_states:
+            all_hidden_states = all_hidden_states + (hidden_states,)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/huggingface/optimum-graphcore/commit/14c3842bd5a259b70093f647a77e7e765687a6c0#diff-3c1a4ff2b3d1bbfe361661ed784a3290269fbe74bbf2a7747b834e8219a018a7L29' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 70050183</div><div id='project'> Project Name: huggingface/optimum-graphcore</div><div id='commit'> Commit Name: 14c3842bd5a259b70093f647a77e7e765687a6c0</div><div id='time'> Time: 2022-10-06</div><div id='author'> Author: jamesbr@graphcore.ai</div><div id='file'> File Name: optimum/graphcore/models/hubert/ipu_layer_drop.py</div><div id='m_class'> M Class Name: IPUHubertEncoder</div><div id='n_method'> N Class Name: IPUHubertEncoder</div><div id='m_method'> M Method Name: forward(6)</div><div id='n_method'> N Method Name: forward(6)</div><div id='m_parent_class'> M Parent Class: HubertEncoder</div><div id='n_parent_class'> N Parent Class: HubertEncoder</div><div id='m_file'> M File Name: optimum/graphcore/models/hubert/ipu_layer_drop.py</div><div id='n_file'> N File Name: optimum/graphcore/models/hubert/ipu_layer_drop.py</div><div id='m_start'> M Start Line: 54</div><div id='m_end'> M End Line: 74</div><div id='n_start'> N Start Line: 38</div><div id='n_end'> N End Line: 80</div><BR>

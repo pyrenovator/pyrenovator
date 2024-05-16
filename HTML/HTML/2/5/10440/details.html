@@ -1,0 +1,133 @@
+<html><h3>Pattern ID :10440
+</h3><img src='36441884.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    -------
+        history calendar list
+    
+    <a id="change">global _ALL_CALENDAR_LIST</a>
+    global _BENCH_CALENDAR_LIST
+
+    def _get_calendar(url):
+        _value_list = requests.get(url).json()["data"]["klines"]</code></pre><h3>After Change</h3><pre><code class='java'>
+        _value_list = requests.get(url).json()["data"]["klines"]
+        return sorted(map(lambda x: pd.Timestamp(x.split(",")[0]), _value_list))
+
+    calendar<a id="change"> = </a>_CALENDAR_MAP.get(bench_code, None)
+    <a id="change">if calendar is None</a>:
+        calendar<a id="change"> = </a>_get_calendar(CALENDAR_BENCH_URL_MAP[bench_code])
+        _CALENDAR_MAP[bench_code] = calendar
+    return calendar
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 5</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/microsoft/qlib/commit/5bca9d892aad7e59e44e4f4f522675c435b874c5#diff-5028716407720ea33d7e0fa3921ac328c29103dd0822f7102c648ff8edbf0481L31' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 36441884</div><div id='project'> Project Name: microsoft/qlib</div><div id='commit'> Commit Name: 5bca9d892aad7e59e44e4f4f522675c435b874c5</div><div id='time'> Time: 2020-10-20</div><div id='author'> Author: zhu.pengrong@foxmail.com</div><div id='file'> File Name: scripts/data_collector/utils.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: get_hs_calendar_list(1)</div><div id='n_method'> N Method Name: get_hs_calendar_list(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: scripts/data_collector/utils.py</div><div id='n_file'> N File Name: scripts/data_collector/utils.py</div><div id='m_start'> M Start Line: 31</div><div id='m_end'> M End Line: 46</div><div id='n_start'> N Start Line: 52</div><div id='n_end'> N End Line: 56</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 因此需要解码的长度实际是 lengths - 1
+        decode_lengths = (caption_lengths - 1).tolist()
+        &#47&#47 新建两个张量用于存放 word predicion scores and alphas
+        <a id="change">global device</a>
+        predictions = torch.zeros(batch_size, max(decode_lengths), vocab_size).to(device)
+        alphas = torch.zeros(batch_size, max(decode_lengths), num_pixels).to(device)
+
+        &#47&#47 在每一个时间步根据解码器的前一个状态以及经过attention加权后的encoder输出进行解码</code></pre><h3>After Change</h3><pre><code class='java'>
+        :param caption_lengths: caption lengths, a tensor of dimension (batch_size, 1)
+        :return: scores for vocabulary, sorted encoded captions, decode lengths, weights, sort indices
+        
+        self.p<a id="change"> = </a>p
+        batch_size = encoder_out.size(0)
+        encoder_dim = encoder_out.size(1)&#47&#47这里和普通的resnet输出的不同，resnet是最后一个维度是C
+        vocab_size = self.vocab_size
+
+        &#47&#47 把特征图展平作为上下文向量
+        encoder_out = encoder_out.view(batch_size, -1, encoder_dim)  &#47&#47 (batch_size, num_pixels, encoder_dim)
+        num_pixels = encoder_out.size(1)
+
+        &#47&#47 Sort input data by decreasing lengths; why? apparent below
+        caption_lengths, sort_ind = caption_lengths.sort(dim=0, descending=True)
+        &#47&#47 print(&quotsort_ind&quot,sort_ind,&quotencoder_out&quot,encoder_out.shape,&quotencoder_captions&quot,encoded_captions.shape)
+        encoder_out = encoder_out[sort_ind]
+        encoded_captions = encoded_captions[sort_ind]
+
+        &#47&#47 Embedding
+        embeddings = self.embedding(encoded_captions)  &#47&#47 (batch_size, max_caption_length, embed_dim)
+
+        &#47&#47 初始化GRU状态
+        &#47&#47 h, c = self.init_hidden_state(encoder_out)  &#47&#47 (batch_size, decoder_dim)
+        h = self.init_hidden_state(encoder_out)  &#47&#47 (batch_size, decoder_dim)
+
+        &#47&#47 我们一旦生成了&lt;end&gt;就已经完成了解码
+        &#47&#47 因此需要解码的长度实际是 lengths - 1
+        decode_lengths = (caption_lengths - 1).tolist()
+        &#47&#47 新建两个张量用于存放 word predicion scores and alphas
+        predictions = torch.zeros(batch_size, max(decode_lengths), vocab_size).to(device)
+        alphas = torch.zeros(batch_size, max(decode_lengths), num_pixels).to(device)
+
+        &#47&#47 在每一个时间步根据解码器的前一个状态以及经过attention加权后的encoder输出进行解码
+        for t in range(max(decode_lengths)):
+            &#47&#47decode_lengths是解码长度降序的排列,batch_size_t求出当前时间步中需要进行解码的数量
+            batch_size_t = sum([l &gt; t for l in decode_lengths])
+            attention_weighted_encoding, alpha = self.attention(encoder_out[:batch_size_t],
+                                                                h[:batch_size_t])
+            gate = self.sigmoid(self.f_beta(h[:batch_size_t]))  &#47&#47 gating scalar, (batch_size_t, encoder_dim)
+            attention_weighted_encoding = gate * attention_weighted_encoding
+            &#47&#47 h, c = self.decode_step(
+            &#47&#47     torch.cat([embeddings[:batch_size_t, t, :], attention_weighted_encoding], dim=1),
+            &#47&#47     (h[:batch_size_t], c[:batch_size_t]))  &#47&#47 (batch_size_t, decoder_dim)
+            &#47&#47teahcer forcing
+            <a id="change">if </a>t==1 or <a id="change">(np.random.rand() &lt; self.p)</a> :
+                h = self.decode_step(
+                    torch.cat([embeddings[:batch_size_t, t, :], attention_weighted_encoding], dim=1),
+                    h[:batch_size_t])  &#47&#47 (batch_size_t, decoder_dim)
+            else:
+                h<a id="change"> = </a>self.decode_step(
+                    torch.cat([self.embedding(torch.argmax(predictions[:batch_size_t, t, :],dim = 1)), attention_weighted_encoding], dim=1),
+                    h[:batch_size_t])  &#47&#47 (batch_size_t, decoder_dim)
+            preds = self.fc(self.dropout(h))  &#47&#47 (batch_size_t, vocab_size)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/qs956/latex_ocr_pytorch/commit/0455746d6d3141dfc06cd15fb9cd67a0b9defcfc#diff-62e0d959e50d9f4003df8124a1c19d98c77320268642d433b1cc28c58cf73a85L205' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 36441882</div><div id='project'> Project Name: qs956/latex_ocr_pytorch</div><div id='commit'> Commit Name: 0455746d6d3141dfc06cd15fb9cd67a0b9defcfc</div><div id='time'> Time: 2020-03-21</div><div id='author'> Author: qs956@163.com</div><div id='file'> File Name: model/model.py</div><div id='m_class'> M Class Name: DecoderWithAttention</div><div id='n_method'> N Class Name: DecoderWithAttention</div><div id='m_method'> M Method Name: forward(5)</div><div id='n_method'> N Method Name: forward(4)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: model/model.py</div><div id='n_file'> N File Name: model/model.py</div><div id='m_start'> M Start Line: 231</div><div id='m_end'> M End Line: 250</div><div id='n_start'> N Start Line: 214</div><div id='n_end'> N End Line: 271</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        ], f"Invalid data type {self.dtype}, allowed values are [torch.half, torch.bfloat16, torch.float]"
+
+    def __enter__(self):
+        <a id="change">global zero_init_enabled</a>
+        if not self.enabled:
+            return
+        zero_init_enabled = True
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        &#47&#47 Replace .__init__() for all existing subclasses of torch.nn.Module recursively
+        global zero_init_context
+        self.nest_level<a id="change"> = </a>len(zero_init_context)
+
+        global all_wrapped_classes
+        for subclass in get_all_subclasses(torch.nn.modules.module.Module):
+            &#47&#47 Only wrap classes that haven&quott been wrapped yet
+            if subclass not in all_wrapped_classes:
+                _enable_class(subclass)
+                self.wrapped_cls.add(subclass)
+
+        all_wrapped_classes = all_wrapped_classes.union(self.wrapped_cls)
+
+        &#47&#47 Wrap some functions only at top level call of Init
+        <a id="change">if self.nest_level == 0</a>:
+            &#47&#47 holding onto some methods so we can put them back the way they were in __exit__
+            torch.nn.modules.module.Module._old_init_subclass = torch.nn.modules.module.Module.__init_subclass__
+            torch.nn.modules.module.Module._old_apply = torch.nn.modules.module.Module.apply
+            torch.Tensor.__old_new__ = torch.Tensor.__new__
+
+            &#47&#47 Replace .__init__() for future subclasses of torch.nn.Module
+            torch.nn.modules.module.Module.__init_subclass__ = classmethod(_init_subclass)
+            torch.nn.modules.module.Module.apply = apply_with_gather(torch.nn.modules.module.Module._old_apply)
+
+            torch.Tensor.__new__ = get_new_tensor_fn_for_dtype(self.dtype)
+            torch.empty = zero_wrapper_for_fp_tensor_constructor(_orig_torch_empty, self.dtype)
+            torch.zeros = zero_wrapper_for_fp_tensor_constructor(_orig_torch_zeros, self.dtype)
+            torch.ones = zero_wrapper_for_fp_tensor_constructor(_orig_torch_ones, self.dtype)
+            torch.full = zero_wrapper_for_fp_tensor_constructor(_orig_torch_full, self.dtype)
+
+            if self.mem_efficient_linear:
+                print_rank_0(
+                    "nn.functional.linear has been overridden with a more memory efficient version. This will persist unless manually reset.",
+                    force=False)
+                self.linear_bk = torch.nn.functional.linear
+                torch.nn.functional.linear = zero3_linear_wrap
+
+            self.torch_func_wrapped<a id="change"> = </a>True
+
+        zero_init_context.append(self)
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/microsoft/deepspeed/commit/717c30203e48cb4bd195d4f12df78f6b373662ad#diff-bc45426db58250294594100cfdf3d73ecb653d879cabee404e38edc4eb4c9ecbL294' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 36441883</div><div id='project'> Project Name: microsoft/deepspeed</div><div id='commit'> Commit Name: 717c30203e48cb4bd195d4f12df78f6b373662ad</div><div id='time'> Time: 2023-04-13</div><div id='author'> Author: 81312776+tohtana@users.noreply.github.com</div><div id='file'> File Name: deepspeed/runtime/zero/partition_parameters.py</div><div id='m_class'> M Class Name: InsertPostInitMethodToModuleSubClasses</div><div id='n_method'> N Class Name: InsertPostInitMethodToModuleSubClasses</div><div id='m_method'> M Method Name: __enter__(1)</div><div id='n_method'> N Method Name: __enter__(1)</div><div id='m_parent_class'> M Parent Class: object</div><div id='n_parent_class'> N Parent Class: object</div><div id='m_file'> M File Name: deepspeed/runtime/zero/partition_parameters.py</div><div id='n_file'> N File Name: deepspeed/runtime/zero/partition_parameters.py</div><div id='m_start'> M Start Line: 295</div><div id='m_end'> M End Line: 429</div><div id='n_start'> N Start Line: 403</div><div id='n_end'> N End Line: 441</div><BR>

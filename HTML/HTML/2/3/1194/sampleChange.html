@@ -1,0 +1,42 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    data_dict = {}
+    for variable in variables:
+        data_dict[variable] = for_ragged.loc[:, variable].values
+        data_dict[variable] = data_dict[variable].reshape((len(<a id="change">data_dict[variable]</a>), 1))
+    target = for_ragged.loc[:, target_variable].values
+    target = target.reshape((len(target), 1))
+    for_ragged_dataset = np.hstack(([data_dict[k] for k in data_dict] + [target]))</code></pre><h3>After Change</h3><pre><code class='java'>
+    for col in rawdata.columns[rawdata.columns != target_variable]: &#47&#47 leave target as NA
+        &#47&#47 ragged edges
+        if arma_full_df is not None:
+            rawdata[col] = <a id="change">ragged_fill_series(</a>rawdata[col]<a id="change">, function=fill_ragged_edges, est_series=fill_na_df[col], arma_full_series=arma_full_df[col])</a>
+        else:
+            rawdata[col] = ragged_fill_series(rawdata[col], function=fill_ragged_edges, est_series=fill_na_df[col])
+        
+        &#47&#47 within-series missing
+        rawdata[col] = rawdata[col].fillna(fill_na_func(fill_na_df[col]))
+    
+    &#47&#47 drop any rows still with missing X data, in case fill_na_func doesn&quott get full coverage
+    rawdata = rawdata.loc[rawdata.loc[:,variables].dropna().index, :].reset_index(drop=True)
+    for_ragged = for_ragged.loc[rawdata.loc[:,variables].dropna().index, :].reset_index(drop=True)
+    
+    &#47&#47 returning array, target variable at the end
+    def order_dataset(rawdata, variables, target_variable):
+        data_dict = {}
+        for variable in variables:
+            data_dict[variable] = rawdata.loc[:, variable].values
+            data_dict[variable] = data_dict[variable].reshape((len(data_dict[variable]), 1))
+        target = rawdata.loc[:, target_variable].values
+        target = target.reshape((len(target), 1))
+        dataset = np.hstack(([data_dict[k] for k in data_dict] + [target]))
+        return dataset
+    
+    &#47&#47 final datasets
+    dataset = order_dataset(rawdata, variables, target_variable)
+    for_ragged_dataset<a id="change"> = </a>order_dataset(for_ragged, variables, target_variable)
+    if arma_full_df is not None:
+        for_arma_full = order_dataset(convert_float(arma_full_df), variables, target_variable)
+    else:</code></pre>

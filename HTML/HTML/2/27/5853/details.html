@@ -1,0 +1,286 @@
+<html><h3>Pattern ID :5853
+</h3><img src='20709163.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+def run_joint_q(config_dict, common_config, env_dict, stop):
+    algorithm = config_dict["algorithm"]
+    episode_limit = env_dict["episode_limit"]
+    train_batch_episode = <a id="change">config_dict["algo_args"]</a>["batch_episode"]
+    lr = <a id="change">config_dict["algo_args"]</a>["lr"]
+    buffer_size = <a id="change">config_dict["algo_args"]</a>["buffer_size"]
+    target_network_update_frequency = <a id="change">config_dict["algo_args"]</a>["target_network_update_freq"]
+    final_epsilon = <a id="change">config_dict["algo_args"]</a>["final_epsilon"]
+    epsilon_timesteps = config_dict["algo_args"]["epsilon_timesteps"]
+    reward_standardize = <a id="change">config_dict["algo_args"]</a>["reward_standardize"]
+    optimizer = <a id="change">config_dict["algo_args"]</a>["optimizer"]
+
+    mixer_dict = {
+        "qmix": "qmix",</code></pre><h3>After Change</h3><pre><code class='java'>
+
+def run_joint_q(config_dict, common_config, env_dict, stop):
+
+    _param<a id="change"> = </a><a id="change">AlgVar(config_dict</a><a id="change">)</a>
+
+    algorithm = config_dict["algorithm"]
+    episode_limit = env_dict["episode_limit"]
+    train_batch_episode = _param["batch_episode"]
+    lr = _param["lr"]
+    buffer_size = _param["buffer_size"]
+    target_network_update_frequency = _param["target_network_update_freq"]
+    final_epsilon = _param["final_epsilon"]
+    epsilon_timesteps = _param["epsilon_timesteps"]
+    reward_standardize = _param["reward_standardize"]
+    optimizer = _param["optimizer"]
+
+    mixer_dict = {
+        "qmix": "qmix",
+        "vdn": "vdn",
+        "iql": None
+    }
+
+    config = {
+        "model": {
+            "max_seq_len": episode_limit,  &#47&#47 dynamic
+            "custom_model_config": merge_dicts(config_dict, env_dict),
+        },
+    }
+
+    config.update(common_config)
+
+    JointQ_Config.update(
+        {
+            "rollout_fragment_length": 1,
+            "buffer_size": buffer_size * episode_limit,  &#47&#47 in timesteps
+            "train_batch_size": train_batch_episode,  &#47&#47 in sequence
+            "target_network_update_freq": episode_limit * target_network_update_frequency,  &#47&#47 in timesteps
+            "learning_starts": episode_limit * train_batch_episode,
+            "lr": lr,  &#47&#47 default
+            "exploration_config": {
+                "type": "EpsilonGreedy",
+                "initial_epsilon": 1.0,
+                "final_epsilon": final_epsilon,
+                "epsilon_timesteps": epsilon_timesteps,
+            },
+            "mixer": mixer_dict[algorithm]
+        })
+
+    JointQ_Config["reward_standardize"] = reward_standardize  &#47&#47 this may affect the final performance if you turn it on
+    JointQ_Config["optimizer"] = optimizer
+    JointQ_Config["training_intensity"] = None
+
+    Trainer = JointQTrainer.with_updates(
+        name=algorithm.upper(),
+        default_config=JointQ_Config
+    )
+
+    map_name = <a id="change">config_dict["env_args"]["map_name"]</a>
+    arch<a id="change"> = config_dict["model_arch_args"]["core_arch"]</a>
+    RUNNING_NAME<a id="change"> = &quot_&quot</a><a id="change">.join([</a>algorithm, arch, map_name<a id="change"></a>]<a id="change">)</a>
+
+    results = tune.run(Trainer,
+                       name=RUNNING_NAME,
+                       stop=stop,</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 17</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/replicable-marl/marllib/commit/9e811be12c5306ed56bbf16702c6b93ffc628e03#diff-a05316bc127df6d66c47043e5464c73947414774f1edcac1fcd21576ce7f5b40L20' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 20709163</div><div id='project'> Project Name: replicable-marl/marllib</div><div id='commit'> Commit Name: 9e811be12c5306ed56bbf16702c6b93ffc628e03</div><div id='time'> Time: 2022-06-13</div><div id='author'> Author: minchiuan@zju.edu.cn</div><div id='file'> File Name: marl/algos/scripts/vdn_qmix_iql.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: run_joint_q(4)</div><div id='n_method'> N Method Name: run_joint_q(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: marl/algos/scripts/vdn_qmix_iql.py</div><div id='n_file'> N File Name: marl/algos/scripts/vdn_qmix_iql.py</div><div id='m_start'> M Start Line: 20</div><div id='m_end'> M End Line: 76</div><div id='n_start'> N Start Line: 20</div><div id='n_end'> N End Line: 83</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    for bug mentioned https://github.com/ray-project/ray/pull/20743
+    make sure sgd_minibatch_size &gt; max_seq_len
+    
+    train_batch_size = <a id="change">config_dict["algo_args"]</a>["batch_episode"] * env_dict["episode_limit"]
+    sgd_minibatch_size = train_batch_size
+    episode_limit = env_dict["episode_limit"]
+    while sgd_minibatch_size &lt; episode_limit:
+        sgd_minibatch_size *= 2
+
+    algorithm = config_dict["algorithm"]
+    batch_mode = <a id="change">config_dict["algo_args"]</a>["batch_mode"]
+    lr = <a id="change">config_dict["algo_args"]</a>["lr"]
+    iteration = <a id="change">config_dict["algo_args"]</a>["iteration"]
+    clip_param = <a id="change">config_dict["algo_args"]</a>["clip_param"]
+    vf_clip_param = <a id="change">config_dict["algo_args"]</a>["vf_clip_param"]
+    entropy_coeff = <a id="change">config_dict["algo_args"]</a>["entropy_coeff"]
+
+    config = {
+        "batch_mode": batch_mode,</code></pre><h3>After Change</h3><pre><code class='java'>
+    for bug mentioned https://github.com/ray-project/ray/pull/20743
+    make sure sgd_minibatch_size &gt; max_seq_len
+    
+    _param<a id="change"> = </a><a id="change">AlgVar(</a>config_dict<a id="change">)</a>
+
+    train_batch_size = _param["batch_episode"] * env_dict["episode_limit"]
+    sgd_minibatch_size = train_batch_size
+    episode_limit = env_dict["episode_limit"]
+    while sgd_minibatch_size &lt; episode_limit:
+        sgd_minibatch_size *= 2
+
+    algorithm = config_dict["algorithm"]
+    batch_mode = _param["batch_mode"]
+    lr = _param["lr"]
+    iteration = _param["iteration"]
+    clip_param = _param["clip_param"]
+    vf_clip_param = _param["vf_clip_param"]
+    entropy_coeff = _param["entropy_coeff"]
+
+    config = {
+        "batch_mode": batch_mode,
+        "train_batch_size": train_batch_size,
+        "sgd_minibatch_size": sgd_minibatch_size,
+        "lr": lr,
+        "entropy_coeff": entropy_coeff,
+        "num_sgd_iter": iteration,
+        "clip_param": clip_param,
+        "vf_clip_param": vf_clip_param,  &#47&#47 very sensitive, depends on the scale of the rewards
+        "model": {
+            "custom_model": "Value_Decomposition_Model",
+            "max_seq_len": episode_limit,
+            "custom_model_config": merge_dicts(config_dict, env_dict),
+        },
+    }
+    config.update(common_config)
+
+    map_name = <a id="change">config_dict["env_args"]["map_name"]</a>
+    arch<a id="change"> = config_dict["model_arch_args"]["core_arch"]</a>
+    RUNNING_NAME<a id="change"> = &quot_&quot</a><a id="change">.join([</a>algorithm, arch, map_name<a id="change"></a>]<a id="change">)</a>
+
+    results = tune.run(VDPPOTrainer,
+                       name=RUNNING_NAME,
+                       stop=stop,</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/replicable-marl/marllib/commit/9e811be12c5306ed56bbf16702c6b93ffc628e03#diff-7b0ca80dd8cb08be1e42b860a76919061140399350baffa6f24cbebb563c3543L7' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 20709162</div><div id='project'> Project Name: replicable-marl/marllib</div><div id='commit'> Commit Name: 9e811be12c5306ed56bbf16702c6b93ffc628e03</div><div id='time'> Time: 2022-06-13</div><div id='author'> Author: minchiuan@zju.edu.cn</div><div id='file'> File Name: marl/algos/scripts/vdppo.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: run_vdppo(4)</div><div id='n_method'> N Method Name: run_vdppo(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: marl/algos/scripts/vdppo.py</div><div id='n_file'> N File Name: marl/algos/scripts/vdppo.py</div><div id='m_start'> M Start Line: 13</div><div id='m_end'> M End Line: 50</div><div id='n_start'> N Start Line: 14</div><div id='n_end'> N End Line: 56</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+def run_joint_q(config_dict, common_config, env_dict, stop):
+    algorithm = config_dict["algorithm"]
+    episode_limit = env_dict["episode_limit"]
+    train_batch_episode = <a id="change">config_dict["algo_args"]</a>["batch_episode"]
+    lr = <a id="change">config_dict["algo_args"]</a>["lr"]
+    buffer_size = <a id="change">config_dict["algo_args"]</a>["buffer_size"]
+    target_network_update_frequency = <a id="change">config_dict["algo_args"]</a>["target_network_update_freq"]
+    final_epsilon = <a id="change">config_dict["algo_args"]</a>["final_epsilon"]
+    epsilon_timesteps = <a id="change">config_dict["algo_args"]</a>["epsilon_timesteps"]
+    reward_standardize = config_dict["algo_args"]["reward_standardize"]
+    optimizer = <a id="change">config_dict["algo_args"]</a>["optimizer"]
+
+    mixer_dict = {
+        "qmix": "qmix",</code></pre><h3>After Change</h3><pre><code class='java'>
+
+def run_joint_q(config_dict, common_config, env_dict, stop):
+
+    _param<a id="change"> = </a><a id="change">AlgVar(</a>config_dict<a id="change">)</a>
+
+    algorithm = config_dict["algorithm"]
+    episode_limit = env_dict["episode_limit"]
+    train_batch_episode = _param["batch_episode"]
+    lr = _param["lr"]
+    buffer_size = _param["buffer_size"]
+    target_network_update_frequency = _param["target_network_update_freq"]
+    final_epsilon = _param["final_epsilon"]
+    epsilon_timesteps = _param["epsilon_timesteps"]
+    reward_standardize = _param["reward_standardize"]
+    optimizer = _param["optimizer"]
+
+    mixer_dict = {
+        "qmix": "qmix",
+        "vdn": "vdn",
+        "iql": None
+    }
+
+    config = {
+        "model": {
+            "max_seq_len": episode_limit,  &#47&#47 dynamic
+            "custom_model_config": merge_dicts(config_dict, env_dict),
+        },
+    }
+
+    config.update(common_config)
+
+    JointQ_Config.update(
+        {
+            "rollout_fragment_length": 1,
+            "buffer_size": buffer_size * episode_limit,  &#47&#47 in timesteps
+            "train_batch_size": train_batch_episode,  &#47&#47 in sequence
+            "target_network_update_freq": episode_limit * target_network_update_frequency,  &#47&#47 in timesteps
+            "learning_starts": episode_limit * train_batch_episode,
+            "lr": lr,  &#47&#47 default
+            "exploration_config": {
+                "type": "EpsilonGreedy",
+                "initial_epsilon": 1.0,
+                "final_epsilon": final_epsilon,
+                "epsilon_timesteps": epsilon_timesteps,
+            },
+            "mixer": mixer_dict[algorithm]
+        })
+
+    JointQ_Config["reward_standardize"] = reward_standardize  &#47&#47 this may affect the final performance if you turn it on
+    JointQ_Config["optimizer"] = optimizer
+    JointQ_Config["training_intensity"] = None
+
+    Trainer = JointQTrainer.with_updates(
+        name=algorithm.upper(),
+        default_config=JointQ_Config
+    )
+
+    map_name = <a id="change">config_dict["env_args"]["map_name"]</a>
+    arch<a id="change"> = config_dict["model_arch_args"]["core_arch"]</a>
+    RUNNING_NAME<a id="change"> = &quot_&quot</a><a id="change">.join([</a>algorithm, arch, map_name<a id="change"></a>]<a id="change">)</a>
+
+    results = tune.run(Trainer,
+                       name=RUNNING_NAME,
+                       stop=stop,</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/replicable-marl/marllib/commit/9e811be12c5306ed56bbf16702c6b93ffc628e03#diff-a05316bc127df6d66c47043e5464c73947414774f1edcac1fcd21576ce7f5b40L17' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 20709161</div><div id='project'> Project Name: replicable-marl/marllib</div><div id='commit'> Commit Name: 9e811be12c5306ed56bbf16702c6b93ffc628e03</div><div id='time'> Time: 2022-06-13</div><div id='author'> Author: minchiuan@zju.edu.cn</div><div id='file'> File Name: marl/algos/scripts/vdn_qmix_iql.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: run_joint_q(4)</div><div id='n_method'> N Method Name: run_joint_q(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: marl/algos/scripts/vdn_qmix_iql.py</div><div id='n_file'> N File Name: marl/algos/scripts/vdn_qmix_iql.py</div><div id='m_start'> M Start Line: 20</div><div id='m_end'> M End Line: 76</div><div id='n_start'> N Start Line: 20</div><div id='n_end'> N End Line: 83</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    for bug mentioned https://github.com/ray-project/ray/pull/20743
+    make sure sgd_minibatch_size &gt; max_seq_len
+    
+    train_batch_size = <a id="change">config_dict["algo_args"]</a>["batch_episode"] * env_dict["episode_limit"]
+    sgd_minibatch_size = train_batch_size
+    episode_limit = env_dict["episode_limit"]
+    while sgd_minibatch_size &lt; episode_limit:
+        sgd_minibatch_size *= 2
+
+    algorithm = config_dict["algorithm"]
+    batch_mode = <a id="change">config_dict["algo_args"]</a>["batch_mode"]
+    lr = <a id="change">config_dict["algo_args"]</a>["lr"]
+    iteration = <a id="change">config_dict["algo_args"]</a>["iteration"]
+    clip_param = <a id="change">config_dict["algo_args"]</a>["clip_param"]
+    vf_clip_param = <a id="change">config_dict["algo_args"]</a>["vf_clip_param"]
+    entropy_coeff = <a id="change">config_dict["algo_args"]</a>["entropy_coeff"]
+
+    config = {
+        "batch_mode": batch_mode,</code></pre><h3>After Change</h3><pre><code class='java'>
+    make sure sgd_minibatch_size &gt; max_seq_len
+    
+
+    _param<a id="change"> = </a><a id="change">AlgVar(</a>config_dict<a id="change">)</a>
+
+    train_batch_size = _param["batch_episode"] * env_dict["episode_limit"]
+    sgd_minibatch_size = train_batch_size
+    episode_limit = env_dict["episode_limit"]
+    while sgd_minibatch_size &lt; episode_limit:
+        sgd_minibatch_size *= 2
+
+    batch_mode = _param["batch_mode"]
+    lr = _param["lr"]
+    iteration = _param["iteration"]
+    clip_param = _param["clip_param"]
+    vf_clip_param = _param["vf_clip_param"]
+    entropy_coeff = _param["entropy_coeff"]
+
+    config = {
+        "batch_mode": batch_mode,
+        "train_batch_size": train_batch_size,
+        "sgd_minibatch_size": sgd_minibatch_size,
+        "lr": lr,
+        "entropy_coeff": entropy_coeff,
+        "num_sgd_iter": iteration,
+        "clip_param": clip_param,
+        "vf_clip_param": vf_clip_param,  &#47&#47 very sensitive, depends on the scale of the rewards
+        "model": {
+            "custom_model": "Base_Model",
+            "max_seq_len": episode_limit,
+            "custom_model_config": merge_dicts(config_dict, env_dict),
+        },
+    }
+
+    config.update(common_config)
+
+    algorithm = config_dict["algorithm"]
+    map_name = <a id="change">config_dict["env_args"]["map_name"]</a>
+    arch<a id="change"> = config_dict["model_arch_args"]["core_arch"]</a>
+    RUNNING_NAME<a id="change"> = &quot_&quot</a><a id="change">.join([</a>algorithm, arch, map_name<a id="change"></a>]<a id="change">)</a>
+
+    results = tune.run(
+        algorithm.upper(),
+        name=RUNNING_NAME,</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/replicable-marl/marllib/commit/9e811be12c5306ed56bbf16702c6b93ffc628e03#diff-f53fbb84f91c809fd6c05d1336b683978910c09ab5ba184ed46c258affff253eL7' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 20709143</div><div id='project'> Project Name: replicable-marl/marllib</div><div id='commit'> Commit Name: 9e811be12c5306ed56bbf16702c6b93ffc628e03</div><div id='time'> Time: 2022-06-13</div><div id='author'> Author: minchiuan@zju.edu.cn</div><div id='file'> File Name: marl/algos/scripts/ppo.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: run_ppo(4)</div><div id='n_method'> N Method Name: run_ppo(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: marl/algos/scripts/ppo.py</div><div id='n_file'> N File Name: marl/algos/scripts/ppo.py</div><div id='m_start'> M Start Line: 12</div><div id='m_end'> M End Line: 50</div><div id='n_start'> N Start Line: 14</div><div id='n_end'> N End Line: 58</div><BR>

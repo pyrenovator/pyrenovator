@@ -1,0 +1,52 @@
+<html><h3>Pattern ID :26264
+</h3><img src='79029173.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        del g
+
+        &#47&#47 Wait for next if appropriate
+        <a id="change">if </a>((not recved_all) and
+            (batch_idx<a id="change"> - 1 + </a>bwd_recv_buffers.max_buffers &lt; num_batches)):
+            bwd_recv_buffers.recv_next(batch_idx - 1)
+
+        if do_step:</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        self.partition.recompute(batch_idx)
+        g = self.comm_handler.wait_recv_gradients()
+        <a id="change">self.comm_handler.post_recv_gradients(</a>batch_idx, num_batches<a id="change">)</a>
+
+        &#47&#47 Allow skiping steps (Gradient aggregation)
+        old_lrs = None
+        do_step = self.should_do_step(batch_idx)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/saareliad/ftpipe/commit/d920c1dcec233f6797e5a8d616826e38e4063e34#diff-5e076251e3138c824f1e98c9223b2f4507d35059d327da1d43d1ec4e31c68bd3L517' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 79029173</div><div id='project'> Project Name: saareliad/ftpipe</div><div id='commit'> Commit Name: d920c1dcec233f6797e5a8d616826e38e4063e34</div><div id='time'> Time: 2020-05-21</div><div id='author'> Author: saareliad@campus.technion.ac.il</div><div id='file'> File Name: pipeline/partition_manager.py</div><div id='m_class'> M Class Name: SinglePartitionManager</div><div id='n_method'> N Class Name: SinglePartitionManager</div><div id='m_method'> M Method Name: run_batch_backward(3)</div><div id='n_method'> N Method Name: run_batch_backward(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: pipeline/partition_manager.py</div><div id='n_file'> N File Name: pipeline/partition_manager.py</div><div id='m_start'> M Start Line: 729</div><div id='m_end'> M End Line: 780</div><div id='n_start'> N Start Line: 517</div><div id='n_end'> N End Line: 527</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        del g
+
+        &#47&#47 Wait for next if appropriate
+        <a id="change">if </a>((not recved_all) and
+            (batch_idx<a id="change"> - 1 + </a>bwd_recv_buffers.max_buffers &lt; num_batches)):
+            bwd_recv_buffers.recv_next(batch_idx - 1)
+
+        if do_step:</code></pre><h3>After Change</h3><pre><code class='java'>
+        if not is_last_micro_batch:
+            self.partition.recompute(batch_idx)
+        g = self.comm_handler.wait_recv_gradients()
+        <a id="change">self.comm_handler.post_recv_gradients(</a>batch_idx, num_batches<a id="change">)</a>
+
+        &#47&#47 Compute gradients
+        if (not do_step) and self.is_replicated:
+            with self.backward_nosync_context_manager():</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/saareliad/ftpipe/commit/d920c1dcec233f6797e5a8d616826e38e4063e34#diff-5e076251e3138c824f1e98c9223b2f4507d35059d327da1d43d1ec4e31c68bd3L1141' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 79029175</div><div id='project'> Project Name: saareliad/ftpipe</div><div id='commit'> Commit Name: d920c1dcec233f6797e5a8d616826e38e4063e34</div><div id='time'> Time: 2020-05-21</div><div id='author'> Author: saareliad@campus.technion.ac.il</div><div id='file'> File Name: pipeline/partition_manager.py</div><div id='m_class'> M Class Name: GPipePartitionManager</div><div id='n_method'> N Class Name: GPipePartitionManager</div><div id='m_method'> M Method Name: run_batch_backward(3)</div><div id='n_method'> N Method Name: run_batch_backward(3)</div><div id='m_parent_class'> M Parent Class: SinglePartitionManager</div><div id='n_parent_class'> N Parent Class: SinglePartitionManager</div><div id='m_file'> M File Name: pipeline/partition_manager.py</div><div id='n_file'> N File Name: pipeline/partition_manager.py</div><div id='m_start'> M Start Line: 1147</div><div id='m_end'> M End Line: 1193</div><div id='n_start'> N Start Line: 933</div><div id='n_end'> N End Line: 939</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            if self.gap_aware_just_loss and self.weight_stasher:
+                weight_stasher.pop_stashed_buff(batch_idx)
+
+        <a id="change">if not (self.is_first_partition)</a>:
+            request_objects.result()
+        return request_objects
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        self.partition.recompute(batch_idx)
+        &#47&#47 NOTE: in MPI version there was hacky zero and sync here
+        g = self.comm_handler.wait_recv_gradients(batch_idx, last_due_end)
+        <a id="change">self.comm_handler.post_recv_gradients(</a>batch_idx, num_batches<a id="change">)</a>
+
+        &#47&#47 Allow skiping steps (Gradient aggregation)
+        old_lrs = None
+        do_step = self.should_do_step(batch_idx)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/saareliad/ftpipe/commit/8cecdc492a71696ab0f9ab97babd670e9c105270#diff-74ec6423d3af736bf29d69e34554c9070d123eff7f38f0e0e092aa793a433319L450' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 79029179</div><div id='project'> Project Name: saareliad/ftpipe</div><div id='commit'> Commit Name: 8cecdc492a71696ab0f9ab97babd670e9c105270</div><div id='time'> Time: 2020-05-26</div><div id='author'> Author: saareliad@campus.technion.ac.il</div><div id='file'> File Name: pipeline/mp_partition_manager.py</div><div id='m_class'> M Class Name: SinglePartitionManager</div><div id='n_method'> N Class Name: SinglePartitionManager</div><div id='m_method'> M Method Name: run_batch_backward(3)</div><div id='n_method'> N Method Name: run_batch_backward(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: pipeline/mp_partition_manager.py</div><div id='n_file'> N File Name: pipeline/mp_partition_manager.py</div><div id='m_start'> M Start Line: 482</div><div id='m_end'> M End Line: 560</div><div id='n_start'> N Start Line: 468</div><div id='n_end'> N End Line: 528</div><BR>

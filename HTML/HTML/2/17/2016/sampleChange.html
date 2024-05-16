@@ -1,0 +1,64 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    no_prox: bool,
+    clip_global_grad_norm: Tensor,
+):
+    copy_grads<a id="change"> = </a><a id="change">[]</a>
+    for i, param in enumerate(params):
+        grad = grads[i]
+        exp_avg = exp_avgs[i]
+        exp_avg_sq = exp_avg_sqs[i]
+        exp_avg_diff = exp_avg_diffs[i]
+        pre_grad = pre_grads[i]
+
+        grad = grad.mul_(clip_global_grad_norm)
+        copy_grads.append(grad.clone())
+        
+        diff = grad - pre_grad
+        update = grad + beta2 * diff
+        
+        exp_avg.mul_(beta1).add_(grad, alpha=1 - beta1)  &#47&#47 m_t
+        exp_avg_diff.mul_(beta2).add_(diff, alpha=1 - beta2)  &#47&#47 diff_t
+        exp_avg_sq.mul_(beta3).addcmul_(update, update, value=1 - beta3)  &#47&#47 n_t
+
+        denom = ((exp_avg_sq).sqrt() / bias_correction3_sqrt).add_(eps)
+        update = ((exp_avg / bias_correction1 + beta2 * exp_avg_diff / bias_correction2)).div_(denom)
+
+        if no_prox:
+            param.mul_(1 - lr * weight_decay)
+            param.add_(update, alpha=-lr)
+        else:
+            param.add_(update, alpha=-lr)
+            param.div_(1 + lr * weight_decay)
+    <a id="change">return </a>copy_grads
+
+def _multi_tensor_adan(
+    params: List[Tensor],</code></pre><h3>After Change</h3><pre><code class='java'>
+        exp_avg_diff.mul_(beta2).add_(neg_grad_or_diff,
+                                      alpha=1 - beta2)  &#47&#47 diff_t
+
+        <a id="change">neg_grad_or_diff.mul_(beta2).add_(grad</a><a id="change">)</a>
+        exp_avg_sq.mul_(beta3).addcmul_(neg_grad_or_diff,
+                                        neg_grad_or_diff,
+                                        value=1 - beta3)  &#47&#47 n_t
+
+        denom = ((exp_avg_sq).sqrt() / bias_correction3_sqrt).add_(eps)
+        step_size_diff<a id="change"> = lr</a><a id="change"> * beta2 / </a>bias_correction2
+        step_size = <a id="change">lr</a><a id="change"> / </a>bias_correction1
+
+        if no_prox:
+            param.mul_(1 - lr * weight_decay)
+            param.addcdiv_(exp_avg, denom, value=-step_size)
+            param.addcdiv_(exp_avg_diff, denom, value=-step_size_diff)
+        else:
+            <a id="change">param.addcdiv_(</a>exp_avg, denom<a id="change">, value=-step_size)</a>
+            <a id="change">param.addcdiv_(</a>exp_avg_diff, denom<a id="change">, value=-step_size_diff)</a>
+            param.div_(1 + lr * weight_decay)
+
+        <a id="change">neg_grad_or_diff.zero_().add_(grad</a><a id="change">, alpha=-1.0)</a>
+
+
+def _multi_tensor_adan(
+    params: List[Tensor],</code></pre>

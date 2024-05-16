@@ -1,0 +1,556 @@
+<html><h3>Pattern ID :13175
+</h3><img src='44563111.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        os.chdir("../") &#47&#47 back to the original directory
+
+        print("Loss: {:.3f}, PESQ: {:.3f}".format(test_loss, test_pesq))
+        <a id="change">print(</a><a id="change">"Evaluation of PESQ returns error {} times.".format(</a>n_pesq_error<a id="change">))</a>
+
+class AnchoredAttractorTrainer(AttractorTrainer):
+    def __init__(self, model, loader, criterion, optimizer, args):
+        super().__init__(model, loader, criterion, optimizer, args)</code></pre><h3>After Change</h3><pre><code class='java'>
+        n_sources = self.n_sources
+
+        test_loss = 0
+        test_sdr_improvement<a id="change"> = 0</a>
+        test_sir_improvement<a id="change"> = 0</a>
+        test_sar<a id="change"> = 0</a>
+        test_pesq = 0
+        n_pesq_error = 0
+        n_test = len(self.loader.dataset)
+
+        tmp_dir = os.path.join(os.getcwd(), &quottmp&quot)
+        os.makedirs(tmp_dir, exist_ok=True)
+        shutil.copy(&quot./PESQ&quot, os.path.join(tmp_dir, &quotPESQ&quot))
+        os.chdir(tmp_dir)
+
+        with torch.no_grad():
+            for idx, (mixture, sources, ideal_mask, threshold_weight, T, segment_IDs) in enumerate(self.loader):
+                
+                    mixture (1, 1, n_bins, n_frames)
+                    sources (1, n_sources, n_bins, n_frames)
+                    assignment (1, n_sources, n_bins, n_frames)
+                    threshold_weight (1, n_bins, n_frames)
+                    T (1,)
+                
+                if self.use_cuda:
+                    mixture = mixture.cuda()
+                    sources = sources.cuda()
+                    ideal_mask = ideal_mask.cuda()
+                    threshold_weight = threshold_weight.cuda()
+                
+                mixture_amplitude = torch.abs(mixture) &#47&#47 -&gt; (1, 1, n_bins, n_frames)
+                sources_amplitude = torch.abs(sources)
+                
+                output = self.model(mixture_amplitude, assignment=None, threshold_weight=threshold_weight, n_sources=n_sources)
+                loss, perm_idx = self.pit_criterion(output, sources_amplitude, batch_mean=False)
+                loss = loss.sum(dim=0)
+                
+                mixture = mixture[0].cpu()
+                sources = sources[0].cpu()
+    
+                mixture_amplitude = mixture_amplitude[0].cpu() &#47&#47 -&gt; (1, n_bins, n_frames)
+                estimated_sources_amplitude = output[0].cpu() &#47&#47 -&gt; (n_sources, n_bins, n_frames)
+                ratio = estimated_sources_amplitude / mixture_amplitude
+                estimated_sources = ratio * mixture &#47&#47 -&gt; (n_sources, n_bins, n_frames)
+                
+                perm_idx = perm_idx[0] &#47&#47 -&gt; (n_sources,)
+                T = T[0]  &#47&#47 -&gt; &lt;int&gt;
+                segment_IDs = segment_IDs[0] &#47&#47 -&gt; &lt;str&gt;
+                mixture = torch.istft(mixture, n_fft=self.fft_size, hop_length=self.hop_size, normalized=self.normalize, window=self.window, length=T).squeeze(dim=0) &#47&#47 -&gt; (T,)
+                sources = torch.istft(sources, n_fft=self.fft_size, hop_length=self.hop_size, normalized=self.normalize, window=self.window, length=T) &#47&#47 -&gt; (n_sources, T)
+                estimated_sources = torch.istft(estimated_sources, n_fft=self.fft_size, hop_length=self.hop_size, normalized=self.normalize, window=self.window, length=T) &#47&#47 -&gt; (n_sources, T)
+                
+                repeated_mixture = torch.tile(mixture, (self.n_sources, 1))
+                <a id="change">result_estimated</a><a id="change"> = bss_eval_sources(
+                    reference_sources=sources.numpy(),
+                    estimated_sources=estimated_sources.numpy()
+                )</a>
+                <a id="change">result_mixed = </a><a id="change">bss_eval_sources(
+                    reference_sources=sources.numpy(),
+                    estimated_sources=repeated_mixture.numpy()
+                )</a>
+        
+                sdr_improvement<a id="change"> = np</a><a id="change">.mean(result_estimated[0]</a><a id="change"> - result_mixed[0])</a>
+                sir_improvement<a id="change"> = np</a><a id="change">.mean(result_estimated</a><a id="change">[1]</a><a id="change"> - result_mixed[1])</a>
+                sar<a id="change"> = np</a><a id="change">.mean(result_estimated</a><a id="change">[2])</a>
+
+                norm = torch.abs(mixture).max()
+                mixture /= norm
+                mixture_ID = segment_IDs
+
+                &#47&#47 Generate random number temporary wav file.
+                random_ID = str(uuid.uuid4())
+                    
+                if idx &lt; 10 and self.out_dir is not None:
+                    mixture_path = os.path.join(self.out_dir, "{}.wav".format(mixture_ID))
+                    signal = mixture.unsqueeze(dim=0) if mixture.dim() == 1 else mixture
+                    torchaudio.save(mixture_path, signal, sample_rate=self.sr, bits_per_sample=BITS_PER_SAMPLE_WSJ0)
+                    
+                for order_idx in range(self.n_sources):
+                    source, estimated_source = sources[order_idx], estimated_sources[perm_idx[order_idx]]
+                    
+                    &#47&#47 Target
+                    norm = torch.abs(source).max()
+                    source /= norm
+                    if idx &lt; 10 and  self.out_dir is not None:
+                        source_path = os.path.join(self.out_dir, "{}_{}-target.wav".format(mixture_ID, order_idx + 1))
+                        signal = source.unsqueeze(dim=0) if source.dim() == 1 else source
+                        torchaudio.save(source_path, signal, sample_rate=self.sr, bits_per_sample=BITS_PER_SAMPLE_WSJ0)
+                    source_path = "tmp-{}-target_{}.wav".format(order_idx + 1, random_ID)
+                    signal = source.unsqueeze(dim=0) if source.dim() == 1 else source
+                    torchaudio.save(source_path, signal, sample_rate=self.sr, bits_per_sample=BITS_PER_SAMPLE_WSJ0)
+
+                    &#47&#47 Estimated source
+                    norm = torch.abs(estimated_source).max()
+                    estimated_source /= norm
+                    if idx &lt; 10 and  self.out_dir is not None:
+                        estimated_path = os.path.join(self.out_dir, "{}_{}-estimated.wav".format(mixture_ID, order_idx + 1))
+                        signal = estimated_source.unsqueeze(dim=0) if estimated_source.dim() == 1 else estimated_source
+                        torchaudio.save(estimated_path, signal, sample_rate=self.sr, bits_per_sample=BITS_PER_SAMPLE_WSJ0)
+                    estimated_path = "tmp-{}-estimated_{}.wav".format(order_idx + 1, random_ID)
+                    signal = estimated_source.unsqueeze(dim=0) if estimated_source.dim() == 1 else estimated_source
+                    torchaudio.save(estimated_path, signal, sample_rate=self.sr, bits_per_sample=BITS_PER_SAMPLE_WSJ0)
+                
+                pesq = 0
+                    
+                for source_idx in range(self.n_sources):
+                    source_path = "tmp-{}-target_{}.wav".format(source_idx + 1, random_ID)
+                    estimated_path = "tmp-{}-estimated_{}.wav".format(source_idx + 1, random_ID)
+                    
+                    command = "./PESQ +{} {} {}".format(self.sr, source_path, estimated_path)
+                    command += " | grep Prediction | awk &quot{print $5}&quot"
+                    pesq_output = subprocess.check_output(command, shell=True)
+                    pesq_output = pesq_output.decode().strip()
+
+                    if pesq_output == &quot&quot:
+                        &#47&#47 If processing error occurs in PESQ software, it is regarded as PESQ score is -0.5. (minimum of PESQ)
+                        n_pesq_error += 1
+                        pesq += -0.5
+                    else:
+                        pesq += float(pesq_output)
+                    
+                    subprocess.call("rm {}".format(source_path), shell=True)
+                    subprocess.call("rm {}".format(estimated_path), shell=True)
+                
+                pesq /= self.n_sources
+                print("{}, {:.3f}, {:.3f}".format(mixture_ID, loss.item(), pesq), flush=True)
+                
+                test_loss += loss.item()
+                test_sdr_improvement<a id="change"> += </a>sdr_improvement
+                test_sir_improvement<a id="change"> += </a>sir_improvement
+                test_sar<a id="change"> += </a>sar
+                test_pesq += pesq
+
+        test_loss /= n_test
+        test_sdr_improvement<a id="change"> /= </a>n_test
+        test_sir_improvement<a id="change"> /= </a>n_test
+        test_sar<a id="change"> /= </a>n_test
+        test_pesq /= n_test
+        
+        os.chdir("../") &#47&#47 back to the original directory
+
+        <a id="change">print("Loss: {:.3f}, SDR improvement: {:3f}, SIR improvement: {:3f}, SAR: {:3f}, PESQ: {:.3f}".format(</a>test_loss, test_sdr_improvement, test_sir_improvement, test_sar, test_pesq<a id="change">)</a><a id="change">)</a>
+        print("Evaluation of PESQ returns error {} times".format(n_pesq_error))
+
+class AnchoredAttractorTrainer(AttractorTrainer):
+    def __init__(self, model, loader, criterion, optimizer, args):</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 30</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/tky823/dnn-based_source_separation/commit/df9cdaaad920a180e767526b968ade8b822355f2#diff-d5cb03ca8f1fcaf1e8bc22f5deab4b6231d44a4eba914490ae1f21298075470dL562' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 44563111</div><div id='project'> Project Name: tky823/dnn-based_source_separation</div><div id='commit'> Commit Name: df9cdaaad920a180e767526b968ade8b822355f2</div><div id='time'> Time: 2021-08-09</div><div id='author'> Author: 40362510+tky823@users.noreply.github.com</div><div id='file'> File Name: egs/wsj0-mix/common/src/driver.py</div><div id='m_class'> M Class Name: AttractorTester</div><div id='n_method'> N Class Name: AttractorTester</div><div id='m_method'> M Method Name: run(1)</div><div id='n_method'> N Method Name: run(1)</div><div id='m_parent_class'> M Parent Class: TesterBase</div><div id='n_parent_class'> N Parent Class: TesterBase</div><div id='m_file'> M File Name: egs/wsj0-mix/common/src/driver.py</div><div id='n_file'> N File Name: egs/wsj0-mix/common/src/driver.py</div><div id='m_start'> M Start Line: 564</div><div id='m_end'> M End Line: 683</div><div id='n_start'> N Start Line: 562</div><div id='n_end'> N End Line: 706</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        test_loss_improvement /= n_test
+        test_pesq /= n_test
+            
+        <a id="change">print(</a><a id="change">"Loss: {:.3f}, loss improvement: {:3f}, PESQ: {:.3f}".format(</a>test_loss, test_loss_improvement, test_pesq<a id="change">))</a>
+
+class AttractorTrainer(Trainer):
+    def __init__(self, model, loader, criterion, optimizer, args):
+        self.train_loader, self.valid_loader = loader[&quottrain&quot], loader[&quotvalid&quot]</code></pre><h3>After Change</h3><pre><code class='java'>
+        
+        test_loss = 0
+        test_loss_improvement = 0
+        test_sdr_improvement<a id="change"> = 0</a>
+        test_sir_improvement<a id="change"> = 0</a>
+        test_sar<a id="change"> = 0</a>
+        test_pesq = 0
+        n_test = len(self.loader.dataset)
+
+        print("ID, Loss, Loss improvement, SDR improvement, SIR improvement, SAR, PESQ", flush=True)
+        
+        with torch.no_grad():
+            for idx, (mixture, sources, segment_IDs) in enumerate(self.loader):
+                if self.use_cuda:
+                    mixture = mixture.cuda()
+                    sources = sources.cuda()
+                
+                loss_mixture, _ = self.pit_criterion(mixture, sources, batch_mean=False)
+                loss_mixture = loss_mixture.sum(dim=0)
+                
+                output = self.model(mixture)
+                loss, perm_idx = self.pit_criterion(output, sources, batch_mean=False)
+                loss = loss.sum(dim=0)
+                loss_improvement = loss_mixture.item() - loss.item()
+                
+                mixture = mixture[0].squeeze(dim=0).cpu().numpy() &#47&#47 -&gt; (T,)
+                sources = sources[0].cpu().numpy() &#47&#47 -&gt; (n_sources, T)
+                estimated_sources = output[0].cpu().numpy() &#47&#47 -&gt; (n_sources, T)
+                perm_idx = perm_idx[0] &#47&#47 -&gt; (n_sources,)
+                segment_IDs = segment_IDs[0] &#47&#47 -&gt; (n_sources,)
+
+                repeated_mixture = np.tile(mixture, reps=(self.n_sources, 1))
+                <a id="change">result_estimated</a><a id="change"> = bss_eval_sources(
+                    reference_sources=sources,
+                    estimated_sources=estimated_sources
+                )</a>
+                <a id="change">result_mixed = </a><a id="change">bss_eval_sources(
+                    reference_sources=sources,
+                    estimated_sources=repeated_mixture
+                )</a>
+        
+                sdr_improvement<a id="change"> = </a><a id="change">np.mean(</a><a id="change">result_estimated[0]</a><a id="change"> - result_mixed[0])</a>
+                sir_improvement<a id="change"> = </a><a id="change">np.mean(result_estimated[1]</a><a id="change"> - result_mixed[1])</a>
+                sar<a id="change"> = </a><a id="change">np.mean(</a><a id="change">result_estimated[2])</a>
+                
+                norm = np.abs(mixture).max()
+                mixture /= norm
+                mixture_ID = "+".join(segment_IDs)
+                
+                if idx &lt; 10 and self.out_dir is not None:
+                    mixture_path = os.path.join(self.out_dir, "{}.wav".format(mixture_ID))
+                    write_wav(mixture_path, signal=mixture, sr=self.sr)
+                mixture_path = "tmp-mixture.wav"
+                write_wav(mixture_path, signal=mixture, sr=self.sr)
+                
+                for order_idx in range(self.n_sources):
+                    source, estimated_source = sources[order_idx], estimated_sources[perm_idx[order_idx]]
+                    segment_ID = segment_IDs[order_idx]
+                    
+                    &#47&#47 Target
+                    norm = np.abs(source).max()
+                    source /= norm
+                    if idx &lt; 10 and  self.out_dir is not None:
+                        source_path = os.path.join(self.out_dir, "{}_{}-target.wav".format(mixture_ID, order_idx))
+                        write_wav(source_path, signal=source, sr=self.sr)
+                    source_path = "tmp-{}-target.wav".format(order_idx)
+                    write_wav(source_path, signal=source, sr=self.sr)
+                    
+                    &#47&#47 Estimated source
+                    norm = np.abs(estimated_source).max()
+                    estimated_source /= norm
+                    if idx &lt; 10 and  self.out_dir is not None:
+                        estimated_path = os.path.join(self.out_dir, "{}_{}-estimated.wav".format(mixture_ID, order_idx))
+                        write_wav(estimated_path, signal=estimated_source, sr=self.sr)
+                    estimated_path = "tmp-{}-estimated.wav".format(order_idx)
+                    write_wav(estimated_path, signal=estimated_source, sr=self.sr)
+                
+                pesq = 0
+                
+                for source_idx in range(self.n_sources):
+                    source_path = "tmp-{}-target.wav".format(source_idx)
+                    estimated_path = "tmp-{}-estimated.wav".format(source_idx)
+                    
+                    command = "./PESQ +{} {} {}".format(self.sr, source_path, estimated_path)
+                    command += " | grep Prediction | awk &quot{print $5}&quot"
+                    pesq_output = subprocess.check_output(command, shell=True)
+                    pesq_output = pesq_output.decode().strip()
+                    pesq += float(pesq_output)
+                    
+                    subprocess.call("rm {}".format(source_path), shell=True)
+                    subprocess.call("rm {}".format(estimated_path), shell=True)
+                
+                pesq /= self.n_sources
+                print("{}, {:.3f}, {:.3f}, {:.3f}".format(mixture_ID, loss.item(), loss_improvement, pesq), flush=True)
+                
+                test_loss += loss.item()
+                test_loss_improvement += loss_improvement
+                test_sdr_improvement<a id="change"> += </a>sdr_improvement
+                test_sir_improvement<a id="change"> += </a>sir_improvement
+                test_sar<a id="change"> += </a>sar
+                test_pesq += pesq
+        
+        test_loss /= n_test
+        test_loss_improvement /= n_test
+        test_sdr_improvement<a id="change"> /= </a>n_test
+        test_sir_improvement<a id="change"> /= </a>n_test
+        test_sar<a id="change"> /= </a>n_test
+        test_pesq /= n_test
+            
+        <a id="change">print("Loss: {:.3f}, loss improvement: {:3f}, SDR improvement: {:3f}, SIR improvement: {:3f}, SAR: {:3f}, PESQ: {:.3f}".format(</a>test_loss, test_loss_improvement, test_sdr_improvement, test_sir_improvement, test_sar, test_pesq<a id="change">)</a><a id="change">)</a>
+
+class AttractorTrainer(Trainer):
+    def __init__(self, model, loader, criterion, optimizer, args):
+        self.train_loader, self.valid_loader = loader[&quottrain&quot], loader[&quotvalid&quot]</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/tky823/dnn-based_source_separation/commit/db6ae4406ffc1e5f0b6e7a5930544a09ba8b5106#diff-b61b98e7733d0396b3b1f77244617744f6ae8cc0f81d894ba9279b12993aed7aL242' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 44563110</div><div id='project'> Project Name: tky823/dnn-based_source_separation</div><div id='commit'> Commit Name: db6ae4406ffc1e5f0b6e7a5930544a09ba8b5106</div><div id='time'> Time: 2021-01-15</div><div id='author'> Author: 40362510+tky823@users.noreply.github.com</div><div id='file'> File Name: egs/librispeech/common/src/driver.py</div><div id='m_class'> M Class Name: Tester</div><div id='n_method'> N Class Name: Tester</div><div id='m_method'> M Method Name: run(1)</div><div id='n_method'> N Method Name: run(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: egs/librispeech/common/src/driver.py</div><div id='n_file'> N File Name: egs/librispeech/common/src/driver.py</div><div id='m_start'> M Start Line: 245</div><div id='m_end'> M End Line: 328</div><div id='n_start'> N Start Line: 246</div><div id='n_end'> N End Line: 354</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        
+        os.chdir("../") &#47&#47 back to the original directory
+
+        <a id="change">print(</a><a id="change">"Loss: {:.3f}, PESQ: {:.3f}".format(</a>test_loss, test_pesq<a id="change">))</a>
+        print("Evaluation of PESQ returns error {} times.".format(n_pesq_error))
+
+class AnchoredAttractorTrainer(AttractorTrainer):
+    def __init__(self, model, loader, criterion, optimizer, args):</code></pre><h3>After Change</h3><pre><code class='java'>
+        n_sources = self.n_sources
+
+        test_loss = 0
+        test_sdr_improvement<a id="change"> = 0</a>
+        test_sir_improvement<a id="change"> = 0</a>
+        test_sar<a id="change"> = 0</a>
+        test_pesq = 0
+        n_pesq_error = 0
+        n_test = len(self.loader.dataset)
+
+        tmp_dir = os.path.join(os.getcwd(), &quottmp&quot)
+        os.makedirs(tmp_dir, exist_ok=True)
+        shutil.copy(&quot./PESQ&quot, os.path.join(tmp_dir, &quotPESQ&quot))
+        os.chdir(tmp_dir)
+
+        with torch.no_grad():
+            for idx, (mixture, sources, ideal_mask, threshold_weight, T, segment_IDs) in enumerate(self.loader):
+                
+                    mixture (1, 1, n_bins, n_frames)
+                    sources (1, n_sources, n_bins, n_frames)
+                    assignment (1, n_sources, n_bins, n_frames)
+                    threshold_weight (1, n_bins, n_frames)
+                    T (1,)
+                
+                if self.use_cuda:
+                    mixture = mixture.cuda()
+                    sources = sources.cuda()
+                    ideal_mask = ideal_mask.cuda()
+                    threshold_weight = threshold_weight.cuda()
+                
+                mixture_amplitude = torch.abs(mixture) &#47&#47 -&gt; (1, 1, n_bins, n_frames)
+                sources_amplitude = torch.abs(sources)
+                
+                output = self.model(mixture_amplitude, assignment=None, threshold_weight=threshold_weight, n_sources=n_sources)
+                loss, perm_idx = self.pit_criterion(output, sources_amplitude, batch_mean=False)
+                loss = loss.sum(dim=0)
+                
+                mixture = mixture[0].cpu()
+                sources = sources[0].cpu()
+    
+                mixture_amplitude = mixture_amplitude[0].cpu() &#47&#47 -&gt; (1, n_bins, n_frames)
+                estimated_sources_amplitude = output[0].cpu() &#47&#47 -&gt; (n_sources, n_bins, n_frames)
+                ratio = estimated_sources_amplitude / mixture_amplitude
+                estimated_sources = ratio * mixture &#47&#47 -&gt; (n_sources, n_bins, n_frames)
+                
+                perm_idx = perm_idx[0] &#47&#47 -&gt; (n_sources,)
+                T = T[0]  &#47&#47 -&gt; &lt;int&gt;
+                segment_IDs = segment_IDs[0] &#47&#47 -&gt; &lt;str&gt;
+                mixture = torch.istft(mixture, n_fft=self.fft_size, hop_length=self.hop_size, normalized=self.normalize, window=self.window, length=T).squeeze(dim=0) &#47&#47 -&gt; (T,)
+                sources = torch.istft(sources, n_fft=self.fft_size, hop_length=self.hop_size, normalized=self.normalize, window=self.window, length=T) &#47&#47 -&gt; (n_sources, T)
+                estimated_sources = torch.istft(estimated_sources, n_fft=self.fft_size, hop_length=self.hop_size, normalized=self.normalize, window=self.window, length=T) &#47&#47 -&gt; (n_sources, T)
+                
+                repeated_mixture = torch.tile(mixture, (self.n_sources, 1))
+                <a id="change">result_estimated</a><a id="change"> = bss_eval_sources(
+                    reference_sources=sources.numpy(),
+                    estimated_sources=estimated_sources.numpy()
+                )</a>
+                <a id="change">result_mixed = </a><a id="change">bss_eval_sources(
+                    reference_sources=sources.numpy(),
+                    estimated_sources=repeated_mixture.numpy()
+                )</a>
+        
+                sdr_improvement<a id="change"> = </a><a id="change">np.mean(result_estimated[0]</a><a id="change"> - result_mixed[0])</a>
+                sir_improvement<a id="change"> = </a><a id="change">np.mean(</a><a id="change">result_estimated[1]</a><a id="change"> - result_mixed[1])</a>
+                sar<a id="change"> = </a><a id="change">np.mean(</a><a id="change">result_estimated[2])</a>
+
+                norm = torch.abs(mixture).max()
+                mixture /= norm
+                mixture_ID = segment_IDs
+
+                &#47&#47 Generate random number temporary wav file.
+                random_ID = str(uuid.uuid4())
+                    
+                if idx &lt; 10 and self.out_dir is not None:
+                    mixture_path = os.path.join(self.out_dir, "{}.wav".format(mixture_ID))
+                    signal = mixture.unsqueeze(dim=0) if mixture.dim() == 1 else mixture
+                    torchaudio.save(mixture_path, signal, sample_rate=self.sr, bits_per_sample=BITS_PER_SAMPLE_WSJ0)
+                    
+                for order_idx in range(self.n_sources):
+                    source, estimated_source = sources[order_idx], estimated_sources[perm_idx[order_idx]]
+                    
+                    &#47&#47 Target
+                    norm = torch.abs(source).max()
+                    source /= norm
+                    if idx &lt; 10 and  self.out_dir is not None:
+                        source_path = os.path.join(self.out_dir, "{}_{}-target.wav".format(mixture_ID, order_idx + 1))
+                        signal = source.unsqueeze(dim=0) if source.dim() == 1 else source
+                        torchaudio.save(source_path, signal, sample_rate=self.sr, bits_per_sample=BITS_PER_SAMPLE_WSJ0)
+                    source_path = "tmp-{}-target_{}.wav".format(order_idx + 1, random_ID)
+                    signal = source.unsqueeze(dim=0) if source.dim() == 1 else source
+                    torchaudio.save(source_path, signal, sample_rate=self.sr, bits_per_sample=BITS_PER_SAMPLE_WSJ0)
+
+                    &#47&#47 Estimated source
+                    norm = torch.abs(estimated_source).max()
+                    estimated_source /= norm
+                    if idx &lt; 10 and  self.out_dir is not None:
+                        estimated_path = os.path.join(self.out_dir, "{}_{}-estimated.wav".format(mixture_ID, order_idx + 1))
+                        signal = estimated_source.unsqueeze(dim=0) if estimated_source.dim() == 1 else estimated_source
+                        torchaudio.save(estimated_path, signal, sample_rate=self.sr, bits_per_sample=BITS_PER_SAMPLE_WSJ0)
+                    estimated_path = "tmp-{}-estimated_{}.wav".format(order_idx + 1, random_ID)
+                    signal = estimated_source.unsqueeze(dim=0) if estimated_source.dim() == 1 else estimated_source
+                    torchaudio.save(estimated_path, signal, sample_rate=self.sr, bits_per_sample=BITS_PER_SAMPLE_WSJ0)
+                
+                pesq = 0
+                    
+                for source_idx in range(self.n_sources):
+                    source_path = "tmp-{}-target_{}.wav".format(source_idx + 1, random_ID)
+                    estimated_path = "tmp-{}-estimated_{}.wav".format(source_idx + 1, random_ID)
+                    
+                    command = "./PESQ +{} {} {}".format(self.sr, source_path, estimated_path)
+                    command += " | grep Prediction | awk &quot{print $5}&quot"
+                    pesq_output = subprocess.check_output(command, shell=True)
+                    pesq_output = pesq_output.decode().strip()
+
+                    if pesq_output == &quot&quot:
+                        &#47&#47 If processing error occurs in PESQ software, it is regarded as PESQ score is -0.5. (minimum of PESQ)
+                        n_pesq_error += 1
+                        pesq += -0.5
+                    else:
+                        pesq += float(pesq_output)
+                    
+                    subprocess.call("rm {}".format(source_path), shell=True)
+                    subprocess.call("rm {}".format(estimated_path), shell=True)
+                
+                pesq /= self.n_sources
+                print("{}, {:.3f}, {:.3f}".format(mixture_ID, loss.item(), pesq), flush=True)
+                
+                test_loss += loss.item()
+                test_sdr_improvement<a id="change"> += </a>sdr_improvement
+                test_sir_improvement<a id="change"> += </a>sir_improvement
+                test_sar<a id="change"> += </a>sar
+                test_pesq += pesq
+
+        test_loss /= n_test
+        test_sdr_improvement<a id="change"> /= </a>n_test
+        test_sir_improvement<a id="change"> /= </a>n_test
+        test_sar<a id="change"> /= </a>n_test
+        test_pesq /= n_test
+        
+        os.chdir("../") &#47&#47 back to the original directory
+
+        <a id="change">print("Loss: {:.3f}, SDR improvement: {:3f}, SIR improvement: {:3f}, SAR: {:3f}, PESQ: {:.3f}".format(</a>test_loss, test_sdr_improvement, test_sir_improvement, test_sar, test_pesq<a id="change">)</a><a id="change">)</a>
+        print("Evaluation of PESQ returns error {} times".format(n_pesq_error))
+
+class AnchoredAttractorTrainer(AttractorTrainer):
+    def __init__(self, model, loader, criterion, optimizer, args):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/tky823/dnn-based_source_separation/commit/df9cdaaad920a180e767526b968ade8b822355f2#diff-d5cb03ca8f1fcaf1e8bc22f5deab4b6231d44a4eba914490ae1f21298075470dL561' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 44563109</div><div id='project'> Project Name: tky823/dnn-based_source_separation</div><div id='commit'> Commit Name: df9cdaaad920a180e767526b968ade8b822355f2</div><div id='time'> Time: 2021-08-09</div><div id='author'> Author: 40362510+tky823@users.noreply.github.com</div><div id='file'> File Name: egs/wsj0-mix/common/src/driver.py</div><div id='m_class'> M Class Name: AttractorTester</div><div id='n_method'> N Class Name: AttractorTester</div><div id='m_method'> M Method Name: run(1)</div><div id='n_method'> N Method Name: run(1)</div><div id='m_parent_class'> M Parent Class: TesterBase</div><div id='n_parent_class'> N Parent Class: TesterBase</div><div id='m_file'> M File Name: egs/wsj0-mix/common/src/driver.py</div><div id='n_file'> N File Name: egs/wsj0-mix/common/src/driver.py</div><div id='m_start'> M Start Line: 564</div><div id='m_end'> M End Line: 683</div><div id='n_start'> N Start Line: 562</div><div id='n_end'> N End Line: 706</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        test_loss_improvement /= n_test
+        test_pesq /= n_test
+            
+        <a id="change">print(</a><a id="change">"Loss: {:.3f}, loss improvement: {:3f}, PESQ: {:.3f}".format(</a>test_loss, test_loss_improvement, test_pesq<a id="change">))</a>
+
+class AttractorTrainer(Trainer):
+    def __init__(self, model, loader, criterion, optimizer, args):
+        self.train_loader, self.valid_loader = loader[&quottrain&quot], loader[&quotvalid&quot]</code></pre><h3>After Change</h3><pre><code class='java'>
+        
+        test_loss = 0
+        test_loss_improvement = 0
+        test_sdr_improvement<a id="change"> = 0</a>
+        test_sir_improvement<a id="change"> = 0</a>
+        test_sar<a id="change"> = 0</a>
+        test_pesq = 0
+        n_test = len(self.loader.dataset)
+
+        print("ID, Loss, Loss improvement, PESQ", flush=True)
+        
+        with torch.no_grad():
+            for idx, (mixture, sources, segment_IDs) in enumerate(self.loader):
+                if self.use_cuda:
+                    mixture = mixture.cuda()
+                    sources = sources.cuda()
+                
+                loss_mixture, _ = self.pit_criterion(mixture, sources, batch_mean=False)
+                loss_mixture = loss_mixture.sum(dim=0)
+                
+                output = self.model(mixture)
+                loss, perm_idx = self.pit_criterion(output, sources, batch_mean=False)
+                loss = loss.sum(dim=0)
+                loss_improvement = loss_mixture.item() - loss.item()
+                
+                mixture = mixture[0].squeeze(dim=0).cpu().numpy() &#47&#47 -&gt; (T,)
+                sources = sources[0].cpu().numpy() &#47&#47 -&gt; (n_sources, T)
+                estimated_sources = output[0].cpu().numpy() &#47&#47 -&gt; (n_sources, T)
+                perm_idx = perm_idx[0] &#47&#47 -&gt; (n_sources,)
+                segment_IDs = segment_IDs[0] &#47&#47 -&gt; &lt;str&gt;
+
+                repeated_mixture = np.tile(mixture, reps=(self.n_sources, 1))
+                <a id="change">result_estimated</a><a id="change"> = bss_eval_sources(
+                    reference_sources=sources,
+                    estimated_sources=estimated_sources
+                )</a>
+                <a id="change">result_mixed = </a><a id="change">bss_eval_sources(
+                    reference_sources=sources,
+                    estimated_sources=repeated_mixture
+                )</a>
+        
+                sdr_improvement<a id="change"> = </a><a id="change">np.mean(</a><a id="change">result_estimated[0]</a><a id="change"> - result_mixed[0])</a>
+                sir_improvement<a id="change"> = </a><a id="change">np.mean(result_estimated[1]</a><a id="change"> - result_mixed[1])</a>
+                sar<a id="change"> = </a><a id="change">np.mean(</a><a id="change">result_estimated[2])</a>
+                
+                norm = np.abs(mixture).max()
+                mixture /= norm
+                mixture_ID = segment_IDs
+                
+                if idx &lt; 10 and self.out_dir is not None:
+                    mixture_path = os.path.join(self.out_dir, "{}.wav".format(mixture_ID))
+                    write_wav(mixture_path, signal=mixture, sr=self.sr)
+                mixture_path = "tmp-mixture.wav"
+                write_wav(mixture_path, signal=mixture, sr=self.sr)
+                
+                for order_idx in range(self.n_sources):
+                    source, estimated_source = sources[order_idx], estimated_sources[perm_idx[order_idx]]
+                    
+                    &#47&#47 Target
+                    norm = np.abs(source).max()
+                    source /= norm
+                    if idx &lt; 10 and  self.out_dir is not None:
+                        source_path = os.path.join(self.out_dir, "{}_{}-target.wav".format(mixture_ID, order_idx))
+                        write_wav(source_path, signal=source, sr=self.sr)
+                    source_path = "tmp-{}-target.wav".format(order_idx)
+                    write_wav(source_path, signal=source, sr=self.sr)
+                    
+                    &#47&#47 Estimated source
+                    norm = np.abs(estimated_source).max()
+                    estimated_source /= norm
+                    if idx &lt; 10 and  self.out_dir is not None:
+                        estimated_path = os.path.join(self.out_dir, "{}_{}-estimated.wav".format(mixture_ID, order_idx))
+                        write_wav(estimated_path, signal=estimated_source, sr=self.sr)
+                    estimated_path = "tmp-{}-estimated.wav".format(order_idx)
+                    write_wav(estimated_path, signal=estimated_source, sr=self.sr)
+                
+                pesq = 0
+                
+                for source_idx in range(self.n_sources):
+                    source_path = "tmp-{}-target.wav".format(source_idx)
+                    estimated_path = "tmp-{}-estimated.wav".format(source_idx)
+                    
+                    command = "./PESQ +{} {} {}".format(self.sr, source_path, estimated_path)
+                    command += " | grep Prediction | awk &quot{print $5}&quot"
+                    pesq_output = subprocess.check_output(command, shell=True)
+                    pesq_output = pesq_output.decode().strip()
+                    pesq += float(pesq_output)
+                    
+                    subprocess.call("rm {}".format(source_path), shell=True)
+                    subprocess.call("rm {}".format(estimated_path), shell=True)
+                
+                pesq /= self.n_sources
+                print("{}, {:.3f}, {:.3f}, {:.3f}, {:.3f}, {:.3f}, {:.3f}".format(mixture_ID, loss.item(), loss_improvement, sdr_improvement, sir_improvement, sar, pesq), flush=True)
+                
+                test_loss += loss.item()
+                test_loss_improvement += loss_improvement
+                test_sdr_improvement<a id="change"> += </a>sdr_improvement
+                test_sir_improvement<a id="change"> += </a>sir_improvement
+                test_sar<a id="change"> += </a>sar
+                test_pesq += pesq
+        
+        test_loss /= n_test
+        test_loss_improvement /= n_test
+        test_sdr_improvement<a id="change"> /= </a>n_test
+        test_sir_improvement<a id="change"> /= </a>n_test
+        test_sar<a id="change"> /= </a>n_test
+        test_pesq /= n_test
+            
+        <a id="change">print("Loss: {:.3f}, loss improvement: {:3f}, SDR improvement: {:3f}, SIR improvement: {:3f}, SAR: {:3f}, PESQ: {:.3f}".format(</a>test_loss, test_loss_improvement, test_sdr_improvement, test_sir_improvement, test_sar, test_pesq<a id="change">)</a><a id="change">)</a>
+
+class AttractorTrainer(Trainer):
+    def __init__(self, model, loader, criterion, optimizer, args):
+        self.train_loader, self.valid_loader = loader[&quottrain&quot], loader[&quotvalid&quot]</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/tky823/dnn-based_source_separation/commit/82aafe87b019c0358712296c8b8b3da8a296d1ba#diff-d5cb03ca8f1fcaf1e8bc22f5deab4b6231d44a4eba914490ae1f21298075470dL249' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 44563108</div><div id='project'> Project Name: tky823/dnn-based_source_separation</div><div id='commit'> Commit Name: 82aafe87b019c0358712296c8b8b3da8a296d1ba</div><div id='time'> Time: 2021-01-15</div><div id='author'> Author: 40362510+tky823@users.noreply.github.com</div><div id='file'> File Name: egs/wsj0-mix/common/src/driver.py</div><div id='m_class'> M Class Name: Tester</div><div id='n_method'> N Class Name: Tester</div><div id='m_method'> M Method Name: run(1)</div><div id='n_method'> N Method Name: run(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: egs/wsj0-mix/common/src/driver.py</div><div id='n_file'> N File Name: egs/wsj0-mix/common/src/driver.py</div><div id='m_start'> M Start Line: 252</div><div id='m_end'> M End Line: 336</div><div id='n_start'> N Start Line: 253</div><div id='n_end'> N End Line: 360</div><BR>

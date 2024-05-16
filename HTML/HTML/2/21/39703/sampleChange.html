@@ -1,0 +1,63 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+    &#47&#47 Data loading code
+    normalize = T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    <a id="change">if args.center_crop</a>:
+        train_transform<a id="change"> = T</a><a id="change">.Compose([
+            </a><a id="change">ResizeImage(256</a><a id="change">)</a>,
+            <a id="change">T.CenterCrop(224</a><a id="change">)</a>,
+            <a id="change">T.RandomHorizontalFlip()</a>,
+            <a id="change">T.ToTensor()</a>,
+            normalize<a id="change"></a>
+        ]<a id="change">)</a>
+    else:
+        train_transform = T.Compose([
+            ResizeImage(256),</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    &#47&#47 define optimizer and lr scheduler
+    optimizer = SGD(classifier.get_parameters(args.lr), momentum=args.momentum, weight_decay=args.wd, nesterov=True)
+    milestones<a id="change"> = </a><a id="change">[]</a>
+    <a id="change">for milestone</a> in <a id="change">args.lr_decay_epochs.split(&quot,&quot</a><a id="change">)</a><a id="change">:
+        </a><a id="change">milestones.append(int(milestone</a><a id="change">)</a><a id="change">)</a>
+
+    lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(
+        optimizer, milestones, gamma=args.lr_gamma)
+
+    &#47&#47 resume from the best checkpoint
+    if args.phase != &quottrain&quot:
+        checkpoint = torch.load(logger.get_checkpoint_path(&quotbest&quot), map_location=&quotcpu&quot)
+        classifier.load_state_dict(checkpoint)
+
+    if args.phase == &quottest&quot:
+        acc1 = validate(test_loader, classifier, args)
+        print(acc1)
+        return
+
+
+    &#47&#47 compute relationship
+
+    relationship_path = &quotrelationship_d.npy&quot
+    &#47&#47 if not os.path.exists(relationship_path):
+    if 1 == 1:
+        train_source_labels, train_target_labels = get_feature(determin_train_loader, classifier)
+
+        val_source_labels, val_target_labels = get_feature(val_loader, classifier)
+        relationship = direct_relationship_learning(train_source_labels, train_target_labels, val_source_labels, val_target_labels)
+
+        np.save(relationship_path, relationship)
+    else:
+        relationship = np.load(relationship_path)
+
+    &#47&#47 start training
+    best_acc1 = 0.0
+    for epoch in range(args.epochs):
+        &#47&#47 train for one epoch
+        train(train_loader, classifier, optimizer,
+              epoch, relationship, args)
+        <a id="change">lr_scheduler.step()</a>
+        &#47&#47 evaluate on validation set
+        acc1 = validate(val_loader, classifier, args)
+</code></pre>

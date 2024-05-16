@@ -1,0 +1,36 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    output = ctx.method_return
+
+    &#47&#47 transpose weight
+    weight_transpose = <a id="change">weight.t()</a>
+    ctx.method_args = [weight]
+    ctx.method_kwargs = {}
+    ctx.method_return = weight_transpose
+    convert_t(ctx)
+
+    &#47&#47 matmul
+    matmul_output = input.matmul(weight_transpose)
+    ctx.method_args = [input, weight]
+    ctx.method_kwargs = {}
+    ctx.method_return = matmul_output
+    convert_matmul(ctx)
+
+    &#47&#47 add bias
+    if bias is not None:
+        add_bias_output = matmul_output<a id="change"> + </a>bias
+        ctx.method_args = [matmul_output, bias]
+        ctx.method_return<a id="change"> = </a>add_bias_output
+        convert_add(ctx)
+        output._trt = add_bias_output._trt
+    else:</code></pre><h3>After Change</h3><pre><code class='java'>
+    output = ctx.method_return
+
+    in_channels = weight.shape[1]
+    out_channels = <a id="change">weight.shape[0]</a>
+    module = torch.nn.Linear(in_channels, out_channels, bias is not None)
+    module.weight = torch.nn.Parameter(weight)
+    if bias is not None:
+        module.bias = torch.nn.Parameter(bias)</code></pre>

@@ -1,0 +1,40 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            expected_res = torch.tensor(0., device=input.device, dtype=torch.double)
+            expected_grads = []
+            for i in range(batch_size):
+                res = <a id="change">module(</a>input[i].unsqueeze(0)<a id="change">)</a>.sum()
+                expected_grads.append(torch.autograd.grad(res, module.parameters(), torch.ones_like(res)))
+                expected_res += res
+            expected_grads = tuple(torch.stack(grad) for grad in zip(*expected_grads))</code></pre><h3>After Change</h3><pre><code class='java'>
+class TestExpandedWeightModule(TestCase):
+    def _do_test(self, module, input):
+        batch_size = input.shape[0]
+        diff_input = input.dtype == torch.float or <a id="change">input.dtype == torch.double</a>
+        if diff_input:
+            input.requires_grad_()
+        with freeze_rng_state():
+            &#47&#47 get per sample grads with ExpandedWeights context manager
+            actual_res = call_for_per_sample_grads(module, batch_size, input).sum()
+            actual_res.backward()
+            actual_grads = []
+            for param in module.parameters():
+                actual_grads.append(param.grad_sample)
+                del param.grad_sample
+            if diff_input:
+                actual_grads.append(input.grad.clone())
+                input.grad = torch.zeros_like(input.grad)
+
+            &#47&#47 get per sample grads with a for loop
+            expected_res = torch.tensor(0., device=input.device, dtype=torch.double)
+            expected_grads = []
+            for i in range(batch_size):
+                input_slice = input[i]
+                diff_params = module.parameters()
+                <a id="change">if </a>diff_input:
+                    diff_params = chain(diff_params, (input_slice<a id="change"></a>,))
+                res = module(input_slice.unsqueeze(0)).sum()
+                out_grads = torch.autograd.grad(res, diff_params, torch.ones_like(res), allow_unused=True)
+                expected_grads.append(out_grads)</code></pre>

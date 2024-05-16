@@ -1,0 +1,48 @@
+<html><h3>Pattern ID :19505
+</h3><img src='63522448.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    &#47&#47 TODO do the same thing to the test targets in run_training, and maybe refactor
+    if args.dataset_type == &quotbert_pretraining&quot:
+        mask = data.mask()
+        targets<a id="change"> = </a><a id="change">torch.cat(</a>targets<a id="change">, dim=0)</a>.numpy().tolist()
+        for i in range(len(targets)):
+            if mask[i] == 1:  &#47&#47 only predict ones masked out
+                targets[i] = None</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    if args.dataset_type == &quotbert_pretraining&quot:
+        &#47&#47 Only predict targets that are masked out
+        targets = [target if mask == 0 else None for target, mask in <a id="change">zip(</a>targets, data.mask()<a id="change">)</a>]
+
+    preds = predict(
+        model=model,</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/aamini/chemprop/commit/7ad74e35341f0eb65725ef7bba31198a85b1d324#diff-6a9a0f613a09ba7bec911df27fe5b2b55627f788a5a3a9dba096d72c5d72ed76L70' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 63522448</div><div id='project'> Project Name: aamini/chemprop</div><div id='commit'> Commit Name: 7ad74e35341f0eb65725ef7bba31198a85b1d324</div><div id='time'> Time: 2018-12-18</div><div id='author'> Author: swansonk.14@gmail.com</div><div id='file'> File Name: chemprop/train/evaluate.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: evaluate(5)</div><div id='n_method'> N Method Name: evaluate(5)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: chemprop/train/evaluate.py</div><div id='n_file'> N File Name: chemprop/train/evaluate.py</div><div id='m_start'> M Start Line: 70</div><div id='m_end'> M End Line: 76</div><div id='n_start'> N Start Line: 72</div><div id='n_end'> N End Line: 72</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+      labels = scores.new_ones(n_cand)
+      labels[0] = 0.
+      all_labels.append(labels)
+    all_labels<a id="change"> = </a><a id="change">torch.cat(</a>all_labels<a id="change">)</a> &#47&#47 (&#47&#47total candidate in this batch,)
+    return self.criterion(all_scores, all_labels)
+
+  def decodes(self, preds): return wsc_trick_predict(preds)</code></pre><h3>After Change</h3><pre><code class='java'>
+  def __call__(self, x, y):
+    all_scores, n_cands = x
+    losses = []
+    for scores, label in <a id="change">zip(</a>all_scores.split(n_cands.tolist()), y<a id="change">)</a>: &#47&#47 for every sample
+      if label == 0: continue &#47&#47 only calculate loss on positive samples
+      labels = [0.] + [1.]*(len(scores)-1) &#47&#47 labels for BCEWithLogitLoss
+      loss = self.criterion(scores, scores.new(labels)) &#47&#47 ?</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/richarddwang/electra_pytorch/commit/4ae9c6007de255ab71d1fd26eae3eaa9532ff04f#diff-da4c2cbbd518a0b7af54c7cb5e79343bcb782d80af9dbd5d491092ae212b8d38L158' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 63522453</div><div id='project'> Project Name: richarddwang/electra_pytorch</div><div id='commit'> Commit Name: 4ae9c6007de255ab71d1fd26eae3eaa9532ff04f</div><div id='time'> Time: 2020-09-20</div><div id='author'> Author: richardyy1188@gmail.com</div><div id='file'> File Name: _utils/wsc_trick.py</div><div id='m_class'> M Class Name: ELECTRAWSCTrickLoss</div><div id='n_method'> N Class Name: ELECTRAWSCTrickLoss</div><div id='m_method'> M Method Name: __call__(3)</div><div id='n_method'> N Method Name: __call__(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: _utils/wsc_trick.py</div><div id='n_file'> N File Name: _utils/wsc_trick.py</div><div id='m_start'> M Start Line: 160</div><div id='m_end'> M End Line: 167</div><div id='n_start'> N Start Line: 159</div><div id='n_end'> N End Line: 170</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        from_up = self.act(self.norm0(self.up_conv(from_up)))
+        if self.concat:
+            if &quotres&quot in self.mode:
+                x1<a id="change"> = </a><a id="change">torch.cat(</a>(from_up, from_down, mask), 1<a id="change">)</a>
+            else:
+                x1 = torch.cat((from_up, from_down), 1)
+        else:
+            if from_down is not None:</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        &#47&#47 residual structure
+        _,C,H,W = x1.shape
+        for idx, convs in enumerate(<a id="change">zip(</a>self.conv2, self.conv3<a id="change">)</a>):
+            mask = convs[0](torch.cat([x1[:,:C//2], mask], dim=1))
+            x2_actv = x1[:,C//2:] * mask
+            x2 = convs[1](x1[:,C//2:] + x2_actv)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/bcmi/slbr-visible-watermark-removal/commit/43e84b70895d28955496122816e50857863e5bfd#diff-21665f19cd9acd8db0bae320b79f986ec6a79eabb60d74c4c2e813314554df4aL243' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 63522452</div><div id='project'> Project Name: bcmi/slbr-visible-watermark-removal</div><div id='commit'> Commit Name: 43e84b70895d28955496122816e50857863e5bfd</div><div id='time'> Time: 2022-01-04</div><div id='author'> Author: lj200820082007@163.com</div><div id='file'> File Name: src/networks/blocks.py</div><div id='m_class'> M Class Name: MBEBlock</div><div id='n_method'> N Class Name: MBEBlock</div><div id='m_method'> M Method Name: forward(4)</div><div id='n_method'> N Method Name: forward(4)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: src/networks/blocks.py</div><div id='n_file'> N File Name: src/networks/blocks.py</div><div id='m_start'> M Start Line: 244</div><div id='m_end'> M End Line: 260</div><div id='n_start'> N Start Line: 254</div><div id='n_end'> N End Line: 267</div><BR>

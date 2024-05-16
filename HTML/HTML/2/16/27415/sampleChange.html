@@ -1,0 +1,36 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    
+    A = box_a.size(0)
+    B = box_b.size(0)
+    anchor_centers = <a id="change">box_b[:, :2]</a>.unsqueeze(0).expand(A, B, 2)  &#47&#47 Shape [A, B, 2]
+    gt_boxes = box_a.unsqueeze(1).expand(A, B, 4)
+    left_right = torch.stack((anchor_centers[:,:,0]-gt_boxes[:,:,0],     &#47&#47 x-x1
+                              gt_boxes[:,:,2]-anchor_centers[:,:,0]), 2) &#47&#47 x2-x
+    left_right = (left_right.min(dim=-1)[0] / left_right.max(dim=-1)[0])
+    left_right[left_right &lt; 0] = 0        &#47&#47 points outside gt boxes
+    top_bottom = torch.stack((anchor_centers[:,:,1]-gt_boxes[:,:,1],     &#47&#47 y-y1
+                              gt_boxes[:,:,3]-anchor_centers[:,:,1]), 2) &#47&#47 y2-y
+    top_bottom = (top_bottom.min(dim=-1)[0] / top_bottom.max(dim=-1)[0])
+    top_bottom[top_bottom &lt; 0] = 0        &#47&#47 points outside gt boxes
+    <a id="change">return </a>torch.min(left_right, top_bottom)
+
+
+def get_foreground(truths, priors, mask, idx):</code></pre><h3>After Change</h3><pre><code class='java'>
+                              gt_boxes[:,:,3]-ac_boxes[:,:,1]), 2) &#47&#47 y2-y
+    top_bottom = (top_bottom.min(dim=-1)[0] / top_bottom.max(dim=-1)[0])
+    top_bottom[top_bottom &lt; 0] = 0        &#47&#47 points outside gt boxes
+    centerness<a id="change"> = </a>torch.min(left_right, top_bottom)
+    gt_sizes<a id="change"> = </a>torch.sqrt((gt_boxes[:,:,2]-gt_boxes[:,:,0]) * (<a id="change">gt_boxes[:,:,3]</a><a id="change">-gt_boxes[:,:,1]</a>))
+    thresh<a id="change"> = </a>ac_boxes[:,:,2]<a id="change"> / 2.0</a>
+    thresh[thresh == thresh.min()] = 0.0
+    centerness[gt_sizes &lt;= thresh] = 0.0
+    thresh = ac_boxes[:,:,3] * 2.0
+    thresh[thresh == thresh.max()] = 1.0
+    centerness[gt_sizes &gt;= thresh] = 0.0
+    <a id="change">return </a>centerness
+
+
+def get_foreground(truths, priors, mask, idx, multi_anchor=True):</code></pre>

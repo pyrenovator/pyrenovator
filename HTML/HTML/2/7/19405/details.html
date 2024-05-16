@@ -1,0 +1,218 @@
+<html><h3>Pattern ID :19405
+</h3><img src='63346194.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            sample_batch[SampleBatch.VF_PREDS] = policy.compute_central_vf(
+                convert_to_torch_tensor(
+                    sample_batch["state"], policy.device),
+                <a id="change">convert_to_torch_tensor(
+                    sample_batch["opponent_action"]</a>, policy.device<a id="change">)</a>,
+            ) \
+                .cpu().detach().numpy().mean(1)
+            sample_batch[SampleBatch.VF_PREDS] = np.take(sample_batch[SampleBatch.VF_PREDS],</code></pre><h3>After Change</h3><pre><code class='java'>
+                        opponent_batch[i]["obs"][:, action_mask_dim:action_mask_dim + obs_dim] for i in
+                        range(opponent_agents_num)], 1)
+
+            <a id="change">sample_batch["opponent_action"]</a> = np.stack(
+                [opponent_batch[i]["actions"] for i in range(opponent_agents_num)],
+                1)
+
+        if algorithm == "coma":
+            sample_batch[SampleBatch.VF_PREDS] = policy.compute_central_vf(
+                convert_to_torch_tensor(
+                    sample_batch["state"], policy.device),
+                <a id="change">convert_to_torch_tensor(
+                    sample_batch["opponent_action"]</a>, policy.device<a id="change">) if opp_action_in_cc</a><a id="change"> else </a>None,
+            ) \
+                .cpu().detach().numpy()
+            sample_batch[SampleBatch.VF_PREDS] = np.take(sample_batch[SampleBatch.VF_PREDS],</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 6</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/replicable-marl/marllib/commit/8a2592aa280d852fc4fcb0a4d5891924b2ae3b5c#diff-68219017971f889581e85cf8dcb26140558f529bb92d2e62e14d4dbd3ad63615L44' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 63346194</div><div id='project'> Project Name: replicable-marl/marllib</div><div id='commit'> Commit Name: 8a2592aa280d852fc4fcb0a4d5891924b2ae3b5c</div><div id='time'> Time: 2022-04-28</div><div id='author'> Author: hhhusiyi@163.com</div><div id='file'> File Name: CC/utils/onpolicy_tool.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: centralized_critic_postprocessing(4)</div><div id='n_method'> N Method Name: centralized_critic_postprocessing(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: CC/utils/onpolicy_tool.py</div><div id='n_file'> N File Name: CC/utils/onpolicy_tool.py</div><div id='m_start'> M Start Line: 44</div><div id='m_end'> M End Line: 125</div><div id='n_start'> N Start Line: 44</div><div id='n_end'> N End Line: 129</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                        opponent_batch[i]["obs"][:, action_mask_dim:action_mask_dim + obs_dim] for i in
+                        range(opponent_agents_num)], 1)
+
+            <a id="change">sample_batch["opponent_actions"]</a> = np.stack(
+                [opponent_batch[i]["actions"] for i in range(opponent_agents_num)],
+                1)
+
+            if algorithm in ["coma"]:
+                sample_batch[SampleBatch.VF_PREDS] = policy.compute_central_vf(
+                    convert_to_torch_tensor(
+                        sample_batch["state"], policy.device),
+                    convert_to_torch_tensor(
+                        sample_batch["opponent_actions"], policy.device) if opp_action_in_cc else None,
+                ) \
+                    .cpu().detach().numpy()
+                sample_batch[SampleBatch.VF_PREDS] = np.take(sample_batch[SampleBatch.VF_PREDS],
+                                                             np.expand_dims(sample_batch["actions"], axis=1)).squeeze(
+                    axis=1)
+            else:
+                sample_batch[SampleBatch.VF_PREDS] = policy.compute_central_vf(
+                    convert_to_torch_tensor(
+                        sample_batch["state"], policy.device),
+                    <a id="change">convert_to_torch_tensor(
+                        </a>sample_batch["opponent_actions"], policy.device<a id="change">)</a>,
+                ) \
+                    .cpu().detach().numpy()
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    pytorch = custom_config["framework"] == "torch"
+    obs_dim = get_dim(custom_config["space_obs"]["obs"].shape)
+    algorithm = custom_config["algorithm"]
+    <a id="change">opp_action_in_cc</a> = custom_config["opp_action_in_cc"]
+    global_state_flag = custom_config["global_state_flag"]
+    mask_flag = custom_config["mask_flag"]
+
+    if mask_flag:
+        action_mask_dim = custom_config["space_act"].n
+    else:
+        action_mask_dim = 0
+
+    n_agents = custom_config["num_agents"]
+    opponent_agents_num = n_agents - 1
+
+    if (pytorch and hasattr(policy, "compute_central_vf")) or \
+            (not pytorch and policy.loss_initialized()):
+
+        if not opp_action_in_cc and global_state_flag:
+            sample_batch["state"] = sample_batch[&quotobs&quot][:, action_mask_dim:]
+            sample_batch[SampleBatch.VF_PREDS] = policy.compute_central_vf(
+                convert_to_torch_tensor(
+                    sample_batch["state"], policy.device),
+            ).cpu().detach().numpy()
+        else:  &#47&#47 need opponent info
+            assert other_agent_batches is not None
+            opponent_batch_list = list(other_agent_batches.values())
+            raw_opponent_batch = [opponent_batch_list[i][1] for i in range(opponent_agents_num)]
+            opponent_batch = []
+            for one_opponent_batch in raw_opponent_batch:
+                if len(one_opponent_batch) == len(sample_batch):
+                    pass
+                else:
+                    if len(one_opponent_batch) &gt; len(sample_batch):
+                        one_opponent_batch = one_opponent_batch.slice(0, len(sample_batch))
+                    else:  &#47&#47 len(one_opponent_batch) &lt; len(sample_batch):
+                        length_dif = len(sample_batch) - len(one_opponent_batch)
+                        one_opponent_batch = one_opponent_batch.concat(
+                            one_opponent_batch.slice(len(one_opponent_batch) - length_dif, len(one_opponent_batch)))
+                opponent_batch.append(one_opponent_batch)
+
+            &#47&#47 all other agent obs as state
+            &#47&#47 sample_batch["state"] = sample_batch[&quotobs&quot][:, action_mask_dim:action_mask_dim + obs_dim]
+            if global_state_flag:  &#47&#47 include self obs and global state
+                sample_batch["state"] = sample_batch[&quotobs&quot][:, action_mask_dim:]
+            else:
+                sample_batch["state"] = np.stack(
+                    [sample_batch[&quotobs&quot][:, action_mask_dim:action_mask_dim + obs_dim]] + [
+                        opponent_batch[i]["obs"][:, action_mask_dim:action_mask_dim + obs_dim] for i in
+                        range(opponent_agents_num)], 1)
+
+            <a id="change">sample_batch["opponent_actions"]</a> = np.stack(
+                [opponent_batch[i]["actions"] for i in range(opponent_agents_num)],
+                1)
+
+            if algorithm in ["coma"]:
+                sample_batch[SampleBatch.VF_PREDS] = policy.compute_central_vf(
+                    convert_to_torch_tensor(
+                        sample_batch["state"], policy.device),
+                    convert_to_torch_tensor(
+                        sample_batch["opponent_actions"], policy.device) if opp_action_in_cc else None,
+                ) \
+                    .cpu().detach().numpy()
+                sample_batch[SampleBatch.VF_PREDS] = np.take(sample_batch[SampleBatch.VF_PREDS],
+                                                             np.expand_dims(sample_batch["actions"], axis=1)).squeeze(
+                    axis=1)
+            else:
+                sample_batch[SampleBatch.VF_PREDS] = policy.compute_central_vf(
+                    convert_to_torch_tensor(
+                        sample_batch["state"], policy.device),
+                    <a id="change">convert_to_torch_tensor(
+                        </a>sample_batch["opponent_actions"], policy.device<a id="change">) if opp_action_in_cc</a><a id="change"> else </a>None,
+                ) \
+                    .cpu().detach().numpy()
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/replicable-marl/marllib/commit/d99885a1723eb49c0f3e823f3093dd1f07ab1b02#diff-b95419a125ba83b3c016776fb552008b66e42902b3eef3462b86a578436d1e2fL30' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 63346195</div><div id='project'> Project Name: replicable-marl/marllib</div><div id='commit'> Commit Name: d99885a1723eb49c0f3e823f3093dd1f07ab1b02</div><div id='time'> Time: 2022-05-14</div><div id='author'> Author: hhhusiyi@163.com</div><div id='file'> File Name: marl/algos/utils/postprocessing.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: centralized_critic_postprocessing(4)</div><div id='n_method'> N Method Name: centralized_critic_postprocessing(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: marl/algos/utils/postprocessing.py</div><div id='n_file'> N File Name: marl/algos/utils/postprocessing.py</div><div id='m_start'> M Start Line: 86</div><div id='m_end'> M End Line: 106</div><div id='n_start'> N Start Line: 38</div><div id='n_end'> N End Line: 106</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    logits, _ = model.from_batch(train_batch)
+    values = model.central_value_function(convert_to_torch_tensor(
+        train_batch["state"], policy.device),
+        <a id="change">convert_to_torch_tensor(
+            train_batch["opponent_action"]</a>, policy.device<a id="change">)</a>)
+    pi = torch.nn.functional.softmax(logits, dim=-1)
+
+    if policy.is_recurrent():</code></pre><h3>After Change</h3><pre><code class='java'>
+                             train_batch: SampleBatch) -&gt; TensorType:
+    CentralizedValueMixin.__init__(policy)
+    logits, _ = model.from_batch(train_batch)
+    <a id="change">opp_action_in_cc</a> = policy.config["model"]["custom_model_config"]["opp_action_in_cc"]
+    values = model.central_value_function(convert_to_torch_tensor(
+        train_batch["state"], policy.device),
+        <a id="change">convert_to_torch_tensor(
+            train_batch["opponent_action"]</a>, policy.device<a id="change">) if opp_action_in_cc</a><a id="change"> else </a>None)
+    pi = torch.nn.functional.softmax(logits, dim=-1)
+
+    if policy.is_recurrent():</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/replicable-marl/marllib/commit/8a2592aa280d852fc4fcb0a4d5891924b2ae3b5c#diff-68219017971f889581e85cf8dcb26140558f529bb92d2e62e14d4dbd3ad63615L241' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 63346193</div><div id='project'> Project Name: replicable-marl/marllib</div><div id='commit'> Commit Name: 8a2592aa280d852fc4fcb0a4d5891924b2ae3b5c</div><div id='time'> Time: 2022-04-28</div><div id='author'> Author: hhhusiyi@163.com</div><div id='file'> File Name: CC/utils/onpolicy_tool.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: central_critic_coma_loss(4)</div><div id='n_method'> N Method Name: central_critic_coma_loss(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: CC/utils/onpolicy_tool.py</div><div id='n_file'> N File Name: CC/utils/onpolicy_tool.py</div><div id='m_start'> M Start Line: 248</div><div id='m_end'> M End Line: 249</div><div id='n_start'> N Start Line: 254</div><div id='n_end'> N End Line: 258</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            sample_batch[SampleBatch.VF_PREDS] = policy.compute_central_vf(
+                convert_to_torch_tensor(
+                    sample_batch["state"], policy.device),
+                <a id="change">convert_to_torch_tensor(
+                    sample_batch["opponent_action"]</a>, policy.device<a id="change">)</a>,
+            ) \
+                .cpu().detach().numpy().mean(1)
+            sample_batch[SampleBatch.VF_PREDS] = np.take(sample_batch[SampleBatch.VF_PREDS],</code></pre><h3>After Change</h3><pre><code class='java'>
+    pytorch = custom_config["framework"] == "torch"
+    obs_dim = get_dim(custom_config["space_obs"]["obs"].shape)
+    algorithm = custom_config["algorithm"]
+    <a id="change">opp_action_in_cc</a> = custom_config["opp_action_in_cc"]
+    global_state_flag = custom_config["global_state_flag"]
+    mask_flag = custom_config["mask_flag"]
+
+    if mask_flag:
+        action_mask_dim = custom_config["space_act"].n
+    else:
+        action_mask_dim = 0
+
+    n_agents = custom_config["num_agents"]
+    opponent_agents_num = n_agents - 1
+
+    if (pytorch and hasattr(policy, "compute_central_vf")) or \
+            (not pytorch and policy.loss_initialized()):
+
+        if not opp_action_in_cc and global_state_flag:
+            sample_batch["state"] = sample_batch[&quotobs&quot][:, action_mask_dim + obs_dim:]
+        else:  &#47&#47 need opponent info
+            assert other_agent_batches is not None
+            opponent_batch_list = list(other_agent_batches.values())
+            raw_opponent_batch = [opponent_batch_list[i][1] for i in range(opponent_agents_num)]
+            opponent_batch = []
+            for one_opponent_batch in raw_opponent_batch:
+                if len(one_opponent_batch) == len(sample_batch):
+                    pass
+                else:
+                    if len(one_opponent_batch) &gt; len(sample_batch):
+                        one_opponent_batch = one_opponent_batch.slice(0, len(sample_batch))
+                    else:  &#47&#47 len(one_opponent_batch) &lt; len(sample_batch):
+                        length_dif = len(sample_batch) - len(one_opponent_batch)
+                        one_opponent_batch = one_opponent_batch.concat(
+                            one_opponent_batch.slice(len(one_opponent_batch) - length_dif, len(one_opponent_batch)))
+                opponent_batch.append(one_opponent_batch)
+
+            &#47&#47 all other agent obs as state
+            &#47&#47 sample_batch["state"] = sample_batch[&quotobs&quot][:, action_mask_dim:action_mask_dim + obs_dim]
+            if global_state_flag:
+                sample_batch["state"] = sample_batch[&quotobs&quot][:, action_mask_dim + obs_dim:]
+            else:
+                sample_batch["state"] = np.stack(
+                    [sample_batch[&quotobs&quot][:, action_mask_dim:action_mask_dim + obs_dim]] + [
+                        opponent_batch[i]["obs"][:, action_mask_dim:action_mask_dim + obs_dim] for i in
+                        range(opponent_agents_num)], 1)
+
+            sample_batch["opponent_action"] = np.stack(
+                [opponent_batch[i]["actions"] for i in range(opponent_agents_num)],
+                1)
+
+        if algorithm == "coma":
+            sample_batch[SampleBatch.VF_PREDS] = policy.compute_central_vf(
+                convert_to_torch_tensor(
+                    sample_batch["state"], policy.device),
+                <a id="change">convert_to_torch_tensor(
+                    sample_batch["opponent_action"]</a>, policy.device<a id="change">) if opp_action_in_cc</a><a id="change"> else </a>None,
+            ) \
+                .cpu().detach().numpy()
+            sample_batch[SampleBatch.VF_PREDS] = np.take(sample_batch[SampleBatch.VF_PREDS],</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/replicable-marl/marllib/commit/8a2592aa280d852fc4fcb0a4d5891924b2ae3b5c#diff-68219017971f889581e85cf8dcb26140558f529bb92d2e62e14d4dbd3ad63615L40' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 63346191</div><div id='project'> Project Name: replicable-marl/marllib</div><div id='commit'> Commit Name: 8a2592aa280d852fc4fcb0a4d5891924b2ae3b5c</div><div id='time'> Time: 2022-04-28</div><div id='author'> Author: hhhusiyi@163.com</div><div id='file'> File Name: CC/utils/onpolicy_tool.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: centralized_critic_postprocessing(4)</div><div id='n_method'> N Method Name: centralized_critic_postprocessing(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: CC/utils/onpolicy_tool.py</div><div id='n_file'> N File Name: CC/utils/onpolicy_tool.py</div><div id='m_start'> M Start Line: 44</div><div id='m_end'> M End Line: 125</div><div id='n_start'> N Start Line: 44</div><div id='n_end'> N End Line: 129</div><BR>

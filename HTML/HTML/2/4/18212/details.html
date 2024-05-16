@@ -1,0 +1,112 @@
+<html><h3>Pattern ID :18212
+</h3><img src='59851057.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            mixture_amplitude = torch.abs(mixture)
+            
+            estimated_sources_amplitude = {
+                target: [] <a id="change">for</a> target in __sources__
+            }
+
+            &#47&#47 Serial operation
+            for _mixture_amplitude in mixture_amplitude:
+                &#47&#47 _mixture_amplitude: (1, n_mics, n_bins, n_frames)
+                if n_mics == 1:
+                    _mixture_amplitude = torch.tile(_mixture_amplitude, (1, NUM_CHANNELS_MUSDB18, 1, 1))
+                elif n_mics == 2:
+                    _mixture_amplitude_flipped = torch.flip(_mixture_amplitude, dims=(1,))
+                    _mixture_amplitude = torch.cat([_mixture_amplitude, _mixture_amplitude_flipped], dim=0)
+                else:
+                    raise NotImplementedError("Not support {} channels input.".format(n_mics))
+                
+                for target in __sources__:
+                    _estimated_sources_amplitude = model(_mixture_amplitude, target=target)
+
+                    if n_mics == 1:
+                        _estimated_sources_amplitude = _estimated_sources_amplitude.mean(dim=1, keepdim=True)
+                    elif n_mics == 2:
+                        sections = [1, 1]
+                        _estimated_sources_amplitude, _estimated_sources_amplitude_flipped = torch.split(_estimated_sources_amplitude, sections, dim=0)
+                        _estimated_sources_amplitude_flipped = torch.flip(_estimated_sources_amplitude_flipped, dims=(1,))
+                        _estimated_sources_amplitude = torch.cat([_estimated_sources_amplitude, _estimated_sources_amplitude_flipped], dim=0)
+                        _estimated_sources_amplitude = _estimated_sources_amplitude.mean(dim=0, keepdim=True)
+                    else:
+                        raise NotImplementedError("Not support {} channels input.".format(n_mics))
+                    
+                    estimated_sources_amplitude[target].append(_estimated_sources_amplitude)
+        
+            estimated_sources_amplitude<a id="change"> = </a>[
+                <a id="change">torch.cat(</a>estimated_sources_amplitude[target]<a id="change">, dim=0)</a>.unsqueeze(dim=0) for target in __sources__
+            ]
+            estimated_sources_amplitude = torch.cat(estimated_sources_amplitude, dim=0) &#47&#47 (n_sources, batch_size, n_mics, n_bins, n_frames)
+            estimated_sources_amplitude = estimated_sources_amplitude.permute(0, 2, 3, 1, 4)</code></pre><h3>After Change</h3><pre><code class='java'>
+                    raise NotImplementedError("Not support {} channels input.".format(n_mics))
+                
+                _mixture_amplitude = _mixture_amplitude.unsqueeze(dim=1) &#47&#47 (n_flips, 1, n_mics, n_bins, n_frames)
+                _estimated_sources_amplitude = <a id="change">model(</a>_mixture_amplitude<a id="change">)</a> &#47&#47 (n_flips, n_sources, n_mics, n_bins, n_frames)
+
+                if n_mics == 1:
+                    _estimated_sources_amplitude = _estimated_sources_amplitude.mean(dim=2, keepdim=True) &#47&#47 (1, n_sources, n_mics, n_bins, n_frames)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/tky823/dnn-based_source_separation/commit/217e98f862f93f0265909ff789fe6b945f207f35#diff-5599f53723177dd901a20f15babf56046e4299376ddfdd60c181f25f7578d852L19' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 59851057</div><div id='project'> Project Name: tky823/dnn-based_source_separation</div><div id='commit'> Commit Name: 217e98f862f93f0265909ff789fe6b945f207f35</div><div id='time'> Time: 2021-11-18</div><div id='author'> Author: delta9guitar97@gmail.com</div><div id='file'> File Name: egs/tutorials/mm-dense-lstm/src/adhoc_utils.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: separate_by_mm_dense_lstm(3)</div><div id='n_method'> N Method Name: separate_by_mm_dense_lstm(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: egs/tutorials/mm-dense-lstm/src/adhoc_utils.py</div><div id='n_file'> N File Name: egs/tutorials/mm-dense-lstm/src/adhoc_utils.py</div><div id='m_start'> M Start Line: 58</div><div id='m_end'> M End Line: 132</div><div id='n_start'> N Start Line: 19</div><div id='n_end'> N End Line: 125</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        feature, order0 = feature
+        label, order1 = label
+        feature = torch.cat([f.to(device) for f in feature])
+        label = <a id="change">torch.cat(</a>[l.to(device) <a id="change">for</a> l in label]<a id="change">)</a>
+        origin_feature = torch.empty_like(feature)
+        origin_label<a id="change"> = </a>torch.empty_like(label)
+        origin_feature[order0] = feature
+        origin_label[order1] = label
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 origin_label[order1] = label
+
+        optimizer.zero_grad()
+        out = <a id="change">model(</a>feature, adjs<a id="change">)</a>
+        loss = F.nll_loss(out, label)
+        loss.backward()
+        optimizer.step()
+        &#47&#47 w1.tick(&quottrain&quot)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/quiver-team/torch-quiver/commit/229241ef652f57e055b9dac0946868822b0b04d7#diff-eb391d09408dab990c244e745698b82de9000c8725834d25657b25a81aeef82cL158' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 59851061</div><div id='project'> Project Name: quiver-team/torch-quiver</div><div id='commit'> Commit Name: 229241ef652f57e055b9dac0946868822b0b04d7</div><div id='time'> Time: 2021-03-24</div><div id='author'> Author: 41138939+ZenoTan@users.noreply.github.com</div><div id='file'> File Name: benchmarks/ogbn_products_sage/dist_sampling.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train(1)</div><div id='n_method'> N Method Name: train(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: benchmarks/ogbn_products_sage/dist_sampling.py</div><div id='n_file'> N File Name: benchmarks/ogbn_products_sage/dist_sampling.py</div><div id='m_start'> M Start Line: 168</div><div id='m_end'> M End Line: 191</div><div id='n_start'> N Start Line: 169</div><div id='n_end'> N End Line: 205</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            mixture_amplitude = torch.abs(mixture)
+            
+            estimated_sources_amplitude = {
+                target: [] <a id="change">for</a> target in __sources__
+            }
+
+            &#47&#47 Serial operation
+            for _mixture_amplitude in mixture_amplitude:
+                &#47&#47 _mixture_amplitude: (1, n_mics, n_bins, n_frames)
+                if n_mics == 1:
+                    _mixture_amplitude = torch.tile(_mixture_amplitude, (1, NUM_CHANNELS_MUSDB18, 1, 1))
+                elif n_mics == 2:
+                    _mixture_amplitude_flipped = torch.flip(_mixture_amplitude, dims=(1,))
+                    _mixture_amplitude = torch.cat([_mixture_amplitude, _mixture_amplitude_flipped], dim=0)
+                else:
+                    raise NotImplementedError("Not support {} channels input.".format(n_mics))
+                
+                for target in __sources__:
+                    _estimated_sources_amplitude = model(_mixture_amplitude, target=target)
+
+                    if n_mics == 1:
+                        _estimated_sources_amplitude = _estimated_sources_amplitude.mean(dim=1, keepdim=True)
+                    elif n_mics == 2:
+                        sections = [1, 1]
+                        _estimated_sources_amplitude, _estimated_sources_amplitude_flipped = torch.split(_estimated_sources_amplitude, sections, dim=0)
+                        _estimated_sources_amplitude_flipped = torch.flip(_estimated_sources_amplitude_flipped, dims=(1,))
+                        _estimated_sources_amplitude = torch.cat([_estimated_sources_amplitude, _estimated_sources_amplitude_flipped], dim=0)
+                        _estimated_sources_amplitude = _estimated_sources_amplitude.mean(dim=0, keepdim=True)
+                    else:
+                        raise NotImplementedError("Not support {} channels input.".format(n_mics))
+                    
+                    estimated_sources_amplitude[target].append(_estimated_sources_amplitude)
+        
+            estimated_sources_amplitude<a id="change"> = </a>[
+                <a id="change">torch.cat(</a>estimated_sources_amplitude[target]<a id="change">, dim=0)</a>.unsqueeze(dim=0) for target in __sources__
+            ]
+            estimated_sources_amplitude = torch.cat(estimated_sources_amplitude, dim=0) &#47&#47 (n_sources, batch_size, n_mics, n_bins, n_frames)
+            estimated_sources_amplitude = estimated_sources_amplitude.permute(0, 2, 3, 1, 4)</code></pre><h3>After Change</h3><pre><code class='java'>
+                    raise NotImplementedError("Not support {} channels input.".format(n_mics))
+                
+                _mixture_amplitude = _mixture_amplitude.unsqueeze(dim=1) &#47&#47 (n_flips, 1, n_mics, n_bins, n_frames)
+                _estimated_sources_amplitude = <a id="change">model(</a>_mixture_amplitude<a id="change">)</a> &#47&#47 (n_flips, n_sources, n_mics, n_bins, n_frames)
+
+                if n_mics == 1:
+                    _estimated_sources_amplitude = _estimated_sources_amplitude.mean(dim=2, keepdim=True) &#47&#47 (1, n_sources, n_mics, n_bins, n_frames)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/tky823/dnn-based_source_separation/commit/217e98f862f93f0265909ff789fe6b945f207f35#diff-b06596a3586a3a22d97ba7dee468a516bc95919bbeb8ecf983a08084acfdbd26L16' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 59851055</div><div id='project'> Project Name: tky823/dnn-based_source_separation</div><div id='commit'> Commit Name: 217e98f862f93f0265909ff789fe6b945f207f35</div><div id='time'> Time: 2021-11-18</div><div id='author'> Author: delta9guitar97@gmail.com</div><div id='file'> File Name: egs/tutorials/umx/src/adhoc_utils.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: separate_by_umx(3)</div><div id='n_method'> N Method Name: separate_by_umx(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: egs/tutorials/umx/src/adhoc_utils.py</div><div id='n_file'> N File Name: egs/tutorials/umx/src/adhoc_utils.py</div><div id='m_start'> M Start Line: 58</div><div id='m_end'> M End Line: 132</div><div id='n_start'> N Start Line: 19</div><div id='n_end'> N End Line: 125</div><BR>

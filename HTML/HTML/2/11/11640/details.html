@@ -1,0 +1,100 @@
+<html><h3>Pattern ID :11640
+</h3><img src='39472362.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    ctx = ctx.add_to_prefix("shampoo", count=False)
+
+    preconditioner = Preconditioner(grad, ctx.optimizer.block_size)
+    new_preconditioners<a id="change"> = </a><a id="change">[]</a>
+    <a id="change">for </a>i, old_stat in enumerate(preconditioner.statistics_from_grad(grad))<a id="change">:
+        </a>new_stat = ema(ctx, old_stat, step, 1 - ctx.optimizer.shampoo_beta2, f"statistics_{i}", True,
+                       jnp.eye(old_stat.shape[0], dtype=ctx.model.storage_dtype) * ctx.optimizer.epsilon)
+        prev_p<a id="change"> = </a>get_param(ctx, f&quotpreconditioner_{i}&quot, old_stat.shape, dtype=ctx.model.storage_dtype,
+                           init_val=jnp.eye(old_stat.shape[0], dtype=ctx.model.storage_dtype))
+        if ctx.is_initializing:
+            continue
+
+        new_p, error = matrix_inverse_pth_root(new_stat, preconditioner.exponent_for_preconditioner(),
+                                               ridge_epsilon=ctx.optimizer.epsilon)
+        new_p<a id="change"> = </a>select_preconditioner(error, new_p, prev_p)
+        <a id="change">new_preconditioners.append(</a>new_p<a id="change">)</a>
+        assign(ctx, f"preconditioner_{i}", new_p)
+    if ctx.is_initializing:
+        return grad
+    <a id="change">return </a>preconditioner.preconditioned_grad(grad, new_preconditioners)
+
+
+def clip_norm(val: jnp.ndarray, min_norm: float) -&gt; jnp.ndarray:</code></pre><h3>After Change</h3><pre><code class='java'>
+
+def shampoo(ctx: Context, grad: jnp.ndarray, step: jnp.ndarray) -&gt; jnp.ndarray:
+    last_size = grad.shape[-1]
+    kernel_sizes = (ctx.dims.pointwise_kernel<a id="change">, ctx.dims.outer_bottleneck_kernel, ctx.dims.inner_bottleneck_kernel</a>)
+    <a id="change">if </a>grad.ndim != 3 or <a id="change">last_size not in kernel_sizes</a>:
+        return _shampoo(ctx, grad, step)
+    return jnp.stack([_shampoo(ctx, grad[:, :, i], step) for i in range(last_size)])
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 10</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/homebrewnlp/olmax/commit/cee3cb499f3e75c256827c8b9e52ebe1d028e39d#diff-4540d7c8541eb25568b448ea775d64c43be83ce020bc67dd8340da4d4e804846L70' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 39472362</div><div id='project'> Project Name: homebrewnlp/olmax</div><div id='commit'> Commit Name: cee3cb499f3e75c256827c8b9e52ebe1d028e39d</div><div id='time'> Time: 2022-06-28</div><div id='author'> Author: 39779310+ClashLuke@users.noreply.github.com</div><div id='file'> File Name: src/optimizer.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: shampoo(3)</div><div id='n_method'> N Method Name: shampoo(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/optimizer.py</div><div id='n_file'> N File Name: src/optimizer.py</div><div id='m_start'> M Start Line: 70</div><div id='m_end'> M End Line: 89</div><div id='n_start'> N Start Line: 93</div><div id='n_end'> N End Line: 97</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        num_classes = scores.size(-2)
+        predictions = torch.max(scores, dim=-2).indices
+
+        accuracies<a id="change"> = </a><a id="change">[]</a>
+        accuracy_mask = predictions == labels
+
+        n_total = 0
+        n_correct = 0
+
+        <a id="change">for label</a> in range(num_classes)<a id="change">:
+            </a>label_mask<a id="change"> = </a>labels == label
+            per_class_accuracy<a id="change"> = </a>(accuracy_mask & label_mask).float().sum()
+            n_correct += per_class_accuracy
+            per_class_accuracy /= label_mask.float().sum()
+            n_total += label_mask.float().sum()
+            <a id="change">accuracies.append(</a>per_class_accuracy.cpu().item()<a id="change">)</a>
+
+        &#47&#47 overall accuracy
+        accuracies.append(np.nanmean(accuracies))
+        <a id="change">return </a>accuracies
+
+    def iou(self, scores, labels):
+        rCompute the per-class IoU and the mean IoU.</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        accs = []
+        for label in range(self.num_classes):
+            tp = np.longlong(self.confusion_matrix[label<a id="change">, label</a>])
+            fn = np.longlong(self.confusion_matrix[label, :].sum()) - tp
+
+            <a id="change">if tp + fn == 0</a>:
+                acc = float(&quotnan&quot)
+            else:
+                acc = tp / (tp + fn)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/intel-isl/open3d-ml/commit/67123f7e9d5dbbe6a73c42ef648093a7d25ace4a#diff-9e9da74866e05639eb1ee2516ee02a303a05d076194966d6b3bf5e9b66f23032L40' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 39472345</div><div id='project'> Project Name: intel-isl/open3d-ml</div><div id='commit'> Commit Name: 67123f7e9d5dbbe6a73c42ef648093a7d25ace4a</div><div id='time'> Time: 2021-05-11</div><div id='author'> Author: sanskaragrawal107@gmail.com</div><div id='file'> File Name: ml3d/torch/modules/metrics/semseg_metric.py</div><div id='m_class'> M Class Name: SemSegMetric</div><div id='n_method'> N Class Name: SemSegMetric</div><div id='m_method'> M Method Name: acc(1)</div><div id='n_method'> N Method Name: acc(3)</div><div id='m_parent_class'> M Parent Class: object</div><div id='n_parent_class'> N Parent Class: object</div><div id='m_file'> M File Name: ml3d/torch/modules/metrics/semseg_metric.py</div><div id='n_file'> N File Name: ml3d/torch/modules/metrics/semseg_metric.py</div><div id='m_start'> M Start Line: 40</div><div id='m_end'> M End Line: 72</div><div id='n_start'> N Start Line: 25</div><div id='n_end'> N End Line: 55</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    ctx = ctx.add_to_prefix("shampoo", count=False)
+
+    preconditioner = Preconditioner(grad, ctx.optimizer.block_size)
+    new_preconditioners<a id="change"> = </a><a id="change">[]</a>
+    <a id="change">for </a>i, <a id="change">old_stat</a> in enumerate(preconditioner.statistics_from_grad(grad))<a id="change">:
+        </a>new_stat = ema(ctx, old_stat, step, 1 - ctx.optimizer.shampoo_beta2, f"statistics_{i}", True,
+                       jnp.eye(old_stat.shape[0], dtype=ctx.model.storage_dtype) * ctx.optimizer.epsilon)
+        prev_p<a id="change"> = </a>get_param(ctx, f&quotpreconditioner_{i}&quot, old_stat.shape, dtype=ctx.model.storage_dtype,
+                           init_val=jnp.eye(old_stat.shape[0], dtype=ctx.model.storage_dtype))
+        if ctx.is_initializing:
+            continue
+
+        new_p, error = matrix_inverse_pth_root(new_stat, preconditioner.exponent_for_preconditioner(),
+                                               ridge_epsilon=ctx.optimizer.epsilon)
+        new_p<a id="change"> = </a>select_preconditioner(error, new_p, prev_p)
+        <a id="change">new_preconditioners.append(</a>new_p<a id="change">)</a>
+        assign(ctx, f"preconditioner_{i}", new_p)
+    if ctx.is_initializing:
+        return grad
+    <a id="change">return </a>preconditioner.preconditioned_grad(grad, new_preconditioners)
+
+
+def clip_norm(val: jnp.ndarray, min_norm: float) -&gt; jnp.ndarray:</code></pre><h3>After Change</h3><pre><code class='java'>
+
+def shampoo(ctx: Context, grad: jnp.ndarray, step: jnp.ndarray) -&gt; jnp.ndarray:
+    last_size = grad.shape[-1]
+    kernel_sizes = (ctx.dims.pointwise_kernel<a id="change">, ctx.dims.outer_bottleneck_kernel, ctx.dims.inner_bottleneck_kernel</a>)
+    <a id="change">if </a>grad.ndim != 3 or <a id="change">last_size not in kernel_sizes</a>:
+        return _shampoo(ctx, grad, step)
+    return jnp.stack([_shampoo(ctx, grad[:, :, i], step) for i in range(last_size)])
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/homebrewnlp/homebrewnlp-jax/commit/cee3cb499f3e75c256827c8b9e52ebe1d028e39d#diff-4540d7c8541eb25568b448ea775d64c43be83ce020bc67dd8340da4d4e804846L69' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 39472364</div><div id='project'> Project Name: homebrewnlp/homebrewnlp-jax</div><div id='commit'> Commit Name: cee3cb499f3e75c256827c8b9e52ebe1d028e39d</div><div id='time'> Time: 2022-06-28</div><div id='author'> Author: 39779310+ClashLuke@users.noreply.github.com</div><div id='file'> File Name: src/optimizer.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: shampoo(3)</div><div id='n_method'> N Method Name: shampoo(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/optimizer.py</div><div id='n_file'> N File Name: src/optimizer.py</div><div id='m_start'> M Start Line: 70</div><div id='m_end'> M End Line: 89</div><div id='n_start'> N Start Line: 93</div><div id='n_end'> N End Line: 97</div><BR>

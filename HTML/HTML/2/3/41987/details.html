@@ -1,0 +1,76 @@
+<html><h3>Pattern ID :41987
+</h3><img src='117680995.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+    def forward(self, user, item):
+        user = torch.from_numpy(self.interaction_matrix[user.cpu()].todense()).to(self.device)
+        item = torch.from_numpy(<a id="change">self.interaction_matrix[:, item.cpu()].todense()</a>).to(self.device).t()
+        user = self.user_linear(user)
+        item = self.item_linear(item)
+
+        user = self.user_fc_layers(user)
+        item = self.item_fc_layers(item)
+
+        vector<a id="change"> = </a>torch.cosine_similarity(user, item).view(-1)
+        vector = torch.max(vector, torch.tensor([self.min_y_hat]).to(self.device))
+        return vector
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        &#47&#47 Following lines construct tensor of shape [B,n_users] using the tensor of shape [B,H]
+        col_indices = self.history_user_id[item].flatten()
+        row_indices = torch.arange(item.shape[0]).to(self.device).repeat_interleave(<a id="change">self.history_user_id.shape[1]</a>, dim=0)
+        matrix_01 = torch.zeros(1).to(self.device).repeat(item.shape[0], self.n_users)
+        matrix_01.index_put_((row_indices, col_indices), self.history_user_value[item].flatten())
+        item = self.item_linear(matrix_01)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/rucaibox/recbole/commit/a63051c31f6cacc489710809995b2610a52b96d6#diff-c0fe1d45c47ca036a8c10b653717b9e13ef033a28d761ee73169dd2741cf1ae5L73' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 117680995</div><div id='project'> Project Name: rucaibox/recbole</div><div id='commit'> Commit Name: a63051c31f6cacc489710809995b2610a52b96d6</div><div id='time'> Time: 2020-09-17</div><div id='author'> Author: 893833413@qq.com</div><div id='file'> File Name: recbox/model/general_recommender/dmf.py</div><div id='m_class'> M Class Name: DMF</div><div id='n_method'> N Class Name: DMF</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: GeneralRecommender</div><div id='n_parent_class'> N Parent Class: GeneralRecommender</div><div id='m_file'> M File Name: recbox/model/general_recommender/dmf.py</div><div id='n_file'> N File Name: recbox/model/general_recommender/dmf.py</div><div id='m_start'> M Start Line: 73</div><div id='m_end'> M End Line: 82</div><div id='n_start'> N Start Line: 90</div><div id='n_end'> N End Line: 106</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        return self.forward(user, item)
+
+    def get_user_embedding(self, user):
+        user = torch.from_numpy(<a id="change">self.interaction_matrix[user.cpu()].todense()</a>).to(self.device)
+        user = self.user_linear(user)
+        user<a id="change"> = </a>self.user_fc_layers(user)
+        return user
+
+    def get_item_embedding(self):</code></pre><h3>After Change</h3><pre><code class='java'>
+        row_indices = torch.arange(user.shape[0]).to(self.device).repeat_interleave(self.history_item_id.shape[1],
+                                                                                    dim=0)
+        matrix_01 = torch.zeros(1).to(self.device).repeat(user.shape[0], self.n_items)
+        matrix_01.index_put_((row_indices, col_indices), <a id="change">self.history_item_value[user]</a>.flatten())
+        user = self.user_linear(matrix_01)
+
+        return user</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/rucaibox/recbole/commit/a63051c31f6cacc489710809995b2610a52b96d6#diff-c0fe1d45c47ca036a8c10b653717b9e13ef033a28d761ee73169dd2741cf1ae5L106' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 117680992</div><div id='project'> Project Name: rucaibox/recbole</div><div id='commit'> Commit Name: a63051c31f6cacc489710809995b2610a52b96d6</div><div id='time'> Time: 2020-09-17</div><div id='author'> Author: 893833413@qq.com</div><div id='file'> File Name: recbox/model/general_recommender/dmf.py</div><div id='m_class'> M Class Name: DMF</div><div id='n_method'> N Class Name: DMF</div><div id='m_method'> M Method Name: get_user_embedding(2)</div><div id='n_method'> N Method Name: get_user_embedding(2)</div><div id='m_parent_class'> M Parent Class: GeneralRecommender</div><div id='n_parent_class'> N Parent Class: GeneralRecommender</div><div id='m_file'> M File Name: recbox/model/general_recommender/dmf.py</div><div id='n_file'> N File Name: recbox/model/general_recommender/dmf.py</div><div id='m_start'> M Start Line: 107</div><div id='m_end'> M End Line: 109</div><div id='n_start'> N Start Line: 141</div><div id='n_end'> N End Line: 146</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    def predict(self, ids_te_users, test_tr, remove_train=True):
+        pred = self.model[ids_te_users,:]
+        if remove_train:
+            test_tr = <a id="change">test_tr.todense()</a>
+            pred<a id="change"> -= </a>test_tr * 10**7 &#47&#47huge number
+
+        return pred,
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    def predict(self, ids_te_users, test_tr, remove_train=True):
+        pred = self.model[ids_te_users,:]
+        if remove_train:
+            <a id="change">pred[test_tr.nonzero()]</a> = -np.inf
+        return pred,
+
+    def save_model(self, filepath):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/makgyver/rectorch/commit/ea30d0fc68d7f77b60c17c2d8da46c7eae9013f5#diff-dcfeaa5ac3dffd54264034760914588d92fc7395c81eaa9274715840dc28100bL314' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 117680986</div><div id='project'> Project Name: makgyver/rectorch</div><div id='commit'> Commit Name: ea30d0fc68d7f77b60c17c2d8da46c7eae9013f5</div><div id='time'> Time: 2020-04-14</div><div id='author'> Author: mak1788@gmail.com</div><div id='file'> File Name: models.py</div><div id='m_class'> M Class Name: EASE</div><div id='n_method'> N Class Name: EASE</div><div id='m_method'> M Method Name: predict(4)</div><div id='n_method'> N Method Name: predict(4)</div><div id='m_parent_class'> M Parent Class: RecSysModel</div><div id='n_parent_class'> N Parent Class: RecSysModel</div><div id='m_file'> M File Name: models.py</div><div id='n_file'> N File Name: models.py</div><div id='m_start'> M Start Line: 315</div><div id='m_end'> M End Line: 318</div><div id='n_start'> N Start Line: 315</div><div id='n_end'> N End Line: 317</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    &#47&#47print(len(neg_edges))
+
+    rs = np.random.RandomState(seed)
+    A_u = <a id="change">nx.adjacency_matrix(G).todense()</a>
+    indexes = np.where(A_u &lt; 1)
+    indexes = np.c_[indexes[0],indexes[1]]
+
+    neg_index = rs.choice(np.arange(len(indexes)), size=int(np.sum(A_u)))
+    neg_edges<a id="change"> = </a>indexes[neg_index].tolist()
+
+    len_val = int(prob_val*len(row))
+    len_test = int(prob_test*len(row))</code></pre><h3>After Change</h3><pre><code class='java'>
+                oberved_edges[i,1] = int(e[0])
+                oberved_weight[i] = A[e[1], e[0]]
+
+        oberved_edges = <a id="change">oberved_edges[np.sum(oberved_edges, axis=-1) &gt;= 0]</a> 
+        oberved_weight = oberved_weight[oberved_weight &gt;= 0] 
+        datasets[ind] = {}
+        datasets[ind][&quotgraph&quot] = torch.from_numpy(oberved_edges.T).long().to(device)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/sherylhyx/pytorch_geometric_signed_directed/commit/eeeffe159fa0bd2b54e276e7605f8aaa238d8202#diff-c9dabc18cfbd986fb3189b44d148888852aa3e1a9dcc5de10f2d946217fb0215L71' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 117680984</div><div id='project'> Project Name: sherylhyx/pytorch_geometric_signed_directed</div><div id='commit'> Commit Name: eeeffe159fa0bd2b54e276e7605f8aaa238d8202</div><div id='time'> Time: 2022-02-18</div><div id='author'> Author: xzhang15@wpi.edu</div><div id='file'> File Name: torch_geometric_signed_directed/utils/directed/directed_link_split.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: directed_link_class_split(8)</div><div id='n_method'> N Method Name: directed_link_class_split(8)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: torch_geometric_signed_directed/utils/directed/directed_link_split.py</div><div id='n_file'> N File Name: torch_geometric_signed_directed/utils/directed/directed_link_split.py</div><div id='m_start'> M Start Line: 104</div><div id='m_end'> M End Line: 168</div><div id='n_start'> N Start Line: 100</div><div id='n_end'> N End Line: 162</div><BR>

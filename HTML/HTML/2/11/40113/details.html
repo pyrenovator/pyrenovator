@@ -1,0 +1,114 @@
+<html><h3>Pattern ID :40113
+</h3><img src='113961090.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+        &#47&#47 Run a forward chain to collect intermediate inputs
+        &#47&#47 Note that we do not forward for the last module since we do not need its output
+        inter_inputs<a id="change"> = [</a>inputs<a id="change"></a>]
+        <a id="change">for </a>backend in requested_backends[:-1]<a id="change">:
+            </a>assert inputs.ndim == 3, f"inputs to {type(backend)} must be a single 3d tensor of hidden states"
+            inputs = await backend.forward_pool.submit_task(inputs)
+            assert isinstance(inputs, (list, tuple)) and len(inputs) == 1
+            inputs<a id="change"> = </a><a id="change">inputs[0]</a>
+            <a id="change">inter_inputs.append(</a>inputs<a id="change">)</a>
+
+        &#47&#47 Run a chain of requested backends
+        <a id="change">for </a>inp, backend in zip(inter_inputs[::-1], requested_backends[::-1])<a id="change">:
+            </a>inputs_and_grads = [inp, grads]
+            grads<a id="change"> = await </a>backend.backward_pool.submit_task(*inputs_and_grads)
+            assert isinstance(grads, (list, tuple)) and len(grads) == 1
+            grads = grads[0]
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        requested_uids = self._check_uids(request.uid)
+        requested_backends = tuple(self.module_backends[uid] for uid in requested_uids)
+
+        grads = <a id="change">await </a>_rpc_backward(*flat_tensors, requested_backends=requested_backends)
+
+        &#47&#47 Modify grad_inputs_schema to support grad_prompts
+        assert len(requested_backends[0].args_schema) == 1 and len(grads) in (1, 2)  &#47&#47 TODO generalize</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 10</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/bigscience-workshop/distributed-bloom/commit/6095f58681bde14962c5023b75a2219c525cbe4c#diff-65ada620fb21ff82c2b88abea8bc2cf7fdd27241f03553f7e7d076339dbaab55L133' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 113961090</div><div id='project'> Project Name: bigscience-workshop/distributed-bloom</div><div id='commit'> Commit Name: 6095f58681bde14962c5023b75a2219c525cbe4c</div><div id='time'> Time: 2022-08-12</div><div id='author'> Author: dmitrybaranchuk@gmail.com</div><div id='file'> File Name: src/server/handler.py</div><div id='m_class'> M Class Name: TransformerConnectionHandler</div><div id='n_method'> N Class Name: TransformerConnectionHandler</div><div id='m_method'> M Method Name: rpc_backward(3)</div><div id='n_method'> N Method Name: rpc_backward(3)</div><div id='m_parent_class'> M Parent Class: ConnectionHandler</div><div id='n_parent_class'> N Parent Class: ConnectionHandler</div><div id='m_file'> M File Name: src/server/handler.py</div><div id='n_file'> N File Name: src/server/handler.py</div><div id='m_start'> M Start Line: 142</div><div id='m_end'> M End Line: 168</div><div id='n_start'> N Start Line: 133</div><div id='n_end'> N End Line: 145</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+        &#47&#47 Run a forward chain to collect intermediate inputs
+        &#47&#47 Note that we do not forward for the last module since we do not need its outputs
+        inter_inputs<a id="change"> = [</a>inputs<a id="change"></a>]
+        <a id="change">for backend</a> in requested_backends[:-1]<a id="change">:
+            </a>assert inputs.ndim == 3, f"inputs to {type(backend)} must be a single 3d tensor of hidden states"
+            inputs = await backend.forward_pool.submit_task(inputs)
+            assert isinstance(inputs, (list, tuple)) and len(inputs) == 1
+            inputs<a id="change"> = </a><a id="change">inputs[0]</a>
+            <a id="change">inter_inputs.append(</a>inputs<a id="change">)</a>
+
+        &#47&#47 Run a backward chain for requested backends
+        <a id="change">for </a>inp, backend in zip(inter_inputs[::-1], requested_backends[::-1])<a id="change">:
+            </a>inputs_and_grads = [inp, grads]
+            grads<a id="change"> = await </a>backend.backward_pool.submit_task(*inputs_and_grads)
+            assert isinstance(grads, (list, tuple)) and len(grads) == 1
+            grads = grads[0]
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        requested_uids = self._check_uids(uids_header)
+        requested_backends = tuple(self.module_backends[uid] for uid in requested_uids)
+
+        grads = <a id="change">await </a>_rpc_backward(*flat_tensors, requested_backends=requested_backends)
+
+        &#47&#47 Modify grad_inputs_schema to support grad_prompts
+        assert len(requested_backends[0].args_schema) == 1 and len(grads) in (1, 2)  &#47&#47 TODO generalize</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/bigscience-workshop/distributed-bloom/commit/6095f58681bde14962c5023b75a2219c525cbe4c#diff-65ada620fb21ff82c2b88abea8bc2cf7fdd27241f03553f7e7d076339dbaab55L175' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 113961091</div><div id='project'> Project Name: bigscience-workshop/distributed-bloom</div><div id='commit'> Commit Name: 6095f58681bde14962c5023b75a2219c525cbe4c</div><div id='time'> Time: 2022-08-12</div><div id='author'> Author: dmitrybaranchuk@gmail.com</div><div id='file'> File Name: src/server/handler.py</div><div id='m_class'> M Class Name: TransformerConnectionHandler</div><div id='n_method'> N Class Name: TransformerConnectionHandler</div><div id='m_method'> M Method Name: rpc_backward_stream(3)</div><div id='n_method'> N Method Name: rpc_backward_stream(3)</div><div id='m_parent_class'> M Parent Class: ConnectionHandler</div><div id='n_parent_class'> N Parent Class: ConnectionHandler</div><div id='m_file'> M File Name: src/server/handler.py</div><div id='n_file'> N File Name: src/server/handler.py</div><div id='m_start'> M Start Line: 179</div><div id='m_end'> M End Line: 208</div><div id='n_start'> N Start Line: 159</div><div id='n_end'> N End Line: 175</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+        &#47&#47 Run a forward chain to collect intermediate inputs
+        &#47&#47 Note that we do not forward for the last module since we do not need its output
+        inter_inputs<a id="change"> = [</a>inputs<a id="change"></a>]
+        <a id="change">for backend</a> in requested_backends[:-1]<a id="change">:
+            </a>assert inputs.ndim == 3, f"inputs to {type(backend)} must be a single 3d tensor of hidden states"
+            inputs = await backend.forward_pool.submit_task(inputs)
+            assert isinstance(inputs, (list, tuple)) and len(inputs) == 1
+            inputs<a id="change"> = </a><a id="change">inputs[0]</a>
+            <a id="change">inter_inputs.append(</a>inputs<a id="change">)</a>
+
+        &#47&#47 Run a chain of requested backends
+        <a id="change">for </a>inp, backend in zip(inter_inputs[::-1], requested_backends[::-1])<a id="change">:
+            </a>inputs_and_grads = [inp, grads]
+            grads = <a id="change">await </a>backend.backward_pool.submit_task(*inputs_and_grads)
+            assert isinstance(grads, (list, tuple)) and len(grads) == 1
+            grads<a id="change"> = </a>grads[0]
+
+        &#47&#47 Serialize the overall grad_input and respond
+        return runtime_pb2.ExpertResponse(</code></pre><h3>After Change</h3><pre><code class='java'>
+        requested_uids = self._check_uids(request.uid)
+        requested_backends = tuple(self.module_backends[uid] for uid in requested_uids)
+
+        grads = <a id="change">await </a>_rpc_backward(*flat_tensors, requested_backends=requested_backends)
+
+        &#47&#47 Modify grad_inputs_schema to support grad_prompts
+        assert len(requested_backends[0].args_schema) == 1 and len(grads) in (1, 2)  &#47&#47 TODO generalize</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/bigscience-workshop/distributed-bloom/commit/6095f58681bde14962c5023b75a2219c525cbe4c#diff-65ada620fb21ff82c2b88abea8bc2cf7fdd27241f03553f7e7d076339dbaab55L140' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 113961094</div><div id='project'> Project Name: bigscience-workshop/distributed-bloom</div><div id='commit'> Commit Name: 6095f58681bde14962c5023b75a2219c525cbe4c</div><div id='time'> Time: 2022-08-12</div><div id='author'> Author: dmitrybaranchuk@gmail.com</div><div id='file'> File Name: src/server/handler.py</div><div id='m_class'> M Class Name: TransformerConnectionHandler</div><div id='n_method'> N Class Name: TransformerConnectionHandler</div><div id='m_method'> M Method Name: rpc_backward(3)</div><div id='n_method'> N Method Name: rpc_backward(3)</div><div id='m_parent_class'> M Parent Class: ConnectionHandler</div><div id='n_parent_class'> N Parent Class: ConnectionHandler</div><div id='m_file'> M File Name: src/server/handler.py</div><div id='n_file'> N File Name: src/server/handler.py</div><div id='m_start'> M Start Line: 142</div><div id='m_end'> M End Line: 168</div><div id='n_start'> N Start Line: 133</div><div id='n_end'> N End Line: 145</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                url = f&quot{proto}://{self.args.host}:{self.args.port}/post&quot
+
+                with cm1 as p_bar:
+                    all_responses<a id="change"> = []</a>
+                    <a id="change">for req</a> in req_iter<a id="change">:
+                        &#47&#47 fix the mismatch between pydantic model and Protobuf model
+                        </a>req_dict = req.dict()
+                        req_dict[&quotexec_endpoint&quot]<a id="change"> = </a><a id="change">req_dict[&quotheader&quot][&quotexec_endpoint&quot]</a>
+                        req_dict[&quotdata&quot] = req_dict[&quotdata&quot].get(&quotdocs&quot, None)
+
+                        <a id="change">all_responses.append(
+                            </a>asyncio.create_task(
+                                self._get_http_response(
+                                    session,
+                                    url,
+                                    req_dict,
+                                )
+                            )<a id="change">
+                        )</a>
+
+                    <a id="change">for </a>resp in asyncio.as_completed(all_responses)<a id="change">:
+                        </a>r_status<a id="change">, r_str = await </a>resp
+                        if r_status == 404:
+                            raise BadClient(f&quotno such endpoint {url}&quot)
+                        elif r_status &lt; 200 or r_status &gt; 300:</code></pre><h3>After Change</h3><pre><code class='java'>
+                url = f&quot{proto}://{self.args.host}:{self.args.port}/post&quot
+
+                p_bar = stack.enter_context(cm1)
+                iolet = <a id="change">await </a>stack.enter_async_context(HTTPClientlet(url=url))
+
+                prefetcher = HTTPClientPrefetcher(self.args, iolet=iolet)
+                async for response in prefetcher.send(request_iterator):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/jina-ai/jina/commit/2c51fa7e2ca4e2ef72355ae6210ba6056c388bba#diff-85f0eb5c63717161fc010675143a538088c294c1f332471fa9509c4a12616aebL24' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 113961095</div><div id='project'> Project Name: jina-ai/jina</div><div id='commit'> Commit Name: 2c51fa7e2ca4e2ef72355ae6210ba6056c388bba</div><div id='time'> Time: 2021-10-05</div><div id='author'> Author: deepankar.mahapatro@jina.ai</div><div id='file'> File Name: jina/clients/base/http.py</div><div id='m_class'> M Class Name: HTTPBaseClient</div><div id='n_method'> N Class Name: HTTPBaseClient</div><div id='m_method'> M Method Name: _get_results(5)</div><div id='n_method'> N Method Name: _get_results(5)</div><div id='m_parent_class'> M Parent Class: BaseClient</div><div id='n_parent_class'> N Parent Class: BaseClient</div><div id='m_file'> M File Name: jina/clients/base/http.py</div><div id='n_file'> N File Name: jina/clients/base/http.py</div><div id='m_start'> M Start Line: 58</div><div id='m_end'> M End Line: 104</div><div id='n_start'> N Start Line: 86</div><div id='n_end'> N End Line: 119</div><BR>

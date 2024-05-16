@@ -1,0 +1,380 @@
+<html><h3>Pattern ID :15782
+</h3><img src='53333805.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        batches_trained = 0
+        epochs_trained = 0
+        training_complete = False
+        <a id="change">logging.debug(f"Training with {training_epochs} epochs and {training_batches} batches"</a><a id="change">)</a>
+        logging.debug(f"Batch size is {self.batch_size}")
+
+        while not training_complete:
+            loss_meter = AverageMeter()
+            &#47&#47 Set encoder and decoder to be in training mode
+
+            for step, batch in enumerate(dataloader):
+                &#47&#47 Construct batch (currently just using Torch&quots default batch-creator)
+                contexts, targets, traj_ts_info, extra_context = self.unpack_batch(batch)
+
+                &#47&#47 Use an algorithm-specific augmentation strategy to augment either
+                &#47&#47 just context, or both context and targets
+                contexts, targets = self._prep_tensors(contexts), self._prep_tensors(targets)
+                extra_context = self._prep_tensors(extra_context)
+                traj_ts_info = self._prep_tensors(traj_ts_info)
+                &#47&#47 Note: preprocessing might be better to do on CPU if, in future, we can parallelize doing so
+                contexts = self._preprocess(contexts)
+                if self.preprocess_target:
+                    targets = self._preprocess(targets)
+                contexts, targets = self.augmenter(contexts, targets)
+                extra_context = self._preprocess_extra_context(extra_context)
+
+
+                &#47&#47 These will typically just use the forward() function for the encoder, but can optionally
+                &#47&#47 use a specific encode_context and encode_target if one is implemented
+                encoded_contexts = self.encoder.encode_context(contexts, traj_ts_info)
+                encoded_targets = self.encoder.encode_target(targets, traj_ts_info)
+                &#47&#47 Typically the identity function
+                extra_context = self.encoder.encode_extra_context(extra_context, traj_ts_info)
+
+                &#47&#47 Use an algorithm-specific decoder to "decode" the representations into a loss-compatible tensor
+                &#47&#47 As with encode, these will typically just use forward()
+                decoded_contexts = self.decoder.decode_context(encoded_contexts, traj_ts_info, extra_context)
+                decoded_targets = self.decoder.decode_target(encoded_targets, traj_ts_info, extra_context)
+
+                &#47&#47 Optionally add to the batch before loss. By default, this is an identity operation, but
+                &#47&#47 can also implement momentum queue logic
+                decoded_contexts, decoded_targets = self.batch_extender(decoded_contexts, decoded_targets)
+
+                &#47&#47 Use an algorithm-specific loss function. Typically this only requires decoded_contexts and
+                &#47&#47 decoded_targets, but VAE requires encoded_contexts, so we pass it in here
+
+                loss = self.loss_calculator(decoded_contexts, decoded_targets, encoded_contexts)
+                loss_item = loss.item()
+                assert not np.isnan(loss_item), "Loss is not NAN"
+                loss_meter.update(loss_item)
+
+                self.optimizer.zero_grad()
+                loss.backward()
+                self.optimizer.step()
+                del loss  &#47&#47 so we don&quott use again
+
+                gradient_norm, weight_norm = self._calculate_norms()
+
+                &#47&#47 FIXME(sam): don&quott plot this every batch, plot it every k
+                &#47&#47 batches (will make log files much smaller & let us stream
+                &#47&#47 them to head node on Ray cluster)
+                loss_meter.update(loss_item)
+                logger.record(&quotloss&quot, loss_item)
+                logger.record(&quotgradient_norm&quot, gradient_norm.item())
+                logger.record(&quotweight_norm&quot, weight_norm.item())
+                logger.record(&quotepoch&quot, epochs_trained)
+                logger.record(&quotwithin_epoch_step&quot, step)
+                logger.record(&quotbatches_trained&quot, batches_trained)
+                logger.dump(step=batches_trained)
+                batches_trained += 1
+                if <a id="change">(training_batches is not None and batches_trained &gt;= training_batches)</a>:
+                    logging.info(f"Breaking out of training in epoch {epochs_trained} because max batches "
+                                 f"value of {training_batches} has been reached")
+                    training_complete<a id="change"> = </a>True
+                    break
+
+            assert batches_trained &gt; 0, \
+                "went through training loop with no batches---empty dataset?"
+            if epochs_trained == 0:
+                &#47&#47 we infer the size of the dataset from the number of
+                &#47&#47 iterations through the loop the first time
+                <a id="change">logging.debug(</a>f"Dataset size is {batches_trained}"<a id="change">)</a>
+
+            if self.scheduler is not None:
+                self.scheduler.step()
+            loss_record.append(loss_meter.avg)
+
+            epochs_trained<a id="change"> += </a>1
+            if (training_epochs is not None and epochs_trained &gt;= training_epochs):
+                training_complete<a id="change"> = </a>True
+
+            should_save_checkpoint = (training_complete or
+                                      epochs_trained % self.save_interval == 0)</code></pre><h3>After Change</h3><pre><code class='java'>
+        :param dataset:
+        :return:
+        
+        <a id="change">for </a>sub_ds in datasets<a id="change">:
+            &#47&#47 Construct representation learning dataset of correctly paired
+            &#47&#47 (context, target) pairs
+            </a>sub_ds.pipe(self.target_pair_constructor)
+            if self.shuffle_batches:
+                &#47&#47 TODO(sam): if we&quotre low on memory due to shuffle buffer memory
+                &#47&#47 consumption, then consider shuffling *after* interleaving (more</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 8</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/humancompatibleai/eirli/commit/579e0a8ca8ba0c924b8c8f393d9445915448617d#diff-da75b71a2421881ac87f16bdedbc66a6eee21a60650cb052fb123cfe1436b72fL220' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 53333805</div><div id='project'> Project Name: humancompatibleai/eirli</div><div id='commit'> Commit Name: 579e0a8ca8ba0c924b8c8f393d9445915448617d</div><div id='time'> Time: 2020-11-19</div><div id='author'> Author: sam@qxcv.net</div><div id='file'> File Name: src/il_representations/algos/representation_learner.py</div><div id='m_class'> M Class Name: RepresentationLearner</div><div id='n_method'> N Class Name: RepresentationLearner</div><div id='m_method'> M Method Name: learn(4)</div><div id='n_method'> N Method Name: learn(4)</div><div id='m_parent_class'> M Parent Class: BaseEnvironmentLearner</div><div id='n_parent_class'> N Parent Class: BaseEnvironmentLearner</div><div id='m_file'> M File Name: src/il_representations/algos/representation_learner.py</div><div id='n_file'> N File Name: src/il_representations/algos/representation_learner.py</div><div id='m_start'> M Start Line: 220</div><div id='m_end'> M End Line: 354</div><div id='n_start'> N Start Line: 220</div><div id='n_end'> N End Line: 343</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        batches_trained = 0
+        epochs_trained = 0
+        training_complete = False
+        <a id="change">logging.debug(f"Training with {training_epochs} epochs and {training_batches} batches"</a><a id="change">)</a>
+        logging.debug(f"Batch size is {self.batch_size}")
+
+        while not training_complete:
+            loss_meter = AverageMeter()
+            &#47&#47 Set encoder and decoder to be in training mode
+
+            for step, batch in enumerate(dataloader):
+                &#47&#47 Construct batch (currently just using Torch&quots default batch-creator)
+                contexts, targets, traj_ts_info, extra_context = self.unpack_batch(batch)
+
+                &#47&#47 Use an algorithm-specific augmentation strategy to augment either
+                &#47&#47 just context, or both context and targets
+                contexts, targets = self._prep_tensors(contexts), self._prep_tensors(targets)
+                extra_context = self._prep_tensors(extra_context)
+                traj_ts_info = self._prep_tensors(traj_ts_info)
+                &#47&#47 Note: preprocessing might be better to do on CPU if, in future, we can parallelize doing so
+                contexts = self._preprocess(contexts)
+                if self.preprocess_target:
+                    targets = self._preprocess(targets)
+                contexts, targets = self.augmenter(contexts, targets)
+                extra_context = self._preprocess_extra_context(extra_context)
+
+
+                &#47&#47 These will typically just use the forward() function for the encoder, but can optionally
+                &#47&#47 use a specific encode_context and encode_target if one is implemented
+                encoded_contexts = self.encoder.encode_context(contexts, traj_ts_info)
+                encoded_targets = self.encoder.encode_target(targets, traj_ts_info)
+                &#47&#47 Typically the identity function
+                extra_context = self.encoder.encode_extra_context(extra_context, traj_ts_info)
+
+                &#47&#47 Use an algorithm-specific decoder to "decode" the representations into a loss-compatible tensor
+                &#47&#47 As with encode, these will typically just use forward()
+                decoded_contexts = self.decoder.decode_context(encoded_contexts, traj_ts_info, extra_context)
+                decoded_targets = self.decoder.decode_target(encoded_targets, traj_ts_info, extra_context)
+
+                &#47&#47 Optionally add to the batch before loss. By default, this is an identity operation, but
+                &#47&#47 can also implement momentum queue logic
+                decoded_contexts, decoded_targets = self.batch_extender(decoded_contexts, decoded_targets)
+
+                &#47&#47 Use an algorithm-specific loss function. Typically this only requires decoded_contexts and
+                &#47&#47 decoded_targets, but VAE requires encoded_contexts, so we pass it in here
+
+                loss = self.loss_calculator(decoded_contexts, decoded_targets, encoded_contexts)
+                loss_item = loss.item()
+                assert not np.isnan(loss_item), "Loss is not NAN"
+                loss_meter.update(loss_item)
+
+                self.optimizer.zero_grad()
+                loss.backward()
+                self.optimizer.step()
+                del loss  &#47&#47 so we don&quott use again
+
+                gradient_norm, weight_norm = self._calculate_norms()
+
+                &#47&#47 FIXME(sam): don&quott plot this every batch, plot it every k
+                &#47&#47 batches (will make log files much smaller & let us stream
+                &#47&#47 them to head node on Ray cluster)
+                loss_meter.update(loss_item)
+                logger.record(&quotloss&quot, loss_item)
+                logger.record(&quotgradient_norm&quot, gradient_norm.item())
+                logger.record(&quotweight_norm&quot, weight_norm.item())
+                logger.record(&quotepoch&quot, epochs_trained)
+                logger.record(&quotwithin_epoch_step&quot, step)
+                logger.record(&quotbatches_trained&quot, batches_trained)
+                logger.dump(step=batches_trained)
+                batches_trained += 1
+                if <a id="change">(training_batches is not None and batches_trained &gt;= training_batches)</a>:
+                    logging.info(f"Breaking out of training in epoch {epochs_trained} because max batches "
+                                 f"value of {training_batches} has been reached")
+                    training_complete<a id="change"> = </a>True
+                    break
+
+            assert batches_trained &gt; 0, \
+                "went through training loop with no batches---empty dataset?"
+            if epochs_trained == 0:
+                &#47&#47 we infer the size of the dataset from the number of
+                &#47&#47 iterations through the loop the first time
+                <a id="change">logging.debug(</a>f"Dataset size is {batches_trained}"<a id="change">)</a>
+
+            if self.scheduler is not None:
+                self.scheduler.step()
+            loss_record.append(loss_meter.avg)
+
+            epochs_trained<a id="change"> += </a>1
+            if (training_epochs is not None and epochs_trained &gt;= training_epochs):
+                training_complete<a id="change"> = </a>True
+
+            should_save_checkpoint = (training_complete or
+                                      epochs_trained % self.save_interval == 0)</code></pre><h3>After Change</h3><pre><code class='java'>
+        :param dataset:
+        :return:
+        
+        <a id="change">for </a>sub_ds in datasets<a id="change">:
+            &#47&#47 Construct representation learning dataset of correctly paired
+            &#47&#47 (context, target) pairs
+            </a>sub_ds.pipe(self.target_pair_constructor)
+            if self.shuffle_batches:
+                &#47&#47 TODO(sam): if we&quotre low on memory due to shuffle buffer memory
+                &#47&#47 consumption, then consider shuffling *after* interleaving (more</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/humancompatibleai/eirli/commit/579e0a8ca8ba0c924b8c8f393d9445915448617d#diff-da75b71a2421881ac87f16bdedbc66a6eee21a60650cb052fb123cfe1436b72fL215' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 53333807</div><div id='project'> Project Name: humancompatibleai/eirli</div><div id='commit'> Commit Name: 579e0a8ca8ba0c924b8c8f393d9445915448617d</div><div id='time'> Time: 2020-11-19</div><div id='author'> Author: sam@qxcv.net</div><div id='file'> File Name: src/il_representations/algos/representation_learner.py</div><div id='m_class'> M Class Name: RepresentationLearner</div><div id='n_method'> N Class Name: RepresentationLearner</div><div id='m_method'> M Method Name: learn(4)</div><div id='n_method'> N Method Name: learn(4)</div><div id='m_parent_class'> M Parent Class: BaseEnvironmentLearner</div><div id='n_parent_class'> N Parent Class: BaseEnvironmentLearner</div><div id='m_file'> M File Name: src/il_representations/algos/representation_learner.py</div><div id='n_file'> N File Name: src/il_representations/algos/representation_learner.py</div><div id='m_start'> M Start Line: 220</div><div id='m_end'> M End Line: 354</div><div id='n_start'> N Start Line: 220</div><div id='n_end'> N End Line: 343</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+
+def train(args):
+    is_distributed = <a id="change">len(args.hosts) &gt; 1 and args.backend is not None</a>
+    logger.debug("Distributed training - {}".format(is_distributed))
+    use_cuda = (args.processor == &quotgpu&quot) or (args.num_gpus &gt; 0)
+    <a id="change">logger.debug(</a>"Number of gpus available - {}".format(args.num_gpus)<a id="change">)</a>
+    kwargs = {&quotnum_workers&quot: 1, &quotpin_memory&quot: True} if use_cuda else {}
+    device = torch.device("cuda" if use_cuda else "cpu")
+
+    if is_distributed:
+        &#47&#47 Initialize the distributed environment.
+        world_size<a id="change"> = </a>len(args.hosts)
+        os.environ[&quotWORLD_SIZE&quot] = str(world_size)
+        host_rank = args.hosts.index(args.current_host)
+        os.environ[&quotRANK&quot]<a id="change"> = </a>str(host_rank)
+        dist.init_process_group(backend=args.backend, rank=host_rank, world_size=world_size)
+        logger.info(&quotInitialized the distributed environment: \&quot{}\&quot backend on {} nodes. &quot.format(
+            args.backend, dist.get_world_size()) + &quotCurrent host rank is {}. Number of gpus: {}&quot.format(
+            dist.get_rank(), args.num_gpus))
+
+    &#47&#47 set the seed for generating random numbers
+    torch.manual_seed(args.seed)
+    if use_cuda:
+        torch.cuda.manual_seed(args.seed)
+
+    train_loader = _get_train_data_loader(args.batch_size, args.data_dir, is_distributed, **kwargs)
+    test_loader = _get_test_data_loader(args.test_batch_size, args.data_dir, **kwargs)
+
+    &#47&#47 TODO: assert the logs when we move to the SDK local mode
+    logger.debug("Processes {}/{} ({:.0f}%) of train data".format(
+        len(train_loader.sampler), len(train_loader.dataset),
+        100. * len(train_loader.sampler) / len(train_loader.dataset)
+    ))
+
+    logger.debug("Processes {}/{} ({:.0f}%) of test data".format(
+        len(test_loader.sampler), len(test_loader.dataset),
+        100. * len(test_loader.sampler) / len(test_loader.dataset)
+    ))
+
+    model = Net()
+    if is_distributed and use_cuda:
+        &#47&#47 multi-machine multi-gpu case
+        <a id="change">logger.debug("Multi-machine multi-gpu: using DistributedDataParallel."</a><a id="change">)</a>
+        &#47&#47 establish host rank and set device on this node
+        torch.cuda.set_device(host_rank)
+        model.cuda(host_rank)
+        &#47&#47 for multiprocessing distributed, the DDP constructor should always set
+        &#47&#47 the single device scope. otherwise, DDP will use all available devices.
+        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[host_rank], output_device=host_rank)
+    elif use_cuda:
+        &#47&#47 single-machine multi-gpu case
+        logger.debug("Single-machine multi-gpu: using DataParallel().cuda().")
+        model =  model.to(device)
+        model<a id="change"> = </a>torch.nn.DataParallel(model).to(device)
+    else:
+        &#47&#47 single-machine or multi-machine cpu case
+        logger.debug("Single-machine/multi-machine cpu: using DataParallel.")</code></pre><h3>After Change</h3><pre><code class='java'>
+            logger.debug("Multi-machine multi-gpu cuda: using DistributedDataParallel.")
+        &#47&#47 for multiprocessing distributed, the DDP constructor should always set
+        &#47&#47 the single device scope. otherwise, DDP will use all available devices.
+        <a id="change">for </a>name, param in model.named_parameters()<a id="change">:
+            </a>print(f"{dist.get_rank()} model parameters {name}: {param.size()}")
+        model = torch.nn.parallel.DistributedDataParallel(model.to(device))
+    else:
+        model = model.to(device)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/aws/deep-learning-containers/commit/53f99fafb1c247634df1eb80ca25587bf6b3d100#diff-7d121effda9eaa4782a76f0efe76bd90c71226eb18fcc5eb04a281e4d9ac5da2L111' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 53333795</div><div id='project'> Project Name: aws/deep-learning-containers</div><div id='commit'> Commit Name: 53f99fafb1c247634df1eb80ca25587bf6b3d100</div><div id='time'> Time: 2023-04-14</div><div id='author'> Author: shx26@pitt.edu</div><div id='file'> File Name: test/sagemaker_tests/pytorch/training/resources/mnist/mnist.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train(1)</div><div id='n_method'> N Method Name: train(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: test/sagemaker_tests/pytorch/training/resources/mnist/mnist.py</div><div id='n_file'> N File Name: test/sagemaker_tests/pytorch/training/resources/mnist/mnist.py</div><div id='m_start'> M Start Line: 112</div><div id='m_end'> M End Line: 195</div><div id='n_start'> N Start Line: 112</div><div id='n_end'> N End Line: 193</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        batches_trained = 0
+        epochs_trained = 0
+        training_complete = False
+        <a id="change">logging.debug(f"Training with {training_epochs} epochs and {training_batches} batches"</a><a id="change">)</a>
+        logging.debug(f"Batch size is {self.batch_size}")
+
+        while not training_complete:
+            loss_meter = AverageMeter()
+            &#47&#47 Set encoder and decoder to be in training mode
+
+            for step, batch in enumerate(dataloader):
+                &#47&#47 Construct batch (currently just using Torch&quots default batch-creator)
+                contexts, targets, traj_ts_info, extra_context = self.unpack_batch(batch)
+
+                &#47&#47 Use an algorithm-specific augmentation strategy to augment either
+                &#47&#47 just context, or both context and targets
+                contexts, targets = self._prep_tensors(contexts), self._prep_tensors(targets)
+                extra_context = self._prep_tensors(extra_context)
+                traj_ts_info = self._prep_tensors(traj_ts_info)
+                &#47&#47 Note: preprocessing might be better to do on CPU if, in future, we can parallelize doing so
+                contexts = self._preprocess(contexts)
+                if self.preprocess_target:
+                    targets = self._preprocess(targets)
+                contexts, targets = self.augmenter(contexts, targets)
+                extra_context = self._preprocess_extra_context(extra_context)
+
+
+                &#47&#47 These will typically just use the forward() function for the encoder, but can optionally
+                &#47&#47 use a specific encode_context and encode_target if one is implemented
+                encoded_contexts = self.encoder.encode_context(contexts, traj_ts_info)
+                encoded_targets = self.encoder.encode_target(targets, traj_ts_info)
+                &#47&#47 Typically the identity function
+                extra_context = self.encoder.encode_extra_context(extra_context, traj_ts_info)
+
+                &#47&#47 Use an algorithm-specific decoder to "decode" the representations into a loss-compatible tensor
+                &#47&#47 As with encode, these will typically just use forward()
+                decoded_contexts = self.decoder.decode_context(encoded_contexts, traj_ts_info, extra_context)
+                decoded_targets = self.decoder.decode_target(encoded_targets, traj_ts_info, extra_context)
+
+                &#47&#47 Optionally add to the batch before loss. By default, this is an identity operation, but
+                &#47&#47 can also implement momentum queue logic
+                decoded_contexts, decoded_targets = self.batch_extender(decoded_contexts, decoded_targets)
+
+                &#47&#47 Use an algorithm-specific loss function. Typically this only requires decoded_contexts and
+                &#47&#47 decoded_targets, but VAE requires encoded_contexts, so we pass it in here
+
+                loss = self.loss_calculator(decoded_contexts, decoded_targets, encoded_contexts)
+                loss_item = loss.item()
+                assert not np.isnan(loss_item), "Loss is not NAN"
+                loss_meter.update(loss_item)
+
+                self.optimizer.zero_grad()
+                loss.backward()
+                self.optimizer.step()
+                del loss  &#47&#47 so we don&quott use again
+
+                gradient_norm, weight_norm = self._calculate_norms()
+
+                &#47&#47 FIXME(sam): don&quott plot this every batch, plot it every k
+                &#47&#47 batches (will make log files much smaller & let us stream
+                &#47&#47 them to head node on Ray cluster)
+                loss_meter.update(loss_item)
+                logger.record(&quotloss&quot, loss_item)
+                logger.record(&quotgradient_norm&quot, gradient_norm.item())
+                logger.record(&quotweight_norm&quot, weight_norm.item())
+                logger.record(&quotepoch&quot, epochs_trained)
+                logger.record(&quotwithin_epoch_step&quot, step)
+                logger.record(&quotbatches_trained&quot, batches_trained)
+                logger.dump(step=batches_trained)
+                batches_trained += 1
+                if <a id="change">(training_batches is not None and batches_trained &gt;= training_batches)</a>:
+                    logging.info(f"Breaking out of training in epoch {epochs_trained} because max batches "
+                                 f"value of {training_batches} has been reached")
+                    training_complete<a id="change"> = </a>True
+                    break
+
+            assert batches_trained &gt; 0, \
+                "went through training loop with no batches---empty dataset?"
+            if epochs_trained == 0:
+                &#47&#47 we infer the size of the dataset from the number of
+                &#47&#47 iterations through the loop the first time
+                <a id="change">logging.debug(</a>f"Dataset size is {batches_trained}"<a id="change">)</a>
+
+            if self.scheduler is not None:
+                self.scheduler.step()
+            loss_record.append(loss_meter.avg)
+
+            epochs_trained<a id="change"> += </a>1
+            if (training_epochs is not None and epochs_trained &gt;= training_epochs):
+                training_complete<a id="change"> = </a>True
+
+            should_save_checkpoint = (training_complete or
+                                      epochs_trained % self.save_interval == 0)</code></pre><h3>After Change</h3><pre><code class='java'>
+        :param dataset:
+        :return:
+        
+        <a id="change">for </a>sub_ds in datasets<a id="change">:
+            &#47&#47 Construct representation learning dataset of correctly paired
+            &#47&#47 (context, target) pairs
+            </a>sub_ds.pipe(self.target_pair_constructor)
+            if self.shuffle_batches:
+                &#47&#47 TODO(sam): if we&quotre low on memory due to shuffle buffer memory
+                &#47&#47 consumption, then consider shuffling *after* interleaving (more</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/humancompatibleai/eirli/commit/ccdc28141c799043c5385b20f1201bc6971e462b#diff-da75b71a2421881ac87f16bdedbc66a6eee21a60650cb052fb123cfe1436b72fL215' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 53333763</div><div id='project'> Project Name: humancompatibleai/eirli</div><div id='commit'> Commit Name: ccdc28141c799043c5385b20f1201bc6971e462b</div><div id='time'> Time: 2020-11-19</div><div id='author'> Author: sam@qxcv.net</div><div id='file'> File Name: src/il_representations/algos/representation_learner.py</div><div id='m_class'> M Class Name: RepresentationLearner</div><div id='n_method'> N Class Name: RepresentationLearner</div><div id='m_method'> M Method Name: learn(4)</div><div id='n_method'> N Method Name: learn(4)</div><div id='m_parent_class'> M Parent Class: BaseEnvironmentLearner</div><div id='n_parent_class'> N Parent Class: BaseEnvironmentLearner</div><div id='m_file'> M File Name: src/il_representations/algos/representation_learner.py</div><div id='n_file'> N File Name: src/il_representations/algos/representation_learner.py</div><div id='m_start'> M Start Line: 220</div><div id='m_end'> M End Line: 354</div><div id='n_start'> N Start Line: 220</div><div id='n_end'> N End Line: 343</div><BR>

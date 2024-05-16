@@ -1,0 +1,88 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+                with patch("aimet_torch.auto_quant_v2.fold_all_batch_norms", side_effect=error_fn):
+                    &#47&#47 If batchnorm folding fails, should return Adaround results
+                    _, acc, _ = <a id="change">auto_quant.apply(</a>cpu_model, dummy_input<a id="change">, results_dir=results_dir, strict_validation=False)</a>
+                    assert acc == adaround_acc
+
+                    with open(os.path.join(results_dir, &quotdiagnostics.html&quot)) as f:
+                        html_parsed = BeautifulSoup(f.read(), features="html.parser")</code></pre><h3>After Change</h3><pre><code class='java'>
+                            &quotnode_adaround&quot: _SUCCESS,
+                        })
+
+                auto_quant<a id="change"> = </a><a id="change">AutoQuant(</a>cpu_model,
+                                       dummy_input,
+                                       unlabeled_data_loader,
+                                       mocks.eval_callback<a id="change">,
+                                       results_dir=results_dir,
+                                       strict_validation=False)</a>
+                with patch("aimet_torch.auto_quant_v2.fold_all_batch_norms", side_effect=error_fn):
+                    &#47&#47 If batchnorm folding fails, should return Adaround results
+                    _, acc, _ = auto_quant.optimize()
+                    assert acc == adaround_acc
+
+                    with open(os.path.join(results_dir, &quotdiagnostics.html&quot)) as f:
+                        html_parsed = BeautifulSoup(f.read(), features="html.parser")
+                        assert_html(html_parsed, {
+                            &quotnode_batchnorm_folding&quot: _ERROR_IGNORED,
+                            &quotnode_cross_layer_equalization&quot: _SUCCESS,
+                            &quotnode_adaround&quot: _SUCCESS,
+                        })
+
+                auto_quant = AutoQuant(cpu_model,
+                                       dummy_input,
+                                       unlabeled_data_loader,
+                                       mocks.eval_callback,
+                                       results_dir=results_dir,
+                                       strict_validation=False)
+                with patch("aimet_torch.auto_quant_v2.equalize_model", side_effect=error_fn):
+                    &#47&#47 If CLE fails, should return Adaround results
+                    _, acc, _ = auto_quant.optimize()
+                    assert acc == adaround_acc
+
+                    with open(os.path.join(results_dir, &quotdiagnostics.html&quot)) as f:
+                        html_parsed = BeautifulSoup(f.read(), features="html.parser")
+                        assert_html(html_parsed, {
+                            &quotnode_batchnorm_folding&quot: _SUCCESS,
+                            &quotnode_cross_layer_equalization&quot: _ERROR_IGNORED,
+                            &quotnode_adaround&quot: _SUCCESS,
+                        })
+
+                auto_quant = AutoQuant(cpu_model,
+                                       dummy_input,
+                                       unlabeled_data_loader,
+                                       mocks.eval_callback,
+                                       results_dir=results_dir,
+                                       strict_validation=False)
+                with patch("aimet_torch.auto_quant_v2.Adaround._apply_adaround", side_effect=error_fn):
+                    &#47&#47 If adaround fails, should return CLE results
+                    _, acc, _ = auto_quant.optimize()
+                    assert acc == cle_acc
+
+                    with open(os.path.join(results_dir, &quotdiagnostics.html&quot)) as f:
+                        html_parsed = BeautifulSoup(f.read(), features="html.parser")
+                        assert_html(html_parsed, {
+                            &quotnode_batchnorm_folding&quot: _SUCCESS,
+                            &quotnode_cross_layer_equalization&quot: _SUCCESS,
+                            &quotnode_adaround&quot: _ERROR_IGNORED,
+                        })
+
+                auto_quant = AutoQuant(cpu_model,
+                                       dummy_input,
+                                       unlabeled_data_loader,
+                                       mocks.eval_callback,
+                                       results_dir=results_dir,
+                                       strict_validation=False)
+                with patch("aimet_torch.auto_quant_v2.fold_all_batch_norms", side_effect=error_fn),\
+                        patch("aimet_torch.auto_quant_v2.equalize_model", side_effect=error_fn),\
+                        patch("aimet_torch.auto_quant_v2.Adaround._apply_adaround", side_effect=error_fn):
+                    &#47&#47 If everything fails, should raise an error
+                    with pytest.raises(RuntimeError):
+                        <a id="change">auto_quant.optimize()</a>
+
+                    with open(os.path.join(results_dir, &quotdiagnostics.html&quot)) as f:
+                        html_parsed = BeautifulSoup(f.read(), features="html.parser")
+                        assert_html(html_parsed, {</code></pre>

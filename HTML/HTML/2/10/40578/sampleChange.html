@@ -1,0 +1,41 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        lhs = ivy.astype(lhs, preferred_element_type)
+        rhs = ivy.astype(rhs, preferred_element_type)
+    dims = len(lhs.shape) - 2
+    <a id="change">if dimension_numbers is None</a>:
+        dimension_numbers<a id="change"> = </a><a id="change">_set_dimension_numbers(</a>dims<a id="change">)</a>
+    return <a id="change">ivy.conv_general_dilated(
+        </a>lhs,
+        <a id="change">_format_rhs(</a>rhs, dimension_numbers<a id="change">)</a>,
+        window_strides,
+        padding<a id="change">,
+        dims=dims,
+        data_format=_get_general_df(dimension_numbers[0]),
+        x_dilations=1 if lhs_dilation is None else lhs_dilation,
+        dilations=1 if rhs_dilation is None else rhs_dilation,
+        feature_group_count=feature_group_count,
+    )</a>
+
+
+@to_ivy_arrays_and_back
+def convert_element_type(operand, new_dtype):</code></pre><h3>After Change</h3><pre><code class='java'>
+    dims = len(lhs.shape) - 2
+    dim_nums = _dimension_numbers(dimension_numbers, dims+2)
+    return ivy.permute_dims(
+        <a id="change">ivy.conv_general_dilated(
+            ivy.permute_dims(</a>lhs<a id="change">, axes=dim_nums[0])</a>,
+            <a id="change">ivy.permute_dims(</a>rhs<a id="change">, axes=dim_nums[1])</a>,
+            window_strides,
+            padding<a id="change">,
+            dims=dims,
+            data_format="channel_first",
+            x_dilations=1 if lhs_dilation is None else lhs_dilation,
+            dilations=1 if rhs_dilation is None else rhs_dilation,
+            feature_group_count=feature_group_count,
+        )</a>,
+        axes=_argsort_tuple(dim_nums[2]),
+    )
+</code></pre>

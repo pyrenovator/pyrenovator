@@ -1,0 +1,150 @@
+<html><h3>Pattern ID :32208
+</h3><img src='94210254.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        res = F.upsample(res, size=gt.shape, mode=&quotbilinear&quot, align_corners=False)
+        res = res.sigmoid().data.cpu().numpy().squeeze()
+        res = (res - res.min()) / (res.max() - res.min() + 1e-8)
+        print(<a id="change">&quot--&gt; save results: {}&quot.format(</a>SAVE_PATH<a id="change">+</a>name<a id="change">)</a>)
+        imageio.imwrite(SAVE_PATH+name, res)
+
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        res = mindspore.ops.Sigmoid()(res)
+        res = mindspore.nn.ResizeBilinear()(res, (h, w))
+        res = (res - res.min()) / (res.max() - res.min() + 1e-8)
+        res<a id="change"> = </a><a id="change">res.asnumpy().squeeze()</a>
+        imageio.imwrite(save_path+img_name.replace(&quot.jpg&quot, &quot.png&quot), res)
+
+
+if __name__ == "__main__":</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/gewelsji/dgnet/commit/f82c53433a67c0ed8d98385254a023d800a1335c#diff-40489e495cee1883ba8a4324a1dfc8ac999f5b202cc296ca66f59f5f219e7ff9L41' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 94210254</div><div id='project'> Project Name: gewelsji/dgnet</div><div id='commit'> Commit Name: f82c53433a67c0ed8d98385254a023d800a1335c</div><div id='time'> Time: 2022-11-18</div><div id='author'> Author: gepengai.ji@gmail.com</div><div id='file'> File Name: lib_ascend/inference_om.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: infer(4)</div><div id='n_method'> N Method Name: infer(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: lib_ascend/inference_om.py</div><div id='n_file'> N File Name: lib_ascend/inference_om.py</div><div id='m_start'> M Start Line: 41</div><div id='m_end'> M End Line: 63</div><div id='n_start'> N Start Line: 45</div><div id='n_end'> N End Line: 86</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    fastmarch_output = GeodisTK.geodesic3d_fast_marching(
+        input_image, seed_image, spacing
+    )
+    fastmarch_time = time.time()<a id="change"> - </a>tic
+
+    tic = time.time()
+    geodistkraster_output = geodistk_geodesic_distance_3d(
+        input_image, seed_image, spacing, 1.0, 4
+    )
+    geodistkraster_time = time.time() - tic
+
+    device = "cpu"
+    input_image_pt = torch.from_numpy(input_image).unsqueeze_(0).unsqueeze_(0)
+    seed_image_pt = (
+        torch.from_numpy(1 - seed_image.astype(np.float32)).unsqueeze_(0).unsqueeze_(0)
+    )
+    input_image_pt = input_image_pt.to(device)
+    seed_image_pt = seed_image_pt.to(device)
+    tic = time.time()
+    fastraster_output_cpu = np.squeeze(
+        FastGeodis.generalised_geodesic3d(
+            input_image_pt, seed_image_pt, spacing, 1e10, 1.0, 4
+        )
+        .detach()
+        .cpu()
+        .numpy()
+    )
+    fastraster_time_cpu = time.time() - tic
+
+    device = (
+        "cuda" if input_image_pt.shape[1] == 1 and torch.cuda.is_available() else None
+    )
+    if device:
+        input_image_pt = input_image_pt.to(device)
+        seed_image_pt = seed_image_pt.to(device)
+        tic = time.time()
+        fastraster_output_gpu = np.squeeze(
+            FastGeodis.generalised_geodesic3d(
+                input_image_pt, seed_image_pt, spacing, 1e10, 1.0, 4
+            )
+            .detach()
+            .cpu()
+            .numpy()
+        )
+        fastraster_time_gpu = time.time() - tic
+
+    print(
+        <a id="change">"Fast Marching: {:.6f} s \nGeodisTk raster: {:.6f} s \nFastGeodis CPU raster: {:.6f} s".format(
+            </a>fastmarch_time, geodistkraster_time, fastraster_time_cpu<a id="change">
+        )</a>
+    )
+    if device:
+        print("FastGeodis GPU raster: {:.6f} s".format(fastraster_time_gpu))
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    seed_image_pt = seed_image_pt.to(device)
+
+    tic = time.time()
+    toivanenraster_output<a id="change"> = </a><a id="change">np.squeeze(
+        </a>FastGeodis.generalised_geodesic3d_toivanen(
+            input_image_pt, seed_image_pt, spacing, 1e10, 1.0, 4
+        )
+        .detach()
+        .cpu()
+        .numpy()<a id="change">
+    )</a>
+    toivanenraster_time = time.time() - tic
+    
+    tic = time.time()
+    fastraster_output_cpu = np.squeeze(</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/masadcv/fastgeodis/commit/a1906e989649c1f0b8fdbed147c1d576ac5c41f3#diff-d887faa28cfc61b3a52b0d171df805c6719ecc67166d4658c3360e84a2333a91L31' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 94210249</div><div id='project'> Project Name: masadcv/fastgeodis</div><div id='commit'> Commit Name: a1906e989649c1f0b8fdbed147c1d576ac5c41f3</div><div id='time'> Time: 2022-07-22</div><div id='author'> Author: muhammad.asad@kcl.ac.uk</div><div id='file'> File Name: samples/demo3d.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: demo_geodesic_distance3d(2)</div><div id='n_method'> N Method Name: demo_geodesic_distance3d(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: samples/demo3d.py</div><div id='n_file'> N File Name: samples/demo3d.py</div><div id='m_start'> M Start Line: 33</div><div id='m_end'> M End Line: 204</div><div id='n_start'> N Start Line: 17</div><div id='n_end'> N End Line: 181</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    tic = time.time()
+    fastmarch_output = GeodisTK.geodesic2d_fast_marching(input_image, Seed.astype(np.uint8))
+    fastmarch_time = time.time()<a id="change"> - </a>tic
+
+    tic = time.time()
+    geodistkraster_output = geodesic_distance_2d(
+        input_image, Seed.astype(np.uint8), lamb, iterations
+    )
+    geodistkraster_time = time.time() - tic
+
+    if input_image.ndim == 3:
+        input_image = np.moveaxis(input_image, -1, 0)
+    else:
+        input_image = np.expand_dims(input_image, 0)
+
+    device = "cpu"
+    input_image_pt = torch.from_numpy(input_image).unsqueeze_(0).to(device)
+    seed_image_pt = (
+        torch.from_numpy(1 - Seed.astype(np.float32))
+        .unsqueeze_(0)
+        .unsqueeze_(0)
+        .to(device)
+    )
+
+    tic = time.time()
+    fastraster_output_cpu = np.squeeze(
+        FastGeodis.generalised_geodesic2d(input_image_pt, seed_image_pt, v, lamb, iterations).cpu().numpy()
+    )
+    fastraster_time_cpu = time.time() - tic
+
+    device = "cuda" if torch.cuda.is_available() else None
+    if device:
+        input_image_pt = input_image_pt.to(device)
+        seed_image_pt = seed_image_pt.to(device)
+
+        tic = time.time()
+        fastraster_output_gpu = np.squeeze(
+            FastGeodis.generalised_geodesic2d(input_image_pt, seed_image_pt, v, lamb, iterations).cpu().numpy()
+        )
+        fastraster_time_gpu = time.time() - tic
+
+    print("Runtimes:")
+    print(
+        <a id="change">"Fast Marching: {:.6f} s \nGeodisTk raster: {:.6f} s \nFastGeodis CPU raster: {:.6f} s".format(
+            </a>fastmarch_time, geodistkraster_time, fastraster_time_cpu<a id="change">
+        )</a>
+    )
+
+    if device:
+        print("FastGeodis GPU raster: {:.6f} s".format(fastraster_time_gpu))</code></pre><h3>After Change</h3><pre><code class='java'>
+    )
+
+    tic = time.time()
+    toivanenraster_output<a id="change"> = </a><a id="change">np.squeeze(
+        </a>FastGeodis.generalised_geodesic2d_toivanen(input_image_pt, seed_image_pt, v, lamb, iterations).cpu().numpy()<a id="change">
+    )</a>
+    toivanenraster_time = time.time() - tic
+
+    tic = time.time()
+    fastraster_output_cpu = np.squeeze(</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/masadcv/fastgeodis/commit/a1906e989649c1f0b8fdbed147c1d576ac5c41f3#diff-c6567a84a23f27eb1443122b56b63757dea429e19a3d3c58c88e6c34596a2e13L26' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 94210261</div><div id='project'> Project Name: masadcv/fastgeodis</div><div id='commit'> Commit Name: a1906e989649c1f0b8fdbed147c1d576ac5c41f3</div><div id='time'> Time: 2022-07-22</div><div id='author'> Author: muhammad.asad@kcl.ac.uk</div><div id='file'> File Name: samples/demo2d.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: evaluate_geodesic_distance2d(2)</div><div id='n_method'> N Method Name: evaluate_geodesic_distance2d(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: samples/demo2d.py</div><div id='n_file'> N File Name: samples/demo2d.py</div><div id='m_start'> M Start Line: 29</div><div id='m_end'> M End Line: 158</div><div id='n_start'> N Start Line: 18</div><div id='n_end'> N End Line: 100</div><BR>

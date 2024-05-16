@@ -1,0 +1,119 @@
+<html><h3>Pattern ID :5227
+</h3><img src='18574735.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 The `key` is here for legacy reason (tfds) and is not important in itself.
+
+        with open(filepath, encoding="utf-8") as f:
+            for id_, <a id="change">row</a> in enumerate(f):
+                data = row.strip().split(" ", 1)
+                speaker_id = data[0].split("_")[0]
+                <a id="change">yield </a>id_<a id="change">, {
+                    "speaker_id": speaker_id,
+                    "path": os.path.join(path_to_clips, speaker_id, data[0] + ".wav"),
+                    "audio": os.path.join(path_to_clips, speaker_id, data[0] + ".wav"),
+                    "sentence": data[1],
+                }</a>
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        inside_clips_dir = False
+        id_ = 0
+        for path, f in audio_files:
+            <a id="change">if path.startswith(</a>path_to_clips<a id="change">)</a>:
+                inside_clips_dir = True
+                if path in examples:
+                    audio = {"path": path, "bytes": <a id="change">f.read()</a>}
+                    <a id="change">yield </a>id_<a id="change">, {**examples[path], "audio": audio}</a>
+                    id_ += 1
+            elif inside_clips_dir:
+                break</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 9</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/huggingface/datasets/commit/0534a87f60fb9a589138f0773e057c2429f482b7#diff-c295913fcdcb50b7231589824a0b3d3ee249ad9d3eb173ea507466db03447729L113' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 18574735</div><div id='project'> Project Name: huggingface/datasets</div><div id='commit'> Commit Name: 0534a87f60fb9a589138f0773e057c2429f482b7</div><div id='time'> Time: 2021-11-19</div><div id='author'> Author: 42851186+lhoestq@users.noreply.github.com</div><div id='file'> File Name: datasets/vivos/vivos.py</div><div id='m_class'> M Class Name: VivosDataset</div><div id='n_method'> N Class Name: VivosDataset</div><div id='m_method'> M Method Name: _generate_examples(4)</div><div id='n_method'> N Method Name: _generate_examples(3)</div><div id='m_parent_class'> M Parent Class: datasets.GeneratorBasedBuilder</div><div id='n_parent_class'> N Parent Class: datasets.GeneratorBasedBuilder</div><div id='m_file'> M File Name: datasets/vivos/vivos.py</div><div id='n_file'> N File Name: datasets/vivos/vivos.py</div><div id='m_start'> M Start Line: 116</div><div id='m_end'> M End Line: 125</div><div id='n_start'> N Start Line: 113</div><div id='n_end'> N End Line: 138</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        data_fields.remove("audio")
+        path_idx = data_fields.index("path")
+
+        with open(filepath, encoding="utf-8") as <a id="change">f</a>:
+            lines = f.readlines()
+            headline = lines[0]
+
+            column_names = headline.strip().split("\t")
+            assert (
+                column_names == data_fields
+            ), f"The file should have {data_fields} as column names, but has {column_names}"
+
+            for id_, line in enumerate(lines[1:]):
+                field_values = line.strip().split("\t")
+
+                &#47&#47 set absolute path for mp3 audio file
+                field_values[path_idx] = os.path.join(path_to_clips, field_values[path_idx])
+
+                &#47&#47 if data is incomplete, fill with empty values
+                if len(field_values) &lt; len(data_fields):
+                    field_values += (len(data_fields) - len(field_values)) * ["&quot&quot"]
+
+                result = {key: value for key, value in zip(data_fields, field_values)}
+
+                &#47&#47 set audio feature
+                result["audio"] = field_values[path_idx]
+
+                <a id="change">yield </a>id_<a id="change">, result</a>
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        all_field_values = {}
+        metadata_found = False
+        for path, <a id="change">f</a> in files:
+            if path == filepath:
+                metadata_found = True
+                lines = f.readlines()
+                headline = lines[0].decode("utf-8")
+
+                column_names = headline.strip().split("\t")
+                assert (
+                    column_names == data_fields
+                ), f"The file should have {data_fields} as column names, but has {column_names}"
+                for line in lines[1:]:
+                    field_values = line.decode("utf-8").strip().split("\t")
+                    &#47&#47 set full path for mp3 audio file
+                    audio_path = <a id="change">"/".join(</a>[path_to_clips, field_values[path_idx]]<a id="change">)</a>
+                    all_field_values[audio_path] = field_values
+            elif <a id="change">path.startswith(</a>path_to_clips<a id="change">)</a>:
+                assert metadata_found, "Found audio clips before the metadata TSV file."
+                if not all_field_values:
+                    break
+                if path in all_field_values:
+                    field_values = all_field_values[path]
+
+                    &#47&#47 if data is incomplete, fill with empty values
+                    if len(field_values) &lt; len(data_fields):
+                        field_values += (len(data_fields) - len(field_values)) * ["&quot&quot"]
+
+                    result = {key: value for key, value in zip(data_fields, field_values)}
+
+                    &#47&#47 set audio feature
+                    result["audio"] = <a id="change">{</a>"path": path, "bytes": <a id="change">f.read()}</a>
+
+                    <a id="change">yield </a>path<a id="change">, result</a>
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/huggingface/datasets/commit/0534a87f60fb9a589138f0773e057c2429f482b7#diff-fa6b2547cb8690de10dc4151010f3ce12300c5488a6277932a571021aac2532fL703' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 18574733</div><div id='project'> Project Name: huggingface/datasets</div><div id='commit'> Commit Name: 0534a87f60fb9a589138f0773e057c2429f482b7</div><div id='time'> Time: 2021-11-19</div><div id='author'> Author: 42851186+lhoestq@users.noreply.github.com</div><div id='file'> File Name: datasets/common_voice/common_voice.py</div><div id='m_class'> M Class Name: CommonVoice</div><div id='n_method'> N Class Name: CommonVoice</div><div id='m_method'> M Method Name: _generate_examples(4)</div><div id='n_method'> N Method Name: _generate_examples(3)</div><div id='m_parent_class'> M Parent Class: datasets.GeneratorBasedBuilder</div><div id='n_parent_class'> N Parent Class: datasets.GeneratorBasedBuilder</div><div id='m_file'> M File Name: datasets/common_voice/common_voice.py</div><div id='n_file'> N File Name: datasets/common_voice/common_voice.py</div><div id='m_start'> M Start Line: 709</div><div id='m_end'> M End Line: 735</div><div id='n_start'> N Start Line: 707</div><div id='n_end'> N End Line: 748</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            for i, path_to_index in enumerate(path_to_indexs):
+                with open(path_to_index, encoding="utf-8") as f:
+                    lines = f.readlines()
+                    for id_, <a id="change">line</a> in enumerate(lines):
+                        field_values = re.split(r",\s?", line.strip())
+                        user_id, filename, sentence = field_values
+                        path = <a id="change">os.path.join(</a>path_to_datas[i], f"{filename}.wav"<a id="change">)</a>
+                        counter += 1
+                        <a id="change">yield </a>counter<a id="change">, {"path": path, "audio": path, "sentence": sentence}</a>
+        else:
+            for i, path_to_index in enumerate(path_to_indexs):
+                with open(path_to_index, encoding="utf-8") as f:
+                    lines = f.readlines()</code></pre><h3>After Change</h3><pre><code class='java'>
+                        &#47&#47 set absolute path for audio file
+                        path = f"{path_to_data}/{filename}.wav"
+                        sentences[path] = sentence
+                for path, <a id="change">f</a> in files:
+                    <a id="change">if path.startswith(</a>path_to_data<a id="change">)</a>:
+                        counter += 1
+                        audio = {"path": path, "bytes": <a id="change">f.read()</a>}
+                        <a id="change">yield </a>counter<a id="change">, {"path": path, "audio": audio, "sentence": sentences[path]}</a>
+        else:
+            for i, path_to_index in enumerate(path_to_indexs):
+                with open(path_to_index, encoding="utf-8") as f:
+                    lines = f.readlines()</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/huggingface/datasets/commit/0534a87f60fb9a589138f0773e057c2429f482b7#diff-b1c40e633ad528baeeb7cf486e625b16f131dd6095409216d5ecc77b0dd32bfcL622' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 18574738</div><div id='project'> Project Name: huggingface/datasets</div><div id='commit'> Commit Name: 0534a87f60fb9a589138f0773e057c2429f482b7</div><div id='time'> Time: 2021-11-19</div><div id='author'> Author: 42851186+lhoestq@users.noreply.github.com</div><div id='file'> File Name: datasets/openslr/openslr.py</div><div id='m_class'> M Class Name: OpenSlr</div><div id='n_method'> N Class Name: OpenSlr</div><div id='m_method'> M Method Name: _generate_examples(4)</div><div id='n_method'> N Method Name: _generate_examples(3)</div><div id='m_parent_class'> M Parent Class: datasets.GeneratorBasedBuilder</div><div id='n_parent_class'> N Parent Class: datasets.GeneratorBasedBuilder</div><div id='m_file'> M File Name: datasets/openslr/openslr.py</div><div id='n_file'> N File Name: datasets/openslr/openslr.py</div><div id='m_start'> M Start Line: 625</div><div id='m_end'> M End Line: 652</div><div id='n_start'> N Start Line: 583</div><div id='n_end'> N End Line: 624</div><BR>

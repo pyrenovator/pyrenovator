@@ -1,0 +1,42 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                if wait == self.patience and self.use_early_stop:
+                    self._logger.warning(&quotEarly stopping at epoch: %d&quot % epoch_idx)
+                    break
+        <a id="change">self.load_model_with_epoch(</a>best_epoch<a id="change">)</a>
+        return min_val_loss
+
+    def _train_epoch(self, train_dataloader, epoch_idx, loss_func=None):
+        </code></pre><h3>After Change</h3><pre><code class='java'>
+                    format(epoch_idx, self.epochs, np.mean(losses), val_loss, log_lr, (end_time - start_time))
+                self._logger.info(message)
+
+            <a id="change">if self.hyper_tune</a>:
+                &#47&#47 use ray tune to checkpoint
+                <a id="change">with tune.checkpoint_dir(step=epoch_idx)</a><a id="change"> as checkpoint_dir:
+                    </a>path<a id="change"> = </a><a id="change">os.path.join(checkpoint_dir</a>, <a id="change">"checkpoint"</a><a id="change">)</a>
+                    <a id="change">self.save_model(</a>path<a id="change">)</a>
+                &#47&#47 ray tune use loss to determine which params are best
+                <a id="change">tune.report(loss=val_loss)</a>
+
+            if val_loss &lt; min_val_loss:
+                wait = 0
+                if self.saved:
+                    model_file_name = self.save_model_with_epoch(epoch_idx)
+                    self._logger.info(&quotVal loss decrease from {:.4f} to {:.4f}, &quot
+                                      &quotsaving to {}&quot.format(min_val_loss, val_loss, model_file_name))
+                min_val_loss = val_loss
+                best_epoch = epoch_idx
+            else:
+                wait += 1
+                if wait == self.patience and self.use_early_stop:
+                    self._logger.warning(&quotEarly stopping at epoch: %d&quot % epoch_idx)
+                    break
+        <a id="change">if self.load_best_epoch</a>:
+            <a id="change">self.load_model_with_epoch(</a>best_epoch<a id="change">)</a>
+        return min_val_loss
+
+    def _train_epoch(self, train_dataloader, epoch_idx, loss_func=None):
+        </code></pre>

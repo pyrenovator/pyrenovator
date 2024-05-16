@@ -1,0 +1,28 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            return batch
+        return list(torch.unbind(batch, 0))
+
+    <a id="change">if </a>isinstance(batch, dict):
+        return [batch_type(dict(zip(batch, default_uncollate(t)))) for t in zip(*batch.values())]
+
+    <a id="change">if </a><a id="change">isinstance(batch</a>, tuple<a id="change">)</a> and hasattr(batch, "_fields"):  &#47&#47 namedtuple
+        return <a id="change">[batch_type(*sample) for sample in zip(*batch)]</a>
+
+    <a id="change">if </a>isinstance(batch, Sequence) and not <a id="change">isinstance(batch</a>, str<a id="change">)</a>:
+        return <a id="change">[sample for sample in batch]</a>
+
+    return batch
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        ValueError: If the input is not a ``dict`` or list-like.
+    
+
+    <a id="change">if </a>isinstance(batch, dict):
+        if any(not _is_list_like_excluding_str(sub_batch) for sub_batch in batch.values()):
+            raise ValueError("When uncollating a dict, all sub-batches (values) are expected to be list-like.")
+        if len({len(sub_batch) for sub_batch in <a id="change">batch.values()</a>}) &gt; 1:
+            raise ValueError("When uncollating a dict, all sub-batches (values) are expected to have the same length.")
+        elements = list(default_uncollate(element) for element in zip(*batch.values()))
+        return [dict(zip(batch.keys(), element)) for element in elements]</code></pre>

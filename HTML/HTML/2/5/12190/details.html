@@ -1,0 +1,91 @@
+<html><h3>Pattern ID :12190
+</h3><img src='41190132.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        HH, WW = kernel_size
+
+        same_size = HH == WW == stride
+        tiles = <a id="change">(H % HH == 0)</a> and (W  % WW == 0)
+
+        <a id="change">if </a>same_size and tiles:
+            x_reshaped, res = max_pool_2d_forward_reshape(x.data, kernel_size, stride)
+            ctx.method<a id="change"> = </a>&quotreshape&quot
+            ctx.x_reshaped = x_reshaped
+        else:
+            x_cols, x_cols_argmax, res = max_pool_2d_forward_im2col(x.data, kernel_size, stride)</code></pre><h3>After Change</h3><pre><code class='java'>
+        x_reshaped = x.data.reshape(N * C, 1, H, W)
+        x_cols = im2col(x_reshaped, HH, WW, 0, stride)
+
+        max_idx<a id="change"> = </a><a id="change">np.argmax(</a>x_cols<a id="change">, axis=0)</a>
+        res = x_cols[max_idx, range(max_idx.size)]
+        res = res.reshape(OH, OW, N, C).transpose(2, 3, 0, 1)
+        
+        res = tensor.Tensor(res, requires_grad=x.requires_grad, is_leaf=not x.requires_grad)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 5</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/pabannier/nanograd/commit/4342a037a11ec86fc8635e8cf45a44a7ef13561b#diff-0d7ae8ce1a36be920b48dd758e784f7a0e658f7c8f528ec7fcca45d86f18b5f6L560' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 41190132</div><div id='project'> Project Name: pabannier/nanograd</div><div id='commit'> Commit Name: 4342a037a11ec86fc8635e8cf45a44a7ef13561b</div><div id='time'> Time: 2020-12-29</div><div id='author'> Author: pierreantoine.bannier@gmail.com</div><div id='file'> File Name: nanograd/nn/functional.py</div><div id='m_class'> M Class Name: MaxPool2d</div><div id='n_method'> N Class Name: MaxPool2d</div><div id='m_method'> M Method Name: forward(4)</div><div id='n_method'> N Method Name: forward(4)</div><div id='m_parent_class'> M Parent Class: Function</div><div id='n_parent_class'> N Parent Class: Function</div><div id='m_file'> M File Name: nanograd/nn/functional.py</div><div id='n_file'> N File Name: nanograd/nn/functional.py</div><div id='m_start'> M Start Line: 597</div><div id='m_end'> M End Line: 614</div><div id='n_start'> N Start Line: 560</div><div id='n_end'> N End Line: 574</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        batch_size = base
+        for hcn in HCN_LIST:
+            new_batch_size = base * hcn
+            <a id="change">if new_batch_size &gt; max_acceptable_batch_size</a>:
+                break
+            batch_size<a id="change"> = </a>new_batch_size
+        candidate_batch_size.append(batch_size)
+    return list(set(candidate_batch_size))
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            candidate_batch_size.append(base)
+        else:
+            value = max_acceptable_batch_size // base
+            index<a id="change"> = </a><a id="change">np.argmax(</a>np.asarray(HCN_LIST) &gt; value<a id="change">)</a>
+            candidate_batch_size.append(HCN_LIST[index - 1] * base)
+    candidate_batch_size = list(set(candidate_batch_size))
+    logger.info(f"Candidate batch size: {candidate_batch_size}")
+    return candidate_batch_size</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/microsoft/deepspeed/commit/e2b39ded9f3e0316ef57632497568acefcb6231b#diff-b943325e9b40863253337e9cb486a51faa35b1594699b2b1dff1177b0d13a93bL63' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 41190100</div><div id='project'> Project Name: microsoft/deepspeed</div><div id='commit'> Commit Name: e2b39ded9f3e0316ef57632497568acefcb6231b</div><div id='time'> Time: 2021-11-22</div><div id='author'> Author: chunyang.wen@gmail.com</div><div id='file'> File Name: deepspeed/elasticity/elasticity.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: get_candidate_batch_sizes(2)</div><div id='n_method'> N Method Name: get_candidate_batch_sizes(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: deepspeed/elasticity/elasticity.py</div><div id='n_file'> N File Name: deepspeed/elasticity/elasticity.py</div><div id='m_start'> M Start Line: 67</div><div id='m_end'> M End Line: 75</div><div id='n_start'> N Start Line: 64</div><div id='n_end'> N End Line: 74</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    loop = tqdm(test_loader)
+    for batch_idx, frames in enumerate(loop):
+
+        <a id="change">if i &gt;= 10</a>: break
+
+        frames = frames.to(DEVICE)  &#47&#47 [1, T, 3, h, w]
+        frames_vis = postprocess_img(frames.squeeze(dim=0))  &#47&#47 [T, 3, h, w]
+        input = frames[:, :VIDEO_IN_LENGTH]  &#47&#47 [1, t, 3, h, w]
+
+        pred_rgb = pred_rgb_model.pred_n(input, pred_length=VIDEO_PRED_LENGTH)  &#47&#47 [1, T, 3, h, w]
+        pred_rgb_vis = postprocess_img(pred_rgb)  &#47&#47 [T, 3, h, w]
+
+        pred_rgb = torch.cat([input, pred_rgb], dim=1)
+        pred_rgb = torch.stack([seg_model(pred_rgb[:, i]) for i in range(pred_rgb.shape[1])], dim=1)
+        pred_rgb = pred_rgb.argmax(dim=2).squeeze()  &#47&#47 [T, h, w]
+        pred_then_colorized_vis = colorize_semseg(postprocess_mask(pred_rgb), num_classes=SYNPICK_CLASSES) &#47&#47 [T, 3, h, w]
+
+        frames_seg = [seg_model(frames[:, i]).argmax(dim=1) for i in range(frames.shape[1])]
+        frames_seg<a id="change"> = </a>torch.stack(frames_seg, dim=1)  &#47&#47 [1, 1, h, w]
+        input_seg = frames_seg[:, :VIDEO_IN_LENGTH]  &#47&#47 [1, t, 1, h, w]
+
+        pred_mask = pred_mask_model.pred_n(input_seg, pred_length=VIDEO_PRED_LENGTH)</code></pre><h3>After Change</h3><pre><code class='java'>
+            pred_rgb = pred_rgb.argmax(dim=2).squeeze()  &#47&#47 [T, h, w]
+            pred_then_colorized_vis = colorize_semseg(postprocess_mask(pred_rgb), num_classes=SYNPICK_CLASSES).transpose(0, 3, 1, 2) &#47&#47 [T, 3, h, w]
+
+            frames_seg = <a id="change">torch.stack([seg_model(frames[:, i]) for i in range(frames.shape[1])], dim=1).argmax(dim=2)</a>  &#47&#47 [1, T, 1, h, w]
+            frames_seg_in<a id="change"> = </a>torch.stack([(frames_seg == i) for i in range(SYNPICK_CLASSES)], dim=2).float()  &#47&#47 [1, T, c, h, w] one-hot float
+            input_seg = frames_seg_in[:, :VIDEO_IN_LENGTH]  &#47&#47 [1, t, c, h, w]
+            pred_mask = pred_mask_model.pred_n(input_seg, pred_length=VIDEO_PRED_LENGTH).argmax(dim=2)  &#47&#47 [1, n, 1, h, w]
+            pred_mask = torch.cat([input_seg.argmax(dim=2), pred_mask], dim=1).squeeze()  &#47&#47 [T, h, w]</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/ais-bonn/vp-suite/commit/13016d4ab8ba4f8e7ee087155a6c5171f4d00ba3#diff-e07d70acfca9139cbf2c37b7a0074bdfbb966d41dc6c7edcc2cef05e78c00af0L13' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 41190101</div><div id='project'> Project Name: ais-bonn/vp-suite</div><div id='commit'> Commit Name: 13016d4ab8ba4f8e7ee087155a6c5171f4d00ba3</div><div id='time'> Time: 2021-08-02</div><div id='author'> Author: boltres@ais.uni-bonn.de</div><div id='file'> File Name: scripts/visualize_4_way.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: visualize_4_way(1)</div><div id='n_method'> N Method Name: visualize_4_way(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: scripts/visualize_4_way.py</div><div id='n_file'> N File Name: scripts/visualize_4_way.py</div><div id='m_start'> M Start Line: 16</div><div id='m_end'> M End Line: 73</div><div id='n_start'> N Start Line: 17</div><div id='n_end'> N End Line: 74</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            raise ValueError(&quoty_true should contain only labels present in the provided classes list.&quot)
+    else:
+        classes = unique_labels
+    <a id="change">if len(classes) != y_pred.shape[1]</a>:
+        raise ValueError(
+            f&quotNumber of given labels, {len(classes)}, not equal to the number &quot
+            f&quotof columns in \&quoty_pred\&quot, {y_pred.shape[1]}&quot
+        )
+    if class_subset is None:
+        class_subset<a id="change"> = </a>classes
+    class_subset = set(class_subset)
+    return np.array([roc_auc_score(y_true == class_name, y_pred[:, i]) if class_name in class_subset else None
+                     for i, class_name in enumerate(classes)])</code></pre><h3>After Change</h3><pre><code class='java'>
+    &#47&#47 Convert multi label into single label
+    assert_multi_label_shape(y_true)
+    classes = range(y_true.shape[1])
+    y_true<a id="change"> = </a><a id="change">np.argmax(</a>y_true<a id="change">, axis=1)</a>
+
+    return np.array([roc_auc_score(y_true == class_name, y_pred[:, i]) for i, class_name in enumerate(classes)])
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/deepchecks/deepchecks/commit/49ffc017c43a982374c83c98a7027f7c77008188#diff-d3410f06a7ff4a92d8a1b8fde1dc783fb54e881e6911b9aafca78c23b6fb8b52L169' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 41190134</div><div id='project'> Project Name: deepchecks/deepchecks</div><div id='commit'> Commit Name: 49ffc017c43a982374c83c98a7027f7c77008188</div><div id='time'> Time: 2022-10-30</div><div id='author'> Author: matan@deepchecks.com</div><div id='file'> File Name: deepchecks/tabular/metric_utils/additional_classification_metrics.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: roc_auc_per_class(2)</div><div id='n_method'> N Method Name: roc_auc_per_class(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: deepchecks/tabular/metric_utils/additional_classification_metrics.py</div><div id='n_file'> N File Name: deepchecks/tabular/metric_utils/additional_classification_metrics.py</div><div id='m_start'> M Start Line: 169</div><div id='m_end'> M End Line: 203</div><div id='n_start'> N Start Line: 238</div><div id='n_end'> N End Line: 259</div><BR>

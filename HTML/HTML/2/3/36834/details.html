@@ -1,0 +1,61 @@
+<html><h3>Pattern ID :36834
+</h3><img src='104983138.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 forward decoder
+        h_masks = None
+        zs, _ = self.decoder(encoded_texts, h_masks, utterance_embedding)  &#47&#47 (B, Lmax, adim)
+        before_outs = self.feat_out(zs).view(<a id="change">zs.size(</a>0<a id="change">)</a>, -1, self.odim)  &#47&#47 (B, Lmax, odim)
+
+        &#47&#47 postnet -&gt; (B, Lmax//r * r, odim)
+        after_outs = before_outs + self.postnet(before_outs.transpose(1, 2)).transpose(1, 2)</code></pre><h3>After Change</h3><pre><code class='java'>
+        z = self.decoder(cond=encoded_texts.transpose(1, 2), infer=True)
+
+        encoded_texts = cut_to_multiple_of_n(encoded_texts)
+        before_outs = <a id="change">self.decoder.decoder(</a>z<a id="change">, nonpadding=None, cond=encoded_texts.transpose(1, 2).detach())</a>.transpose(1, 2)
+
+        &#47&#47 forward flow post-net
+        if self.glow_enabled:
+            after_outs = self.run_post_glow(tgt_mels=None,
+                                            infer=True,
+                                            mel_out=before_outs,
+                                            encoded_texts=encoded_texts,
+                                            tgt_nonpadding=None)
+        else:
+            after_outs<a id="change"> = </a>before_outs
+
+        return before_outs, after_outs, duration_predictions, pitch_predictions, energy_predictions
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/digitalphonetics/ims-toucan/commit/f8b81e9711f5d31078b3193604da9ac3d6340ec6#diff-e3c4143cb425acc1cbdda5567d276c7b7759839b0680a60454efa104d720661eL161' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 104983138</div><div id='project'> Project Name: digitalphonetics/ims-toucan</div><div id='commit'> Commit Name: f8b81e9711f5d31078b3193604da9ac3d6340ec6</div><div id='time'> Time: 2022-12-02</div><div id='author'> Author: florian.lux@ims.uni-stuttgart.de</div><div id='file'> File Name: InferenceInterfaces/InferenceArchitectures/InferencePortaSpeech.py</div><div id='m_class'> M Class Name: PortaSpeech</div><div id='n_method'> N Class Name: PortaSpeech</div><div id='m_method'> M Method Name: _forward(12)</div><div id='n_method'> N Method Name: _forward(12)</div><div id='m_parent_class'> M Parent Class: torch.nn.Module</div><div id='n_parent_class'> N Parent Class: torch.nn.Module</div><div id='m_file'> M File Name: InferenceInterfaces/InferenceArchitectures/InferencePortaSpeech.py</div><div id='n_file'> N File Name: InferenceInterfaces/InferenceArchitectures/InferencePortaSpeech.py</div><div id='m_start'> M Start Line: 161</div><div id='m_end'> M End Line: 215</div><div id='n_start'> N Start Line: 210</div><div id='n_end'> N End Line: 228</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47        nonpadding: [B, 1, T]
+        &#47&#47        cond: [B, C_g, T]
+        zs, _ = self.decoder(x=encoded_texts.transpose(1, 2), nonpadding=text_lens, cond=utterance_embedding, infer=False, noise_scale=1.0)  &#47&#47 (B, Lmax, adim)
+        before_outs = self.feat_out(zs).view(<a id="change">zs.size(</a>0<a id="change">)</a>, -1, self.odim)  &#47&#47 (B, Lmax, odim)
+
+        &#47&#47 postnet -&gt; (B, Lmax//r * r, odim)
+        after_outs = before_outs + self.post_flow(before_outs.transpose(1, 2)).transpose(1, 2)</code></pre><h3>After Change</h3><pre><code class='java'>
+            z = self.decoder(cond=encoded_texts.transpose(1, 2),
+                             infer=is_inference)  &#47&#47 (B, Lmax, adim)
+        else:
+            z<a id="change">, kl_loss, z_p, m_q, logs_q = </a><a id="change">self.decoder(x=gold_speech,
+                                                        nonpadding=target_non_padding_mask,
+                                                        cond=encoded_texts.transpose(1, 2),
+                                                        infer=is_inference)</a>  &#47&#47 (B, Lmax, adim)
+            if not use_posterior:
+                z = torch.randn_like(z)
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/digitalphonetics/ims-toucan/commit/1f6ef3294b6593510f03bf07885afb4754888c42#diff-12643f5b2c8b9a82605c22c3f362317aa32afc7f0c07d080244ac4cefb2f5794L244' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 104983131</div><div id='project'> Project Name: digitalphonetics/ims-toucan</div><div id='commit'> Commit Name: 1f6ef3294b6593510f03bf07885afb4754888c42</div><div id='time'> Time: 2022-11-29</div><div id='author'> Author: florian.lux@ims.uni-stuttgart.de</div><div id='file'> File Name: TrainingInterfaces/Text_to_Spectrogram/PortaSpeech/PortaSpeech.py</div><div id='m_class'> M Class Name: PortaSpeech</div><div id='n_method'> N Class Name: PortaSpeech</div><div id='m_method'> M Method Name: _forward(14)</div><div id='n_method'> N Method Name: _forward(12)</div><div id='m_parent_class'> M Parent Class: torch.nn.Module,ABC</div><div id='n_parent_class'> N Parent Class: torch.nn.Module,ABC</div><div id='m_file'> M File Name: TrainingInterfaces/Text_to_Spectrogram/PortaSpeech/PortaSpeech.py</div><div id='n_file'> N File Name: TrainingInterfaces/Text_to_Spectrogram/PortaSpeech/PortaSpeech.py</div><div id='m_start'> M Start Line: 303</div><div id='m_end'> M End Line: 309</div><div id='n_start'> N Start Line: 258</div><div id='n_end'> N End Line: 330</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            enc_output = self.encode(inputs, i_mask)
+
+        t_mask = utils.create_pad_mask(targets, self.trg_pad_idx)
+        target_size = <a id="change">targets.size()</a>[1]
+        t_self_mask = utils.create_trg_self_mask(target_size,
+                                                 device=targets.device)
+        return self.decode(targets, enc_output, i_mask, t_self_mask, t_mask)</code></pre><h3>After Change</h3><pre><code class='java'>
+        padded_input = padded_input.transpose(1, 2).contiguous()  &#47&#47 BxTxH
+
+        encoder_padded_outputs, _ = self.encoder(padded_input, input_lengths)
+        pred<a id="change">, gold, *_ = </a><a id="change">self.decoder(</a>padded_target, encoder_padded_outputs, input_lengths<a id="change">)</a>
+        hyp_best_scores, hyp_best_ids = torch.topk(pred, 1, dim=2)
+
+        hyp_seq = hyp_best_ids.squeeze(2)
+        gold_seq = gold</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/qute012/kosr/commit/b7d24b0d835254fd425224eba3421a3b7224e55f#diff-c6b6e8084627536e70fdb6e8be5c81f8520937c01028e9bb6ea65a82014b023eL18' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 104983133</div><div id='project'> Project Name: qute012/kosr</div><div id='commit'> Commit Name: b7d24b0d835254fd425224eba3421a3b7224e55f</div><div id='time'> Time: 2021-01-12</div><div id='author'> Author: ejrwls012@gmail.com</div><div id='file'> File Name: model/transformer/transformer.py</div><div id='m_class'> M Class Name: Transformer</div><div id='n_method'> N Class Name: Transformer</div><div id='m_method'> M Method Name: forward(4)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: model/transformer/transformer.py</div><div id='n_file'> N File Name: model/transformer/transformer.py</div><div id='m_start'> M Start Line: 19</div><div id='m_end'> M End Line: 28</div><div id='n_start'> N Start Line: 18</div><div id='n_end'> N End Line: 34</div><BR>

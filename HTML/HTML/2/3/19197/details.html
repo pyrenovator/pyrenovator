@@ -1,0 +1,49 @@
+<html><h3>Pattern ID :19197
+</h3><img src='62430168.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    &#47&#47 this takes a ret index to an inp index, indexing 0 on the reduced strides
+    &#47&#47 if it&quots not a reduce, this should be a NOOP
+    reduce_shape = (bufs[0][1].shape, ret.shape) if reduce_shape is None else reduce_shape
+    view = View(<a id="change">reduce_shape[1]</a>, strides_for_shape(reduce_shape[0]))
+    loop : List[Tuple[str, str]] = []
+    if reduce_shape[1] != reduce_shape[0]:   &#47&#47 this is a reduce
+      &#47&#47 reverse operation of expand, this validates inputs</code></pre><h3>After Change</h3><pre><code class='java'>
+    red = prod([s for s,n in zip(*reduce_shape) if n == 1])
+
+    &#47&#47 if it&quots a partial reduce, assert last non reduced axis is before the first reduced axis
+    if red &gt; 1 and <a id="change">prod(</a>ret.shape<a id="change">)</a> != 1: assert max([i for i,(s,n) in enumerate(zip(*reduce_shape)) if s == n and n != 1]) &lt; min([i for i,(s,n) in enumerate(zip(*reduce_shape)) if s != 1 and n == 1])
+
+    kernel_name = "reduce" if red &gt; 1 else "elementwise"
+    views = {name:buf.contiguous_view_constant_fold(name) for name, buf in bufs}</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 2</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/geohot/tinygrad/commit/e34eb855fe7d7bbb2e3eafd558e76bb97d96b9f9#diff-305e94e84668440e8f8a2a4e17d5796e43233474510c7af082ab29c9aa824eeeL121' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 62430168</div><div id='project'> Project Name: geohot/tinygrad</div><div id='commit'> Commit Name: e34eb855fe7d7bbb2e3eafd558e76bb97d96b9f9</div><div id='time'> Time: 2022-08-20</div><div id='author'> Author: geohot@gmail.com</div><div id='file'> File Name: tinygrad/llops/ops_gpu.py</div><div id='m_class'> M Class Name: GPUBuffer</div><div id='n_method'> N Class Name: GPUBuffer</div><div id='m_method'> M Method Name: _processing_op(8)</div><div id='n_method'> N Method Name: _processing_op(8)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: tinygrad/llops/ops_gpu.py</div><div id='n_file'> N File Name: tinygrad/llops/ops_gpu.py</div><div id='m_start'> M Start Line: 122</div><div id='m_end'> M End Line: 133</div><div id='n_start'> N Start Line: 121</div><div id='n_end'> N End Line: 127</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    
+
+    if isinstance(data_shape, tuple):
+        data_shape = <a id="change">data_shape[0]</a>
+    return data_shape
+
+
+def is_image_space_channels_first(observation_space: spaces.Box) -&gt; bool:</code></pre><h3>After Change</h3><pre><code class='java'>
+    
+
+    if isinstance(data_shape, tuple):
+        data_shape = <a id="change">prod(</a>list(data_shape)<a id="change">)</a>
+    return data_shape
+
+
+def is_image_space_channels_first(observation_space: spaces.Box) -&gt; bool:</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/londonnode/pearl/commit/a6479a0e430d9f0560162301a584e32c105a27ed#diff-0b0497ddb46201f25c12d42ed2d12104f2d5ecd6dfd22c203da2fc7255877656L13' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 62430179</div><div id='project'> Project Name: londonnode/pearl</div><div id='commit'> Commit Name: a6479a0e430d9f0560162301a584e32c105a27ed</div><div id='time'> Time: 2021-09-30</div><div id='author'> Author: rohan.tangri@gmail.com</div><div id='file'> File Name: anvil/models/utils.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: get_mlp_size(1)</div><div id='n_method'> N Method Name: get_mlp_size(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: anvil/models/utils.py</div><div id='n_file'> N File Name: anvil/models/utils.py</div><div id='m_start'> M Start Line: 23</div><div id='m_end'> M End Line: 23</div><div id='n_start'> N Start Line: 30</div><div id='n_end'> N End Line: 30</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+  assert tuple(shape_ret) == tuple(ret.shape)
+  prod_list = np.array(dimlist, dtype=i32)[-1::-1].cumprod(dtype=i32)[-1::-1] &#47&#47 take cumprod from back to front
+  prg, is_float4 = get_binop_prg(code, tuple(complist))
+  kernel_size = ((roundup(<a id="change">prod_list[0]</a>)//4) if is_float4 else prod_list[0]) if len(dimlist) &gt; 0 else 1
+  prg.binop(cl_queue, [kernel_size], None, x.cl, y.cl, ret.cl, *dimlist, *(prod_list[1:]))
+
+def reduce_op(op, inp, ret):</code></pre><h3>After Change</h3><pre><code class='java'>
+    float4 b = b_g[gid];
+    res_g[gid] = +code+;
+  })
+  binop([roundup(<a id="change">prod(</a>ret.shape<a id="change">)</a>)//4], None, x.cl, y.cl, ret.cl)
+  return ret
+
+def reduce_op(op, inp, ret):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/geohot/tinygrad/commit/dcbca4fdf15a249e0864289a3715fcaee9be005f#diff-305e94e84668440e8f8a2a4e17d5796e43233474510c7af082ab29c9aa824eeeL89' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 62430180</div><div id='project'> Project Name: geohot/tinygrad</div><div id='commit'> Commit Name: dcbca4fdf15a249e0864289a3715fcaee9be005f</div><div id='time'> Time: 2022-06-12</div><div id='author'> Author: 72895+geohot@users.noreply.github.com</div><div id='file'> File Name: tinygrad/llops/ops_gpu.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: binary_op(4)</div><div id='n_method'> N Method Name: binary_op(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: tinygrad/llops/ops_gpu.py</div><div id='n_file'> N File Name: tinygrad/llops/ops_gpu.py</div><div id='m_start'> M Start Line: 95</div><div id='m_end'> M End Line: 104</div><div id='n_start'> N Start Line: 75</div><div id='n_end'> N End Line: 86</div><BR>

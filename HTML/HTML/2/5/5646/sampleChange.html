@@ -1,0 +1,46 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            url, cache_dir=local_path, **download_kwargs
+        )
+
+        os.rename(<a id="change">os.path.join(</a>local_path, fetched_file<a id="change">)</a>, local_abs_path)
+    return local_abs_path
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    savedir.mkdir(exist_ok=True)
+    sourcefile = f"{source}/{filename}"
+    destination = savedir / filename
+    <a id="change">if </a>source.startswith("http://") or <a id="change">source.startswith(</a>"https://"<a id="change">)</a>:
+        &#47&#47 Interpret source as web address.
+        &#47&#47 Download
+        try:
+            urllib.request.urlretrieve(sourcefile, destination)
+        except urllib.error.URLError:
+            raise ValueError(
+                f"Interpreted {source} as web address, but could not download."
+            )
+    elif pathlib.Path(source).is_dir():
+        &#47&#47 Interpret source as local directory path
+        &#47&#47 Just symlink
+        sourcepath<a id="change"> = </a>pathlib.Path(sourcefile).absolute()
+        destination.unlink(missing_ok=True)
+        destination.symlink_to(sourcepath)
+    else:
+        &#47&#47 Interpret source as huggingface hub ID
+        &#47&#47 Use huggingface hub&quots fancy cached download.
+        try:
+            import huggingface_hub
+        except ImportError:
+            &#47&#47 Extra tools pattern:
+            raise ValueError(
+                f"Interpreted {source} as Huggingface hub ID, but Huggingface-hub"
+                "is not installed. Please install with pip install huggingface-hub"
+            )
+        url = huggingface_hub.hf_hub_url(source, filename)
+        fetched_file = huggingface_hub.cached_download(url, cache_dir=savedir)
+        &#47&#47 Huggingface hub downloads to etag filename, symlink to the expected one:
+        sourcepath<a id="change"> = </a>pathlib.Path(fetched_file).absolute()
+        destination.unlink(missing_ok=True)
+        destination.symlink_to(sourcepath)
+    return destination</code></pre>

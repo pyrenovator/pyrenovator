@@ -1,0 +1,61 @@
+<html><h3>Pattern ID :26227
+</h3><img src='78944844.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        self.dns = dns
+    def forward(self, label, pos_score, log_pos_prob, neg_score, log_neg_prob):
+        if not self.dns or pos_score.dim() &gt; 1:
+            weight = F.softmax(<a id="change">torch.ones_like(</a>neg_score<a id="change">)</a>, -1)
+            notpadnum = torch.logical_not(torch.isinf(pos_score)).float().sum(-1)
+            output = torch.nan_to_num(F.logsigmoid(pos_score), nan=0.0).sum(-1)\
+                 / notpadnum</code></pre><h3>After Change</h3><pre><code class='java'>
+            weight = self._cal_weight(neg_score, log_neg_prob)
+            notpadnum = torch.logical_not(torch.isinf(pos_score)).float().sum()
+            output = torch.nan_to_num(F.logsigmoid(pos_score), nan=0.0).sum() / notpadnum
+            neg_score<a id="change"> = </a>F.softplus(neg_score) * weight
+            neg_score_sum<a id="change"> = </a><a id="change">neg_score.sum(</a>-1<a id="change">)</a>
+            if pos_score.dim() == neg_score.dim()-1:
+                padding_mask = torch.isinf(pos_score)
+                neg_score_sum.masked_fill_(padding_mask, 0.0)
+            return -output + torch.mean(neg_score_sum)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/ustcml/recstudio/commit/d105308841df24997fabad0bcbe394d8ae46a729#diff-d049d95be678e47f8bdff9aac0c68d411711eaed88f870b109e68ca1650e203cL93' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 78944844</div><div id='project'> Project Name: ustcml/recstudio</div><div id='commit'> Commit Name: d105308841df24997fabad0bcbe394d8ae46a729</div><div id='time'> Time: 2022-08-15</div><div id='author'> Author: angus_huang@mail.ustc.edu.cn</div><div id='file'> File Name: recstudio/model/loss_func.py</div><div id='m_class'> M Class Name: BinaryCrossEntropyLoss</div><div id='n_method'> N Class Name: BinaryCrossEntropyLoss</div><div id='m_method'> M Method Name: forward(6)</div><div id='n_method'> N Method Name: forward(6)</div><div id='m_parent_class'> M Parent Class: PairwiseLoss</div><div id='n_parent_class'> N Parent Class: PairwiseLoss</div><div id='m_file'> M File Name: recstudio/model/loss_func.py</div><div id='n_file'> N File Name: recstudio/model/loss_func.py</div><div id='m_start'> M Start Line: 93</div><div id='m_end'> M End Line: 99</div><div id='n_start'> N Start Line: 108</div><div id='n_end'> N End Line: 119</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+		
+		pred_batch, y_batch = pred_batch.view(-1, pred_batch.shape[-1]), y_batch.view(-1, y_batch.shape[-1])
+		self.zero_grad()
+		y_batch.backward(<a id="change">torch.ones_like(</a>y_batch<a id="change">)</a>)
+		if self.K is None:
+			self._initialize_K(m=y_batch.shape[-1])
+		for pred, y in zip(pred_batch, y_batch):</code></pre><h3>After Change</h3><pre><code class='java'>
+		self.zero_grad()
+		
+		error = y_batch_view - pred_batch_view
+		psi<a id="change"> = </a>self._get_psi_batch(pred_batch_view)
+		
+		if self.reduction == "mean":
+			error = error.mean(dim=0).unsqueeze(0)
+			psi = [psi_i.mean(dim=0).unsqueeze(0) for psi_i in psi]
+		elif self.reduction == "sum":
+			error = error.sum(dim=0).unsqueeze(0)
+			psi<a id="change"> = </a>[<a id="change">psi_i.sum(dim=0)</a>.unsqueeze(0) for psi_i in psi]
+		elif self.reduction == "none":
+			pass
+		else:</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/neurotorch/neurotorch/commit/8419aed1db7d78e03c5884959079672a5525f279#diff-1f40139a1b0ed1ef510287b509d1409a4fc9d946d85bdc91ef3706e3934355a3L201' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 78944845</div><div id='project'> Project Name: neurotorch/neurotorch</div><div id='commit'> Commit Name: 8419aed1db7d78e03c5884959079672a5525f279</div><div id='time'> Time: 2022-10-20</div><div id='author'> Author: 50332514+JeremieGince@users.noreply.github.com</div><div id='file'> File Name: src/neurotorch/learning_algorithms/weak_rls.py</div><div id='m_class'> M Class Name: WeakRLS</div><div id='n_method'> N Class Name: WeakRLS</div><div id='m_method'> M Method Name: _batch_step(2)</div><div id='n_method'> N Method Name: _batch_step(2)</div><div id='m_parent_class'> M Parent Class: LearningAlgorithm</div><div id='n_parent_class'> N Parent Class: LearningAlgorithm</div><div id='m_file'> M File Name: src/neurotorch/learning_algorithms/weak_rls.py</div><div id='n_file'> N File Name: src/neurotorch/learning_algorithms/weak_rls.py</div><div id='m_start'> M Start Line: 202</div><div id='m_end'> M End Line: 213</div><div id='n_start'> N Start Line: 218</div><div id='n_end'> N End Line: 235</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                                     dtype=torch.int32,
+                                     device=Y.device) * -1 
+        _, sorted_group_indices = torch.sort(groups, descending=True, dim=-1)
+        factors = <a id="change">torch.ones_like(</a>counts<a id="change">, dtype=Y.dtype)</a>
+        clustered_broadcast_gpu(
+            Y,
+            groups,
+            factors,</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 broadcast kernel that takes advantage of clustering
+        &#47&#47 More information can be found in the cuda file
+        with torch.no_grad():
+            threads<a id="change"> = </a>256
+            G = set_group(C, E)
+            group_counts = counts.view(N, H, G, -1).sum(-1)
+            block_counts = (group_counts + threads - 1) // threads
+            total_blocks<a id="change"> = </a><a id="change">block_counts.sum()</a>.item()
+            indx_maps = torch.ones(
+                (total_blocks, 5),
+                device=X.device,</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/idiap/fast-transformers/commit/8e4d4469091761280523efe62ffda6277d02ce87#diff-1e33ed565253c17c8a36f5b467de6127f401bed60ced4cf14d371ea1201dc2baL58' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 78944841</div><div id='project'> Project Name: idiap/fast-transformers</div><div id='commit'> Commit Name: 8e4d4469091761280523efe62ffda6277d02ce87</div><div id='time'> Time: 2020-11-25</div><div id='author'> Author: avyas@idiap.ch</div><div id='file'> File Name: fast_transformers/aggregate/__init__.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: clustered_broadcast(5)</div><div id='n_method'> N Method Name: clustered_broadcast(5)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: fast_transformers/aggregate/__init__.py</div><div id='n_file'> N File Name: fast_transformers/aggregate/__init__.py</div><div id='m_start'> M Start Line: 68</div><div id='m_end'> M End Line: 94</div><div id='n_start'> N Start Line: 72</div><div id='n_end'> N End Line: 109</div><BR>

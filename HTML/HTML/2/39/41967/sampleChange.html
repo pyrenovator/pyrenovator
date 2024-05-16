@@ -1,0 +1,48 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+def main():
+    &#47&#47 config is updated by: (1) config.py, (2) yaml file, (3) arguments
+    arguments<a id="change"> = get_arguments()</a>
+    <a id="change">config</a> = <a id="change">get_config()</a>
+    <a id="change">config = update_config(config</a>, arguments<a id="change">)</a>
+
+    &#47&#47 set output folder
+    <a id="change">if not config.EVAL</a>:
+        config.SAVE<a id="change"> = </a><a id="change">&quot{}/train-{}&quot.format(</a>config.SAVE, <a id="change">time.strftime(&quot%Y%m%d-%H-%M-%S&quot</a><a id="change">)</a><a id="change">)</a>
+    else:
+        config.SAVE<a id="change"> = </a>&quot{}/eval-{}&quot.format(config.SAVE, <a id="change">time.strftime(</a>&quot%Y%m%d-%H-%M-%S&quot<a id="change">)</a>)
+
+    if not os.path.exists(config.SAVE):
+        os.makedirs(config.SAVE, exist_ok=True)
+
+    &#47&#47 get dataset and start DDP
+    <a id="change">if not config.EVAL</a>:
+        dataset_train<a id="change"> = </a><a id="change">get_dataset(config</a><a id="change">, mode=&quottrain&quot)</a>
+    else:
+        dataset_train<a id="change"> = </a>None
+    dataset_val<a id="change"> = </a><a id="change">get_dataset(config</a><a id="change">, mode=&quotval&quot)</a>
+    config.NGPUS = <a id="change">len(</a><a id="change">paddle.static.cuda_places())</a><a id="change"> if </a><a id="change">config.NGPUS == -1 else </a>config.NGPUS
+    dist.spawn(main_worker, args=(config, dataset_train, dataset_val, ), nprocs=config.NGPUS)
+
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+def main():
+    &#47&#47 config is updated in order: (1) default in config.py, (2) yaml file, (3) arguments
+    <a id="change">config</a> = <a id="change">update_config(</a><a id="change">get_config()</a>, <a id="change">get_arguments())</a>
+
+    &#47&#47 set output folder
+    config.SAVE<a id="change"> = </a>os.path.join(config.SAVE,
+        f"{&quoteval&quot if config.EVAL else &quottrain&quot}-{time.strftime(&quot%Y%m%d-%H-%M&quot)}")
+    if not os.path.exists(config.SAVE):
+        os.makedirs(config.SAVE, exist_ok=True)
+
+    &#47&#47 get train dataset if in train mode and val dataset
+    dataset_train = <a id="change">get_dataset(config</a><a id="change">, is_train=True)</a><a id="change"> if not config.EVAL</a><a id="change"> else </a>None
+    dataset_val<a id="change"> = </a><a id="change">get_dataset(config</a><a id="change">, is_train=False)</a>
+
+    &#47&#47 dist spawn lunch: use CUDA_VISIBLE_DEVICES to set available gpus
+    paddle.distributed.spawn(main_worker, args=(config, dataset_train, dataset_val))
+</code></pre>

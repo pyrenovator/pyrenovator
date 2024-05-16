@@ -1,0 +1,57 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 Create a vector to hold all output spikes
+        if self.spikes_number is None or len(self.spikes_number) != time_steps:
+            del self.spikes_number  &#47&#47 Free memory just to be sure
+            self.spikes_number = <a id="change">syn_out.new_zeros(time_steps, *syn_out.shape[1:]).int()</a>
+
+        self.spikes_number.zero_()
+        spikes_number<a id="change"> = </a>self.spikes_number
+
+        if self.state is None:
+            self.state = syn_out.new_zeros(syn_out.shape[1:])
+        elif self.state.device != syn_out.device:
+            &#47&#47 print(f"Device type state: {self.state.device}, syn_out: {syn_out.device} ")
+            self.state = self.state.to(syn_out.device)
+
+        state = self.state
+
+        &#47&#47 Loop over time steps
+        for iCurrentTimeStep in range(time_steps):
+            state = state + syn_out[iCurrentTimeStep]
+
+            &#47&#47 - Reset or subtract from membrane state after spikes
+            if membrane_subtract is not None:
+                &#47&#47 Calculate number of spikes to be generated
+                spikes_number[iCurrentTimeStep] = (state &gt;= threshold).int() + (
+                    state - threshold &gt; 0
+                ).int() * ((state - threshold) / membrane_subtract).int()
+                &#47&#47 - Subtract from states
+                state = state - (
+                    membrane_subtract * spikes_number[iCurrentTimeStep].float()
+                )
+            else:
+                &#47&#47 - Check threshold crossings for spikes
+                spike_record = state &gt;= threshold
+                &#47&#47 - Add to spike counter
+                spikes_number[iCurrentTimeStep] = spike_record
+                &#47&#47 - Reset neuron states
+                state = (
+                    spike_record.float() * membrane_reset
+                    + state * (spike_record ^ 1).float()
+                )
+
+            if threshold_low is not None:
+                state = self.thresh_lower(state)  &#47&#47 Lower bound on the activation
+
+        self.state = state
+        self.spikes_number<a id="change"> = </a>spikes_number
+        <a id="change">return </a>spikes_number.float()  &#47&#47 Float to keep things compatible
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        self.state = state
+        self.spikes_number = spikes_number.sum()
+        <a id="change">return </a>spikes_number
+</code></pre>

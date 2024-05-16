@@ -1,0 +1,57 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    def search(self, conf_search:Config, model_desc_builder:ModelDescBuilder,
+                 trainer_class:TArchTrainer, finalizers:Finalizers)-&gt;SearchResult:
+        &#47&#47 the pool of ray job ids
+        future_ids<a id="change"> = </a><a id="change">[]</a>
+
+        &#47&#47 attempt to restore parent pool
+        parent_pool_restored = self._restore_parent_pool()
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 seed the pool with many different seed models of different
+        &#47&#47 macro parameters like number of cells, reductions etc if parent pool
+        &#47&#47 could not be restored and/or this is the first time this job has been run.
+        <a id="change">future_ids</a> = [] if parent_pool_restored else  self._create_seed_jobs()
+
+        while not self._should_terminate_search():
+            logger.info(f&quotnum jobs currently in pool (waiting or being processed) {len(future_ids)}&quot)
+
+            if future_ids:
+                job_id_done, future_ids = ray.wait(future_ids)
+                job_stage, *job_return = ray.get(job_id_done[0])
+
+                logger.info(f&quot"{job_stage}" completed&quot)
+
+                if job_stage==JobStage.SEED:
+                    model_desc, train_metrics = job_return
+
+                    &#47&#47 add it to the parent models pool
+                    self._convex_hull_points.append((model_desc, train_metrics))
+
+                    &#47&#47 save to disk for restoring
+                    filename = os.path.join(self._checkpoints_foldername, f&quotparent_desc_{len(self._convex_hull_points)}.yaml&quot)
+                    model_desc.save(filename, save_trainables=True)
+                    self._record_checkpoint(filename, metrics_stats)
+                    logger.info(f&quotappended to parent a model with MAdd {metrics_stats.model_stats.MAdd}, num cells {len(job_result.model_desc.cell_descs())}, num nodes in cell {len(job_result.model_desc.cell_descs()[0].nodes())}&quot)
+
+                    &#47&#47 sample a model from parent pool
+                    model_desc, _ = self._sample_model_from_parent_pool()
+                    job_result = JobResult(model_desc, True)
+                    this_search_id = search_desc.remote(job_result, self.model_desc_builder, self.trainer_class, self.finalizers, self.conf_train, self.conf_loader, common.get_state())
+                    future_ids.append(this_search_id)
+                    logger.info(&quotjust added a new model to processing pool&quot)
+                elif job_stage==JobStage.SEARCH:
+                    &#47&#47 unpack job result
+                    model_desc, search_metrics = job_return
+
+                    &#47&#47 create the job to train the searched model
+                    this_child_id = self.train_model_desc_dist.remote(JobStage.TRAIN, self.conf_postsearch_train,
+                                                                      model_desc, common.get_state())
+                    future_ids.append(this_child_id)
+                elif <a id="change">job_stage==JobStage.TRAIN</a>:
+                    <a id="change">pass</a> &#47&#47 no more processing for this job
+                else:
+                    raise RuntimeError(f&quotJob stage "{job_stage}" is not recognized&quot)
+</code></pre>

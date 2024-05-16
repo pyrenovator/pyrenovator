@@ -1,0 +1,103 @@
+<html><h3>Pattern ID :26942
+</h3><img src='80330697.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        output_audio, _ = self.RNNs[1](X_audio)
+        output_visual, _ = self.RNNs[2](X_visual)
+
+        batch_size = <a id="change">output_text.size(0</a><a id="change">)</a>
+
+        &#47&#47 (batch, num_directions * hidden_size)
+        output_text = output_text[:, -1, :]
+        output_audio = output_audio[:, -1, :]
+        output_visual = output_visual[:, -1, :]
+
+        &#47&#47 (num_classes, 300)
+        text_emo_vecs = self.textEmoEmbs(torch.LongTensor(list(range(self.num_classes))))
+        visual_emo_vecs = self.affineVisual(text_emo_vecs)
+        audio_emo_vecs = self.affineAudio(text_emo_vecs)
+
+        text_emo_vecs<a id="change"> = </a>text_emo_vecs.unsqueeze(0).repeat(batch_size, 1, 1)
+        visual_emo_vecs = visual_emo_vecs.unsqueeze(0).repeat(batch_size, 1, 1)
+        audio_emo_vecs = audio_emo_vecs.unsqueeze(0).repeat(batch_size, 1, 1)
+
+        text_attn_feature = self.attention(output_text, text_emo_vecs)
+        visual_attn_feature = self.attention(output_visual, visual_emo_vecs)
+        audio_attn_feature = self.attention(output_audio, audio_emo_vecs)
+
+        &#47&#47 TODO: try residual connection
+
+        logits<a id="change"> = </a>self.out(torch.cat((text_attn_feature, visual_attn_feature, audio_attn_feature), dim=1))
+        return logits
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            output_text, _ = self.RNNs[0](X_text)
+            output_text = output_text[:, -1, :]
+            text_emo_vecs_origin = self.textEmoEmbs(torch.LongTensor(list(range(self.num_classes))).to(self.device))
+            text_emo_vecs<a id="change"> = </a><a id="change">text_emo_vecs_origin.unsqueeze(0</a><a id="change">)</a>.repeat(batch_size, 1, 1)
+            text_attn_weights = self.attention(output_text, text_emo_vecs)
+            logits = text_attn_weights if logits is None else logits + text_attn_weights
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 5</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/wenliangdai/modality-transferable-mer/commit/b0e565d11d6b3bf9f65fb1dcbdc8c641a2bc8054#diff-9dca09e4df72ee7b751c74b7ea8c66a06c2d78f76fef6a3bdb604dc6680fd2efL53' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 80330697</div><div id='project'> Project Name: wenliangdai/modality-transferable-mer</div><div id='commit'> Commit Name: b0e565d11d6b3bf9f65fb1dcbdc8c641a2bc8054</div><div id='time'> Time: 2020-06-10</div><div id='author'> Author: wenliang.dai.1995@gmail.com</div><div id='file'> File Name: src/models/temp.py</div><div id='m_class'> M Class Name: EmotionEmbAttnModel</div><div id='n_method'> N Class Name: EmotionEmbAttnModel</div><div id='m_method'> M Method Name: forward(4)</div><div id='n_method'> N Method Name: forward(4)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: src/models/temp.py</div><div id='n_file'> N File Name: src/models/temp.py</div><div id='m_start'> M Start Line: 53</div><div id='m_end'> M End Line: 79</div><div id='n_start'> N Start Line: 70</div><div id='n_end'> N End Line: 96</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+        &#47&#47in-batch negative sample
+        &#47&#47!! TODO: use mask matrix. It&quots slow now.
+        batch_size<a id="change"> = </a><a id="change">y.size(0</a><a id="change">)</a>
+        scores<a id="change"> = </a>torch.ones(batch_size, 1 + self.n_neg, device=y.device)  &#47&#47positive sample in the first position.
+        y_expand = torch.cat((y, y))
+        for i in range(batch_size):
+            scores[i, :] = torch.cat((y_expand[i].view(-1), y_expand[i + 1:i + 1 + self.n_neg]))</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        &#47&#47 pred[i, j] means predicted score that user_i give to item_j
+
+        pred = torch.cosine_similarity(<a id="change">user_embedding.unsqueeze(1</a><a id="change">)</a>, item_embedding, dim=2)  &#47&#47 (batch_size, batch_size)
+
+        &#47&#47 get sample weight of items in this batch
+        sample_weight = self.embedding(x, self.sample_weight_feature, squeeze_dim=True).squeeze(1)  &#47&#47 (batch_size)
+
+        scores = pred - torch.log(sample_weight)  &#47&#47Sampling Bias Corrected, using broadcast
+        if user_embedding.shape[0] * (self.n_neg + 1) != self.index0.shape[0]:  &#47&#47 last batch
+            batch_size = user_embedding.shape[0]
+            index0 = self.index0[:batch_size * (self.n_neg + 1)]
+            index1 = self.index1[:batch_size * (self.n_neg + 1)]
+            index0[np.where(index0 &gt;= batch_size)] -= batch_size
+            index1[np.where(index1 &gt;= batch_size)] -= batch_size
+
+            scores<a id="change"> = </a>scores[index0, index1]
+        else:
+            scores = scores[self.index0, self.index1]
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/datawhalechina/torch-rechub/commit/d0461152ddffad7a6bf7c7532b7b540094623e95#diff-16cab9e6b17798cf716613c6493b3a5a50aea041bdf0c65f5c89b59a4d0c686aL54' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 80330712</div><div id='project'> Project Name: datawhalechina/torch-rechub</div><div id='commit'> Commit Name: d0461152ddffad7a6bf7c7532b7b540094623e95</div><div id='time'> Time: 2022-06-07</div><div id='author'> Author: icewwl@163.com</div><div id='file'> File Name: torch_rechub/models/matching/youtube_sbc.py</div><div id='m_class'> M Class Name: YoutubeSBC</div><div id='n_method'> N Class Name: YoutubeSBC</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: torch.nn.Module</div><div id='n_parent_class'> N Parent Class: torch.nn.Module</div><div id='m_file'> M File Name: torch_rechub/models/matching/youtube_sbc.py</div><div id='n_file'> N File Name: torch_rechub/models/matching/youtube_sbc.py</div><div id='m_start'> M Start Line: 55</div><div id='m_end'> M End Line: 80</div><div id='n_start'> N Start Line: 60</div><div id='n_end'> N End Line: 87</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        rir_waveform = rir_waveform.unsqueeze(0)
+
+    &#47&#47 Compute the average amplitude of the clean
+    orig_amplitude<a id="change"> = </a>compute_amplitude(
+        waveforms, <a id="change">waveforms.size(1</a><a id="change">)</a>, rescale_amp
+    )
+
+    &#47&#47 Compute index of the direct signal, so we can preserve alignment
+    value_max, direct_index = rir_waveform.abs().max(axis=1)
+
+    &#47&#47 Making sure the max is always positive (if not, flip)
+    mask = (rir_waveform[:, direct_index] &lt; 0).squeeze(-1)
+    rir_waveform[mask] = -rir_waveform[mask]
+
+    &#47&#47 Use FFT to compute convolution, because of long reverberation filter
+    waveforms = convolve1d(
+        waveform=waveforms,
+        kernel=rir_waveform.unsqueeze(-1),
+        use_fft=True,
+        rotation_index=direct_index,
+    )
+
+    &#47&#47 Rescale to the peak amplitude of the clean waveform
+    waveforms<a id="change"> = </a>rescale(
+        waveforms, waveforms.size(1), orig_amplitude, rescale_amp
+    )
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    if len(waveforms.shape) == 1:
+        waveforms = waveforms.unsqueeze(0).unsqueeze(-1)
+    elif len(waveforms.shape) == 2:
+        waveforms<a id="change"> = </a><a id="change">waveforms.unsqueeze(-1</a><a id="change">)</a>
+
+    if len(rir_waveform.shape) == 1:  &#47&#47 convolve1d expects a 3d tensor !
+        rir_waveform = rir_waveform.unsqueeze(0).unsqueeze(-1)
+    elif len(rir_waveform.shape) == 2:</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/speechbrain/speechbrain/commit/0a5f7b91576ba484f872e9152ab1a484bd8f71b5#diff-454bfb7fb5869a2d50824c98ab0d2c30697a64b00bdf8855f57ac19c7352ce79L276' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 80330721</div><div id='project'> Project Name: speechbrain/speechbrain</div><div id='commit'> Commit Name: 0a5f7b91576ba484f872e9152ab1a484bd8f71b5</div><div id='time'> Time: 2020-07-15</div><div id='author'> Author: cornellsamuele@gmail.com</div><div id='file'> File Name: speechbrain/processing/signal_processing.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: reverberate(3)</div><div id='n_method'> N Method Name: reverberate(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: speechbrain/processing/signal_processing.py</div><div id='n_file'> N File Name: speechbrain/processing/signal_processing.py</div><div id='m_start'> M Start Line: 308</div><div id='m_end'> M End Line: 336</div><div id='n_start'> N Start Line: 310</div><div id='n_end'> N End Line: 336</div><BR>

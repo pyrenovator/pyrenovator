@@ -1,0 +1,48 @@
+<html><h3>Pattern ID :31547
+</h3><img src='92221887.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            (pos_x[:, :, :, 0::2].sin(), pos_x[:, :, :, 1::2].cos()), dim=4
+        ).flatten(3)
+        pos_y = torch.stack(
+            (pos_y[:, :, :, 0::2].sin(), pos_y[:, :, :, <a id="change">1</a>::2].cos()), dim=4
+        ).flatten(3)
+        pos = torch.cat((pos_x, pos_y), dim=3).permute(0, 3, 1, 2)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        inv_feq = 1.0 / (self.temperature ** (dim_t / self.half_d_model))
+
+        pos_x = torch.einsum("b h w, d -&gt; b h w d", x_embed, inv_feq)
+        pos_y = <a id="change">torch.einsum("b h w, d -&gt; b h w d"</a>, y_embed, inv_feq<a id="change">)</a>
+
+        pos_x = torch.stack((pos_x.sin(), pos_x.cos()), dim=4).flatten(3)
+        pos_y = torch.stack((pos_y.sin(), pos_y.cos()), dim=4).flatten(3)
+        pos = torch.cat((pos_x, pos_y), dim=3)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 2</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/green-wood/bttr/commit/ed6072e37a991c138f4197fce71b68ee4e1fc529#diff-07d28c3a77ca52c5c7f69922e4113566385015a423017083355cb5c85428dca4L77' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 92221887</div><div id='project'> Project Name: green-wood/bttr</div><div id='commit'> Commit Name: ed6072e37a991c138f4197fce71b68ee4e1fc529</div><div id='time'> Time: 2021-06-09</div><div id='author'> Author: 1027572886a@gmail.ccom</div><div id='file'> File Name: bttr/model/pos_enc.py</div><div id='m_class'> M Class Name: ImgPosEnc</div><div id='n_method'> N Class Name: ImgPosEnc</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: pl.LightningModule</div><div id='n_parent_class'> N Parent Class: pl.LightningModule</div><div id='m_file'> M File Name: bttr/model/pos_enc.py</div><div id='n_file'> N File Name: bttr/model/pos_enc.py</div><div id='m_start'> M Start Line: 77</div><div id='m_end'> M End Line: 97</div><div id='n_start'> N Start Line: 78</div><div id='n_end'> N End Line: 95</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        )
+        _, encoding_indices = (-d).max(1)
+        encodings = F.one_hot(encoding_indices, self.num_tokens).type(z_flattened.dtype)
+        encoding_indices = encoding_indices.view(*z.shape[<a id="change">:-1</a>])
+        z_q = self.embedding(encoding_indices)
+        avg_probs = torch.mean(encodings, dim=0)
+        perplexity = torch.exp(-torch.sum(avg_probs * torch.log(avg_probs + 1e-10)))</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        d = torch.sum(z_flattened.pow(2), dim=1, keepdim=True) + \
+            torch.sum(self.embedding.weight.pow(2), dim=1) - 2 * \
+            <a id="change">torch.einsum(&quotbd,dn-&gt;bn&quot</a>, z_flattened, self.embedding.weight.permute(1,0)<a id="change">)</a> &#47&#47 &quotn d -&gt; d n&quot
+
+        encoding_indices = torch.argmin(d, dim=1)
+        z_q = self.embedding(encoding_indices).view(z.shape)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/tgisaturday/dalle-lightning/commit/f5fd383f3ac54b79f33c1ab36ae01f46ea06c6c7#diff-5cc0cb1395e7634e216d321d933d7868cc1ee34fa25763750d65126b9ad1ea15L67' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 92221892</div><div id='project'> Project Name: tgisaturday/dalle-lightning</div><div id='commit'> Commit Name: f5fd383f3ac54b79f33c1ab36ae01f46ea06c6c7</div><div id='time'> Time: 2021-08-04</div><div id='author'> Author: jamesk1228@gmail.com</div><div id='file'> File Name: pl_dalle/modules/vqvae/quantize.py</div><div id='m_class'> M Class Name: EMAVectorQuantizer</div><div id='n_method'> N Class Name: EMAVectorQuantizer</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: pl_dalle/modules/vqvae/quantize.py</div><div id='n_file'> N File Name: pl_dalle/modules/vqvae/quantize.py</div><div id='m_start'> M Start Line: 68</div><div id='m_end'> M End Line: 99</div><div id='n_start'> N Start Line: 131</div><div id='n_end'> N End Line: 164</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            w_head_v = self.transpose_for_scores(mixed_value_layer)  &#47&#47 [btz, n_head, k_len, d_head]
+            if hasattr(self, &quotseg_embed&quot):
+                w_head_s = self.seg_embed(seg_mat)  &#47&#47 [btz, q_len, klen, hdsz]
+                w_head_s = w_head_s.reshape(*w_head_s.shape[<a id="change">:3</a>], self.num_attention_heads, self.attention_head_size)
+
+            r_head_k = self.r(r)  &#47&#47 [hdsz, nhead*headsize] = [r_len, 1, nhead*headsize]
+            r_head_k = r_head_k.view(rlen, self.num_attention_heads, self.attention_head_size)  &#47&#47 rlen x n_head x d_head</code></pre><h3>After Change</h3><pre><code class='java'>
+                &#47&#47 EF = torch.einsum(&quotbnid,bijnd-&gt;bnij&quot, (rs_head_q, w_head_s))  &#47&#47 [btz, n_head, q_len, k_len]
+                
+                seg_mat = F.one_hot(seg_mat, 2).float()
+                EF = <a id="change">torch.einsum("bnid,snd-&gt;ibns"</a>, w_head_q + self.r_s_bias.unsqueeze(1), self.seg_embed<a id="change">)</a>
+                EF = torch.einsum("bijs,ibns-&gt;bnij", seg_mat, EF)
+            else:
+                EF = 0</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/tongjilibo/bert4torch/commit/5c1a0e0dd99a5b0164617e7e611a660816c4ae46#diff-423158f6414177c50deaf8ff8d75202474ddccb543fca22c762f1c3c0e973f8eL570' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 92221891</div><div id='project'> Project Name: tongjilibo/bert4torch</div><div id='commit'> Commit Name: 5c1a0e0dd99a5b0164617e7e611a660816c4ae46</div><div id='time'> Time: 2022-07-17</div><div id='author'> Author: tongjilibo@163.com</div><div id='file'> File Name: bert4torch/layers.py</div><div id='m_class'> M Class Name: RelPartialLearnableMultiHeadAttn</div><div id='n_method'> N Class Name: RelPartialLearnableMultiHeadAttn</div><div id='m_method'> M Method Name: forward(6)</div><div id='n_method'> N Method Name: forward(6)</div><div id='m_parent_class'> M Parent Class: MultiHeadAttentionLayer</div><div id='n_parent_class'> N Parent Class: MultiHeadAttentionLayer</div><div id='m_file'> M File Name: bert4torch/layers.py</div><div id='n_file'> N File Name: bert4torch/layers.py</div><div id='m_start'> M Start Line: 578</div><div id='m_end'> M End Line: 598</div><div id='n_start'> N Start Line: 579</div><div id='n_end'> N End Line: 603</div><BR>

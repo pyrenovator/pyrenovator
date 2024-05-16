@@ -1,0 +1,58 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        if self.stop_gradient_from_energy_predictor:
+            energy_predictions = self.energy_predictor(encoded_texts.detach(), duration_masks.unsqueeze(-1))
+        else:
+            energy_predictions<a id="change"> = </a>self.energy_predictor(encoded_texts, <a id="change">duration_masks.unsqueeze(-1</a><a id="change">)</a>)
+
+        if gold_durations is not None:
+            duration_predictions = gold_durations</code></pre><h3>After Change</h3><pre><code class='java'>
+                                                     nonpadding=None,
+                                                     cond=encoded_texts.transpose(1, 2).detach(),
+                                                     utt_emb=utterance_embedding).transpose(1, 2)
+        predicted_durations<a id="change"> = </a><a id="change">self.duration_vae.decoder(duration_z,
+                                                        nonpadding=None,
+                                                        cond=encoded_texts.transpose(1, 2).detach(),
+                                                        utt_emb=utterance_embedding).squeeze(1</a><a id="change">)</a>
+
+        if gold_durations is not None:
+            predicted_durations = gold_durations
+        else:
+            predicted_durations = make_estimated_durations_usable_for_inference(predicted_durations)
+        if gold_pitch is not None:
+            pitch_predictions = gold_pitch
+        if gold_energy is not None:
+            energy_predictions = gold_energy
+
+        for phoneme_index, phoneme_vector in enumerate(text_tensors.squeeze(0)):
+            if phoneme_vector[get_feature_to_index_lookup()["voiced"]] == 0:
+                &#47&#47 this means the phoneme is unvoiced
+                pitch_predictions[0][phoneme_index] = 0.0
+            if phoneme_vector[get_feature_to_index_lookup()["silence"]] == 1 and pause_duration_scaling_factor != 1.0:
+                predicted_durations[0][phoneme_index] = torch.round(
+                    predicted_durations[0][phoneme_index].float() * pause_duration_scaling_factor)
+        pitch_predictions = _scale_variance(pitch_predictions, pitch_variance_scale)
+        energy_predictions = _scale_variance(energy_predictions, energy_variance_scale)
+
+        embedded_pitch_curve = self.pitch_embed(pitch_predictions.transpose(1, 2)).transpose(1, 2)
+        embedded_energy_curve = self.energy_embed(energy_predictions.transpose(1, 2)).transpose(1, 2)
+        encoded_texts = encoded_texts + embedded_energy_curve + embedded_pitch_curve
+        encoded_texts = self.length_regulator(encoded_texts, predicted_durations,
+                                              duration_scaling_factor)  &#47&#47 (B, Lmax, adim)
+        predicted_spectrogram_before_postnet = self.decoder(encoded_texts, nonpadding=None,
+                                                            utt_emb=utterance_embedding).transpose(1, 2)
+        predicted_spectrogram_before_postnet = self.out_proj(predicted_spectrogram_before_postnet).transpose(1, 2)
+
+        &#47&#47 forward flow post-net
+        predicted_spectrogram_after_postnet = self.run_post_glow(tgt_mels=None,
+                                                                 infer=True,
+                                                                 mel_out=predicted_spectrogram_before_postnet,
+                                                                 encoded_texts=encoded_texts,
+                                                                 tgt_nonpadding=None)
+
+        <a id="change">return </a>predicted_spectrogram_before_postnet, predicted_spectrogram_after_postnet, predicted_durations, pitch_predictions, energy_predictions
+
+    @torch.inference_mode()
+    def forward(self,</code></pre>

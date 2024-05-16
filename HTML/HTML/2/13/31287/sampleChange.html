@@ -1,0 +1,31 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    def greedy(self, self_attended_context, context, context_indices, oov_to_limited_idx, rnn_state=None):
+        B, TC, C = context.size()
+        T = self.args.max_output_length
+        outs = Variable(<a id="change">context.data.new(B, T).long().fill_(
+            </a>self.field.decoder_stoi[&quot&lt;pad&gt;&quot]<a id="change">)</a>, volatile=True)
+        hiddens = [Variable(<a id="change">self_attended_context[0].data.new(B</a>, T, C<a id="change">)</a>.zero_(), volatile=True)
+                   for l in range(len(self.self_attentive_decoder.layers) + 1)]
+        hiddens[0] = hiddens[0] + positional_encodings_like(hiddens[0])
+        eos_yet = context.data.new(B).byte().zero_()
+
+        rnn_output, context_alignment = None, None
+        for t in range(T):
+            if t == 0:
+                embedding = self.decoder_embeddings(<a id="change">Variable(
+                    self_attended_context[-1].data.new(B).long().fill_(
+                        self.field.vocab.stoi[&quot&lt;init&gt;&quot]), volatile=True).unsqueeze(1</a><a id="change">)</a>, [1]*B)
+            else:
+                embedding = self.decoder_embeddings(outs[:, t - 1].unsqueeze(1), [1]*B)
+            hiddens[0][:, t] = hiddens[0][:, t] + (math.sqrt(self.self_attentive_decoder.d_model) * embedding).squeeze(1)</code></pre><h3>After Change</h3><pre><code class='java'>
+                context_indices, 
+                oov_to_limited_idx)
+            pred_probs, preds = probs.max(-1)
+            preds<a id="change"> = </a><a id="change">preds.squeeze(1</a><a id="change">)</a>
+            eos_yet = eos_yet | (preds == self.field.decoder_stoi[&quot&lt;eos&gt;&quot])
+            outs[:, t] = preds.cpu().apply_(self.map_to_full)
+            if eos_yet.all():
+                break</code></pre>

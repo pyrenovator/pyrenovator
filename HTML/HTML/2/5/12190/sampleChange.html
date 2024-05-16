@@ -1,0 +1,23 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        HH, WW = kernel_size
+
+        same_size = HH == WW == stride
+        tiles = <a id="change">(H % HH == 0)</a> and (W  % WW == 0)
+
+        <a id="change">if </a>same_size and tiles:
+            x_reshaped, res = max_pool_2d_forward_reshape(x.data, kernel_size, stride)
+            ctx.method<a id="change"> = </a>&quotreshape&quot
+            ctx.x_reshaped = x_reshaped
+        else:
+            x_cols, x_cols_argmax, res = max_pool_2d_forward_im2col(x.data, kernel_size, stride)</code></pre><h3>After Change</h3><pre><code class='java'>
+        x_reshaped = x.data.reshape(N * C, 1, H, W)
+        x_cols = im2col(x_reshaped, HH, WW, 0, stride)
+
+        max_idx<a id="change"> = </a><a id="change">np.argmax(</a>x_cols<a id="change">, axis=0)</a>
+        res = x_cols[max_idx, range(max_idx.size)]
+        res = res.reshape(OH, OW, N, C).transpose(2, 3, 0, 1)
+        
+        res = tensor.Tensor(res, requires_grad=x.requires_grad, is_leaf=not x.requires_grad)</code></pre>

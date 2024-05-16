@@ -1,0 +1,41 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    tokenizer = AutoTokenizer.from_pretrained(args.params_path)
+
+    examples = []
+    <a id="change">for </a><a id="change">text</a> in data<a id="change">:
+        </a>result = tokenizer(text=text, max_seq_len=args.max_seq_length)
+        <a id="change">examples.append(</a>(<a id="change">result[&quotinput_ids&quot]</a><a id="change">, result[&quottoken_type_ids&quot]</a>)<a id="change">)</a>
+
+    &#47&#47 Seperates data into some batches.
+    batches = <a id="change">[
+        examples[i:i + args.batch_size]
+        for i in range(0, len(examples), args.batch_size)
+    ]</a>
+
+    batchify_fn = lambda samples, fn=Tuple(
+        Pad(axis=0, pad_val=tokenizer.pad_token_id),  &#47&#47 input
+        Pad(axis=0, pad_val=tokenizer.pad_token_type_id),  &#47&#47 segment
+    ): fn(samples)
+
+    results = []
+    model.eval()
+    for <a id="change">batch</a> in batches:
+        input_ids<a id="change">, token_type_ids</a> = batchify_fn(batch)
+        input_ids<a id="change"> = paddle</a><a id="change">.to_tensor(</a>input_ids<a id="change">)</a>
+        token_type_ids<a id="change"> = paddle</a><a id="change">.to_tensor(</a>token_type_ids<a id="change">)</a>
+        logits<a id="change"> = </a><a id="change">model(</a>input_ids, token_type_ids<a id="change">)</a>
+        probs = F.sigmoid(logits).numpy()
+        for prob in probs:
+            labels = []
+            for i, p in enumerate(prob):</code></pre><h3>After Change</h3><pre><code class='java'>
+    data_ds = data_ds.map(trans_func)
+
+    &#47&#47 batchify dataset
+    collate_fn<a id="change"> = </a><a id="change">DataCollatorWithPadding(</a>tokenizer<a id="change">)</a>
+    data_batch_sampler = BatchSampler(data_ds,
+                                      batch_size=args.batch_size,
+                                      shuffle=False)
+</code></pre>

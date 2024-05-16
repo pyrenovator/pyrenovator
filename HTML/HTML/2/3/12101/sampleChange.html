@@ -1,0 +1,39 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    def a3c(rank):
+        c = TestA3C.c
+        world = get_world()
+        reduce_group<a id="change"> = </a>world.create_rpc_group("reduce_group", ["0", "1"])
+        actor = smw(Actor(c.observe_dim, c.action_num)
+                    .to(c.device), c.device, c.device)
+        critic = smw(Critic(c.observe_dim)
+                     .to(c.device), c.device, c.device)
+        actor_g_server = PushPullGradServer("actor_g_server", reduce_group,
+                                            reduce_batch_size=2)
+        critic_g_server = PushPullGradServer("critic_g_server", reduce_group,
+                                             reduce_batch_size=2)
+        if rank == 0:
+            actor_m = Actor(c.observe_dim, c.action_num).to(c.device)
+            critic_m = Critic(c.observe_dim).to(c.device)
+            actor_g_server.manage_model(actor_m,
+                                        t.optim.Adam(actor_m.parameters(),
+                                                     lr=1e-3))
+            critic_g_server.manage_model(critic_m,
+                                         t.optim.Adam(critic_m.parameters(),
+                                                      lr=1e-3))
+        if rank in (0, 1):
+            actor_g_server.start()
+            <a id="change">critic_g_server.start()</a>
+
+        a3c = A3C(actor, critic,
+                  nn.MSELoss(reduction=&quotsum&quot),
+                  (actor_g_server, critic_g_server),</code></pre><h3>After Change</h3><pre><code class='java'>
+        critic = smw(Critic(c.observe_dim)
+                     .to(c.device), c.device, c.device)
+        &#47&#47 in all test scenarios, all processes will be used as reducers
+        actor_g_server<a id="change">, critic_g_server</a> = grad_server_helper(
+            lambda: Actor(c.observe_dim, c.action_num),
+            lambda: Critic(c.observe_dim),
+            learning_rate=5e-3</code></pre>

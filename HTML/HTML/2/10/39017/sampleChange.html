@@ -1,0 +1,26 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+@pytest.mark.parametrize("engine", ["parquet", "csv", "csv-no-header"])
+@pytest.mark.parametrize("op_columns", [["x"], None])
+def test_normalize(tmpdir, df, dataset, gpu_memory_frac, engine, op_columns):
+    cat_names = ["name-cat", "name-string"]<a id="change"> if engine == "parquet"</a><a id="change"> else </a>["name-string"]
+    cont_names = ["x", "y"]
+    label_name = ["label"]
+</code></pre><h3>After Change</h3><pre><code class='java'>
+@pytest.mark.parametrize("engine", ["parquet", "csv", "csv-no-header"])
+@pytest.mark.parametrize("op_columns", [["x"], ["x", "y"]])
+def test_normalize(tmpdir, df, dataset, gpu_memory_frac, engine, op_columns):
+    cont_features = op_columns<a id="change"> &gt;&gt; </a>ops.Normalize()
+    processor = <a id="change">nvtabular.Workflow(</a>cont_features<a id="change">)</a>
+    <a id="change">processor.fit(dataset</a><a id="change">)</a>
+
+    new_gdf = <a id="change">processor.transform(dataset).to_ddf()</a>.compute()
+    for col in op_columns:
+        assert math.isclose(df[col].mean(), processor.column_group.op.means[col], rel_tol=1e-4)
+        assert math.isclose(df[col].std(), processor.column_group.op.stds[col], rel_tol=1e-4)
+        df[col]<a id="change"> = </a>(df[col] - processor.column_group.op.means[col]) / processor.column_group.op.stds[
+            col
+        ]
+        assert np.all((df[col] - new_gdf[col]).abs().values &lt;= 1e-2)</code></pre>

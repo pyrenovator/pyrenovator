@@ -1,0 +1,66 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+        &#47&#47 compute encodings
+        self.assertFalse(tensor_quantizer.isEncodingValid)
+        encoding = <a id="change">tensor_quantizer.computeEncoding()</a>
+        self.assertTrue(tensor_quantizer.isEncodingValid)
+        print(&quotmin=&quot, encoding.min, &quot, max=&quot, encoding.max)
+
+        &#47&#47 get the output</code></pre><h3>After Change</h3><pre><code class='java'>
+        graph = tf.Graph()
+        config = tf.ConfigProto(log_device_placement=False)
+        sess = tf.Session(graph=graph, config=config)
+        bitwidth<a id="change"> = 8</a>
+        use_symm_encoding<a id="change"> = </a>False
+        with graph.as_default():
+
+            inp = tf.placeholder(tf.float32, shape=[10], name=&quotinput&quot)
+            tensor_quantizer = libpymo.TensorQuantizer(libpymo.QuantizationMode.QUANTIZATION_TF_ENHANCED,
+                                                       libpymo.RoundingMode.ROUND_NEAREST)
+            tensor_quantizer_val = libpymo.PtrToInt64(tensor_quantizer)
+            tensor_quant_ref = tf.Variable(initial_value=tensor_quantizer_val, trainable=False, dtype=tf.int64)
+
+            mode_var = tf.Variable(initial_value=int(libpymo.TensorQuantizerOpMode.updateStats),
+                                   trainable=False, dtype=tf.int32)
+
+            encoding_min = tf.Variable(initial_value=0.0, trainable=True, dtype=tf.double)
+            encoding_max = tf.Variable(initial_value=0.0, trainable=True, dtype=tf.double)
+            bit_width = tf.Variable(initial_value=bitwidth, trainable=False, dtype=tf.int8)
+            use_symmetric_encoding = tf.Variable(initial_value=use_symm_encoding, trainable=False, dtype=tf.bool)
+
+            sess.run([mode_var.initializer, tensor_quant_ref.initializer, encoding_min.initializer,
+                      encoding_max.initializer, bit_width.initializer, use_symmetric_encoding.initializer])
+
+            &#47&#47 place holder for the input
+            with tf.device("/device:GPU:0"):
+
+                pass_through_op_output = zero_out_module.qc_quantize(name=&quotquant_op&quot, in_tensor=inp,
+                                                                     op_mode=mode_var,
+                                                                     tensor_quantizer_reference=tensor_quant_ref,
+                                                                     encoding_min=encoding_min,
+                                                                     encoding_max=encoding_max,
+                                                                     bit_width=bit_width,
+                                                                     use_symmetric_encoding=use_symmetric_encoding)
+
+        inp_tensor = sess.graph.get_tensor_by_name(&quotinput:0&quot)
+        inp_data = np.random.rand(10)
+
+        &#47&#47 get the output
+        print(inp_data)
+        with tf.device("/device:GPU:0"):
+            out_data = sess.run(pass_through_op_output, feed_dict={inp_tensor: inp_data})
+        print(out_data)
+
+        &#47&#47 compare qc_quantize op&quots output with input
+        self.assertTrue(np.allclose(out_data, inp_data))
+
+        &#47&#47 compute encodings
+        self.assertFalse(tensor_quantizer.isEncodingValid)
+        encoding = <a id="change">tensor_quantizer.computeEncoding(</a>bitwidth, use_symm_encoding<a id="change">)</a>
+        self.assertTrue(tensor_quantizer.isEncodingValid)
+        print(&quotmin=&quot, encoding.min, &quot, max=&quot, encoding.max)
+
+        &#47&#47 get the output</code></pre>

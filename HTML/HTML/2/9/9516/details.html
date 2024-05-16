@@ -1,0 +1,78 @@
+<html><h3>Pattern ID :9516
+</h3><img src='33957255.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+def input_embed(ctx: Context, inp: jnp.ndarray) -&gt; jnp.ndarray:
+    ctx = ctx.add_to_prefix("input_embed")
+    spec = base_spec(inp)
+    <a id="change">return </a>jnp.einsum(f"{spec}x,xyz-&gt;{spec}yz", one_hot(inp, ctx.data.vocab_size),
+                      get_param(ctx, "weight", [ctx.dims.vocab, ctx.dims.heads, ctx.dims.features_per_head],
+                                ctx.embedding_std))
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    ctx = ctx.add_to_prefix("input_embed")
+
+    spec = base_spec(inp)
+    embd<a id="change"> = </a>get_param(ctx, "weight", [ctx.dims.vocab, ctx.dims.heads, ctx.dims.features_per_head], ctx.embedding_std)
+    out<a id="change"> = </a>jnp.einsum(f"{spec}x,xyz-&gt;{spec}yz", one_hot(inp, ctx.data.vocab_size), embd)
+
+    position_shape = dims_to_shape(ctx, [ctx.dims.sequence])
+    feature_shape = dims_to_shape(ctx, [ctx.dims.heads, ctx.dims.features_per_head])
+    position_count = util.prod(position_shape)
+    feature_count = util.prod(feature_shape)
+    positions<a id="change"> = </a>jnp.reshape(jnp.arange(0, position_shape), (-1, 1, 1))
+    features = jnp.arange(0, feature_count)
+    features = jnp.reshape(features, [1] + feature_shape) * 4 / feature_count
+    features<a id="change"> = </a><a id="change">jnp.exp(</a>features - math.log(position_count<a id="change"> / </a>2 / math.pi)<a id="change">)</a>
+    <a id="change">return </a>out + jnp.sin(features<a id="change"> * </a>positions)
+
+
+def output_embed(ctx: Context, inp: jnp.ndarray) -&gt; jnp.ndarray:</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 9</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/homebrewnlp/olmax/commit/e36a0fd09a8811ec71213205ebfb684ba66a6b83#diff-fada037ad086638e65c7ae77e3d223963e9afaa26326aab0ea718f4013176e43L101' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 33957255</div><div id='project'> Project Name: homebrewnlp/olmax</div><div id='commit'> Commit Name: e36a0fd09a8811ec71213205ebfb684ba66a6b83</div><div id='time'> Time: 2021-07-20</div><div id='author'> Author: 39779310+ClashLuke@users.noreply.github.com</div><div id='file'> File Name: model.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: input_embed(2)</div><div id='n_method'> N Method Name: input_embed(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: model.py</div><div id='n_file'> N File Name: model.py</div><div id='m_start'> M Start Line: 101</div><div id='m_end'> M End Line: 105</div><div id='n_start'> N Start Line: 102</div><div id='n_end'> N End Line: 116</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        trans_loss_t, domain_acc_t = self._single_domain_forward(g_t, f_t, domain=0)
+        self.grl.step()
+        self.domain_discriminator_accuracy = 0.5 * (domain_acc_s + domain_acc_t)
+        <a id="change">return </a>0.5 * (trans_loss_s + trans_loss_t)
+
+    def _single_domain_forward(self, logits, features, domain=1):
+        Perform forward on a single domain.</code></pre><h3>After Change</h3><pre><code class='java'>
+        f = torch.cat((f_s, f_t), dim=0)
+        g = torch.cat((g_s, g_t), dim=0)
+        g = F.softmax(g,dim=1).detach()
+        h<a id="change"> = </a>self.grl(self.map(f, g))
+        d<a id="change"> = </a>self.domain_discriminator(h)
+        d_label = torch.cat((
+            torch.ones((g_s.size(0), 1)).to(g_s.device),
+            torch.zeros((g_t.size(0), 1)).to(g_t.device),
+        ))
+        weight<a id="change"> = </a>1.0 + <a id="change">torch.exp(-entropy(g)</a><a id="change">)</a>
+        batch_size<a id="change"> = </a>f.size(0)
+        weight = weight<a id="change"> / torch.sum(weight) * </a>batch_size
+        self.domain_discriminator_accuracy = binary_accuracy(d, d_label)
+        <a id="change">return </a>self.bce(d, d_label, weight.view_as(d))
+
+
+class RandomizedMultiLinearMap(nn.Module):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/thuml/transfer-learning-library/commit/6dfc8e293ca2cbc4d116dc8ed0a6ef176dff0d06#diff-921a2eeb848068663b0c58710b496c58d46246573eaab61f41628954ccf27867L85' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 33957335</div><div id='project'> Project Name: thuml/transfer-learning-library</div><div id='commit'> Commit Name: 6dfc8e293ca2cbc4d116dc8ed0a6ef176dff0d06</div><div id='time'> Time: 2020-04-12</div><div id='author'> Author: 13126830206@163.com</div><div id='file'> File Name: dalib/adaptation/cdan.py</div><div id='m_class'> M Class Name: ConditionalDomainAdversarialLoss</div><div id='n_method'> N Class Name: ConditionalDomainAdversarialLoss</div><div id='m_method'> M Method Name: forward(5)</div><div id='n_method'> N Method Name: forward(5)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: dalib/adaptation/cdan.py</div><div id='n_file'> N File Name: dalib/adaptation/cdan.py</div><div id='m_start'> M Start Line: 86</div><div id='m_end'> M End Line: 90</div><div id='n_start'> N Start Line: 87</div><div id='n_end'> N End Line: 100</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        trans_loss_t, domain_acc_t = self._single_domain_forward(g_t, f_t, domain=0)
+        self.grl.step()
+        self.domain_discriminator_accuracy = 0.5 * (domain_acc_s + domain_acc_t)
+        <a id="change">return </a>0.5 * (trans_loss_s + trans_loss_t)
+
+    def _single_domain_forward(self, logits, features, domain=1):
+        Perform forward on a single domain.</code></pre><h3>After Change</h3><pre><code class='java'>
+        f = torch.cat((f_s, f_t), dim=0)
+        g = torch.cat((g_s, g_t), dim=0)
+        g = F.softmax(g,dim=1).detach()
+        h<a id="change"> = </a>self.grl(self.map(f, g))
+        d<a id="change"> = </a>self.domain_discriminator(h)
+        d_label = torch.cat((
+            torch.ones((g_s.size(0), 1)).to(g_s.device),
+            torch.zeros((g_t.size(0), 1)).to(g_t.device),
+        ))
+        weight<a id="change"> = </a>1.0 + <a id="change">torch.exp(-entropy(g)</a><a id="change">)</a>
+        batch_size<a id="change"> = </a>f.size(0)
+        weight = weight<a id="change"> / torch.sum(weight) * </a>batch_size
+        self.domain_discriminator_accuracy = binary_accuracy(d, d_label)
+        <a id="change">return </a>self.bce(d, d_label, weight.view_as(d))
+
+
+class RandomizedMultiLinearMap(nn.Module):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/thuml/transfer-learning-library/commit/8477111b23336e7dd2d349a4b35b969240ff5871#diff-921a2eeb848068663b0c58710b496c58d46246573eaab61f41628954ccf27867L85' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 33957320</div><div id='project'> Project Name: thuml/transfer-learning-library</div><div id='commit'> Commit Name: 8477111b23336e7dd2d349a4b35b969240ff5871</div><div id='time'> Time: 2020-04-12</div><div id='author'> Author: 13126830206@163.com</div><div id='file'> File Name: dalib/adaptation/cdan.py</div><div id='m_class'> M Class Name: ConditionalDomainAdversarialLoss</div><div id='n_method'> N Class Name: ConditionalDomainAdversarialLoss</div><div id='m_method'> M Method Name: forward(5)</div><div id='n_method'> N Method Name: forward(5)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: dalib/adaptation/cdan.py</div><div id='n_file'> N File Name: dalib/adaptation/cdan.py</div><div id='m_start'> M Start Line: 86</div><div id='m_end'> M End Line: 90</div><div id='n_start'> N Start Line: 87</div><div id='n_end'> N End Line: 100</div><BR>

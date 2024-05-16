@@ -1,0 +1,39 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+        num_batches = 0
+        current_epoch_losses = []
+        <a id="change">current_epoch_reg_losses</a><a id="change"> = </a><a id="change">[]</a>
+        for inputs, targets in loader:
+            &#47&#47 Run forward calculation
+            predicted = self.model.forward(**inputs)
+
+            &#47&#47 Compute loss.
+            loss = self.loss_fn(predicted, targets)
+            current_epoch_losses.append(loss.data.item())
+            &#47&#47 Regularize.
+            loss, reg_loss = self._add_batch_regualarizations(loss, reg_lambda_ar)
+            <a id="change">current_epoch_reg_losses.append(</a>reg_loss.data.item()<a id="change">)</a>
+
+            self.optimizer.zero_grad()
+            loss.backward()
+            self.optimizer.step()
+            num_batches += 1
+
+        self.scheduler.step()
+        epoch_loss = np.mean(current_epoch_losses)
+        epoch_reg = <a id="change">np.mean(current_epoch_reg_losses</a><a id="change">)</a>
+
+        return epoch_loss, epoch_reg, num_batches
+
+    def _add_batch_regualarizations(self, loss, reg_lambda_ar):</code></pre><h3>After Change</h3><pre><code class='java'>
+            self.optimizer.step()
+
+            for metric in self.metrics:
+                <a id="change">metric.update(predicted=predicted, target=targets)</a>
+            self.value_metrics["RegLoss"].update(avg_value=reg_loss, num=targets.shape[0])
+
+        self.scheduler.step()
+        for metric in self.metrics: metric.compute(save=True)</code></pre>

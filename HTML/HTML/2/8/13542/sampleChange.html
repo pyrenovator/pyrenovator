@@ -1,0 +1,33 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    ) -&gt; Tuple[States, TensorBool]:
+        Function that takes a batch of states and actions and returns a batch of next
+        states and a boolean tensor indicating initial states in the new batch.
+        <a id="change">pass</a>
+
+    @abstractmethod
+    def reward(self, final_states: States) -&gt; TensorFloat:
+        pass</code></pre><h3>After Change</h3><pre><code class='java'>
+    def backward_step(self, states: States, actions: TensorLong) -&gt; States:
+        Function that takes a batch of states and actions and returns a batch of next
+        states and a boolean tensor indicating initial states in the new batch.
+        new_states<a id="change"> = </a>deepcopy(states)
+        initial_states: TensorBool = new_states.is_initial_state()
+
+        non_initial_states_masks = new_states.backward_masks[~initial_states]
+        non_initial_actions<a id="change"> = </a>actions[~initial_states]
+        actions_valid<a id="change"> = </a>all(
+            torch.gather(non_initial_states_masks, 1, <a id="change">non_initial_actions.unsqueeze(1</a><a id="change">)</a>)
+        )
+        if not actions_valid:
+            raise NonValidActionsError("Actions are not valid")
+
+        not_done_states<a id="change"> = </a>new_states.states[~initial_states]
+        self.backward_step_no_worry(not_done_states, non_initial_actions)
+
+        new_states.states[~initial_states]<a id="change"> = </a>not_done_states
+
+        self.update_masks(new_states)
+        return new_states</code></pre>

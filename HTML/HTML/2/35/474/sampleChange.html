@@ -1,0 +1,38 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            self.linear = nn.Linear(self.out_planes*4*block.expansion, self.num_classes)
+
+    def _make_layer(self, block, planes, num_blocks, stride):
+        strides = <a id="change">[</a>stride<a id="change"></a>]<a id="change"> + [1</a>]<a id="change">*</a>(num_blocks<a id="change">-1</a>)
+        layers = []
+        <a id="change">for stride</a> in strides<a id="change">:
+            </a>layers.append(<a id="change">block(</a>self.in_planes, planes, <a id="change">stride</a><a id="change">)</a>)
+            self.in_planes = planes * block.expansion
+        return nn.Sequential(*layers)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        norm_layer = self._norm_layer
+        downsample = None
+        previous_dilation = self.dilation
+        <a id="change">if dilate</a>:
+            self.dilation<a id="change"> *= </a>stride
+            <a id="change">stride</a><a id="change"> = 1</a>
+        <a id="change">if stride != 1 or self.inplanes != planes * block.expansion</a>:
+            downsample<a id="change"> = </a><a id="change">nn.Sequential(
+                </a><a id="change">conv1x1(</a>self.inplanes, <a id="change">planes</a><a id="change"> * </a>block.expansion, <a id="change">stride</a><a id="change">)</a>,
+                <a id="change">norm_layer(planes</a><a id="change"> * </a>block.expansion<a id="change">)</a><a id="change">,
+            )</a>
+
+        layers = []
+        layers.append(block(self.inplanes, planes, stride, downsample, self.groups,
+                            self.base_width, previous_dilation, norm_layer))
+        self.inplanes = planes * block.expansion
+        <a id="change">for _</a> in <a id="change">range(1</a>, blocks<a id="change">):
+            layers.append(</a><a id="change">block(</a>self.inplanes, <a id="change">planes</a><a id="change">, groups=self.groups,
+                                base_width=self.base_width, dilation=self.dilation,
+                                norm_layer=norm_layer))</a>
+
+        return nn.Sequential(*layers)
+
+    def _forward_impl(self, x):</code></pre>

@@ -1,0 +1,71 @@
+<html><h3>Pattern ID :40228
+</h3><img src='114199468.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+        &#47&#47 Compute and apply filter
+        notch_kernel = notch_filter(drop_frequency).to(clean_waveform.device)
+        padding = (len(notch_kernel) // 2, <a id="change">len(</a>notch_kernel<a id="change">)</a> // 2)
+        dropped_waveform = convolve1d(dropped_waveform, notch_kernel, padding)
+
+        &#47&#47 Save the state of the RNG for reproducibility</code></pre><h3>After Change</h3><pre><code class='java'>
+        pad = filter_length // 2
+
+        &#47&#47 Start with delta function
+        drop_filter<a id="change"> = </a><a id="change">torch.zeros(</a>1, 1, filter_length<a id="change">)</a>
+        drop_filter[0, 0, pad] = 1
+
+        &#47&#47 Subtract each frequency
+        for frequency in drop_frequency:
+            notch_kernel = notch_filter(
+                frequency, filter_length, self.drop_width,
+            ).to(clean_waveform.device)
+            drop_filter<a id="change"> = </a>convolve1d(drop_filter, notch_kernel, pad)
+
+        &#47&#47 Apply filter
+        dropped_waveform<a id="change"> = </a>convolve1d(dropped_waveform, drop_filter, pad)
+
+        &#47&#47 Save the state of the RNG for reproducibility
+        self.rng_state = torch.random.get_rng_state()</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 5</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/speechbrain/speechbrain/commit/a478adfd391cc6d4fe1d41abd3613d20b7fc349d#diff-8f41b7c6f8310ccf5ec23acf0ede4f3b90c12388db593458278544ffb09ae3d5L1926' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 114199468</div><div id='project'> Project Name: speechbrain/speechbrain</div><div id='commit'> Commit Name: a478adfd391cc6d4fe1d41abd3613d20b7fc349d</div><div id='time'> Time: 2020-03-02</div><div id='author'> Author: plantinga.peter@protonmail.com</div><div id='file'> File Name: data_augmentation.py</div><div id='m_class'> M Class Name: drop_freq</div><div id='n_method'> N Class Name: drop_freq</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: data_augmentation.py</div><div id='n_file'> N File Name: data_augmentation.py</div><div id='m_start'> M Start Line: 1926</div><div id='m_end'> M End Line: 1944</div><div id='n_start'> N Start Line: 2021</div><div id='n_end'> N End Line: 2059</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            for j in range(0, len(train_smiles), self.args.batch_size):
+                train_batches.append(train_smiles[j:j + self.args.batch_size])
+            batch_encs = [self.encoder(train_batch) for train_batch in train_batches]
+            means = [torch.mean(batch_encs[i], dim=0, keepdim=True) for i in range(<a id="change">len(</a>batch_encs<a id="change">)</a>)]
+            domain_encs.append(torch.mean(torch.cat(means, dim=0), dim=0))
+        self.domain_encs = domain_encs
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            train_batches = []
+            for j in range(0, len(train_smiles), self.args.batch_size):
+                train_batches.append(train_smiles[j:j + self.args.batch_size])
+            means_sum<a id="change"> = </a><a id="change">torch.zeros(</a>self.args.hidden_size<a id="change">)</a>
+            if self.args.cuda:
+                means_sum<a id="change"> = </a>means_sum.cuda()
+            for train_batch in train_batches:
+                with torch.no_grad():
+                    batch_encs = self.encoder(train_batch) &#47&#47bs x hidden
+                means_sum<a id="change"> += </a>torch.mean(batch_encs, dim=0)
+            domain_encs.append(means_sum / len(train_batches))
+        self.domain_encs = domain_encs
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/aamini/chemprop/commit/ce09638e4df7666a5cbdc5297eda15364cb46add#diff-eee12f70990be22455041e206b0ab84ff5903fea7888f4b78e4089cf96e59988L159' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 114199462</div><div id='project'> Project Name: aamini/chemprop</div><div id='commit'> Commit Name: ce09638e4df7666a5cbdc5297eda15364cb46add</div><div id='time'> Time: 2018-10-28</div><div id='author'> Author: yangk@mit.edu</div><div id='file'> File Name: moe.py</div><div id='m_class'> M Class Name: MOE</div><div id='n_method'> N Class Name: MOE</div><div id='m_method'> M Method Name: compute_domain_encs(2)</div><div id='n_method'> N Method Name: compute_domain_encs(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: moe.py</div><div id='n_file'> N File Name: moe.py</div><div id='m_start'> M Start Line: 164</div><div id='m_end'> M End Line: 169</div><div id='n_start'> N Start Line: 164</div><div id='n_end'> N End Line: 174</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+        return a pair of high-red audio and corresponding low-res spectrogram as if it was predicted by the TTS
+        
+        max_audio_start = <a id="change">len(</a>self.waves[index]<a id="change">)</a> - self.samples_per_segment
+        audio_start = random.randint(0, max_audio_start)
+        segment = self.waves[index][audio_start: audio_start + self.samples_per_segment]
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        while (len(wave) / sr) &lt; (
+                (self.samples_per_segment + 50) / self.desired_samplingrate):  &#47&#47 + 50 is just to be extra sure
+            &#47&#47 catch files that are too short to apply meaningful signal processing and make them longer
+            wave<a id="change"> = </a>numpy.concatenate([wave, <a id="change">numpy.zeros(shape=1000)</a>, wave])
+            &#47&#47 add some true silence in the mix, so the vocoder is exposed to that as well during training
+        if sr == self.desired_samplingrate:
+            wave<a id="change"> = </a>torch.tensor(wave)
+        else:
+            wave = torch.tensor(librosa.resample(y=wave, orig_sr=sr, target_sr=self.desired_samplingrate))
+
+        max_audio_start<a id="change"> = </a>len(wave) - self.samples_per_segment
+        audio_start = random.randint(0, max_audio_start)
+        segment = wave[audio_start: audio_start + self.samples_per_segment]
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/digitalphonetics/ims-toucan/commit/39829a5ab449523e2cbb7e913e0df4b6ec6c3abd#diff-6d06b1ed23ad849f7ccf759355f4b4bc0f0bbc671b49f57094dfd2ad1b804218L69' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 114199424</div><div id='project'> Project Name: digitalphonetics/ims-toucan</div><div id='commit'> Commit Name: 39829a5ab449523e2cbb7e913e0df4b6ec6c3abd</div><div id='time'> Time: 2022-10-13</div><div id='author'> Author: lux.florian@gmail.com</div><div id='file'> File Name: TrainingInterfaces/Spectrogram_to_Wave/HiFiGAN/HiFiGANDataset.py</div><div id='m_class'> M Class Name: HiFiGANDataset</div><div id='n_method'> N Class Name: HiFiGANDataset</div><div id='m_method'> M Method Name: __getitem__(2)</div><div id='n_method'> N Method Name: __getitem__(2)</div><div id='m_parent_class'> M Parent Class: Dataset</div><div id='n_parent_class'> N Parent Class: Dataset</div><div id='m_file'> M File Name: TrainingInterfaces/Spectrogram_to_Wave/HiFiGAN/HiFiGANDataset.py</div><div id='n_file'> N File Name: TrainingInterfaces/Spectrogram_to_Wave/HiFiGAN/HiFiGANDataset.py</div><div id='m_start'> M Start Line: 77</div><div id='m_end'> M End Line: 79</div><div id='n_start'> N Start Line: 43</div><div id='n_end'> N End Line: 58</div><BR>

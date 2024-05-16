@@ -1,0 +1,20 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                           stride=(self.patch_size, self.patch_size)) * self.patch_elems
+        exps_coord_sum = torch.nn.AvgPool2d(exps * self.coords, kernel_size=(self.patch_size, self.patch_size),
+                           stride=(self.patch_size, self.patch_size)) * self.patch_elems
+        keypoint_tensor<a id="change"> = </a>exps_coord_sum / exps_patch_sum
+        keypoint_coords = <a id="change">keypoint_tensor.view(</a>BW, <a id="change">2</a>, self.num_patches<a id="change">)</a>.transpose(2, 1)
+
+        if self.grid_sample:
+            norm_keypoints2D = normalize_coords(keypoint_coords, self.width, self.width).unsqueeze(1)</code></pre><h3>After Change</h3><pre><code class='java'>
+        BW = descriptors.size(0)
+        v_coords, u_coords = torch.meshgrid([torch.arange(0, self.width), torch.arange(0, self.width)])
+        v_coords = v_coords.unsqueeze(0).float()  &#47&#47 1 x H x W
+        u_coords<a id="change"> = </a><a id="change">u_coords.unsqueeze(0).float()</a>
+        detector_patches = F.unfold(detector_scores, kernel_size=self.patch_size, stride=self.patch_size)  &#47&#47 BW x patch_elements x num_patches
+        softmax_attention = F.softmax(detector_patches / self.temperature, dim=1)  &#47&#47 BW x patch_elements x num_patches
+        expected_v = torch.sum(self.v_patches * softmax_attention, dim=1)
+        expected_u = torch.sum(self.u_patches * softmax_attention, dim=1)</code></pre>

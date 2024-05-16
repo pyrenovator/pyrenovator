@@ -1,0 +1,50 @@
+<html><h3>Pattern ID :28242
+</h3><img src='83408776.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 prepare lstm to receive gradient from all losses (Q1_loss, Q2_loss, policy_loss)
+        &#47&#47 retain_graph needs to be used because lstm is shared among the three
+
+        <a id="change">self.lstm_optimizer.zero_grad()</a>
+
+        &#47&#47 reduce td error
+
+        self.Q1_optimizer.zero_grad()</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        self.critic_lstm.flatten_parameters()
+        critic_h, _ = self.actor_lstm(b.o)
+        critic_h_1_T, critic_h_2_Tplus1 = critic_h[:, :-1, :], <a id="change">critic_h[:, 1:, :]</a>  &#47&#47 T represents num_bptt
+
+        &#47&#47 prepare lstm to receive gradient from all losses (Q1_loss, Q2_loss, policy_loss)
+        &#47&#47 retain_graph needs to be used because lstm is shared among the three</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/zhihanyang2022/off-policy-continuous-control/commit/0d405a315e44a0b8df2bfcb89ea02b6979215166#diff-a5c291ec9aab37f6351911dd4dd49334c82a0507245742c0291338a09f74c16aL128' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 83408776</div><div id='project'> Project Name: zhihanyang2022/off-policy-continuous-control</div><div id='commit'> Commit Name: 0d405a315e44a0b8df2bfcb89ea02b6979215166</div><div id='time'> Time: 2021-05-23</div><div id='author'> Author: yangz2@carleton.edu</div><div id='file'> File Name: offpcc/algorithms/sac_lstm.py</div><div id='m_class'> M Class Name: SAC_LSTM</div><div id='n_method'> N Class Name: SAC_LSTM</div><div id='m_method'> M Method Name: update_networks(2)</div><div id='n_method'> N Method Name: update_networks(2)</div><div id='m_parent_class'> M Parent Class: OffPolicyRLAlgorithm</div><div id='n_parent_class'> N Parent Class: OffPolicyRLAlgorithm</div><div id='m_file'> M File Name: offpcc/algorithms/sac_lstm.py</div><div id='n_file'> N File Name: offpcc/algorithms/sac_lstm.py</div><div id='m_start'> M Start Line: 128</div><div id='m_end'> M End Line: 221</div><div id='n_start'> N Start Line: 130</div><div id='n_end'> N End Line: 229</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+			hh_list.append(hh)
+		preds = torch.stack(output_list, dim=1)
+		loss = criterion(preds, targets)
+		<a id="change">optimizer.zero_grad()</a>
+		loss.backward()
+		optimizer.step()
+		p_bar.set_description(f"Loss: {loss.item():.4f}")
+	return torch.squeeze(preds)</code></pre><h3>After Change</h3><pre><code class='java'>
+			grad_outputs = torch.eye(out.shape[-1], device=targets.device)
+			for g_idx in range(grad_outputs.shape[0]):
+				param.grad.zero_()
+				instantaneous_eligibility_trace[g_idx] = torch.autograd.grad(<a id="change">out[:, g_idx]</a>, param, retain_graph=True)[0][g_idx]
+			eligibility_trace.append(instantaneous_eligibility_trace)
+		preds = torch.stack(output_list, dim=1)
+		mean_error = targets - preds</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/neurotorch/neurotorch/commit/4028f8f7fcb44b43d6235c1d12c734f809b1e629#diff-e6c8fac3a6216017c8602da4fb676a8fa4863da3f367703767d4a4defbe277adL44' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 83408770</div><div id='project'> Project Name: neurotorch/neurotorch</div><div id='commit'> Commit Name: 4028f8f7fcb44b43d6235c1d12c734f809b1e629</div><div id='time'> Time: 2022-11-28</div><div id='author'> Author: 50332514+JeremieGince@users.noreply.github.com</div><div id='file'> File Name: src/neurotorch/learning_algorithms/debug_e_prop.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: dummy_train(1)</div><div id='n_method'> N Method Name: dummy_train(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/neurotorch/learning_algorithms/debug_e_prop.py</div><div id='n_file'> N File Name: src/neurotorch/learning_algorithms/debug_e_prop.py</div><div id='m_start'> M Start Line: 51</div><div id='m_end'> M End Line: 64</div><div id='n_start'> N Start Line: 45</div><div id='n_end'> N End Line: 76</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 Computing gradients for fnet and updating weights
+        fnet_loss = FLAGS.warp_scaling * warp_loss + fnet_loss.detach()
+        fnet_loss = fnet_loss.cuda()
+        <a id="change">fnet_optimizer.zero_grad()</a>
+        fnet_loss.backward()
+        fnet_optimizer.step()
+        update_list_avg += [tb, dt_ratio]
+        update_list_name += ["t_balance", "Dst_ratio"]</code></pre><h3>After Change</h3><pre><code class='java'>
+    &#47&#47 Preparing generator input
+    gen_flow = upscale_four(fnet_input * 4.)
+
+    gen_flow = torch.reshape(<a id="change">gen_flow[:, 0:2]</a>,
+                             (FLAGS.batch_size, (inputimages - 1), 2, FLAGS.crop_size * 4, FLAGS.crop_size * 4))
+    input_frames = torch.reshape(Frame_t,
+                                 (FLAGS.batch_size * (inputimages - 1), output_channel, FLAGS.crop_size,</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/dwightfoster/pytorch-tecogan/commit/b64afd58ac37b8b9ed21dc91b415612572cfa585#diff-f5a7fdedd2c0ddebef9c8da0be135c2dfddb9e5339087d894cdd812cea93a47eL47' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 83408772</div><div id='project'> Project Name: dwightfoster/pytorch-tecogan</div><div id='commit'> Commit Name: b64afd58ac37b8b9ed21dc91b415612572cfa585</div><div id='time'> Time: 2021-03-11</div><div id='author'> Author: dwightfoster03@gmail.com</div><div id='file'> File Name: code/train.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: TecoGAN(11)</div><div id='n_method'> N Method Name: TecoGAN(13)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: code/train.py</div><div id='n_file'> N File Name: code/train.py</div><div id='m_start'> M Start Line: 47</div><div id='m_end'> M End Line: 347</div><div id='n_start'> N Start Line: 66</div><div id='n_end'> N End Line: 145</div><BR>

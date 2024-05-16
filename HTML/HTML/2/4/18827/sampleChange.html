@@ -1,0 +1,42 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                **kwargs
+            )
+
+            <a id="change">setattr(</a>self, <a id="change">f&quotoptim{ind}&quot</a>, optimizer<a id="change">)</a> &#47&#47 cannot use pytorch ModuleList for some reason with optimizers
+
+            if self.use_ema:
+                self.ema_unets.append(EMA(unet, **ema_kwargs))</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        lr, wd, eps = map(partial(cast_tuple, length = self.num_unets), (lr, wd, eps))
+
+        optimizers<a id="change"> = </a>[]
+
+        for unet, unet_lr, unet_wd, unet_eps in zip(decoder.unets, lr, wd, eps):
+            optimizer = get_optimizer(
+                unet.parameters(),
+                lr = unet_lr,
+                wd = unet_wd,
+                eps = unet_eps,
+                group_wd_params = group_wd_params,
+                **kwargs
+            )
+
+            optimizers.append(optimizer)
+
+            if self.use_ema:
+                self.ema_unets.append(EMA(unet, **ema_kwargs))
+
+        &#47&#47 gradient clipping if needed
+
+        self.max_grad_norm = max_grad_norm
+
+        self.register_buffer(&quotstep&quot, torch.tensor([0.]))
+        results = list(self.accelerator.prepare(decoder, *optimizers))
+        self.decoder = results.pop(0)
+        for opt_ind in range(<a id="change">len(</a>optimizers<a id="change">)</a>):
+            setattr(self, f&quotoptim{opt_ind}&quot, results.pop(0))
+
+    def save(self, path, overwrite = True, **kwargs):</code></pre>

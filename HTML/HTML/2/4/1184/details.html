@@ -1,0 +1,90 @@
+<html><h3>Pattern ID :1184
+</h3><img src='6010607.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        :return:
+        
+        items_embedding = self.item_embedding(torch.tensor([i for i in range(self.items_total)]).to(nodes_output.device))
+        alpha = <a id="change">torch.sigmoid(</a>self.alpha<a id="change">)</a>
+        embed = (1 - alpha) * items_embedding.clone() + alpha * nodes_output
+        return embed
+
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        id = 0
+        num_nodes = self.items_total
+        items_embedding = self.item_embedding(torch.tensor([i for i in range(self.items_total)]).to(nodes_output.device))
+        batch_embedding<a id="change"> = []</a>
+        for _ in range(batch_size):
+            output_node_features = nodes_output[id:id + num_nodes, :]
+            embed = (1 - self.alpha) * items_embedding
+
+            embed = embed + self.alpha * output_node_features
+            <a id="change">batch_embedding.append(</a>embed<a id="change">)</a>
+            id += num_nodes
+        batch_embedding = torch.stack(batch_embedding)
+        return batch_embedding
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/benedekrozemberczki/pytorch_geometric_temporal/commit/6c36f8a6c545046914ce31c842b9648ac37c8b93#diff-781837fb12ee6ac1f0b89d83a2500544e486bd58832bd4e4a8d1a779b2a0950eL84' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 6010607</div><div id='project'> Project Name: benedekrozemberczki/pytorch_geometric_temporal</div><div id='commit'> Commit Name: 6c36f8a6c545046914ce31c842b9648ac37c8b93</div><div id='time'> Time: 2021-07-24</div><div id='author'> Author: benedek.rozemberczki@gmail.com</div><div id='file'> File Name: torch_geometric_temporal/nn/attention/dnntsp.py</div><div id='m_class'> M Class Name: GlobalGatedUpdater</div><div id='n_method'> N Class Name: GlobalGatedUpdater</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: torch_geometric_temporal/nn/attention/dnntsp.py</div><div id='n_file'> N File Name: torch_geometric_temporal/nn/attention/dnntsp.py</div><div id='m_start'> M Start Line: 84</div><div id='m_end'> M End Line: 87</div><div id='n_start'> N Start Line: 88</div><div id='n_end'> N End Line: 101</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+        &#47&#47 Update gate of the GRU.
+        update_gate_conv = layers.SNConv2D(num_channels, self._kernel_size, sn_eps=self._sn_eps)
+        update_gate = <a id="change">F.sigmoid(</a>update_gate_conv(xh)<a id="change">)</a>
+
+        &#47&#47 Gate the inputs.
+        gated_input = torch.cat([x, read_gate * prev_state], dim=1)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        self.cell = ConvGRUCell(input_channels, output_channels, kernel_size, sn_eps)
+
+    def forward(self, x: torch.Tensor, hidden_state=None) -&gt; torch.Tensor:
+        outputs<a id="change"> = []</a>
+        for step in range(x.size(1)):
+            &#47&#47 Compute current timestep
+            output, hidden_state = self.cell(x[:, step, :, :, :], hidden_state)
+            <a id="change">outputs.append(</a>output<a id="change">)</a>
+        &#47&#47 Stack outputs to return as tensor
+        outputs = torch.stack(outputs, dim=0)
+        return outputs
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/openclimatefix/skillful_nowcasting/commit/b080785f5f559396d0b7e1a52d1c6d9a948d9439#diff-cee00a565d888c684ec40bd3eac27669aa3223b223a80ae9f871383a9fb64917L19' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 6010610</div><div id='project'> Project Name: openclimatefix/skillful_nowcasting</div><div id='commit'> Commit Name: b080785f5f559396d0b7e1a52d1c6d9a948d9439</div><div id='time'> Time: 2021-11-08</div><div id='author'> Author: jacob@bieker.tech</div><div id='file'> File Name: nowcasting_gan/layers/ConvGRU.py</div><div id='m_class'> M Class Name: ConvGRU</div><div id='n_method'> N Class Name: ConvGRU</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: torch.nn.Module</div><div id='n_parent_class'> N Parent Class: torch.nn.Module</div><div id='m_file'> M File Name: nowcasting_gan/layers/ConvGRU.py</div><div id='n_file'> N File Name: nowcasting_gan/layers/ConvGRU.py</div><div id='m_start'> M Start Line: 19</div><div id='m_end'> M End Line: 51</div><div id='n_start'> N Start Line: 70</div><div id='n_end'> N End Line: 78</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                    edge_attr = self.explain_edges_with_loop(x, walks, ex_label)
+                    mask = edge_attr
+                    mask = self.control_sparsity(mask, kwargs.get(&quotsparsity&quot))
+                    mask = <a id="change">mask.sigmoid()</a>
+                    masks.append(mask.detach())
+
+                related_preds = self.eval_related_pred(x, edge_index, masks, **kwargs)</code></pre><h3>After Change</h3><pre><code class='java'>
+            with self.connect_mask(self):
+                ex_labels = tuple(torch.tensor([label]).to(self.device) for label in labels)
+                edge_masks = []
+                hard_edge_masks<a id="change"> = []</a>
+                for ex_label in ex_labels:
+                    edge_attr = self.explain_edges_with_loop(x, walks, ex_label)
+                    edge_mask = edge_attr.detach()
+                    valid_mask = (edge_mask != - math.inf)
+                    edge_mask[edge_mask == - math.inf] = edge_mask[valid_mask].min() - 1  &#47&#47 replace the negative inf
+                    edge_masks.append(edge_mask)
+                    <a id="change">hard_edge_masks.append(</a>self.control_sparsity(edge_attr, kwargs.get(&quotsparsity&quot)).sigmoid()<a id="change">)</a>
+
+                related_preds = self.eval_related_pred(x, edge_index, hard_edge_masks, **kwargs)
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/divelab/dig/commit/d2838464a04282f7b1b6e3a98cdec42f3a3a29c7#diff-6ec0ebef828e44dc923d4557573c3b1330dd11f1927c80b2fee107cd3f82b002L28' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 6010609</div><div id='project'> Project Name: divelab/dig</div><div id='commit'> Commit Name: d2838464a04282f7b1b6e3a98cdec42f3a3a29c7</div><div id='time'> Time: 2022-05-25</div><div id='author'> Author: haiyang@tamu.edu</div><div id='file'> File Name: dig/xgraph/method/gnn_gi.py</div><div id='m_class'> M Class Name: GNN_GI</div><div id='n_method'> N Class Name: GNN_GI</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: WalkBase</div><div id='n_parent_class'> N Parent Class: WalkBase</div><div id='m_file'> M File Name: dig/xgraph/method/gnn_gi.py</div><div id='n_file'> N File Name: dig/xgraph/method/gnn_gi.py</div><div id='m_start'> M Start Line: 69</div><div id='m_end'> M End Line: 121</div><div id='n_start'> N Start Line: 68</div><div id='n_end'> N End Line: 124</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                    edge_attr = self.explain_edges_with_loop(x, walks, ex_label)
+                    mask = edge_attr
+                    mask = self.control_sparsity(mask, kwargs.get(&quotsparsity&quot))
+                    mask = <a id="change">mask.sigmoid()</a>
+                    masks.append(mask.detach())
+
+                related_preds = self.eval_related_pred(x, edge_index, masks, **kwargs)</code></pre><h3>After Change</h3><pre><code class='java'>
+            with self.connect_mask(self):
+                ex_labels = tuple(torch.tensor([label]).to(self.device) for label in labels)
+                edge_masks = []
+                hard_edge_masks<a id="change"> = []</a>
+                for ex_label in ex_labels:
+                    edge_attr = self.explain_edges_with_loop(x, walks, ex_label)
+                    edge_mask = edge_attr.detach()
+                    valid_mask = (edge_mask != -math.inf)
+                    edge_mask[edge_mask == - math.inf] = edge_mask[valid_mask].min() - 1  &#47&#47 replace the negative inf
+
+                    edge_masks.append(edge_mask)
+                    <a id="change">hard_edge_masks.append(</a>self.control_sparsity(edge_attr, kwargs.get(&quotsparsity&quot)).sigmoid()<a id="change">)</a>
+
+                related_preds = self.eval_related_pred(x, edge_index, hard_edge_masks, **kwargs)
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/divelab/dig/commit/d2838464a04282f7b1b6e3a98cdec42f3a3a29c7#diff-5d068dcea6950e5d3838e17dbd3ef99d21b35907914dd017e0f9efc391aed595L31' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 6010608</div><div id='project'> Project Name: divelab/dig</div><div id='commit'> Commit Name: d2838464a04282f7b1b6e3a98cdec42f3a3a29c7</div><div id='time'> Time: 2022-05-25</div><div id='author'> Author: haiyang@tamu.edu</div><div id='file'> File Name: dig/xgraph/method/gnn_lrp.py</div><div id='m_class'> M Class Name: GNN_LRP</div><div id='n_method'> N Class Name: GNN_LRP</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: WalkBase</div><div id='n_parent_class'> N Parent Class: WalkBase</div><div id='m_file'> M File Name: dig/xgraph/method/gnn_lrp.py</div><div id='n_file'> N File Name: dig/xgraph/method/gnn_lrp.py</div><div id='m_start'> M Start Line: 68</div><div id='m_end'> M End Line: 205</div><div id='n_start'> N Start Line: 67</div><div id='n_end'> N End Line: 211</div><BR>

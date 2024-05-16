@@ -1,0 +1,53 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                    rsps = self._get_pm_resp()
+                    for rsp in rsps:
+                        if not enum_equal(rsp, MGMT_RESPONSE.PAUSED):
+                            <a id="change">raise </a>ValueError(f"Wrong Response Received : {rsp}")
+                    &#47&#47 Inform the runtime about successful pausing
+                    self.service_to_runtime.send(MGMT_RESPONSE.PAUSED)
+                    break</code></pre><h3>After Change</h3><pre><code class='java'>
+                                                command)
+                        &#47&#47 Advance to the next phase
+                        phase = self._next_phase(is_last_ts)
+                        if <a id="change">enum_equal(</a>phase, MGMT_COMMAND.STOP<a id="change">)</a>:
+                            self.service_to_runtime.send(MGMT_RESPONSE.REQ_STOP)
+                            break
+                        if enum_equal(phase, MGMT_COMMAND.PAUSE):
+                            self.service_to_runtime.send(
+                                MGMT_RESPONSE.REQ_PAUSE)
+                            break
+                        &#47&#47 Increase time step if spiking phase
+                        if enum_equal(phase, LoihiPyRuntimeService.Phase.SPK):
+                            curr_time_step += 1
+                        &#47&#47 Inform ProcessModels about current phase
+                        self._send_pm_cmd(phase)
+                        &#47&#47 ProcessModels respond with DONE if not HOST phase
+                        if not enum_equal(
+                                phase, LoihiPyRuntimeService.Phase.HOST):
+                            self._get_pm_resp()
+                            if self._error:
+                                &#47&#47 Forward error to runtime
+                                self.service_to_runtime.send(
+                                    MGMT_RESPONSE.ERROR)
+                                &#47&#47 stop all other pm
+                                self._send_pm_cmd(MGMT_COMMAND.STOP)
+                                return
+                        &#47&#47 Check if pause or stop received from Runtime
+                        &#47&#47 TODO: Do we actualy need to wait for PMs to be in
+                        &#47&#47 HOST or MGMT phase to stop or pause them?
+                        if self.runtime_to_service.probe():
+                            cmd = self.runtime_to_service.peek()
+                            if enum_equal(cmd, MGMT_COMMAND.STOP):
+                                self.runtime_to_service.recv()
+                                self._handle_stop()
+                                return
+                            if enum_equal(cmd, MGMT_COMMAND.PAUSE):
+                                self.runtime_to_service.recv()
+                                self._handle_pause()
+                                self.paused<a id="change"> = </a>True
+                                break
+
+                        &#47&#47 If HOST phase (last time step ended) break the loop</code></pre>

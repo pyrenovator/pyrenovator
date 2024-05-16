@@ -1,0 +1,97 @@
+<html><h3>Pattern ID :22791
+</h3><img src='72359056.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        with g.local_scope():
+            h = self.feats
+            edge_weight = self.linear_e1(edge_weight)
+            x<a id="change"> = </a>self.nn_conv1(g, h, edge_weight=edge_weight)
+            x = F.dropout(x, p=self.dropout, training=False)
+            if self.num_node_layer == 2:
+                &#47&#47edge_weight = self.linear_e2(edge_weight)
+                x = self.nn_conv2(g, x, edge_weight=edge_weight)
+                x = F.dropout(x, p=self.dropout, training=False)
+
+            x = self.emd2pred(x)
+            x = F.dropout(x, p=self.dropout, training=False)
+
+            <a id="change">return </a>x
+
+
+class AGNNConv(nn.Module):</code></pre><h3>After Change</h3><pre><code class='java'>
+            h = F.dropout(h, p=self.dropout, training=False)
+
+        edge_weight = {}
+        <a id="change">for </a>i, <a id="change">e</a> in <a id="change">enumerate(</a>hg.canonical_etypes<a id="change">):
+            </a>edge_weight[e]<a id="change"> = h[i]</a>.expand(hg.num_edges(e), -1)
+        temp = self.h_n_dict()
+        n_feats<a id="change"> = </a><a id="change">{}</a>
+        for n in hg.ntypes:
+            n_feats[n] = temp[n]
+        if hasattr(hg, &quotntypes&quot):
+            &#47&#47edge_weight = F.embedding(hg.edata[dgl.ETYPE].long(), h)
+
+            &#47&#47 full graph training
+           &#47&#47 edge_weight = self.linear_e1(edge_weight)
+            for layer in self.node_layers:
+                n_feats = layer(hg, n_feats, edge_weight)
+                n_feats = F.dropout(n_feats, p=self.dropout, training=False)
+        else:
+            &#47&#47 minibatch training
+            pass
+        n_feats = self.emd2pred(n_feats)
+        n_feats = F.dropout(n_feats, p=self.dropout, training=False)
+        <a id="change">return </a>n_feats
+
+
+class AGNNConv(nn.Module):</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 9</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/bupt-gamma/openhgnn/commit/5b978d8c10bf24304d51be5f4c2c306d5720b7b3#diff-429162e7bcdfbbc409aabd0e6317a9f8bd71ecc0fdb9f27c08cab2cd0cda454cL49' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 72359056</div><div id='project'> Project Name: bupt-gamma/openhgnn</div><div id='commit'> Commit Name: 5b978d8c10bf24304d51be5f4c2c306d5720b7b3</div><div id='time'> Time: 2021-04-14</div><div id='author'> Author: theheavenszhao@outlook.com</div><div id='file'> File Name: openhgnn/models/RSHN.py</div><div id='m_class'> M Class Name: RSHN</div><div id='n_method'> N Class Name: RSHN</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: BaseModel</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: openhgnn/models/RSHN.py</div><div id='n_file'> N File Name: openhgnn/models/RSHN.py</div><div id='m_start'> M Start Line: 49</div><div id='m_end'> M End Line: 74</div><div id='n_start'> N Start Line: 65</div><div id='n_end'> N End Line: 97</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            user_len_list = pos_len_list * self.times
+            cur_data.set_additional_info(list(pos_len_list), list(user_len_list))
+        self.pr += self.step
+        <a id="change">return </a>cur_data
+
+    def get_pos_len_list(self):
+        </code></pre><h3>After Change</h3><pre><code class='java'>
+        uid_list = self.uid_list[self.pr:self.pr + self.step]
+        data_list = []
+        idx_list = []
+        positive_u<a id="change"> = </a><a id="change">[]</a>
+        positive_i = torch.tensor([], dtype=torch.int64)
+
+        <a id="change">for </a>idx, <a id="change">uid</a> in <a id="change">enumerate(</a>uid_list<a id="change">):
+            </a>index = self.uid2index[uid]
+            data_list.append(self._neg_sampling(self.dataset[index]))
+            idx_list += [idx for i in range(self.uid2items_num[uid] * self.times)]
+            positive_u += [idx for i in range(self.uid2items_num[uid])]
+            positive_i<a id="change"> = </a>torch.cat((positive_i, <a id="change">self.dataset[index]</a>[self.iid_field]), 0)
+
+        cur_data = cat_interactions(data_list)
+        idx_list<a id="change"> = </a>torch.from_numpy(np.array(idx_list))
+        positive_u = torch.from_numpy(np.array(positive_u))
+
+        self.pr += self.step
+        
+        <a id="change">return </a>cur_data, idx_list, positive_u, positive_i
+
+    def get_pos_len_list(self):
+        </code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/rucaibox/recbole/commit/a3596a230c1b34f77b50d21460d63996206cd55a#diff-c052dea1f8aad195c52d1137acfdac3f1b025dd939e309f5841d956bab717492L120' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 72359058</div><div id='project'> Project Name: rucaibox/recbole</div><div id='commit'> Commit Name: a3596a230c1b34f77b50d21460d63996206cd55a</div><div id='time'> Time: 2021-07-15</div><div id='author'> Author: 2017202006@ruc.edu.cn</div><div id='file'> File Name: recbole/data/dataloader/general_dataloader.py</div><div id='m_class'> M Class Name: NegSampleEvalDataLoader</div><div id='n_method'> N Class Name: NegSampleEvalDataLoader</div><div id='m_method'> M Method Name: _next_batch_data(1)</div><div id='n_method'> N Method Name: _next_batch_data(1)</div><div id='m_parent_class'> M Parent Class: NegSampleDataLoader</div><div id='n_parent_class'> N Parent Class: NegSampleDataLoader</div><div id='m_file'> M File Name: recbole/data/dataloader/general_dataloader.py</div><div id='n_file'> N File Name: recbole/data/dataloader/general_dataloader.py</div><div id='m_start'> M Start Line: 121</div><div id='m_end'> M End Line: 132</div><div id='n_start'> N Start Line: 121</div><div id='n_end'> N End Line: 140</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            dataset_output = torch.cat(output_list, dim=0).numpy()
+            dataset_label = torch.cat(label_list, dim=0).numpy()
+
+        <a id="change">return </a>ocean_acc_avg, ocean_acc, dataset_output, dataset_label
+
+    def data_fmt(self, data):
+        for k, v in data.items():</code></pre><h3>After Change</h3><pre><code class='java'>
+            dataset_output = torch.cat(output_list, dim=0).numpy()
+            dataset_label = torch.cat(label_list, dim=0).numpy()
+
+        ocean_acc_avg_rand<a id="change"> = </a>np.round(ocean_acc_avg.astype("float64"), 4)
+        keys = ["O", "C", "E", "A", "N"]
+        ocean_acc_dict<a id="change"> = </a><a id="change">{}</a>
+        <a id="change">for </a>i, <a id="change">k</a> in <a id="change">enumerate(</a>keys<a id="change">):
+            </a>ocean_acc_dict[k]<a id="change"> = </a>np.round(<a id="change">ocean_acc[i]</a>, 4)
+        <a id="change">return </a>ocean_acc_avg_rand, ocean_acc_dict, dataset_output, dataset_label
+
+    def data_fmt(self, data):
+        for k, v in data.items():</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/liaorongfan/deeppersonality/commit/5a924bc31a78ba2fcab3f3879e8d6afd628b86de#diff-168d565f7529f694efa844178ce306f05fabadd239ba234d9df27c4647f19c1dL79' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 72359083</div><div id='project'> Project Name: liaorongfan/deeppersonality</div><div id='commit'> Commit Name: 5a924bc31a78ba2fcab3f3879e8d6afd628b86de</div><div id='time'> Time: 2021-11-03</div><div id='author'> Author: 15670381505@163.com</div><div id='file'> File Name: dpcv/engine/bi_modal_trainer.py</div><div id='m_class'> M Class Name: BiModalTrainer</div><div id='n_method'> N Class Name: BiModalTrainer</div><div id='m_method'> M Method Name: test(3)</div><div id='n_method'> N Method Name: test(3)</div><div id='m_parent_class'> M Parent Class: object</div><div id='n_parent_class'> N Parent Class: object</div><div id='m_file'> M File Name: dpcv/engine/bi_modal_trainer.py</div><div id='n_file'> N File Name: dpcv/engine/bi_modal_trainer.py</div><div id='m_start'> M Start Line: 100</div><div id='m_end'> M End Line: 100</div><div id='n_start'> N Start Line: 101</div><div id='n_end'> N End Line: 106</div><BR>

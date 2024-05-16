@@ -1,0 +1,94 @@
+<html><h3>Pattern ID :4872
+</h3><img src='17243206.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+        &#47&#47 Remove padded values
+        &#47&#47 Want e.g. (..., 1000, 768) -&gt; (..., 999, 768)
+        <a id="change">if pad_length &gt; 0</a>:
+            hidden_states = <a id="change">hidden_states[..., 0:(-pad_length), :]</a>
+
+        hidden_states = self.layer_norm(hidden_states)
+
+        if not return_dict:</code></pre><h3>After Change</h3><pre><code class='java'>
+        hidden_states = hidden_states + position_embeddings
+        hidden_states = self.dropout(hidden_states)
+
+        <a id="change">for layer</a> in self.layers<a id="change">:
+            </a>if output_hidden_states:
+                all_hidden_states<a id="change"> = </a>all_hidden_states<a id="change"> + </a>(hidden_states,)
+
+            layer_outputs = layer(hidden_states, attention_mask=attention_mask, output_attentions=output_attentions)
+
+            &#47&#47 add LayerDrop (see https://arxiv.org/abs/1909.11556 for description)
+            dropout_probability = torch.rand(tuple())
+            skip_the_layer = torch.tensor(self.training) and (dropout_probability &lt; self.config.layerdrop)
+            if self.config.layerdrop &gt; 0.0:
+                hidden_states = torch.where(skip_the_layer, hidden_states, layer_outputs[0])
+            else:
+                hidden_states = layer_outputs[0]
+
+            <a id="change">if </a>skip_the_layer:
+                layer_outputs = (None, None)
+
+            if output_attentions:
+                all_self_attentions<a id="change"> = </a>all_self_attentions<a id="change"> + </a>(layer_outputs[1],)
+
+        hidden_states = self.layer_norm(hidden_states)
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 10</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/huggingface/optimum-graphcore/commit/075200de7b5b118681fc46af97985bb53ce9c146#diff-78e7e62156963de0a5dbf323a0121639c4ddfcd5d6364518045269e8263e5b12L101' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 17243206</div><div id='project'> Project Name: huggingface/optimum-graphcore</div><div id='commit'> Commit Name: 075200de7b5b118681fc46af97985bb53ce9c146</div><div id='time'> Time: 2022-08-03</div><div id='author'> Author: gejinchen1996@gmail.com</div><div id='file'> File Name: optimum/graphcore/models/wav2vec2/ipu_layer_drop.py</div><div id='m_class'> M Class Name: IPUWav2Vec2EncoderStableLayerNorm</div><div id='n_method'> N Class Name: IPUWav2Vec2EncoderStableLayerNorm</div><div id='m_method'> M Method Name: forward(6)</div><div id='n_method'> N Method Name: forward(6)</div><div id='m_parent_class'> M Parent Class: Wav2Vec2EncoderStableLayerNorm</div><div id='n_parent_class'> N Parent Class: Wav2Vec2EncoderStableLayerNorm</div><div id='m_file'> M File Name: optimum/graphcore/models/wav2vec2/ipu_layer_drop.py</div><div id='n_file'> N File Name: optimum/graphcore/models/wav2vec2/ipu_layer_drop.py</div><div id='m_start'> M Start Line: 127</div><div id='m_end'> M End Line: 193</div><div id='n_start'> N Start Line: 101</div><div id='n_end'> N End Line: 144</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+def shampoo(ctx: Context, grad: jnp.ndarray, step: jnp.ndarray) -&gt; jnp.ndarray:
+    last_size = grad.shape[-1]
+    kernel_sizes = (ctx.dims.pointwise_kernel, ctx.dims.outer_bottleneck_kernel, ctx.dims.inner_bottleneck_kernel)
+    <a id="change">if grad.ndim != 3</a> or last_size not in kernel_sizes:
+        return _shampoo(ctx, grad, step)
+    return jnp.stack([_shampoo(ctx, <a id="change">grad[:, :, i]</a>, step) for i in range(last_size)], axis=-1)
+
+
+def clip_norm(val: jnp.ndarray, min_norm: float) -&gt; jnp.ndarray:</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    preconditioner = Preconditioner(grad, ctx.optimizer.block_size)
+    new_preconditioners = []
+    <a id="change">for </a>i, <a id="change">old_stat</a> in enumerate(preconditioner.statistics_from_grad(grad))<a id="change">:
+        </a>new_stat<a id="change"> = </a>ema(ctx, old_stat, step, 1<a id="change"> - </a>ctx.optimizer.shampoo_beta2, f"statistics_{i}", True,
+                       jnp.eye(old_stat.shape[0], dtype=ctx.model.storage_dtype)<a id="change"> * </a>ctx.optimizer.epsilon)
+        prev_p<a id="change"> = </a>get_param(ctx, f&quotpreconditioner_{i}&quot, old_stat.shape, dtype=ctx.model.storage_dtype,
+                           init_val=jnp.eye(old_stat.shape[0], dtype=ctx.model.storage_dtype))
+        <a id="change">if </a>ctx.is_initializing:
+            continue
+
+        new_p, error = matrix_inverse_pth_root(new_stat, preconditioner.exponent_for_preconditioner(),</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/homebrewnlp/homebrewnlp-jax/commit/bf951740b4e76e5a2144d26015890e30aed83bb5#diff-4540d7c8541eb25568b448ea775d64c43be83ce020bc67dd8340da4d4e804846L92' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 17243200</div><div id='project'> Project Name: homebrewnlp/homebrewnlp-jax</div><div id='commit'> Commit Name: bf951740b4e76e5a2144d26015890e30aed83bb5</div><div id='time'> Time: 2022-07-06</div><div id='author'> Author: 39779310+ClashLuke@users.noreply.github.com</div><div id='file'> File Name: src/optimizer.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: shampoo(3)</div><div id='n_method'> N Method Name: shampoo(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/optimizer.py</div><div id='n_file'> N File Name: src/optimizer.py</div><div id='m_start'> M Start Line: 93</div><div id='m_end'> M End Line: 97</div><div id='n_start'> N Start Line: 70</div><div id='n_end'> N End Line: 89</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+        &#47&#47 Remove padded values
+        &#47&#47 Want e.g. (..., 1000, 768) -&gt; (..., 999, 768)
+        <a id="change">if pad_length &gt; 0</a>:
+            hidden_states = <a id="change">hidden_states[..., 0:(-pad_length), :]</a>
+
+        if not return_dict:
+            return tuple(v for v in [hidden_states, all_hidden_states, all_self_attentions] if v is not None)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        hidden_states = self.layer_norm(hidden_states)
+        hidden_states = self.dropout(hidden_states)
+
+        <a id="change">for layer</a> in self.layers<a id="change">:
+            </a>if output_hidden_states:
+                all_hidden_states<a id="change"> = </a>all_hidden_states<a id="change"> + </a>(hidden_states,)
+
+            layer_outputs = layer(hidden_states, attention_mask=attention_mask, output_attentions=output_attentions)
+
+            &#47&#47 add LayerDrop (see https://arxiv.org/abs/1909.11556 for description)
+            dropout_probability = torch.rand(tuple())
+            skip_the_layer = torch.tensor(self.training) and (dropout_probability &lt; self.config.layerdrop)
+            if self.config.layerdrop &gt; 0.0:
+                hidden_states = torch.where(skip_the_layer, hidden_states, layer_outputs[0])
+            else:
+                hidden_states = layer_outputs[0]
+
+            <a id="change">if </a>skip_the_layer:
+                layer_outputs = (None, None)
+
+            if output_attentions:
+                all_self_attentions<a id="change"> = </a>all_self_attentions<a id="change"> + </a>(layer_outputs[1],)
+
+        if output_hidden_states:
+            all_hidden_states = all_hidden_states + (hidden_states,)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/huggingface/optimum-graphcore/commit/075200de7b5b118681fc46af97985bb53ce9c146#diff-78e7e62156963de0a5dbf323a0121639c4ddfcd5d6364518045269e8263e5b12L33' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 17243215</div><div id='project'> Project Name: huggingface/optimum-graphcore</div><div id='commit'> Commit Name: 075200de7b5b118681fc46af97985bb53ce9c146</div><div id='time'> Time: 2022-08-03</div><div id='author'> Author: gejinchen1996@gmail.com</div><div id='file'> File Name: optimum/graphcore/models/wav2vec2/ipu_layer_drop.py</div><div id='m_class'> M Class Name: IPUWav2Vec2Encoder</div><div id='n_method'> N Class Name: IPUWav2Vec2Encoder</div><div id='m_method'> M Method Name: forward(6)</div><div id='n_method'> N Method Name: forward(6)</div><div id='m_parent_class'> M Parent Class: Wav2Vec2Encoder</div><div id='n_parent_class'> N Parent Class: Wav2Vec2Encoder</div><div id='m_file'> M File Name: optimum/graphcore/models/wav2vec2/ipu_layer_drop.py</div><div id='n_file'> N File Name: optimum/graphcore/models/wav2vec2/ipu_layer_drop.py</div><div id='m_start'> M Start Line: 41</div><div id='m_end'> M End Line: 108</div><div id='n_start'> N Start Line: 41</div><div id='n_end'> N End Line: 83</div><BR>

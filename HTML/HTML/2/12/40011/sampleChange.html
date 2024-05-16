@@ -1,0 +1,40 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        self.checks = checks
+
+    def run(self, model=None, train_data=None, validation_data=None):
+        <a id="change">return [check.run(model=model, train_data=train_data, validation_data=validation_data)
+                for check in self.checks]</a>
+
+    def run_and_decide(self, model=None, train_data=None, validation_data=None):
+        return [check.run_and_decide(model=model, train_data=train_data, validation_data=validation_data)
+                for check in self.checks]</code></pre><h3>After Change</h3><pre><code class='java'>
+        if check_datasets_policy not in [&quotboth&quot, &quottrain&quot, &quotvalidation&quot]:
+            raise ValueError(&quotcheck_datasets_policy must be one of ["both", "train", "validation"]&quot)
+
+        <a id="change">results</a><a id="change"> = </a><a id="change">[]</a>
+        <a id="change">for </a>check in self.checks<a id="change">:
+            </a>if isinstance(check, TrainValidationBaseCheck):
+                results.append(check.run(train_dataset=train_dataset, validation_dataset=validation_dataset,
+                                         model=model))
+            elif <a id="change"></a>isinstance(check, CompareDatasetsBaseCheck):
+                <a id="change">results.append(</a>check.run(dataset=train_dataset, compared_dataset=validation_dataset, model=model)<a id="change">)</a>
+            elif isinstance(check, SingleDatasetBaseCheck):
+                if check_datasets_policy in [&quotboth&quot, &quottrain&quot]:
+                    results.append(check.run(dataset=train_dataset))
+                if check_datasets_policy in [&quotboth&quot, &quotvalidation&quot]:
+                    results.append(check.run(dataset=validation_dataset))
+            elif isinstance(check, ModelOnlyBaseCheck):
+                results.append(check.run(model=model))
+            else:
+                <a id="change">raise </a>TypeError(f&quotExpected check of type SingleDatasetBaseCheck, CompareDatasetsBaseCheck, &quot
+                                f&quotTrainValidationBaseCheck or ModelOnlyBaseCheck. Got  {check.__class__.__name__} &quot
+                                f&quotinstead&quot)
+
+        <a id="change">return results</a>
+
+    def decide(self, model=None, train_dataset=None, validation_dataset=None, check_datasets_policy: str = &quotvalidation&quot
+               ) -&gt; List[CheckResult]:
+        &#47&#47TODO: Complete</code></pre>

@@ -1,0 +1,73 @@
+<html><h3>Pattern ID :35000
+</h3><img src='100088983.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        super(ActionDecoder, self).__init__()
+    
+    def forward(self, x):
+        <a id="change">return </a>x
+
+
+class RewardDecoder(nn.Module):</code></pre><h3>After Change</h3><pre><code class='java'>
+        self.model = nn.Sequential(*self.layers)
+    
+    def forward(self, x):
+        raw_init_std<a id="change"> = </a>np.log(np.exp(self.init_std) - 1)
+        x = self.model(x)
+        mean, std = torch.chunk(x, 2, dim=-1)
+        mean = self.mean_scale * torch.tanh(mean / self.mean_scale)
+        std = self.softplus(std + raw_init_std) + self.min_std
+        dist = td.Normal(mean, std)
+        transforms = <a id="change">[</a>TanhBijector()<a id="change"></a>]
+        dist = <a id="change">td.transformed_distribution.TransformedDistribution(
+            </a>dist, transforms<a id="change">)</a>
+        dist = td.Independent(dist, 1)
+        <a id="change">return </a>dist
+
+
+class DenseDecoder(nn.Module):</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 5</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/chamorajg/pl-dreamer/commit/76fdde73106a7f1aade5a0b5254668f2acd6c439#diff-734b1a4068a191e125c67abe0a00adbc591fd0f43a56153f0b386d4e402164eaL101' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 100088983</div><div id='project'> Project Name: chamorajg/pl-dreamer</div><div id='commit'> Commit Name: 76fdde73106a7f1aade5a0b5254668f2acd6c439</div><div id='time'> Time: 2021-08-04</div><div id='author'> Author: chanduiyer.raja@gmail.com</div><div id='file'> File Name: planet.py</div><div id='m_class'> M Class Name: ActionDecoder</div><div id='n_method'> N Class Name: ActionDecoder</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: planet.py</div><div id='n_file'> N File Name: planet.py</div><div id='m_start'> M Start Line: 101</div><div id='m_end'> M End Line: 101</div><div id='n_start'> N Start Line: 158</div><div id='n_end'> N End Line: 168</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    def map_x_to_distribution(self, x: torch.Tensor) -&gt; distributions.Normal:
+        x = x.permute(1, 0, 2)
+        <a id="change">return </a>self.distribution_class(
+            loc=x[..., 0],
+            cov_factor=x[..., 2:],
+            cov_diag=x[..., 1],</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    def map_x_to_distribution(self, x: torch.Tensor) -&gt; distributions.Normal:
+        x = x.permute(1, 0, 2)
+        distr<a id="change"> = </a>self.distribution_class(
+            loc=torch.zeros_like(x[..., 2]),
+            cov_factor=x[..., 4:],
+            cov_diag=x[..., 3],
+        )
+        scaler = distributions.AffineTransform(loc=x[..., 0], scale=x[..., 1])
+        if self.transformation is None:
+            <a id="change">return </a><a id="change">distributions.TransformedDistribution(</a>distr, <a id="change">[</a>scaler<a id="change"></a>]<a id="change">)</a>
+        else:
+            return distributions.TransformedDistribution(distr, [scaler, self.transformation])
+
+    def rescale_parameters(</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/jdb78/pytorch-forecasting/commit/09eb7856fd61cd62c765376a0b1b2400fecb4243#diff-c105df2da19b181ed8de6c83f6a07ed0f8d9c8c712a8172f7f4222ecbcebcdb0L87' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 100088990</div><div id='project'> Project Name: jdb78/pytorch-forecasting</div><div id='commit'> Commit Name: 09eb7856fd61cd62c765376a0b1b2400fecb4243</div><div id='time'> Time: 2022-05-14</div><div id='author'> Author: beitner.jan@bcg.com</div><div id='file'> File Name: pytorch_forecasting/metrics/distributions.py</div><div id='m_class'> M Class Name: MultivariateNormalDistributionLoss</div><div id='n_method'> N Class Name: MultivariateNormalDistributionLoss</div><div id='m_method'> M Method Name: map_x_to_distribution(2)</div><div id='n_method'> N Method Name: map_x_to_distribution(2)</div><div id='m_parent_class'> M Parent Class: MultivariateDistributionLoss</div><div id='n_parent_class'> N Parent Class: MultivariateDistributionLoss</div><div id='m_file'> M File Name: pytorch_forecasting/metrics/distributions.py</div><div id='n_file'> N File Name: pytorch_forecasting/metrics/distributions.py</div><div id='m_start'> M Start Line: 89</div><div id='m_end'> M End Line: 93</div><div id='n_start'> N Start Line: 92</div><div id='n_end'> N End Line: 103</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    distribution_arguments = ["loc", "scale"]
+
+    def map_x_to_distribution(self, x: torch.Tensor) -&gt; distributions.Normal:
+        <a id="change">return </a>self.distribution_class(loc=x[..., 0], scale=x[..., 1])
+
+    def rescale_parameters(
+        self, parameters: torch.Tensor, target_scale: torch.Tensor, encoder: BaseEstimator</code></pre><h3>After Change</h3><pre><code class='java'>
+    distribution_arguments = ["loc", "scale"]
+
+    def map_x_to_distribution(self, x: torch.Tensor) -&gt; distributions.Normal:
+        distr<a id="change"> = </a>self.distribution_class(loc=x[..., 2], scale=x[..., 3])
+        scaler = distributions.AffineTransform(loc=x[..., 0], scale=x[..., 1])
+        if self._transformation is None:
+            return distributions.TransformedDistribution(distr, [scaler])
+        else:
+            <a id="change">return </a><a id="change">distributions.TransformedDistribution(
+                </a>distr, <a id="change">[</a>scaler, TorchNormalizer.get_transform(self._transformation)["inverse_torch"]<a id="change"></a>]<a id="change">
+            )</a>
+
+    def rescale_parameters(
+        self, parameters: torch.Tensor, target_scale: torch.Tensor, encoder: BaseEstimator
+    ) -&gt; torch.Tensor:</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/jdb78/pytorch-forecasting/commit/0193b8802943f92d3323715a088b99b6e0d96786#diff-c105df2da19b181ed8de6c83f6a07ed0f8d9c8c712a8172f7f4222ecbcebcdb0L26' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 100088989</div><div id='project'> Project Name: jdb78/pytorch-forecasting</div><div id='commit'> Commit Name: 0193b8802943f92d3323715a088b99b6e0d96786</div><div id='time'> Time: 2022-05-18</div><div id='author'> Author: beitner.jan@bcg.com</div><div id='file'> File Name: pytorch_forecasting/metrics/distributions.py</div><div id='m_class'> M Class Name: NormalDistributionLoss</div><div id='n_method'> N Class Name: NormalDistributionLoss</div><div id='m_method'> M Method Name: map_x_to_distribution(2)</div><div id='n_method'> N Method Name: map_x_to_distribution(2)</div><div id='m_parent_class'> M Parent Class: DistributionLoss</div><div id='n_parent_class'> N Parent Class: DistributionLoss</div><div id='m_file'> M File Name: pytorch_forecasting/metrics/distributions.py</div><div id='n_file'> N File Name: pytorch_forecasting/metrics/distributions.py</div><div id='m_start'> M Start Line: 27</div><div id='m_end'> M End Line: 27</div><div id='n_start'> N Start Line: 23</div><div id='n_end'> N End Line: 32</div><BR>

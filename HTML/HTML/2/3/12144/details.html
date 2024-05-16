@@ -1,0 +1,74 @@
+<html><h3>Pattern ID :12144
+</h3><img src='41010275.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            labels += [torch.as_tensor(label)]
+            pointer += server_payload[&quotdata&quot].classes
+            pointer = pointer % len(self.dataloader.dataset)
+        data = <a id="change">torch.stack(data).to(**self.setup)</a>
+        labels = torch.stack(labels).to(device=self.setup[&quotdevice&quot])
+
+        &#47&#47 Compute local updates
+        shared_grads = []
+        shared_buffers = []
+        for query in range(self.num_user_queries):
+            payload = server_payload[&quotqueries&quot][query]
+            parameters = payload[&quotparameters&quot]
+            buffers = payload[&quotbuffers&quot]
+
+            with torch.no_grad():
+                for param, server_state in zip(self.model.parameters(), parameters):
+                    param.copy_(server_state.to(**self.setup))
+                for buffer, server_state in zip(self.model.buffers(), buffers):
+                    buffer.copy_(server_state.to(**self.setup))
+
+            &#47&#47 Compute the forward pass
+            outputs = self.model(data)
+            loss = self.loss(outputs, labels)
+
+            shared_grads<a id="change"> += </a>[torch.autograd.grad(loss, self.model.parameters())]
+            shared_buffers += [[b.clone().detach() for b in self.model.buffers()]]
+
+        shared_data = dict(gradients=shared_grads, buffers=shared_buffers,</code></pre><h3>After Change</h3><pre><code class='java'>
+                &#47&#47 Compute the forward pass
+                outputs = self.model(data)
+                loss = self.loss(outputs, labels)
+                <a id="change">loss.backward()</a>
+                optimizer.step()
+
+            &#47&#47 Share differential to server version:
+            &#47&#47 This is equivalent to sending the new stuff and letting the server do it, but in line</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/jonasgeiping/breaching/commit/1ab2867fea20551797c9aea8ae67099093ec7180#diff-222118a39af19077a8b428b60923841d31a00f445f3963533670a0eaa87a9924L151' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 41010275</div><div id='project'> Project Name: jonasgeiping/breaching</div><div id='commit'> Commit Name: 1ab2867fea20551797c9aea8ae67099093ec7180</div><div id='time'> Time: 2021-10-01</div><div id='author'> Author: jonas.geiping@googlemail.com</div><div id='file'> File Name: breaching/cases/users.py</div><div id='m_class'> M Class Name: UserMultiStep</div><div id='n_method'> N Class Name: UserMultiStep</div><div id='m_method'> M Method Name: compute_local_updates(2)</div><div id='n_method'> N Method Name: compute_local_updates(2)</div><div id='m_parent_class'> M Parent Class: UserSingleStep</div><div id='n_parent_class'> N Parent Class: UserSingleStep</div><div id='m_file'> M File Name: breaching/cases/users.py</div><div id='n_file'> N File Name: breaching/cases/users.py</div><div id='m_start'> M Start Line: 151</div><div id='m_end'> M End Line: 187</div><div id='n_start'> N Start Line: 158</div><div id='n_end'> N End Line: 200</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+def run_embedding_bag(device, num_embeddings, embedding_dim, batch_size):
+    embedding_sum = nn.EmbeddingBag(num_embeddings, embedding_dim, mode=&quotsum&quot).to(device)
+
+    input_ids<a id="change"> = </a><a id="change">torch.randint(low = 0, high = num_embeddings - 1, size = (batch_size, embedding_dim)).to(</a>device<a id="change">)</a>
+
+    output = embedding_sum(input_ids)
+
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+def run_embedding_bag(input_ids, output_grad, embedding_sum):
+    output = embedding_sum(input_ids)
+    <a id="change">output.backward(</a>output_grad<a id="change">)</a>
+
+
+def benchmark(num_embeddings, embedding_dim, batch_size):
+    device = &quotcuda&quot</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/hpcaitech/freqcacheembedding/commit/4faf53ac52494564f1a1f3f2ef78ad6e0318b417#diff-99fd8b184a62004082075bff425f1f2aa4715da53127c5ef892357e76daefc04L6' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 41010277</div><div id='project'> Project Name: hpcaitech/freqcacheembedding</div><div id='commit'> Commit Name: 4faf53ac52494564f1a1f3f2ef78ad6e0318b417</div><div id='time'> Time: 2022-07-17</div><div id='author'> Author: fangjiarui123@gmail.com</div><div id='file'> File Name: benchmark/benchmark_embedding_bag.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: run_embedding_bag(3)</div><div id='n_method'> N Method Name: run_embedding_bag(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: benchmark/benchmark_embedding_bag.py</div><div id='n_file'> N File Name: benchmark/benchmark_embedding_bag.py</div><div id='m_start'> M Start Line: 6</div><div id='m_end'> M End Line: 9</div><div id='n_start'> N Start Line: 7</div><div id='n_end'> N End Line: 8</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        for batch_idx, data in enumerate(loop):
+
+            &#47&#47 fwd
+            img_data = <a id="change">data["frames"].to(</a>self.device<a id="change">)</a> &#47&#47 [b, T, c, h, w], with T = total_frames
+            input_frames = img_data[:, :config["context_frames"]]
+            target_frames<a id="change"> = </a>img_data[:, config["context_frames"]:config["context_frames"] + config["pred_frames"]]
+            actions = data["actions"].to(self.device)
+
+            predictions, model_losses \</code></pre><h3>After Change</h3><pre><code class='java'>
+                    total_loss += value
+
+            optimizer.zero_grad()
+            <a id="change">total_loss.backward()</a>
+            optimizer.step()
+
+            loop.set_postfix(loss=total_loss.item())
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/ais-bonn/vp-suite/commit/1de690a43911d41c194f2067a282354e4af3f3c6#diff-8c04a9d43529712c64c43ccd22167af0664933fb04476357b7c2ea98d790c14bL201' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 41010268</div><div id='project'> Project Name: ais-bonn/vp-suite</div><div id='commit'> Commit Name: 1de690a43911d41c194f2067a282354e4af3f3c6</div><div id='time'> Time: 2022-02-24</div><div id='author'> Author: boltres@ais.uni-bonn.de</div><div id='file'> File Name: vp_suite/models/st_phy.py</div><div id='m_class'> M Class Name: STPhy</div><div id='n_method'> N Class Name: STPhy</div><div id='m_method'> M Method Name: train_iter(6)</div><div id='n_method'> N Method Name: train_iter(6)</div><div id='m_parent_class'> M Parent Class: VideoPredictionModel</div><div id='n_parent_class'> N Parent Class: VideoPredictionModel</div><div id='m_file'> M File Name: vp_suite/models/st_phy.py</div><div id='n_file'> N File Name: vp_suite/models/st_phy.py</div><div id='m_start'> M Start Line: 215</div><div id='m_end'> M End Line: 237</div><div id='n_start'> N Start Line: 220</div><div id='n_end'> N End Line: 238</div><BR>

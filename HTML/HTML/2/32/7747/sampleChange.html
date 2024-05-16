@@ -1,0 +1,55 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        prefix: str = "",
+        keep_vars: bool = False,
+    ) -&gt; Dict[str, Any]:
+        <a id="change">if destination is None</a>:
+            <a id="change">destination = </a><a id="change">OrderedDict()</a>
+            &#47&#47 pyre-ignore [16]
+            destination._metadata<a id="change"> = </a><a id="change">OrderedDict()</a>
+
+        <a id="change">for </a>config, <a id="change">emb_module</a> in <a id="change">zip(
+            </a>self._config.embedding_tables,
+            self._emb_modules<a id="change">,
+        )</a><a id="change">:
+            key = </a>prefix<a id="change"> + f"{config.name}.weight"</a>
+            param = emb_module.weight if keep_vars else emb_module.weight.data
+            <a id="change">assert </a>config.local_rows == param.size(0)
+            <a id="change">assert </a>config.local_cols == param.size(1)
+            <a id="change">if config.global_metadata is not None</a>:
+                &#47&#47 set additional field of sharded tensor based on local tensor properties
+                config.global_metadata.tensor_properties.dtype<a id="change"> = </a>param.dtype
+                config.global_metadata.tensor_properties.requires_grad<a id="change"> = </a>(
+                    param.requires_grad
+                )
+                <a id="change">destination[
+                    key
+                ]</a><a id="change"> = ShardedTensor._init_from_local_shards_and_global_metadata(
+                    local_shards=[Shard(param, config.local_metadata)],
+                    sharded_tensor_metadata=config.global_metadata,
+                    process_group=self._pg,
+                )</a>
+            else:
+                <a id="change">destination[key]</a><a id="change"> = </a>param
+
+        <a id="change">return destination</a>
+
+    def named_parameters(
+        self, prefix: str = "", recurse: bool = True
+    ) -&gt; Iterator[Tuple[str, nn.Parameter]]:</code></pre><h3>After Change</h3><pre><code class='java'>
+        prefix: str = "",
+        keep_vars: bool = False,
+    ) -&gt; Dict[str, Any]:
+        params<a id="change"> = </a><a id="change">[
+            emb_module.weight if keep_vars else emb_module.weight.data
+            for emb_module in self._emb_modules
+        ]</a>
+        <a id="change">return </a><a id="change">_get_state_dict(
+            </a>self._config.embedding_tables, params, self._pg, destination, prefix<a id="change">
+        )</a>
+
+    def named_parameters(
+        self, prefix: str = "", recurse: bool = True
+    ) -&gt; Iterator[Tuple[str, nn.Parameter]]:</code></pre>

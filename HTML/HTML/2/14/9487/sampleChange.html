@@ -1,0 +1,70 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+        if (epoch + 1) % args.eval_step == 0 or (epoch == args.epochs - 1):
+            &#47&#47 save checkpoint and remember best mAP
+            torch.save(<a id="change">model_1_ema.state_dict()</a>, logger.get_checkpoint_path(&quotmodel_1_latest&quot))
+            torch.save(model_2_ema.state_dict(), logger.get_checkpoint_path(&quotmodel_2_latest&quot))
+            print("Test model_1 on target domain...")
+            _, test_mAP_1 = validate(test_loader, model_1_ema, target_dataset.query, target_dataset.gallery,
+                                     device, cmc_flag=True, rerank=args.rerank)
+            print("Test model_2 on target domain...")
+            _, test_mAP_2 = validate(test_loader, model_2_ema, target_dataset.query, target_dataset.gallery,
+                                     device, cmc_flag=True, rerank=args.rerank)
+            if test_mAP_1 &gt; test_mAP_2 and test_mAP_1 &gt; best_test_mAP:
+                shutil.copy(logger.get_checkpoint_path(&quotmodel_1_latest&quot), logger.get_checkpoint_path(&quotbest&quot))
+                best_test_mAP = test_mAP_1
+            if test_mAP_2 &gt; test_mAP_1 and test_mAP_2 &gt; best_test_mAP:
+                shutil.copy(logger.get_checkpoint_path(&quotmodel_2_latest&quot), logger.get_checkpoint_path(&quotbest&quot))
+                best_test_mAP = test_mAP_2
+
+    &#47&#47 evaluate on test set
+    <a id="change">model_1_ema.load_state_dict(</a>torch.load(logger.get_checkpoint_path(&quotbest&quot))<a id="change">)</a>
+    print("Test on target domain:")
+    _<a id="change">, test_mAP = </a><a id="change">validate(</a>test_loader, <a id="change">model_1_ema</a>, target_dataset.query, target_dataset.gallery, device<a id="change">,
+                           cmc_flag=True, rerank=args.rerank)</a>
+    print("test mAP on target = {}".format(test_mAP))
+    print("oracle mAP on target = {}".format(best_test_mAP))
+    logger.close()
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    &#47&#47 optionally resume from a checkpoint
+    if args.resume:
+        checkpoint = torch.load(args.resume, map_location=&quotcpu&quot)
+        <a id="change">model_1.load_state_dict(checkpoint[&quotmodel_1&quot]</a><a id="change">)</a>
+        <a id="change">model_1_ema.load_state_dict(checkpoint[&quotmodel_1_ema&quot]</a><a id="change">)</a>
+        model_2.load_state_dict(checkpoint[&quotmodel_2&quot])
+        model_2_ema.load_state_dict(checkpoint[&quotmodel_2_ema&quot])
+        args.start_epoch = checkpoint[&quotepoch&quot] + 1
+
+    &#47&#47 start training
+    best_test_mAP = 0.
+    for epoch in range(args.start_epoch, args.epochs):
+        &#47&#47 run cluster algorithm
+        cluster_labels, cluster_centers = run_cluster_algorithm(cluster_loader, model_1_ema, model_2_ema, args)
+
+        &#47&#47 generate pseudo labels
+        train_target_iter = generate_pseudo_labels(target_dataset, cluster_labels, train_transform)
+
+        &#47&#47 reinitialize classifier head and define optimizer
+        model_1.module.head.weight.data.copy_(cluster_centers)
+        model_2.module.head.weight.data.copy_(cluster_centers)
+        model_1_ema.module.head.weight.data.copy_(cluster_centers)
+        model_2_ema.module.head.weight.data.copy_(cluster_centers)
+        optimizer = Adam(model_1.module.get_parameters(base_lr=args.lr, rate=args.rate) + model_2.module.get_parameters(
+            base_lr=args.lr, rate=args.rate), args.lr, weight_decay=args.weight_decay)
+
+        &#47&#47 train for one epoch
+        train(train_target_iter, model_1, model_1_ema, model_2, model_2_ema, optimizer, criterion_ce, criterion_ce_soft,
+              criterion_triplet, criterion_triplet_soft, epoch, args)
+
+        if (epoch + 1) % args.eval_step == 0 or (epoch == args.epochs - 1):
+            &#47&#47 save checkpoint and remember best mAP
+            torch.save(
+                {
+                    &quotmodel_1&quot: model_1.state_dict(),
+                    &quotmodel_1_ema&quot: <a id="change">model_1_ema.state_dict()</a>,
+                    &quotmodel_2&quot: model_2.state_dict(),
+                    &quotmodel_2_ema&quot: model_2_ema.state_dict(),
+                    &quotepoch&quot: epoch</code></pre>

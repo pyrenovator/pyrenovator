@@ -1,0 +1,79 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        }
+
+        self._device = device
+        self._input_dists: nn.ModuleList = <a id="change">nn.ModuleList()</a>
+        self._lookups<a id="change">: nn.ModuleList = nn</a><a id="change">.ModuleList()</a>
+        self._create_lookups()
+        self._output_dists: nn.ModuleList = <a id="change">nn.ModuleList()</a>
+        self._create_output_dist()
+
+        self._feature_splits: List[int] = []
+        self._features_order: List[int] = []</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        self._device = device
+        self._input_dists: List[nn.Module] = []
+        <a id="change">self._lookups: List[nn.Module] = </a><a id="change">[]</a>
+        self._create_lookups()
+        self._output_dists: List[nn.Module] = []
+        self._create_output_dist()
+
+        self._feature_splits: List[int] = []
+        self._features_order: List[int] = []
+
+        self._has_uninitialized_input_dist: bool = True
+
+        &#47&#47 Get all fused optimizers and combine them.
+        optims = []
+        for lookup in self._lookups:
+            for _, m in lookup.named_modules():
+                if isinstance(m, FusedOptimizerModule):
+                    &#47&#47 modify param keys to match EmbeddingCollection
+                    params: MutableMapping[str, Union[torch.Tensor, ShardedTensor]] = {}
+                    for param_key, weight in m.fused_optimizer.params.items():
+                        params["embeddings." + param_key] = weight
+                    m.fused_optimizer.params = params
+                    optims.append(("", m.fused_optimizer))
+        self._optim: CombinedOptimizer = CombinedOptimizer(optims)
+        self._embedding_dim: int = module.embedding_dim()
+        self._embedding_names_per_sharding: List[List[str]] = []
+        for sharding in self._sharding_type_to_sharding.values():
+            self._embedding_names_per_sharding.append(sharding.embedding_names())
+        self._local_embedding_dim: int = self._embedding_dim
+        self._features_to_permute_indices: Dict[str, List[int]] = {}
+        if ShardingType.COLUMN_WISE.value in self._sharding_type_to_sharding:
+            sharding = self._sharding_type_to_sharding[ShardingType.COLUMN_WISE.value]
+            &#47&#47 CW partition must be same for all CW sharded parameters
+            self._local_embedding_dim = cast(
+                ShardMetadata, sharding.embedding_shard_metadata()[0]
+            ).shard_sizes[1]
+            self._generate_permute_indices_per_feature(
+                module.embedding_configs(), table_name_to_parameter_sharding
+            )
+        self._need_indices: bool = module.need_indices()
+
+        <a id="change">for </a><a id="change">index</a>, (sharding, lookup) in <a id="change">enumerate(
+            zip(
+                </a><a id="change">self._sharding_type_to_sharding.values()</a>,
+                <a id="change">self._lookups</a><a id="change">,
+            )</a><a id="change">
+        ):
+            &#47&#47 TODO: can move this into DpPooledEmbeddingSharding once all modules are composable
+            </a><a id="change">if isinstance(</a>sharding, DpSequenceEmbeddingSharding<a id="change">)</a>:
+                <a id="change">self._lookups[index] = </a><a id="change">DistributedDataParallel(
+                    module=lookup,
+                    device_ids=[device]
+                    if self._device and self._device.type == "gpu"
+                    else None,
+                    process_group=env.process_group,
+                    gradient_as_bucket_view=True,
+                    broadcast_buffers=True,
+                    static_graph=True,
+                )</a>
+        self._initialize_torch_state()
+
+    @staticmethod
+    def _pre_load_state_dict_hook(</code></pre>

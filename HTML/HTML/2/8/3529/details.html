@@ -1,0 +1,92 @@
+<html><h3>Pattern ID :3529
+</h3><img src='13505231.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+        &#47&#47 compute the spatial mean and instance fields by scattering with the
+        &#47&#47 target tensor
+        cluster_means_spatial<a id="change"> = </a>cluster_means[target]
+        instance_sizes_spatial = instance_counts[target]
+
+        &#47&#47 permute the embedding dimension to axis 0
+        if target.dim() == 2:
+            cluster_means_spatial = cluster_means_spatial.permute(2, 0, 1)
+        else:
+            cluster_means_spatial = <a id="change">cluster_means_spatial.permute(3</a>, <a id="change">0</a>, <a id="change">1</a>, <a id="change">2</a><a id="change">)</a>
+
+        &#47&#47 compute the distance to cluster means
+        dist_to_mean = torch.norm(embeddings - cluster_means_spatial, self.norm, dim=0)
+
+        if ignore_zero_label:
+            &#47&#47 zero out distances corresponding to 0-label cluster, so that it does not contribute to the loss
+            dist_mask = torch.ones_like(dist_to_mean)
+            dist_mask[target == 0] = 0
+            dist_to_mean = dist_to_mean * dist_mask
+            &#47&#47 decrease number of instances
+            n_instances -= 1
+            &#47&#47 if there is only 0-label in the target return 0
+            if n_instances == 0:
+                return 0.0
+
+        &#47&#47 zero out distances less than delta_var (hinge)
+        hinge_dist = torch.clamp(dist_to_mean - self.delta_var, min=0) ** 2
+
+        &#47&#47 normalize the variance by instance sizes and number of instances and sum it up
+        variance_term<a id="change"> = </a>torch.sum(hinge_dist / instance_sizes_spatial) / n_instances
+        return variance_term
+
+    def _compute_unlabeled_push(self, cluster_means, embeddings, target):</code></pre><h3>After Change</h3><pre><code class='java'>
+            ignore_zero_label: if True ignores the cluster corresponding to the 0-label
+        
+        assert target.dim() in (2, 3)
+        ignore_labels = <a id="change">[</a>0<a id="change"></a>] if ignore_zero_label else None
+        return cimpl._compute_variance_term_scatter(
+            cluster_means, embeddings.unsqueeze(0), target.unsqueeze(0),
+            self.norm, self.delta_var, instance_counts, ignore_labels</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/constantinpape/torch-em/commit/6b3c4ed59bff373d2b2f945e3f1aa300659ce9e9#diff-4ae644b7c870f8b2444a41dc20b100f7c4de0377aea62d81ec64ab36f8a94a4fL143' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 13505231</div><div id='project'> Project Name: constantinpape/torch-em</div><div id='commit'> Commit Name: 6b3c4ed59bff373d2b2f945e3f1aa300659ce9e9</div><div id='time'> Time: 2021-12-28</div><div id='author'> Author: c.pape@gmx.net</div><div id='file'> File Name: torch_em/loss/spoco_loss.py</div><div id='m_class'> M Class Name: ContrastiveLossBase</div><div id='n_method'> N Class Name: ContrastiveLossBase</div><div id='m_method'> M Method Name: _compute_variance_term(6)</div><div id='n_method'> N Method Name: _compute_variance_term(6)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: torch_em/loss/spoco_loss.py</div><div id='n_file'> N File Name: torch_em/loss/spoco_loss.py</div><div id='m_start'> M Start Line: 167</div><div id='m_end'> M End Line: 199</div><div id='n_start'> N Start Line: 143</div><div id='n_end'> N End Line: 147</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        attn = torch.softmax(attn, 3) * start_mask
+        attn = self.dropout(attn)
+
+        out<a id="change"> = </a>attn @ value
+        out = out.transpose(1, 2).reshape(
+            batch, height, width, self.dim_head * self.n_head
+        )
+        out<a id="change"> = </a><a id="change">out.permute(0</a>, <a id="change">3</a>, <a id="change">1</a>, <a id="change">2</a><a id="change">)</a>
+
+        return out
+
+class PixelBlock(HelperModule):</code></pre><h3>After Change</h3><pre><code class='java'>
+        batch_size, _, height, width = k.shape
+        reshape = lambda x: x.view(batch_size, -1, self.nb_heads, self.head_dim).transpose(1, 2)
+
+        qkv_f = torch.cat(<a id="change">[
+            </a>q.view(batch_size, q.shape[1], -1).transpose(1, 2),
+            k.view(batch_size, k.shape[1], -1).transpose(1, 2),
+            k.view(batch_size, k.shape[1], -1).transpose(1, 2)<a id="change"></a>,
+        ], dim=-1)
+
+        q, k, v = torch.chunk(self.to_qkv(qkv_f), chunks=3, dim=-1)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/vvvm23/vqvae-2/commit/e15b9e3d7c13f912682873648e5aaaf81b1dfec5#diff-a112c46d500b0c8291c2990801b6878d4693377171a2ede123da1a50dcc72c61L178' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 13504204</div><div id='project'> Project Name: vvvm23/vqvae-2</div><div id='commit'> Commit Name: e15b9e3d7c13f912682873648e5aaaf81b1dfec5</div><div id='time'> Time: 2021-06-02</div><div id='author'> Author: alexander.f.mckinney@durham.ac.uk</div><div id='file'> File Name: pixelsnail.py</div><div id='m_class'> M Class Name: CausalAttention</div><div id='n_method'> N Class Name: CausalAttention</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: HelperModule</div><div id='n_parent_class'> N Parent Class: HelperModule</div><div id='m_file'> M File Name: pixelsnail.py</div><div id='n_file'> N File Name: pixelsnail.py</div><div id='m_start'> M Start Line: 184</div><div id='m_end'> M End Line: 204</div><div id='n_start'> N Start Line: 110</div><div id='n_end'> N End Line: 130</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+        file_name = dataset.imgs[dataset.image_ids[item]][&quotfile_name&quot]
+
+        sample<a id="change"> = </a>dataset.__getitem__(item)
+        keypoints3D = sample[1]
+        imgs_orig = sample[0]
+        img_size = imgs_orig[0].shape
+        dataset_name = sample[-1]
+        reproTool = reproTools[dataset_name]
+        num_cameras = imgs_orig.shape[0]
+
+        imgs<a id="change"> = </a><a id="change">torch.from_numpy(imgs_orig).cuda().float().permute(0</a>,<a id="change">3</a>,<a id="change">1</a>,<a id="change">2</a><a id="change">)</a>
+
+        points3D_net = jarvisPredictor(imgs, reproTool.cameraMatrices.cuda(), reproTool.intrinsicMatrices.cuda(), reproTool.distortionCoefficients.cuda())
+
+        if points3D_net != None:</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    pointsNet = []
+    pointsGT = []
+    filenames = <a id="change">[]</a>
+    data_generator = DataLoader(
+                dataset,
+                batch_size = 1,
+                shuffle = False,</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/jarvis-mocap/jarvis-hybridnet/commit/327b43a36cc8aa4995c6e50842b02f3577a1e241#diff-769b6466744cecdc87ace0d46622975c1c612d93b95416dd15345c5193a92404L16' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 13504221</div><div id='project'> Project Name: jarvis-mocap/jarvis-hybridnet</div><div id='commit'> Commit Name: 327b43a36cc8aa4995c6e50842b02f3577a1e241</div><div id='time'> Time: 2022-04-28</div><div id='author'> Author: jarvismocap@gmail.com</div><div id='file'> File Name: jarvis/analysis/analyze.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: analyze_validation_data(5)</div><div id='n_method'> N Method Name: analyze_validation_data(5)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: jarvis/analysis/analyze.py</div><div id='n_file'> N File Name: jarvis/analysis/analyze.py</div><div id='m_start'> M Start Line: 28</div><div id='m_end'> M End Line: 52</div><div id='n_start'> N Start Line: 22</div><div id='n_end'> N End Line: 82</div><BR>

@@ -1,0 +1,47 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        with g.local_scope():
+            h = self.feats
+            edge_weight = self.linear_e1(edge_weight)
+            x<a id="change"> = </a>self.nn_conv1(g, h, edge_weight=edge_weight)
+            x = F.dropout(x, p=self.dropout, training=False)
+            if self.num_node_layer == 2:
+                &#47&#47edge_weight = self.linear_e2(edge_weight)
+                x = self.nn_conv2(g, x, edge_weight=edge_weight)
+                x = F.dropout(x, p=self.dropout, training=False)
+
+            x = self.emd2pred(x)
+            x = F.dropout(x, p=self.dropout, training=False)
+
+            <a id="change">return </a>x
+
+
+class AGNNConv(nn.Module):</code></pre><h3>After Change</h3><pre><code class='java'>
+            h = F.dropout(h, p=self.dropout, training=False)
+
+        edge_weight = {}
+        <a id="change">for </a>i, <a id="change">e</a> in <a id="change">enumerate(</a>hg.canonical_etypes<a id="change">):
+            </a>edge_weight[e]<a id="change"> = h[i]</a>.expand(hg.num_edges(e), -1)
+        temp = self.h_n_dict()
+        n_feats<a id="change"> = </a><a id="change">{}</a>
+        for n in hg.ntypes:
+            n_feats[n] = temp[n]
+        if hasattr(hg, &quotntypes&quot):
+            &#47&#47edge_weight = F.embedding(hg.edata[dgl.ETYPE].long(), h)
+
+            &#47&#47 full graph training
+           &#47&#47 edge_weight = self.linear_e1(edge_weight)
+            for layer in self.node_layers:
+                n_feats = layer(hg, n_feats, edge_weight)
+                n_feats = F.dropout(n_feats, p=self.dropout, training=False)
+        else:
+            &#47&#47 minibatch training
+            pass
+        n_feats = self.emd2pred(n_feats)
+        n_feats = F.dropout(n_feats, p=self.dropout, training=False)
+        <a id="change">return </a>n_feats
+
+
+class AGNNConv(nn.Module):</code></pre>

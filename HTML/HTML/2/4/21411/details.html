@@ -1,0 +1,59 @@
+<html><h3>Pattern ID :21411
+</h3><img src='68224101.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                        if world_size &gt; 1:
+                            torch.distributed.barrier() 
+                            torch.save(opt.state_dict(), os.path.join(args.log_dir, f&quotiteration_{iteration}_rank_{rank}_optim.pth&quot))
+                            <a id="change">torch.distributed.barrier()</a> 
+                        
+
+                    &#47&#47 lr update</code></pre><h3>After Change</h3><pre><code class='java'>
+                                if world_size &gt; 1:
+                                    torch.distributed.barrier()
+                                torch.save(save_opt_state_dict, os.path.join(args.log_dir, &quotbest_optim.pth&quot))
+                                <a id="change">if world_size &gt; 1</a>:
+                                    <a id="change">torch.distributed.barrier()</a>
+
+                    &#47&#47 lr update
+                    lr = opt.param_groups[0][&quotlr&quot] 
+                    if args.warmup &gt; 0 and args.transformer_lr:</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/stanford-oval/genienlp/commit/60dbc940281fbdf38b557e7eb7fa1913720edafe#diff-605dd195f574ab979ac4e3d48e9ed7dc75e65560aec927db9feaf3b2ddf90858L188' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 68224101</div><div id='project'> Project Name: stanford-oval/genienlp</div><div id='commit'> Commit Name: 60dbc940281fbdf38b557e7eb7fa1913720edafe</div><div id='time'> Time: 2019-03-08</div><div id='author'> Author: mehrad@stanford.edu</div><div id='file'> File Name: decanlp/train.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train(17)</div><div id='n_method'> N Method Name: train(17)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: decanlp/train.py</div><div id='n_file'> N File Name: decanlp/train.py</div><div id='m_start'> M Start Line: 245</div><div id='m_end'> M End Line: 271</div><div id='n_start'> N Start Line: 188</div><div id='n_end'> N End Line: 270</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        load_exp = ExperimentBuilder(args.experiment_root, args.dataset, args.model, args.experiment_name,
+                summary_fieldnames = summary_fieldnames, summary_fieldtypes = summary_fieldtypes,
+                version = load_version, telegram_key_ini = config.KEY_INI_PATH, telegram_bot_idx = args.telegram_bot_idx)
+        <a id="change">dist.barrier()</a>      &#47&#47 before creating any experiment directory, we need to make sure that all versions for all processes is equal.
+        load_exp.load_summary()
+        exp.copy_from(load_exp, copy_dirs = rank == 0, exclude_weights=True)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        load_exp = ExperimentBuilder(args.experiment_root, args.dataset, args.model, args.experiment_name,
+                summary_fieldnames = summary_fieldnames, summary_fieldtypes = summary_fieldtypes,
+                version = load_version, telegram_key_ini = config.KEY_INI_PATH, telegram_bot_idx = args.telegram_bot_idx)
+        <a id="change">if world_size &gt; 1</a>:
+            <a id="change">dist.barrier()</a>      &#47&#47 before creating any experiment directory, we need to make sure that all versions for all processes is equal.
+        load_exp.load_summary()
+        exp.copy_from(load_exp, copy_dirs = rank == 0, exclude_weights=True)
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/kiyoon/pyvideoai/commit/7e9d98b92de92bb49377e169dec00f78b6cdb5ce#diff-8ea56a3c4ce8d98a59d95a9de8ab3a45e87b0bc4dda1378a6b5dddabe1846e20L61' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 68224100</div><div id='project'> Project Name: kiyoon/pyvideoai</div><div id='commit'> Commit Name: 7e9d98b92de92bb49377e169dec00f78b6cdb5ce</div><div id='time'> Time: 2021-07-24</div><div id='author'> Author: yoonkr33@gmail.com</div><div id='file'> File Name: pyvideoai/train_multiprocess.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train(1)</div><div id='n_method'> N Method Name: train(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: pyvideoai/train_multiprocess.py</div><div id='n_file'> N File Name: pyvideoai/train_multiprocess.py</div><div id='m_start'> M Start Line: 97</div><div id='m_end'> M End Line: 105</div><div id='n_start'> N Start Line: 97</div><div id='n_end'> N End Line: 108</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    &#47&#47 to download and extract at the same time
+    if smp.local_rank() == 0:
+        dataset1 = datasets.MNIST("../data", train=True, download=True, transform=transform)
+    <a id="change">smp.barrier()</a>
+    dataset1 = datasets.MNIST("../data", train=True, download=False, transform=transform)
+
+    if (use_ddp or use_horovod) and smp.dp_size() &gt; 1:
+        partitions_dict = {f"{i}": 1 / smp.dp_size() for i in range(smp.dp_size())}</code></pre><h3>After Change</h3><pre><code class='java'>
+        [transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))]
+    )
+
+    <a id="change">if args.data_dir is None</a>:
+        &#47&#47 SM Distributed: Download only on a single process per instance.
+        &#47&#47 When this is not present, the file is corrupted by multiple processes trying
+        &#47&#47 to download and extract at the same time
+        args.data_dir = "../data"
+        if smp.local_rank() == 0:
+            dataset1 = datasets.MNIST(args.data_dir, train=True, download=True, transform=transform)
+        <a id="change">smp.barrier()</a>
+
+    dataset1 = datasets.MNIST(args.data_dir, train=True, download=False, transform=transform)
+
+    if (use_ddp) and smp.dp_size() &gt; 1:</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/aws/deep-learning-containers/commit/0e3595bf101a2601842e88eff46499ce1221232e#diff-0096dbf00ce594beebe6a26e6aa9ee298c512f07b3761f29fc43bb33e03797fbL231' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 68224103</div><div id='project'> Project Name: aws/deep-learning-containers</div><div id='commit'> Commit Name: 0e3595bf101a2601842e88eff46499ce1221232e</div><div id='time'> Time: 2021-03-15</div><div id='author'> Author: rahulhuilgol@gmail.com</div><div id='file'> File Name: test/sagemaker_tests/pytorch/training/resources/mnist/smmodelparallel_pt_mnist.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(0)</div><div id='n_method'> N Method Name: main(0)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: test/sagemaker_tests/pytorch/training/resources/mnist/smmodelparallel_pt_mnist.py</div><div id='n_file'> N File Name: test/sagemaker_tests/pytorch/training/resources/mnist/smmodelparallel_pt_mnist.py</div><div id='m_start'> M Start Line: 233</div><div id='m_end'> M End Line: 341</div><div id='n_start'> N Start Line: 234</div><div id='n_end'> N End Line: 349</div><BR>

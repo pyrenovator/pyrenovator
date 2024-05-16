@@ -1,0 +1,19 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    if distributed.get_rank() == 0:
+        &#47&#47 how many samples to draw from each replica
+        mult = torch.distributions.Multinomial(num, probs = all_num_samples)
+        samples_per_rank<a id="change"> = </a><a id="change">mult.sample().long()</a>
+    else:
+        samples_per_rank = torch.empty_like(all_num_samples)
+    distributed.broadcast(samples_per_rank, src = 0)
+    samples_per_rank = samples_per_rank.tolist()</code></pre><h3>After Change</h3><pre><code class='java'>
+    all_num_samples = all_gather_sizes(local_samples, dim = 0)
+
+    if rank == 0:
+        samples_per_rank = sample_multinomial(num, all_num_samples / <a id="change">all_num_samples.sum()</a>)
+    else:
+        samples_per_rank = torch.empty_like(all_num_samples)
+</code></pre>

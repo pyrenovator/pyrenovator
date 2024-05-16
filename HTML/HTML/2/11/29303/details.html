@@ -1,0 +1,208 @@
+<html><h3>Pattern ID :29303
+</h3><img src='86040452.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        in_features_layer = in_features
+        for idx in range(num_block_convs):
+            block: OrderedDict[str, nn.Module] = OrderedDict()
+            <a id="change">block[f"data_enc_level{tag}_batchnorm_conv{idx}"]</a><a id="change"> = </a>nn.BatchNorm3d(
+                in_features_layer,
+                affine=True,  &#47&#47 Same effect as "Scale" layer in Caffe
+            )
+            <a id="change">block[f"data_enc_level{tag}_conv{idx}"]</a><a id="change"> = </a>nn.Conv3d(
+                in_channels=in_features_layer,
+                out_channels=num_block_features,
+                kernel_size=3,
+                padding=1,
+            )
+            <a id="change">block[f"data_enc_level{tag}_conv{idx}_relu"] = </a>nn.ReLU()
+
+            self.blocks.append(nn.Sequential(block))
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        in_features_layer = in_features
+        for idx in range(num_block_convs):
+            <a id="change">dense_dict.update(
+                [
+                    </a>(
+                        f"data_enc_level{tag}_batchnorm_conv{idx}",
+                        nn.BatchNorm3d(
+                            in_features_layer,
+                            affine=True,  &#47&#47 Same effect as "Scale" layer in Caffe
+                        ),
+                    ),
+                    (
+                        f"data_enc_level{tag}_conv{idx}",
+                        nn.Conv3d(
+                            in_channels=in_features_layer,
+                            out_channels=num_block_features,
+                            kernel_size=3,
+                            padding=1,
+                        ),
+                    ),
+                    (f"data_enc_level{tag}_conv{idx}_relu", nn.ReLU())<a id="change"></a>,
+                ]<a id="change">
+            )</a>
+
+            &#47&#47 The next layer takes all previous features as input
+            in_features_layer += num_block_features
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 8</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/rmeli/gnina-torch/commit/ae13019259dc80166c9acd41ce1cc7fed1bf18d8#diff-5ab34236f2ede2f92bf7a22d8178708b84218a88a112b5e7e46c9f9d4243283dL499' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 86040452</div><div id='project'> Project Name: rmeli/gnina-torch</div><div id='commit'> Commit Name: ae13019259dc80166c9acd41ce1cc7fed1bf18d8</div><div id='time'> Time: 2022-07-15</div><div id='author'> Author: rocco.meli@biodtp.ox.ac.uk</div><div id='file'> File Name: gnina/models.py</div><div id='m_class'> M Class Name: DenseBlock</div><div id='n_method'> N Class Name: DenseBlock</div><div id='m_method'> M Method Name: __init__(5)</div><div id='n_method'> N Method Name: __init__(5)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: gnina/models.py</div><div id='n_file'> N File Name: gnina/models.py</div><div id='m_start'> M Start Line: 499</div><div id='m_end'> M End Line: 520</div><div id='n_start'> N Start Line: 499</div><div id='n_end'> N End Line: 532</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 store the baseline config values in Ray to avoid Ray issue &#47&#4712048
+
+        &#47&#47TODO refactor this into a function
+        <a id="change">skopt_space[&quotlog_dir&quot]</a><a id="change"> = </a>skopt.space.Categorical(categories=(log_dir,))
+        <a id="change">skopt_space[&quotstages_to_run&quot]</a><a id="change"> = </a>skopt.space.Categorical(categories=(stages_to_run,))
+        <a id="change">skopt_space[&quotwrapped_config_keys&quot] = </a>skopt.space.Categorical(categories=(wrapped_config_keys,))
+        skopt_space[&quotforce_repl_run&quot] = skopt.space.Categorical(categories=(force_repl_run,))
+        skopt_space[&quotrepl_encoder_path&quot] = skopt.space.Categorical(categories=(repl_encoder_path,))
+        for ref_config in skopt_ref_configs:</code></pre><h3>After Change</h3><pre><code class='java'>
+    &#47&#47 These are values from the config that we want to be set for all experiments,
+    &#47&#47 and that we need to pass in through either the spec or the skopt config so
+    &#47&#47 they will be reset properly in case of experiment failure
+    needed_config_params = <a id="change">{</a>&quotlog_dir&quot: log_dir,
+                            &quotstages_to_run&quot: stages_to_run,
+                            &quotforce_repl_run&quot: force_repl_run,
+                            &quotrepl_encoder_path&quot: repl_encoder_path,
+                            &quotwrapped_config_keys&quot: wrapped_config_keys<a id="change">}</a>
+
+    if metric is None:
+        &#47&#47 choose a default metric depending on whether we&quotre running
+        &#47&#47 representation learning, IL, or both
+        metric = {
+            &#47&#47 return_mean is returned by il_test.run()
+            StagesToRun.REPL_AND_IL:
+            &quotreturn_mean&quot,
+            StagesToRun.IL_ONLY:
+            &quotreturn_mean&quot,
+            &#47&#47 repl_loss is returned by run_rep_learner.run()
+            StagesToRun.REPL_ONLY:
+            &quotrepl_loss&quot,
+        }[stages_to_run]
+
+    &#47&#47 We remove unnecessary keys from the "spec" that we pass to Ray Tune. This
+    &#47&#47 ensures that Ray Tune doesn&quott try to tune over things that can&quott affect
+    &#47&#47 the outcome.
+
+    if stages_to_run == StagesToRun.IL_ONLY \
+       and &quotrepl&quot in spec:
+        logging.warning(
+            "You only asked to tune IL, so I&quotm removing the representation "
+            "learning config from the Tune spec.")
+        del spec[&quotrepl&quot]
+
+    if stages_to_run == StagesToRun.REPL_ONLY \
+       and &quotil_train&quot in spec:
+        logging.warning(
+            "You only asked to tune RepL, so I&quotm removing the imitation "
+            "learning config from the Tune spec.")
+        del spec[&quotil_train&quot]
+
+    &#47&#47 make Ray run from this directory
+    ray_dir = os.path.join(log_dir)
+    os.makedirs(ray_dir, exist_ok=True)
+    &#47&#47 Ray Tune will change the directory when tuning; this next step ensures
+    &#47&#47 that pwd-relative data_roots remain valid.
+    env_data_config[&quotdata_root&quot] = os.path.abspath(
+        os.path.join(cwd, env_data_config[&quotdata_root&quot]))
+
+    if detect_ec2():
+        ray.init(address="auto", **ray_init_kwargs)
+    else:
+        ray.init(**ray_init_kwargs)
+
+    if use_skopt:
+        assert skopt_search_mode in {&quotmin&quot, &quotmax&quot}, \
+            &quotskopt_search_mode must be "min" or "max", as appropriate for &quot \
+            &quotthe metric being optimised&quot
+        assert len(skopt_space) &gt; 0, "was passed an empty skopt_space"
+
+        &#47&#47 do some sacred_copy() calls to ensure that we don&quott accidentally put
+        &#47&#47 a ReadOnlyDict or ReadOnlyList into our optimizer
+        skopt_space = sacred_copy(skopt_space)
+        skopt_search_mode = sacred_copy(skopt_search_mode)
+        skopt_ref_configs = sacred_copy(skopt_ref_configs)
+        metric = sacred_copy(metric)
+
+        &#47&#47 In addition to the actual spaces we&quotre searching over, we also need to
+        &#47&#47 store the baseline config values in Ray to avoid Ray issue &#47&#4712048
+
+        &#47&#47TODO refactor this into a function
+        skopt_space, skopt_ref_configs = update_skopt_space_and_ref_configs(skopt_space,
+                                                                            skopt_ref_configs,
+                                                                            needed_config_params)
+
+        for ing_name, ing_config in ingredient_configs_dict.items():
+            frozen_config = WrappedConfig(ing_config)
+
+            &#47&#47 Create a Categorical skopt search space with a single element:
+            &#47&#47 the frozen config. This means that Ray&quots config dictionary
+            &#47&#47 will contain the same `frozen_config` object on every trial
+            skopt_space[f"{ing_name}_frozen"] = skopt.space.Categorical(categories=(frozen_config,))
+            for ref_config in skopt_ref_configs:
+                ref_config[f"{ing_name}_frozen"] = frozen_config
+
+        sorted_space = collections.OrderedDict([
+            (key, value) for key, value in sorted(skopt_space.items())
+        ])
+        for k, v in list(sorted_space.items()):
+            &#47&#47 cast each value in sorted_space to a skopt Dimension object, then
+            &#47&#47 make the name of the Dimension object match the corresponding key
+            new_v = skopt.space.check_dimension(v)
+            new_v.name = k
+            sorted_space[k] = new_v
+        skopt_optimiser = skopt.optimizer.Optimizer([*sorted_space.values()],
+                                                    base_estimator=&quotRF&quot)
+        algo = SkOptSearch(skopt_optimiser,
+                           list(sorted_space.keys()),
+                           metric=metric,
+                           mode=skopt_search_mode,
+                           points_to_evaluate=[[
+                               ref_config_dict[k] for k in sorted_space.keys()
+                           ] for ref_config_dict in skopt_ref_configs])
+        tune_run_kwargs = {
+            &quotsearch_alg&quot: algo,
+            &quotscheduler&quot: CheckpointFIFOScheduler(algo),
+            **tune_run_kwargs,
+        }
+        &#47&#47 completely remove &quotspec&quot
+        if spec:
+            logging.warning("Will ignore everything in &quotspec&quot argument")
+        spec = {}
+    else:
+        &#47&#47 In addition to the actual spaces we&quotre searching over, we also need to
+        &#47&#47 store the baseline config values in Ray to avoid Ray issue &#47&#4712048
+        &#47&#47 We create a grid search with a single value of the WrappedConfig object
+        for ing_name, ing_config in ingredient_configs_dict.items():
+            frozen_config = WrappedConfig(ing_config)
+            spec[f"{ing_name}_frozen"] = tune.grid_search([frozen_config])
+
+        <a id="change">spec.update(</a>needed_config_params<a id="change">)</a>
+
+    rep_run = tune.run(
+        trainable_function,
+        name=exp_name,</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/humancompatibleai/eirli/commit/128c0f5841c39c3096bc51c2b4297d6716c7ac5e#diff-ac0180ce63420dc2ca54be789611665df0da7f4c04d1cba1b30d255501b86c38L549' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 86040453</div><div id='project'> Project Name: humancompatibleai/eirli</div><div id='commit'> Commit Name: 128c0f5841c39c3096bc51c2b4297d6716c7ac5e</div><div id='time'> Time: 2021-01-08</div><div id='author'> Author: codywild@berkeley.edu</div><div id='file'> File Name: src/il_representations/scripts/pretrain_n_adapt.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: run(19)</div><div id='n_method'> N Method Name: run(19)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/il_representations/scripts/pretrain_n_adapt.py</div><div id='n_file'> N File Name: src/il_representations/scripts/pretrain_n_adapt.py</div><div id='m_start'> M Start Line: 561</div><div id='m_end'> M End Line: 704</div><div id='n_start'> N Start Line: 571</div><div id='n_end'> N End Line: 712</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        }
+        self.actor_kwargs = self.net_args.copy()
+        self.actor_kwargs[&quotuse_sde&quot] = use_sde
+        <a id="change">self.actor_kwargs[&quotlog_std_init&quot]</a><a id="change"> = </a>log_std_init
+        <a id="change">self.actor_kwargs[&quotclip_noise&quot]</a><a id="change"> = </a>clip_noise
+        <a id="change">self.actor_kwargs[&quotlr_sde&quot] = </a>lr_sde
+
+        self.actor, self.actor_target = None, None
+        self.critic, self.critic_target = None, None</code></pre><h3>After Change</h3><pre><code class='java'>
+            &quotactivation_fn&quot: self.activation_fn
+        }
+        self.actor_kwargs = self.net_args.copy()
+        sde_kwargs = <a id="change">{
+            </a>&quotuse_sde&quot: use_sde,
+            &quotlog_std_init&quot: log_std_init,
+            &quotclip_noise&quot: clip_noise,
+            &quotlr_sde&quot: lr_sde,
+            &quotsde_net_arch&quot: sde_net_arch<a id="change">
+        }</a>
+        <a id="change">self.actor_kwargs.update(</a>sde_kwargs<a id="change">)</a>
+
+        self.actor, self.actor_target = None, None
+        self.critic, self.critic_target = None, None
+        self.use_sde = use_sde</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/dlr-rm/stable-baselines3/commit/4e39a0627c6f822d90ca557b9bd54f9655022b9b#diff-f84bbd6ec90ca0699c1e895bfb1c559ece8c89238f652c7aff79e7bb2ac970b2L152' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 86040463</div><div id='project'> Project Name: dlr-rm/stable-baselines3</div><div id='commit'> Commit Name: 4e39a0627c6f822d90ca557b9bd54f9655022b9b</div><div id='time'> Time: 2019-12-02</div><div id='author'> Author: antonin.raffin@dlr.de</div><div id='file'> File Name: torchy_baselines/td3/policies.py</div><div id='m_class'> M Class Name: TD3Policy</div><div id='n_method'> N Class Name: TD3Policy</div><div id='m_method'> M Method Name: __init__(12)</div><div id='n_method'> N Method Name: __init__(11)</div><div id='m_parent_class'> M Parent Class: BasePolicy</div><div id='n_parent_class'> N Parent Class: BasePolicy</div><div id='m_file'> M File Name: torchy_baselines/td3/policies.py</div><div id='n_file'> N File Name: torchy_baselines/td3/policies.py</div><div id='m_start'> M Start Line: 172</div><div id='m_end'> M End Line: 176</div><div id='n_start'> N Start Line: 179</div><div id='n_end'> N End Line: 204</div><BR>

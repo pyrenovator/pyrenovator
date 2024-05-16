@@ -1,0 +1,24 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                           cycle_length=ctx.data.interleaved_datasets,
+                           num_parallel_calls=ctx.data.parallel_interleave)
+
+    <a id="change">return </a>dset.shuffle(ctx.data.shuffle_buffer, seed=ctx.data.seed).batch(batch_size).map(_memory_func)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    dset = tf.data.Dataset.from_tensor_slices(filenames).repeat()
+    sequence_length = ctx.dims.dim_sizes[ctx.dims.sequence]
+    batch_size = ctx.dims.dim_sizes[ctx.dims.batch]
+    device_steps<a id="change"> = </a>ctx.device_steps
+
+    def _slice_target(x):
+        x = tf.cast(tf.reshape(x, (device_steps, batch_size, sequence_length + 1)), tf.int32)
+        return tf.stack([x[:, :sequence_length], x[:, 1:]], 1)
+
+    dset = dset.interleave(lambda x: decoder(&quotint64&quot in filenames[0], x, sequence_length),
+                           cycle_length=ctx.data.interleaved_datasets,
+                           num_parallel_calls=ctx.data.parallel_interleave)
+    dset = dset.shuffle(ctx.data.shuffle_buffer, seed=ctx.data.seed).batch(device_steps * batch_size).map(_slice_target)
+    <a id="change">return </a><a id="change">iter(</a>dset<a id="change">)</a>
+</code></pre>

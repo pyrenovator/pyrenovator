@@ -1,0 +1,97 @@
+<html><h3>Pattern ID :9702
+</h3><img src='34896052.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+&#47&#47 training function
+def train(netGaze, epoch):
+    epoch_loss = list()
+    pred_all = <a id="change">np.array(</a>[]<a id="change">, dtype=&quotint64&quot)</a>
+    target_all = np.array([], dtype=&quotint64&quot)
+    netGaze.train()
+    for b_idx, (data, targets) in enumerate(train_loader):
+        if args.cuda:
+            data, targets = data.cuda(), targets.cuda()
+        &#47&#47 convert the data and targets into Variable and cuda form
+        data, targets = Variable(data), Variable(targets)
+
+        &#47&#47 train the network
+        optimizer.zero_grad()
+
+        scores, masks = netGaze(data)
+        scores = scores.view(-1, args.num_classes)
+        loss = F.nll_loss(scores, targets)
+
+        &#47&#47 compute the accuracy
+        pred = scores.data.max(1)[1]  &#47&#47 get the index of the max log-probability
+        pred_all<a id="change">   = </a>np.append(pred_all, pred.cpu().numpy())
+        target_all = np.append(target_all, targets.cpu().numpy())
+
+        epoch_loss.append(loss.item())
+        loss.backward()
+        optimizer.step()
+
+        if b_idx % args.log_schedule == 0:
+            print(&quotEpoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}&quot.format(
+                epoch, (b_idx+1) * len(data), len(train_loader.dataset),
+                100. * (b_idx+1)*len(data) / len(train_loader.dataset), loss.item()))
+            with open(os.path.join(args.output_dir, "logs.txt"), "a") as f:
+                f.write(&quotEpoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}\n&quot.format(
+                epoch, (b_idx+1) * len(data), len(train_loader.dataset),
+                100. * (b_idx+1)*len(data) / len(train_loader.dataset), loss.item()))
+
+    &#47&#47 now that the epoch is completed calculate statistics and store logs
+    avg_loss = mean(epoch_loss)
+    print("------------------------\nAverage loss for epoch = {:.2f}".format(avg_loss))
+    with open(os.path.join(args.output_dir, "logs.txt"), "a") as f:
+        f.write("\n------------------------\nAverage loss for epoch = {:.2f}\n".format(avg_loss))
+
+    train_accuracy<a id="change"> =  </a>100.0*accuracy_score(target_all, pred_all)
+    print("Accuracy for epoch = {:.2f}%\n------------------------".format(train_accuracy))
+    with open(os.path.join(args.output_dir, "logs.txt"), "a") as f:
+        f.write("Accuracy for epoch = {:.2f}%\n------------------------\n".format(train_accuracy))</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        &#47&#47 compute the accuracy
+        pred = scores.data.max(1)[1]  &#47&#47 get the index of the max log-probability
+        correct += <a id="change">pred.eq(targets.data).cpu().sum()</a>
+
+        epoch_loss.append(loss.item())
+        loss.backward()
+        optimizer.step()</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/arangesh/gpcyclegan/commit/c290b0a34cefdc1bed78a9fb9b2c8f2635b236f8#diff-fe4b548fb0464c5a4e688fa5c3603a28d51f3151b47930906504168b98dc5413L90' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 34896052</div><div id='project'> Project Name: arangesh/gpcyclegan</div><div id='commit'> Commit Name: c290b0a34cefdc1bed78a9fb9b2c8f2635b236f8</div><div id='time'> Time: 2020-10-12</div><div id='author'> Author: arangesh@ucsd.edu</div><div id='file'> File Name: gazenet-ft.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train(2)</div><div id='n_method'> N Method Name: train(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: gazenet-ft.py</div><div id='n_file'> N File Name: gazenet-ft.py</div><div id='m_start'> M Start Line: 90</div><div id='m_end'> M End Line: 130</div><div id='n_start'> N Start Line: 90</div><div id='n_end'> N End Line: 128</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+        weights: torch.FloatTensor = grad.mean(axis=-1, keepdim=True).mean(axis=-1, keepdim=True)    &#47&#47 (N,C,1,1)
+        heatmap: torch.FloatTensor = (feats * weights).sum(dim=1).clamp(0)  &#47&#47 (N,H,W)
+        heatmap<a id="change"> = </a><a id="change">np.array(</a>heatmap.cpu()<a id="change">)</a>
+        heatmap = cv2.resize(heatmap[0], _input.shape[2:])
+
+        heatmap = heatmap - np.min(heatmap)
+        heatmap<a id="change"> = </a>heatmap / np.max(heatmap)
+        return heatmap
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        _output: torch.FloatTensor = self._model.pool(feats)
+        _output: torch.FloatTensor = self._model.flatten(_output)
+        _output: torch.FloatTensor = self._model.classifier(_output)
+        _output: torch.FloatTensor = <a id="change">_output.gather(dim=1, index=_class.unsqueeze(1)).sum()</a>
+        grad: torch.FloatTensor = torch.autograd.grad(_output, feats)[0]   &#47&#47 (N,C,H,W)
+        feats.requires_grad_(False)
+
+        weights: torch.FloatTensor = grad.mean(dim=-2, keepdim=True).mean(dim=-1, keepdim=True)    &#47&#47 (N,C,1,1)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/ain-soph/trojanzoo/commit/2bf7c2a2e8acba2592ee17d60d1a59b7bd1bbfe5#diff-2e5a199c407507ee95051b9d3c697f33888e4d96925f51e508939244c2f34dbeL206' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 34896053</div><div id='project'> Project Name: ain-soph/trojanzoo</div><div id='commit'> Commit Name: 2bf7c2a2e8acba2592ee17d60d1a59b7bd1bbfe5</div><div id='time'> Time: 2020-11-24</div><div id='author'> Author: ain-soph@live.com</div><div id='file'> File Name: trojanzoo/model/imagemodel.py</div><div id='m_class'> M Class Name: ImageModel</div><div id='n_method'> N Class Name: ImageModel</div><div id='m_method'> M Method Name: grad_cam(3)</div><div id='n_method'> N Method Name: grad_cam(3)</div><div id='m_parent_class'> M Parent Class: Model</div><div id='n_parent_class'> N Parent Class: Model</div><div id='m_file'> M File Name: trojanzoo/model/imagemodel.py</div><div id='n_file'> N File Name: trojanzoo/model/imagemodel.py</div><div id='m_start'> M Start Line: 206</div><div id='m_end'> M End Line: 222</div><div id='n_start'> N Start Line: 190</div><div id='n_end'> N End Line: 212</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        scores_of_corrupted_subjects = kg_embedding_model.predict(corrupted_subject_based)
+        scores_of_corrupted_objects = kg_embedding_model.predict(corrupted_object_based)
+
+        pos_triple<a id="change"> = </a><a id="change">np.array(</a>pos_triple<a id="change">)</a>
+        pos_triple = np.expand_dims(a=pos_triple, axis=0)
+        pos_triple = torch.tensor(pos_triple, dtype=torch.long, device=self.device)
+
+        score_of_positive<a id="change"> = </a>kg_embedding_model.predict(pos_triple)
+
+        scores_subject_based = np.append(arr=scores_of_corrupted_subjects, values=score_of_positive)
+        indice_of_pos_subject_based = scores_subject_based.size - 1</code></pre><h3>After Change</h3><pre><code class='java'>
+                                         np.greater(scores_of_corrupted_subjects, score_of_positive).sum()
+
+        rank_of_positive_object_based = scores_of_corrupted_objects.shape[0] - \
+                                        <a id="change">np.greater(scores_of_corrupted_objects, score_of_positive).sum()</a>
+
+        return (
+            rank_of_positive_subject_based + 1,
+            rank_of_positive_object_based + 1,</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/pykeen/pykeen/commit/d0af5f9478b457b561f9e88d53fbe9a18f1c2672#diff-a6024a855f8f100281bf731d896a62044c0b328f1fe84fdfa500129ccb1796efL135' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 34896048</div><div id='project'> Project Name: pykeen/pykeen</div><div id='commit'> Commit Name: d0af5f9478b457b561f9e88d53fbe9a18f1c2672</div><div id='time'> Time: 2019-05-15</div><div id='author'> Author: lvermue@users.noreply.github.com</div><div id='file'> File Name: src/poem/evaluation/ranked_based_evaluator.py</div><div id='m_class'> M Class Name: RankBasedEvaluator</div><div id='n_method'> N Class Name: RankBasedEvaluator</div><div id='m_method'> M Method Name: _compute_rank(6)</div><div id='n_method'> N Method Name: _compute_rank(6)</div><div id='m_parent_class'> M Parent Class: AbstractEvalutor</div><div id='n_parent_class'> N Parent Class: AbstractEvalutor</div><div id='m_file'> M File Name: src/poem/evaluation/ranked_based_evaluator.py</div><div id='n_file'> N File Name: src/poem/evaluation/ranked_based_evaluator.py</div><div id='m_start'> M Start Line: 146</div><div id='m_end'> M End Line: 176</div><div id='n_start'> N Start Line: 143</div><div id='n_end'> N End Line: 157</div><BR>

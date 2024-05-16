@@ -1,0 +1,41 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        self.optimizer.zero_grad()
+
+        &#47&#47 The actor ids of a given batch should be all the same. Thus we can debatch them.
+        actor_ids<a id="change"> = </a><a id="change">debatch_actor_ids(</a>actor_ids<a id="change">)</a>
+
+        &#47&#47 Convert only actions to torch, since observations are converted in policy.compute_substep_policy_output method
+        actions = convert_to_torch(actions, device=self.policy.device, cast=None, in_place=True)
+        total_loss = self.loss.calculate_loss(policy=self.policy, observations=observations,
+                                              actions=actions, actor_ids=actor_ids, events=self.imitation_events)
+        total_loss.backward()
+        self.optimizer.step()
+
+        &#47&#47 Report additional policy-related stats
+        for <a id="change">actor_id</a> in actor_ids:
+            l2_norm = sum([param.norm() for param in <a id="change">self.policy.network_for(actor_id</a><a id="change">)</a>.parameters()])
+            grad_norm = compute_gradient_norm(<a id="change">self.policy.network_for(actor_id</a><a id="change">)</a>.parameters())
+
+            self.imitation_events.policy_l2_norm(step_id=actor_id.step_key, agent_id=actor_id.agent_id,
+                                                 value=l2_norm.item())</code></pre><h3>After Change</h3><pre><code class='java'>
+        self.policy.train()
+        self.optimizer.zero_grad()
+
+        <a id="change">observation_dict</a><a id="change">, action_dict</a> = data
+        convert_to_torch(action_dict, device=self.policy.device, cast=None, in_place=True)
+
+        total_loss = self.loss.calculate_loss(policy=self.policy, observation_dict=observation_dict,
+                                              action_dict=action_dict, events=self.imitation_events)
+        total_loss.backward()
+        self.optimizer.step()
+
+        &#47&#47 Report additional policy-related stats
+        for <a id="change">policy_id</a> in <a id="change">observation_dict.keys()</a>:
+            l2_norm = sum([param.norm() for param in <a id="change">self.policy.networks[policy_id]</a>.parameters()])
+            grad_norm = compute_gradient_norm(<a id="change">self.policy.networks[policy_id]</a>.parameters())
+
+            self.imitation_events.policy_l2_norm(step_id=policy_id, value=l2_norm.item())
+            self.imitation_events.policy_grad_norm(step_id=policy_id, value=grad_norm)</code></pre>

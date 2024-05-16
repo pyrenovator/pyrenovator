@@ -1,0 +1,81 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+                    inputs = model.preprocess(batch_data, device)
+                    &#47&#47 scores: B x N x num_classes
+                    scores = <a id="change">model(</a>inputs<a id="change">)</a>
+
+                    labels = batch_data[1]
+                    scores, labels = self.filter_valid(scores, labels, device)
+
+                    logp<a id="change"> = </a>torch.distributions.utils.probs_to_logits(
+                        scores, is_binary=False)
+                    loss<a id="change"> = </a>criterion(logp, labels)
+                    acc = accuracy(scores, labels)
+                    iou = intersection_over_union(scores, labels)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            preprocess=model.preprocess,
+            transform=model.transform,
+            shuffle=True)
+        valid_loader<a id="change"> = </a>DataLoader(
+            train_split,
+            batch_size=cfg.val_batch_size,
+            shuffle=True,
+            collate_fn=batcher.collate_fn)
+
+        optimizer = torch.optim.Adam(model.parameters(), lr=cfg.adam_lr)
+        scheduler = torch.optim.lr_scheduler.ExponentialLR(
+            optimizer, cfg.scheduler_gamma)
+
+        self.optimizer, self.scheduler = optimizer, scheduler
+
+        first_epoch = self.load_ckpt(model.cfg.ckpt_path, True)
+
+        writer = SummaryWriter(join(cfg.logs_dir, cfg.train_sum_dir))
+
+        log.info("Started training")
+
+        for epoch in range(0, cfg.max_epoch + 1):
+
+            print(f&quot=== EPOCH {epoch:d}/{cfg.max_epoch:d} ===&quot)
+            model.train()
+            self.losses = []
+            self.accs = []
+            self.ious = []
+            step = 0
+
+            for idx, inputs in enumerate(tqdm(train_loader, 
+                                        desc=&quottraining&quot)):
+
+                results = model(inputs[&quotdata&quot])
+                loss, gt_labels, predict_scores = model.loss(
+                    Loss, results, inputs, device)
+
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+
+                acc = Metric.acc(predict_scores, gt_labels)
+                iou = Metric.iou(predict_scores, gt_labels)
+                self.losses.append(loss.cpu().item())
+                self.accs.append(acc)
+                self.ious.append(iou)
+
+                step = step + 1
+
+            scheduler.step()
+
+            &#47&#47 --------------------- validation
+            model.eval()
+            self.valid_losses = []
+            self.valid_accs = []
+            self.valid_ious = []
+            step = 0
+            with torch.no_grad():
+                for idx, inputs in <a id="change">enumerate(</a>tqdm(valid_loader, 
+                                            desc=&quotvalidation&quot)<a id="change">)</a>:
+                    results = model(inputs[&quotdata&quot])
+                    loss, gt_labels, predict_scores = model.loss(
+                        Loss, results, inputs, device)</code></pre>

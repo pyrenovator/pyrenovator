@@ -1,0 +1,60 @@
+<html><h3>Pattern ID :29234
+</h3><img src='85973502.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+    if level_low &lt; 0:
+        level_low = torch.ones([1]).to(torch.int8) * level_low
+        level_high = torch.ones(<a id="change">[</a>1<a id="change"></a>]).to(torch.int8)<a id="change"> * </a>level_high
+        level_low = level_low.to(y_zero_point.device)
+        level_high = level_high.to(y_zero_point.device)
+        y_zero_point = min(max(level_low, (y_zero_point.to(torch.int8))), level_high)</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    type_ = torch.int8 if level_low &lt; 0 else torch.uint8
+    level_low *= torch.ones_like(y_zero_point).to(type_)
+    level_high *= <a id="change">torch.ones_like(</a>y_zero_point<a id="change">)</a>.to(type_)
+    level_low = level_low.to(y_zero_point.device)
+    level_high = level_high.to(y_zero_point.device)
+    y_zero_point = torch.min(torch.max(level_low, y_zero_point.to(type_)), level_high)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/openvinotoolkit/nncf/commit/23610df53be6cb3c36a8f5ec6aaf7ab8f4fc757e#diff-79eba4eaba4a6497a26f88dd22fb2c4ca247d8745f0763dbe56801ee3188ce1aL153' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 85973502</div><div id='project'> Project Name: openvinotoolkit/nncf</div><div id='commit'> Commit Name: 23610df53be6cb3c36a8f5ec6aaf7ab8f4fc757e</div><div id='time'> Time: 2020-11-06</div><div id='author'> Author: aleksei.kashapov@intel.com</div><div id='file'> File Name: nncf/quantization/quantize_functions.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: get_scale_zp_from_input_low_input_high(4)</div><div id='n_method'> N Method Name: get_scale_zp_from_input_low_input_high(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: nncf/quantization/quantize_functions.py</div><div id='n_file'> N File Name: nncf/quantization/quantize_functions.py</div><div id='m_start'> M Start Line: 154</div><div id='m_end'> M End Line: 169</div><div id='n_start'> N Start Line: 153</div><div id='n_end'> N End Line: 164</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+def mask_image(x, config):
+    height, width, _ = config[&quotimage_shape&quot]
+    mask_all = <a id="change">[]</a>
+    for i in range(x.size(0)):
+        mask = Masks.get_ff_mask(height, width)
+        mask_all.append(mask)
+    mask = torch.from_numpy(np.asarray(mask_all)).unsqueeze(1).float()
+    ones = torch.ones(x.size(0), 1, x.size(2), x.size(3))
+    mask = ones<a id="change"> * </a>mask
+    if x.is_cuda:
+        mask = mask.cuda()
+    result = x * (1. - mask)</code></pre><h3>After Change</h3><pre><code class='java'>
+def mask_image(x, config):
+    height, width, _ = config[&quotimage_shape&quot]
+    mask = torch.ones_like(x)
+    temp = <a id="change">torch.ones_like(</a>x<a id="change">)</a>
+    for i in range(x.size(0)):
+        mask_temp = Masks.get_ff_mask(height, width)
+        mask[i,:,:,:] = temp[i,:,:,:] * mask_temp
+&#47&#47         mask_all.append(mask)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/sayednadim/global-and-local-attention-based-free-form-image-inpainting/commit/f42c7e888ac77a88b8ece8c9bf9adabba796d7ca#diff-4a9d05cc3eadd7aa0b347854fe63c55a626198aae56f6d3482457196186e5d60L38' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 85973498</div><div id='project'> Project Name: sayednadim/global-and-local-attention-based-free-form-image-inpainting</div><div id='commit'> Commit Name: f42c7e888ac77a88b8ece8c9bf9adabba796d7ca</div><div id='time'> Time: 2020-08-05</div><div id='author'> Author: smnadimuddin@gmail.com</div><div id='file'> File Name: model/mask.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: mask_image(2)</div><div id='n_method'> N Method Name: mask_image(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: model/mask.py</div><div id='n_file'> N File Name: model/mask.py</div><div id='m_start'> M Start Line: 40</div><div id='m_end'> M End Line: 46</div><div id='n_start'> N Start Line: 40</div><div id='n_end'> N End Line: 44</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    def reprojection_error(self, objPts_w, imgPts, Rt):
+        P = np.matmul(self.camMat[:, :3], Rt)
+        objPts_w_ex = np.concatenate((objPts_w.reshape((self.n, 3)), np.array(<a id="change">[</a>np.ones((self.n))<a id="change"></a>]).T), axis=1)
+
+        imgRep = np.matmul(P, objPts_w_ex.T).T
+        imgRep[:, 0] = imgRep[:, 0] / imgRep[:, 2]
+        imgRep[:, 1] = imgRep[:, 1] / imgRep[:, 2]
+        error = np.sqrt((imgPts[:, 0] - imgRep[:, 0].reshape((self.n, 1))) ** 2 + (
+                    imgPts[:, 1] - imgRep[:, 1].reshape((self.n, 1)))<a id="change"> ** </a>2)
+        error = np.sum(error, axis=0) / self.n
+
+        return error[0]</code></pre><h3>After Change</h3><pre><code class='java'>
+        
+        P = torch.bmm(camMat[:, :, :3], Rt)
+        &#47&#47 concat 1 to the last column of objPts_w
+        objPts_w_ex = torch.cat((objPts_w, <a id="change">torch.ones_like(</a>objPts_w[:, :, :1]<a id="change">)</a>), dim=-1)
+        &#47&#47 Calculate the image points
+        imgRep = torch.bmm(P, objPts_w_ex.transpose(dim0=-1, dim1=-2)).transpose(dim0=-1, dim1=-2)
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/pypose/pypose/commit/f93c59c3ad352fe90aa3072311a7ca67fa442243#diff-052b8dfcb4f5d16ac2df9676fd039e877588b354a969db2f245a098529fc6d31L455' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 85973512</div><div id='project'> Project Name: pypose/pypose</div><div id='commit'> Commit Name: f93c59c3ad352fe90aa3072311a7ca67fa442243</div><div id='time'> Time: 2023-02-25</div><div id='author'> Author: zitongz3@illinois.edu</div><div id='file'> File Name: pypose/module/pnp.py</div><div id='m_class'> M Class Name: EPnP</div><div id='n_method'> N Class Name: EPnP</div><div id='m_method'> M Method Name: reprojection_error(5)</div><div id='n_method'> N Method Name: reprojection_error(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: pypose/module/pnp.py</div><div id='n_file'> N File Name: pypose/module/pnp.py</div><div id='m_start'> M Start Line: 456</div><div id='m_end'> M End Line: 466</div><div id='n_start'> N Start Line: 469</div><div id='n_end'> N End Line: 492</div><BR>

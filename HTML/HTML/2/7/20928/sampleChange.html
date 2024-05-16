@@ -1,0 +1,25 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+def cross_entropy_loss(ctx: Context, src: jnp.ndarray, tgt: jnp.ndarray) -&gt; typing.Tuple[jnp.ndarray, jnp.ndarray]:
+    src = promote_to(src, jnp.float32)
+    max_logit<a id="change"> = </a>lax.stop_gradient(src).max(-1, keepdims=True)
+    log_z<a id="change"> = </a>lax.log(lax.exp(src - max_logit).sum(-1, keepdims=True)) + max_logit
+    loss<a id="change"> = </a>log_z - jnp.take_along_axis(src, tgt.reshape(*tgt.shape, 1), -1)
+    loss = loss.mean()
+    accuracy<a id="change"> = </a><a id="change">(jnp.argmax(src, 2) == tgt).astype(</a>jnp.float32<a id="change">)</a>.mean()
+    if ctx.training.z_loss:
+        loss += z_loss(ctx, log_z)
+    <a id="change">return </a>loss, accuracy
+
+
+def revnet_out(src: typing.Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray]) -&gt; jnp.ndarray:</code></pre><h3>After Change</h3><pre><code class='java'>
+        accuracy = lax.psum(accuracy.mean() / ctx.dims.sizes.heads, ParallelAxes.model)
+        return (loss, accuracy), _grad
+
+    <a id="change">return </a>_fn(src, tgt)
+
+
+def revnet_out(src: typing.Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray]) -&gt; jnp.ndarray:</code></pre>

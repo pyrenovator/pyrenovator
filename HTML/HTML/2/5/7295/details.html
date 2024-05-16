@@ -1,0 +1,88 @@
+<html><h3>Pattern ID :7295
+</h3><img src='24352562.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        mask = length_to_mask(
+            length * targets.shape[1], max_len=targets.shape[1],
+        )
+        <a id="change">if len(targets.shape) == 3</a>:
+            mask<a id="change"> = </a>mask.unsqueeze(2).repeat(1, 1, targets.shape[2])
+
+    &#47&#47 Compute, then reduce loss
+    loss = loss_fn(predictions, targets) * mask</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 Handle any dimensionality of input
+        while len(length_mask.shape) &lt; len(mask.shape):
+            length_mask = length_mask.unsqueeze(-1)
+        length_mask<a id="change"> = </a><a id="change">length_mask.type(</a>mask.dtype<a id="change">)</a>
+        mask *= length_mask
+
+    &#47&#47 Compute, then reduce loss
+    loss = loss_fn(predictions, targets) * mask</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 5</div><BR><div id='size'>Non-data size: 5</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/speechbrain/speechbrain/commit/f9198e1170fc6123693643401693dc6da9308f3f#diff-dacadc87130a104a9b34b5d369c53e34f52662470ff3e0d91783d3ede95fee82L619' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 24352562</div><div id='project'> Project Name: speechbrain/speechbrain</div><div id='commit'> Commit Name: f9198e1170fc6123693643401693dc6da9308f3f</div><div id='time'> Time: 2020-11-30</div><div id='author'> Author: plantinga.peter@protonmail.com</div><div id='file'> File Name: speechbrain/nnet/losses.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: compute_masked_loss(6)</div><div id='n_method'> N Method Name: compute_masked_loss(6)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: speechbrain/nnet/losses.py</div><div id='n_file'> N File Name: speechbrain/nnet/losses.py</div><div id='m_start'> M Start Line: 621</div><div id='m_end'> M End Line: 628</div><div id='n_start'> N Start Line: 619</div><div id='n_end'> N End Line: 629</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    [1] Lin et al. (2017). Focal Loss for Dense Object Detection. ICCV 2017. 
+    
+    log_prob = torch.nn.functional.log_softmax(logits, dim=-1)
+    <a id="change">if weight is not None</a>:
+        log_prob<a id="change"> = </a>log_prob * weight
+    
+    target_wo_ignore_index = target.masked_fill(target==ignore_index, 0)
+    log_prob_t = log_prob.gather(dim=1, index=target_wo_ignore_index.unsqueeze(-1)).squeeze(-1)</code></pre><h3>After Change</h3><pre><code class='java'>
+    [1] Lin et al. (2017). Focal Loss for Dense Object Detection. ICCV 2017. 
+    
+    if weight is None:
+        sample_weight<a id="change"> = </a><a id="change">(target != ignore_index).type(</a>torch.float<a id="change">)</a>
+    else:
+        sample_weight = weight.gather(dim=0, index=target) * (target != ignore_index).type(torch.float)
+    
+    log_prob = torch.nn.functional.log_softmax(logits, dim=-1)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/syuoni/eznlp/commit/6c21298e53d2743f23f8ce908349372fe4e9c1e8#diff-5e31e2c95d5c4030cb129eee8bfb01162b1fbc8a23a944182cc0c6b38d64aaf5L187' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 24352561</div><div id='project'> Project Name: syuoni/eznlp</div><div id='commit'> Commit Name: 6c21298e53d2743f23f8ce908349372fe4e9c1e8</div><div id='time'> Time: 2021-05-10</div><div id='author'> Author: enwei.zhu@outlook.com</div><div id='file'> File Name: eznlp/nn/functional.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: focal_loss(6)</div><div id='n_method'> N Method Name: focal_loss(6)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: eznlp/nn/functional.py</div><div id='n_file'> N File Name: eznlp/nn/functional.py</div><div id='m_start'> M Start Line: 206</div><div id='m_end'> M End Line: 217</div><div id='n_start'> N Start Line: 218</div><div id='n_end'> N End Line: 230</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        if weights is not None:
+            curr_ce_loss = curr_ce_loss * weights[i]
+        acc_ce_loss += curr_ce_loss
+    <a id="change">if weights is None</a>:
+        acc_ce_loss<a id="change"> /= </a>num_class
+    return acc_ce_loss
+
+</code></pre><h3>After Change</h3><pre><code class='java'>
+&#47&#47 This is wrong, that is not how categorical cross entropy works
+def CCE(out, target, params):
+    acc_ce_loss = 0
+    target<a id="change"> = </a><a id="change">one_hot(target, params["model"]["class_list"]).type(</a>out.dtype<a id="change">)</a>
+    for i in range(0, len(params["model"]["class_list"])):
+        curr_ce_loss = CE(out[:, i, ...], target[:, i, ...])
+        if params["weights"] is not None:
+            curr_ce_loss = curr_ce_loss * params["weights"][i]</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/cbica/gandlf/commit/afa5adced38f003b1b6d9a8b0651ec19fe04e310#diff-5dc7e5a5f7ba7e6018092d4f53bfc69ee41df6108245bb7a7796f3a3d6836695L114' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 24352560</div><div id='project'> Project Name: cbica/gandlf</div><div id='commit'> Commit Name: afa5adced38f003b1b6d9a8b0651ec19fe04e310</div><div id='time'> Time: 2021-06-04</div><div id='author'> Author: sarthak.pati@hotmail.com</div><div id='file'> File Name: GANDLF/losses.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: CCE(3)</div><div id='n_method'> N Method Name: CCE(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: GANDLF/losses.py</div><div id='n_file'> N File Name: GANDLF/losses.py</div><div id='m_start'> M Start Line: 114</div><div id='m_end'> M End Line: 123</div><div id='n_start'> N Start Line: 116</div><div id='n_end'> N End Line: 125</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                obj_target = fg_mask.unsqueeze(-1)
+                reg_target = gt_bboxes_per_image[matched_gt_inds]
+
+                <a id="change">if self.reid_dim &gt; 0</a>:
+                    reid_target<a id="change"> = </a>gt_tracking_id[fg_mask]
+
+                if self.use_l1:
+                    l1_target = self.get_l1_target(</code></pre><h3>After Change</h3><pre><code class='java'>
+        if self.use_l1:
+            l1_targets = torch.cat(l1_targets, 0)
+        if self.reid_dim &gt; 0:
+            reid_targets = <a id="change">torch.cat(reid_targets, 0).type(</a>torch.int64<a id="change">)</a>
+
+        num_fg = max(num_fg, 1)
+        loss_iou = (self.iou_loss(bbox_preds.view(-1, 4)[fg_masks], reg_targets)).sum() / num_fg
+        loss_obj = (self.bcewithlog_loss(obj_preds.view(-1, 1), obj_targets)).sum() / num_fg
+        loss_cls = (self.bcewithlog_loss(cls_preds.view(-1, self.num_classes)[fg_masks], cls_targets)).sum() / num_fg
+        loss_l1 = (self.l1_loss(origin_preds.view(-1, 4)[fg_masks], l1_targets)).sum() / num_fg if self.use_l1 else 0.
+
+        reid_loss = 0.
+        if self.reid_dim &gt; 0:
+            reid_feat = reid_preds.view(-1, self.reid_dim)[fg_masks]
+            cls_label_targets = cls_targets.max(1)[1]
+            for cls in range(self.num_classes):
+                inds = torch.where(cls == cls_label_targets)
+                if inds[0].shape[0] == 0:
+                    continue
+                this_cls_tracking_id = reid_targets[inds]
+                this_cls_reid_feat = self.emb_scales[cls] * F.normalize(reid_feat[inds])
+
+                reid_output = self.classifiers[cls](this_cls_reid_feat)
+                reid_loss<a id="change"> += </a>self.reid_loss(reid_output, this_cls_tracking_id)
+
+        reg_weight = 5.0
+        loss = reg_weight * loss_iou + loss_obj + loss_cls + loss_l1 + reid_loss</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/zhangming8/yolox-pytorch/commit/e162fc0465b1f5d8b3211cdc81fd8eabb6dd55c7#diff-180d1e08e835c9b52081c2fe023d6b978026584c661357da6f5f7bcab9805901L85' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 24352566</div><div id='project'> Project Name: zhangming8/yolox-pytorch</div><div id='commit'> Commit Name: e162fc0465b1f5d8b3211cdc81fd8eabb6dd55c7</div><div id='time'> Time: 2021-07-26</div><div id='author'> Author: zhangming8@github.com</div><div id='file'> File Name: models/losses/yolox_loss.py</div><div id='m_class'> M Class Name: YOLOXLoss</div><div id='n_method'> N Class Name: YOLOXLoss</div><div id='m_method'> M Method Name: get_losses(9)</div><div id='n_method'> N Method Name: get_losses(9)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: models/losses/yolox_loss.py</div><div id='n_file'> N File Name: models/losses/yolox_loss.py</div><div id='m_start'> M Start Line: 94</div><div id='m_end'> M End Line: 206</div><div id='n_start'> N Start Line: 105</div><div id='n_end'> N End Line: 224</div><BR>

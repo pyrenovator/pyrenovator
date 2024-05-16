@@ -1,0 +1,26 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+        &#47&#47 Cast inputs & grad outputs to backend dtype
+        inputs = inputs.to(requested_backends[0].dtype)
+        grads = <a id="change">grads.to(</a>requested_backends[-1].dtype<a id="change">)</a>
+
+        &#47&#47 Run a forward chain to collect intermediate inputs
+        &#47&#47 Note that we do not forward for the last module since we do not need its output
+        inter_inputs = [inputs]</code></pre><h3>After Change</h3><pre><code class='java'>
+        requested_uids = self._check_uids(request.uid)
+        requested_backends = tuple(self.module_backends[uid] for uid in requested_uids)
+
+        grads = <a id="change">await </a>_rpc_backward(*flat_tensors, requested_backends=requested_backends)
+
+        &#47&#47 Modify grad_inputs_schema to support grad_prompts
+        assert len(requested_backends[0].args_schema) == 1 and len(grads) in (1, 2)  &#47&#47 TODO generalize
+
+        grad_inputs_schema_with_prompts = (
+            requested_backends[0].args_schema * len(grads)<a id="change">,
+            requested_backends[0].kwargs_schema</a>,
+        )  &#47&#47 TODO generalize
+
+        &#47&#47 Serialize the overall grad_input and respond</code></pre>

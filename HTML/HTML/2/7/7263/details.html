@@ -1,0 +1,194 @@
+<html><h3>Pattern ID :7263
+</h3><img src='24306546.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            preprocessed_deprioritize_text = embedding_model.preprocess(deprioritize_text)
+            embedding_deprioritize = embedding_model.embed(preprocessed_deprioritize_text)
+
+    <a id="change">with timer</a><a id="change">(&quotsentences_conditioning&quot):
+        </a>restricted_sentence_ids = filter_sentences(connection,
+                                                   has_journal=has_journal,
+                                                   date_range=date_range,
+                                                   exclusion_text=exclusion_text)</code></pre><h3>After Change</h3><pre><code class='java'>
+        &quotStronger&quot: (0.5, 0.7),
+    }
+    &#47&#47 now: maximize L = a1 * cos(x, query) - a2 * cos(x, exclusions)
+    <a id="change">logger.info("Combining query and deprioritizations"</a><a id="change">)</a>
+    alpha_1, alpha_2 = deprioritizations[deprioritize_strength]
+    similarities = alpha_1 * similarities_query - alpha_2 * similarities_deprio
+
+    with timer(&quotsorting&quot):
+        <a id="change">logger.info(f"Sorting the similarities and getting the top {k} results"</a><a id="change">)</a>
+        top_indices = np.argsort(-similarities)[:k]
+
+    logger.info("run_search finished")
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/bluebrain/search/commit/6dbc2fe8f01adb39650da97fb8473111884cd0c1#diff-bff7455e4f1c8e89955ba1e3ac3e8ce00b65c0438cae04fa236438905afa05b0L170' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 24306546</div><div id='project'> Project Name: bluebrain/search</div><div id='commit'> Commit Name: 6dbc2fe8f01adb39650da97fb8473111884cd0c1</div><div id='time'> Time: 2020-08-04</div><div id='author'> Author: francesco.casalegno@gmail.com</div><div id='file'> File Name: src/bbsearch/search.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: run_search(12)</div><div id='n_method'> N Method Name: run_search(12)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/bbsearch/search.py</div><div id='n_file'> N File Name: src/bbsearch/search.py</div><div id='m_start'> M Start Line: 210</div><div id='m_end'> M End Line: 221</div><div id='n_start'> N Start Line: 170</div><div id='n_end'> N End Line: 241</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            preprocessed_deprioritize_text = embedding_model.preprocess(deprioritize_text)
+            embedding_deprioritize = embedding_model.embed(preprocessed_deprioritize_text)
+
+    <a id="change">with timer</a><a id="change">(&quotsentences_conditioning&quot):
+        </a>restricted_sentence_ids = filter_sentences(connection,
+                                                   has_journal=has_journal,
+                                                   date_range=date_range,
+                                                   exclusion_text=exclusion_text)</code></pre><h3>After Change</h3><pre><code class='java'>
+        - &quotdeprioritize_embed_time&quot - how much time it took to embed the `deprioritize_text` in seconds
+        -
+    
+    <a id="change">logger.info("Starting run_search"</a><a id="change">)</a>
+
+    &#47&#47 Replace empty `deprioritize_text` by None
+    if deprioritize_text is not None and len(deprioritize_text.strip()) == 0:
+        deprioritize_text = None
+
+    timer = Timer(verbose=verbose)
+
+    with timer(&quotquery_embed&quot):
+        logger.info("Embedding the query text")
+        preprocessed_query_text = embedding_model.preprocess(query_text)
+        embedding_query = embedding_model.embed(preprocessed_query_text)
+
+    if deprioritize_text is not None:
+        with timer(&quotdeprioritize_embed&quot):
+            logger.info("Embedding the deprioritization text")
+            preprocessed_deprioritize_text = embedding_model.preprocess(deprioritize_text)
+            embedding_deprioritize = embedding_model.embed(preprocessed_deprioritize_text)
+
+    with timer(&quotsentences_filtering&quot):
+        logger.info("Applying sentence filtering")
+        restricted_sentence_ids = (
+            SentenceFilter(connection)
+            .only_with_journal(has_journal)
+            .restrict_sentences_ids_to(indices)
+            .date_range(date_range)
+            .exclude_strings(exclusion_text.split())
+            .run()
+        )
+
+    with timer(&quotconsidered_embeddings_lookup&quot):
+        logger.info("Constructing mask based on indices and sentence filtering")
+        mask = np.isin(indices, restricted_sentence_ids)
+
+    logger.info("Applying the mask")
+    embeddings_corpus = precomputed_embeddings[mask]
+    sentence_ids = indices[mask]
+
+    if len(sentence_ids) == 0:
+        return np.array([]), np.array([]), timer.stats
+
+    &#47&#47 Compute similarities
+    with timer(&quotquery_similarity&quot):
+        logger.info("Computing cosine similarities for the query text")
+        similarities_query = cosine_similarity(X=embedding_query[None, :],
+                                               Y=embeddings_corpus).squeeze()
+
+    if deprioritize_text is not None:
+        with timer(&quotdeprioritize_similarity&quot):
+            logger.info("Computing cosine similarity for the deprioritization text")
+            similarities_deprio = cosine_similarity(X=embedding_deprioritize[None, :],
+                                                    Y=embeddings_corpus).squeeze()
+    else:
+        similarities_deprio = np.zeros_like(similarities_query)
+
+    deprioritizations = {
+        &quotNone&quot: (1, 0),
+        &quotWeak&quot: (0.9, 0.1),
+        &quotMild&quot: (0.8, 0.3),
+        &quotStrong&quot: (0.5, 0.5),
+        &quotStronger&quot: (0.5, 0.7),
+    }
+    &#47&#47 now: maximize L = a1 * cos(x, query) - a2 * cos(x, exclusions)
+    logger.info("Combining query and deprioritizations")
+    alpha_1, alpha_2 = deprioritizations[deprioritize_strength]
+    similarities = alpha_1 * similarities_query - alpha_2 * similarities_deprio
+
+    with timer(&quotsorting&quot):
+        logger.info(f"Sorting the similarities and getting the top {k} results")
+        top_indices = np.argsort(-similarities)[:k]
+
+    <a id="change">logger.info("run_search finished"</a><a id="change">)</a>
+
+    return sentence_ids[top_indices], similarities[top_indices], timer.stats
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/bluebrain/search/commit/6dbc2fe8f01adb39650da97fb8473111884cd0c1#diff-bff7455e4f1c8e89955ba1e3ac3e8ce00b65c0438cae04fa236438905afa05b0L145' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 24306547</div><div id='project'> Project Name: bluebrain/search</div><div id='commit'> Commit Name: 6dbc2fe8f01adb39650da97fb8473111884cd0c1</div><div id='time'> Time: 2020-08-04</div><div id='author'> Author: francesco.casalegno@gmail.com</div><div id='file'> File Name: src/bbsearch/search.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: run_search(12)</div><div id='n_method'> N Method Name: run_search(12)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/bbsearch/search.py</div><div id='n_file'> N File Name: src/bbsearch/search.py</div><div id='m_start'> M Start Line: 210</div><div id='m_end'> M End Line: 221</div><div id='n_start'> N Start Line: 170</div><div id='n_end'> N End Line: 241</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    logger.info(f"training batches: {len(train_dataloader)}, val batches: {len(val_dataloader)}, "
+                f"test batches: {len(test_dataloader)}", ranks=[0])
+
+    <a id="change">with ColoInitContext</a><a id="change">(device=get_current_device()):
+        </a>model = DLRM(args.num_embeddings_per_feature, args.embedding_dim, len(DEFAULT_CAT_NAMES),
+                     len(DEFAULT_INT_NAMES), list(map(int, args.dense_arch_layer_sizes.split(","))),
+                     list(map(int, args.over_arch_layer_sizes.split(","))))
+    logger.info(f"{get_mem_info(&quotAfter model Init:  &quot)}")</code></pre><h3>After Change</h3><pre><code class='java'>
+    colossalai.logging.disable_existing_loggers()
+    colossalai.launch_from_torch(config=args.config_path, verbose=False)
+
+    <a id="change">logger</a> = colossalai.logging.get_dist_logger()
+    logger.info(f"launch rank {gpc.get_global_rank()}, Done, "
+                f"DP size: {gpc.get_world_size(ParallelMode.DATA)}, "
+                f"MP size: {gpc.get_world_size(ParallelMode.MODEL)}")
+
+    train_dataloader = get_dataloader(args, &quottrain&quot)
+    val_dataloader = get_dataloader(args, "val")
+    test_dataloader = get_dataloader(args, "test")
+
+    logger.info(f"training batches: {len(train_dataloader)}, val batches: {len(val_dataloader)}, "
+                f"test batches: {len(test_dataloader)}", ranks=[0])
+
+    device = get_current_device()
+    sparse_device = torch.device(&quotcpu&quot) if args.use_cpu else device
+    model = DLRM(args.num_embeddings_per_feature, args.embedding_dim, len(DEFAULT_CAT_NAMES),
+                 len(DEFAULT_INT_NAMES), list(map(int, args.dense_arch_layer_sizes.split(","))),
+                 list(map(int, args.over_arch_layer_sizes.split(","))), sparse_device, device)
+    &#47&#47 with ColoInitContext(device=get_current_device()):
+    &#47&#47     model = DLRM(args.num_embeddings_per_feature, args.embedding_dim, len(DEFAULT_CAT_NAMES),
+    &#47&#47                  len(DEFAULT_INT_NAMES), list(map(int, args.dense_arch_layer_sizes.split(","))),
+    &#47&#47                  list(map(int, args.over_arch_layer_sizes.split(","))))
+    logger.info(f"{get_mem_info(&quotAfter model Init:  &quot)}", ranks=[0])
+
+    &#47&#47 spec = TensorSpec(
+    &#47&#47     distspec.shard(gpc.get_group(ParallelMode.PARALLEL_1D), [0], [gpc.get_world_size(ParallelMode.PARALLEL_1D)]),
+    &#47&#47     ParallelAction(ComputePattern.TP1D))
+    &#47&#47 with DistSpecManager.no_grad():
+    &#47&#47     &#47&#47 Here only sets embedding to be model parallelized to align with torchrec
+    &#47&#47     model.sparse_arch.embed.weight.set_spec(spec)
+    &#47&#47 logger.info(f"{get_mem_info(&quotAfter model spec:  &quot)}")
+
+    &#47&#47 TODO: check ColoOptimizer
+    optimizer = ColossalaiOptimizer(torch.optim.SGD(model.parameters(), lr=args.learning_rate))
+    criterion = torch.nn.BCEWithLogitsLoss()
+
+    &#47&#47 engine, _, _, _ = colossalai.initialize(model, optimizer, criterion)
+    model = DDP(model,
+                process_group=gpc.get_group(ParallelMode.DATA),
+                device_ids=None,
+                find_unused_parameters=True,
+                broadcast_buffers=False)
+    engine = Engine(model, optimizer, criterion)
+
+    <a id="change">logger.info(f"{get_mem_info(&quotAfter colossalai init:  &quot)}"</a><a id="change">, ranks=[0])</a>
+    for name, param in model.module.named_parameters():
+        <a id="change">logger.info(f"{name} : shape {param.shape}, device {param.data.device}"</a><a id="change">, ranks=[0])</a>
+
+    &#47&#47 Sanity Check
+    &#47&#47 rank = gpc.get_local_rank(ParallelMode.DATA)
+    &#47&#47 &#47&#47 offsets = torch.tensor([0, *np.cumsum(args.num_embeddings_per_feature)[:-1]]).unsqueeze(0)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/hpcaitech/freqcacheembedding/commit/a61a1ad5740991f47e8056702337b6f2915faddc#diff-8810ccd09665ac488f95fb8235326b784f45c9f2e09556f975cf1f1092b115f4L294' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 24306528</div><div id='project'> Project Name: hpcaitech/freqcacheembedding</div><div id='commit'> Commit Name: a61a1ad5740991f47e8056702337b6f2915faddc</div><div id='time'> Time: 2022-06-01</div><div id='author'> Author: zhangg1998@outlook.com</div><div id='file'> File Name: colossal_main.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(0)</div><div id='n_method'> N Method Name: main(0)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: colossal_main.py</div><div id='n_file'> N File Name: colossal_main.py</div><div id='m_start'> M Start Line: 312</div><div id='m_end'> M End Line: 329</div><div id='n_start'> N Start Line: 318</div><div id='n_end'> N End Line: 398</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        output_examples.split_names = artifact_utils.encode_split_names(
+            sorted(example_uris.keys()))
+
+        <a id="change">with self</a><a id="change">._make_beam_pipeline() as pipeline:
+            </a>for split, example_uri in example_uris.items():
+                output_examples_split_uri = artifact_utils.get_split_uri(
+                    [output_examples], split)
+                inferrer_step.set_output_uri(output_examples_split_uri)</code></pre><h3>After Change</h3><pre><code class='java'>
+            model_blessing = artifact_utils.get_single_instance(
+                input_dict[&quotmodel_blessing&quot])
+            if not model_utils.is_model_blessed(model_blessing):
+                <a id="change">logging.info(&quotModel on %s was not blessed&quot</a>, model_blessing.uri<a id="change">)</a>
+                return
+        else:
+            <a id="change">logging.info(
+                &quotModel blessing is not provided, exported model will be &quot
+                &quotused.&quot</a><a id="change">)</a>
+
+        model = artifact_utils.get_single_instance(
+            input_dict[MODEL])
+        model_path = path_utils.serving_model_path(model.uri)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/maiot-io/zenml/commit/1f86eb5ae94e0dc71caf2edadd7a41f84a41fa35#diff-549acfa988fe6f9d971198bf183f103ffd348f89f78ce1e80ac7b8d886933c72L40' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 24306487</div><div id='project'> Project Name: maiot-io/zenml</div><div id='commit'> Commit Name: 1f86eb5ae94e0dc71caf2edadd7a41f84a41fa35</div><div id='time'> Time: 2021-03-18</div><div id='author'> Author: bariscandurak@hotmail.com</div><div id='file'> File Name: zenml/components/bulk_inferrer/executor.py</div><div id='m_class'> M Class Name: BulkInferrerExecutor</div><div id='n_method'> N Class Name: BulkInferrerExecutor</div><div id='m_method'> M Method Name: Do(4)</div><div id='n_method'> N Method Name: Do(4)</div><div id='m_parent_class'> M Parent Class: base_executor.BaseExecutor</div><div id='n_parent_class'> N Parent Class: base_executor.BaseExecutor</div><div id='m_file'> M File Name: zenml/components/bulk_inferrer/executor.py</div><div id='n_file'> N File Name: zenml/components/bulk_inferrer/executor.py</div><div id='m_start'> M Start Line: 49</div><div id='m_end'> M End Line: 101</div><div id='n_start'> N Start Line: 63</div><div id='n_end'> N End Line: 111</div><BR>

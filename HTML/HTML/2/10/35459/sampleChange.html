@@ -1,0 +1,25 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        :return: quantized dequantized tensor
+        
+        quantized_tensors = []
+        <a id="change">for </a>i, <a id="change">minimum</a> in <a id="change">enumerate(</a>encoding_min<a id="change">):
+            </a>tensor_slice = tensor_to_quantize_dequantize.select(channel_axis, i).contiguous(memory_format=torch.contiguous_format)
+            tensor = torch.clamp(tensor_slice, minimum.item(), encoding_max[i].item())
+            tensor = torch.round(tensor / delta[i].item()) + offset[i].item()
+            tensor<a id="change"> = </a>(tensor - offset[i].item()) * delta[i].item()
+            quantized_tensors.append(tensor)
+        quantized_tensor = torch.stack(tuple(quantized_tensors), dim=channel_axis)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        :param channel_axis: Axis along which per channel quantize dequantize is performed
+        :return: quantized dequantized tensor
+        
+        <a id="change">if len(tensor_to_quantize_dequantize.shape) &gt; 1</a>:
+            encoding_min<a id="change"> = </a>grad_fn.broadcast_to_tensor(tensor_to_quantize_dequantize, encoding_min, channel_axis)
+            encoding_max<a id="change"> = </a>grad_fn.broadcast_to_tensor(tensor_to_quantize_dequantize, encoding_max, channel_axis)
+            delta<a id="change"> = </a>grad_fn.broadcast_to_tensor(tensor_to_quantize_dequantize, delta, channel_axis)
+            offset = grad_fn.broadcast_to_tensor(tensor_to_quantize_dequantize, offset, channel_axis)
+
+        tensor = torch.clamp(tensor_to_quantize_dequantize, encoding_min, encoding_max)</code></pre>

@@ -1,0 +1,281 @@
+<html><h3>Pattern ID :14191
+</h3><img src='47241232.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        log_writer = LogWriter(log_writer_path)
+
+    WEIGHTS_NAME = "model_state.pdparams"
+    OPTIMIZER_NAME = <a id="change">"model_state_mp_{:0&gt;2d}_sharding_{:0&gt;2d}.pdopt".format(mp_rank</a>, sharding_rank<a id="change">)</a>
+
+    <a id="change">if args.mp_degree &gt; 1</a>:
+        WEIGHTS_NAME<a id="change"> = </a><a id="change">"model_state_mp_{:0&gt;2d}.pdparams".format(mp_rank</a><a id="change">)</a>
+        GPTForSequenceClassification.resource_files_names = {"model_state": WEIGHTS_NAME}
+
+    model = GPTForSequenceClassification.from_pretrained(
+        args.model_name_or_path,</code></pre><h3>After Change</h3><pre><code class='java'>
+    WEIGHTS_NAME = "model_state.pdparams"
+    OPTIMIZER_NAME = "optimizer.pdopt"
+
+    <a id="change">if args.mp_degree &gt; 1 or args.sharding_degree &gt; 1</a>:
+        WEIGHTS_NAME<a id="change"> = </a><a id="change">_add_variant(</a>WEIGHTS_NAME, <a id="change">weight_name_suffix()</a><a id="change">)</a>
+        OPTIMIZER_NAME<a id="change"> = </a><a id="change">_add_variant(</a>OPTIMIZER_NAME, <a id="change">optimizer_name_suffix())</a>
+        &#47&#47 GPTForSequenceClassification using old style save_pretrained
+        &#47&#47 remove if CLASS using save_pretrained_v2
+        <a id="change">logger.info(f"{WEIGHTS_NAME}, {OPTIMIZER_NAME}, {optimizer_name_suffix()}"</a><a id="change">)</a>
+        <a id="change">if </a><a id="change">not GPTForSequenceClassification.constructed_from_pretrained_config()</a>:
+            GPTForSequenceClassification.resource_files_names = {"model_state": WEIGHTS_NAME}
+
+    model = GPTForSequenceClassification.from_pretrained(</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 19</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/paddlepaddle/paddlenlp/commit/218c7cbfe8f2089ad9b594dfe82f914a42b7e3d9#diff-a8fd6d6c07c957f737965208d017f120e9791f5ca24f265be30adbe3b5538b39L196' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 47241232</div><div id='project'> Project Name: paddlepaddle/paddlenlp</div><div id='commit'> Commit Name: 218c7cbfe8f2089ad9b594dfe82f914a42b7e3d9</div><div id='time'> Time: 2023-03-29</div><div id='author'> Author: zhonghui.net@gmail.com</div><div id='file'> File Name: examples/language_model/gpt-3/dygraph/run_glue_mp.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: do_train(1)</div><div id='n_method'> N Method Name: do_train(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples/language_model/gpt-3/dygraph/run_glue_mp.py</div><div id='n_file'> N File Name: examples/language_model/gpt-3/dygraph/run_glue_mp.py</div><div id='m_start'> M Start Line: 196</div><div id='m_end'> M End Line: 294</div><div id='n_start'> N Start Line: 290</div><div id='n_end'> N End Line: 302</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    &#47&#47 obtain rank message of hybrid parallel
+    hcg = fleet.get_hybrid_communicate_group()
+    &#47&#47 global_rank = hcg.get_global_rank()
+    <a id="change">mp_rank</a> = hcg.get_model_parallel_rank()
+    dp_rank = hcg.get_data_parallel_rank()
+    sharding_rank = hcg.get_sharding_parallel_rank()
+
+    sharding_size = hcg.get_sharding_parallel_world_size()
+    data_world_rank = dp_rank * sharding_size + sharding_rank
+    data_world_size = args.dp_degree * args.sharding_degree
+    local_rank = int(os.getenv("PADDLE_RANK_IN_NODE", 0))
+
+    &#47&#47 seed control in hybrid parallel
+    set_hyrbid_parallel_seed(args.seed, data_world_rank, mp_rank)
+
+    default_global_tokens_num = args.global_batch_size * args.max_seq_len
+
+    model_class, tokenizer_class = MODEL_CLASSES[args.model_type]
+    tokenizer = tokenizer_class.from_pretrained(args.tokenizer_name_or_path)
+
+    &#47&#47 Detecting last checkpoint.
+    last_checkpoint = None
+    training_args = args
+    training_args.overwrite_output_dir = False
+    training_args.resume_from_checkpoint = True
+    if os.path.isdir(training_args.output_dir) and not training_args.overwrite_output_dir:
+        last_checkpoint = get_last_checkpoint(training_args.output_dir)
+        if last_checkpoint is None and len(os.listdir(training_args.output_dir)) &gt; 1:
+            raise ValueError(
+                f"Output directory ({training_args.output_dir}) already exists and is not empty. "
+                "Use --overwrite_output_dir to overcome."
+            )
+        elif last_checkpoint is not None and training_args.resume_from_checkpoint is None:
+            logger.info(
+                f"Checkpoint detected, resuming training at {last_checkpoint}. To avoid this behavior, change "
+                "the `--output_dir` or add `--overwrite_output_dir` to train from scratch."
+            )
+
+    global_step = 0
+    if training_args.resume_from_checkpoint and last_checkpoint is not None:
+        global_step = int(str(last_checkpoint).split("-")[-1])
+
+    log_writer = None
+    if dp_rank == 0 and mp_rank == 0 and sharding_rank == 0:
+        log_writer_path = os.path.join(args.output_dir, default_logdir())
+        log_writer = LogWriter(logdir=log_writer_path)
+
+    WEIGHTS_NAME = "model_state.pdparams"
+    OPTIMIZER_NAME = <a id="change">"model_state_mp_{:0&gt;2d}_sharding_{:0&gt;2d}.pdopt".format(</a>mp_rank, sharding_rank<a id="change">)</a>
+    <a id="change">if args.mp_degree &gt; 1</a>:
+        WEIGHTS_NAME<a id="change"> = </a><a id="change">"model_state_mp_{:0&gt;2d}.pdparams".format(</a>mp_rank<a id="change">)</a>
+        GPTForPretraining.resource_files_names = {"model_state": WEIGHTS_NAME}
+
+    model_config = model_class.pretrained_init_configuration[args.model_name_or_path]
+    model_config["hidden_dropout_prob"] = args.hidden_dropout_prob</code></pre><h3>After Change</h3><pre><code class='java'>
+    WEIGHTS_NAME = "model_state.pdparams"
+    OPTIMIZER_NAME = "optimizer.pdopt"
+
+    <a id="change">if args.mp_degree &gt; 1 or args.sharding_degree &gt; 1</a>:
+        WEIGHTS_NAME<a id="change"> = </a><a id="change">_add_variant(</a>WEIGHTS_NAME, <a id="change">weight_name_suffix()</a><a id="change">)</a>
+        OPTIMIZER_NAME<a id="change"> = </a><a id="change">_add_variant(</a>OPTIMIZER_NAME, <a id="change">optimizer_name_suffix())</a>
+        &#47&#47 GPTForPretraining using old style save_pretrained
+        &#47&#47 remove if CLASS using save_pretrained_v2
+        <a id="change">logger.info(f"{WEIGHTS_NAME}, {OPTIMIZER_NAME}, {optimizer_name_suffix()}"</a><a id="change">)</a>
+        <a id="change">if </a><a id="change">not GPTForPretraining.constructed_from_pretrained_config()</a>:
+            GPTForPretraining.resource_files_names = {"model_state": WEIGHTS_NAME}
+
+    model_config = model_class.pretrained_init_configuration[args.model_name_or_path]</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/paddlepaddle/paddlenlp/commit/218c7cbfe8f2089ad9b594dfe82f914a42b7e3d9#diff-e27f619af28c32b237cc9a826aca7b484aebd6639b06b365131f01df9770cb2fL118' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 47241233</div><div id='project'> Project Name: paddlepaddle/paddlenlp</div><div id='commit'> Commit Name: 218c7cbfe8f2089ad9b594dfe82f914a42b7e3d9</div><div id='time'> Time: 2023-03-29</div><div id='author'> Author: zhonghui.net@gmail.com</div><div id='file'> File Name: examples/language_model/gpt-3/dygraph/run_pretrain_mp.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: do_train(1)</div><div id='n_method'> N Method Name: do_train(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples/language_model/gpt-3/dygraph/run_pretrain_mp.py</div><div id='n_file'> N File Name: examples/language_model/gpt-3/dygraph/run_pretrain_mp.py</div><div id='m_start'> M Start Line: 137</div><div id='m_end'> M End Line: 187</div><div id='n_start'> N Start Line: 184</div><div id='n_end'> N End Line: 196</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    &#47&#47 obtain rank message of hybrid parallel
+    hcg = fleet.get_hybrid_communicate_group()
+    &#47&#47 global_rank = hcg.get_global_rank()
+    <a id="change">mp_rank</a> = hcg.get_model_parallel_rank()
+    dp_rank = hcg.get_data_parallel_rank()
+    sharding_rank = hcg.get_sharding_parallel_rank()
+
+    sharding_size = hcg.get_sharding_parallel_world_size()
+    data_world_rank = dp_rank * sharding_size + sharding_rank
+    data_world_size = args.dp_degree * args.sharding_degree
+    &#47&#47 local_rank = int(os.getenv("PADDLE_RANK_IN_NODE", 0))
+
+    &#47&#47 seed control in hybrid parallel
+    set_hyrbid_parallel_seed(args.seed, data_world_rank, mp_rank)
+
+    default_global_tokens_num = args.global_batch_size * args.max_seq_len
+
+    model_class, tokenizer_class = MODEL_CLASSES[args.model_type]
+    tokenizer = tokenizer_class.from_pretrained(args.tokenizer_name_or_path)
+
+    &#47&#47 Detecting last checkpoint.
+    last_checkpoint = None
+    training_args = args
+    training_args.overwrite_output_dir = False
+    training_args.resume_from_checkpoint = True
+    if os.path.isdir(training_args.output_dir) and not training_args.overwrite_output_dir:
+        last_checkpoint = get_last_checkpoint(training_args.output_dir)
+        if last_checkpoint is None and len(os.listdir(training_args.output_dir)) &gt; 1:
+            raise ValueError(
+                f"Output directory ({training_args.output_dir}) already exists and is not empty. "
+                "Use --overwrite_output_dir to overcome."
+            )
+        elif last_checkpoint is not None and training_args.resume_from_checkpoint is None:
+            logger.info(
+                f"Checkpoint detected, resuming training at {last_checkpoint}. To avoid this behavior, change "
+                "the `--output_dir` or add `--overwrite_output_dir` to train from scratch."
+            )
+
+    global_step = 0
+    if training_args.resume_from_checkpoint and last_checkpoint is not None:
+        global_step = int(str(last_checkpoint).split("-")[-1])
+
+    log_writer = None
+    if dp_rank == 0 and mp_rank == 0 and sharding_rank == 0:
+        log_writer_path = os.path.join(args.output_dir, default_logdir())
+        log_writer = LogWriter(logdir=log_writer_path)
+
+    WEIGHTS_NAME = "model_state.pdparams"
+    OPTIMIZER_NAME = <a id="change">"model_state_mp_{:0&gt;2d}_sharding_{:0&gt;2d}.pdopt".format(</a>mp_rank, sharding_rank<a id="change">)</a>
+    <a id="change">if args.mp_degree &gt; 1</a>:
+        WEIGHTS_NAME<a id="change"> = </a><a id="change">"model_state_mp_{:0&gt;2d}.pdparams".format(</a>mp_rank<a id="change">)</a>
+        GPTLMHeadModel.resource_files_names = {"model_state": WEIGHTS_NAME}
+
+    model_config = model_class.pretrained_init_configuration[args.model_name_or_path]
+    model_config["hidden_dropout_prob"] = args.hidden_dropout_prob</code></pre><h3>After Change</h3><pre><code class='java'>
+    WEIGHTS_NAME = "model_state.pdparams"
+    OPTIMIZER_NAME = "optimizer.pdopt"
+
+    <a id="change">if args.mp_degree &gt; 1 or args.sharding_degree &gt; 1</a>:
+        WEIGHTS_NAME<a id="change"> = </a><a id="change">_add_variant(</a>WEIGHTS_NAME, <a id="change">weight_name_suffix()</a><a id="change">)</a>
+        OPTIMIZER_NAME<a id="change"> = </a><a id="change">_add_variant(</a>OPTIMIZER_NAME, <a id="change">optimizer_name_suffix())</a>
+        &#47&#47 GPTLMHeadModel using old style save_pretrained
+        &#47&#47 remove if CLASS using save_pretrained_v2
+        <a id="change">logger.info(f"{WEIGHTS_NAME}, {OPTIMIZER_NAME}, {optimizer_name_suffix()}"</a><a id="change">)</a>
+        <a id="change">if </a><a id="change">not GPTLMHeadModel.constructed_from_pretrained_config()</a>:
+            GPTLMHeadModel.resource_files_names = {"model_state": WEIGHTS_NAME}
+
+    model_config = model_class.pretrained_init_configuration[args.model_name_or_path]</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/paddlepaddle/paddlenlp/commit/218c7cbfe8f2089ad9b594dfe82f914a42b7e3d9#diff-5a3e0ef420cb91b8f24ef6c532ac7437de84204e96d04e509be6f1d3c519a3f2L121' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 47241235</div><div id='project'> Project Name: paddlepaddle/paddlenlp</div><div id='commit'> Commit Name: 218c7cbfe8f2089ad9b594dfe82f914a42b7e3d9</div><div id='time'> Time: 2023-03-29</div><div id='author'> Author: zhonghui.net@gmail.com</div><div id='file'> File Name: examples/language_model/gpt-3/dygraph/run_finetune.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: do_train(1)</div><div id='n_method'> N Method Name: do_train(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples/language_model/gpt-3/dygraph/run_finetune.py</div><div id='n_file'> N File Name: examples/language_model/gpt-3/dygraph/run_finetune.py</div><div id='m_start'> M Start Line: 140</div><div id='m_end'> M End Line: 190</div><div id='n_start'> N Start Line: 187</div><div id='n_end'> N End Line: 199</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    &#47&#47 obtain rank message of hybrid parallel
+    hcg = fleet.get_hybrid_communicate_group()
+    &#47&#47 global_rank = hcg.get_global_rank()
+    <a id="change">mp_rank</a> = hcg.get_model_parallel_rank()
+    dp_rank = hcg.get_data_parallel_rank()
+    sharding_rank = hcg.get_sharding_parallel_rank()
+
+    sharding_size = hcg.get_sharding_parallel_world_size()
+    data_world_rank = dp_rank * sharding_size + sharding_rank
+    data_world_size = args.dp_degree * args.sharding_degree
+    &#47&#47 local_rank = int(os.getenv("PADDLE_RANK_IN_NODE", 0))
+
+    &#47&#47 seed control in hybrid parallel
+    set_hyrbid_parallel_seed(args.seed, data_world_rank, mp_rank)
+    default_global_tokens_num = args.global_batch_size * args.max_seq_len
+
+    model_class, tokenizer_class = MODEL_CLASSES[args.model_type]
+    tokenizer = tokenizer_class.from_pretrained(args.model_name_or_path)
+
+    args.task_name = args.task_name.lower()
+    metric_class = METRIC_CLASSES[args.task_name]
+
+    train_ds = load_dataset("glue", args.task_name, splits="train")
+    tokenizer = GPTTokenizer.from_pretrained(args.model_name_or_path)
+
+    trans_func = partial(
+        convert_example, tokenizer=tokenizer, label_list=train_ds.label_list, max_seq_length=args.max_seq_length
+    )
+    train_ds = train_ds.map(trans_func, lazy=True)
+    train_batch_sampler = paddle.io.DistributedBatchSampler(
+        train_ds,
+        batch_size=args.micro_batch_size,
+        shuffle=True,
+        num_replicas=data_world_size,
+        rank=data_world_rank,
+    )
+
+    if args.task_name == "mnli":
+        dev_ds = load_dataset("glue", args.task_name, splits=["dev_matched"])
+    else:
+        dev_ds = load_dataset("glue", args.task_name, splits="dev")
+
+    dev_ds = dev_ds.map(trans_func, lazy=True)
+    valid_batch_sampler = paddle.io.BatchSampler(
+        dev_ds,
+        batch_size=args.micro_batch_size,
+        shuffle=False,
+    )
+
+    train_data_loader = paddle.io.DataLoader(
+        dataset=train_ds,
+        batch_sampler=train_batch_sampler,
+        num_workers=0,
+        return_list=True,
+        collate_fn=DataCollatorWithPadding(tokenizer=tokenizer, padding=True, max_length=args.max_seq_length),
+    )
+
+    valid_data_loader = paddle.io.DataLoader(
+        dataset=dev_ds,
+        batch_sampler=valid_batch_sampler,
+        num_workers=0,
+        return_list=True,
+        collate_fn=DataCollatorWithPadding(tokenizer=tokenizer, padding=True, max_length=args.max_seq_length),
+    )
+
+    num_classes = 1 if train_ds.label_list is None else len(train_ds.label_list)
+
+    &#47&#47 Detecting last checkpoint.
+    last_checkpoint = None
+    training_args = args
+    training_args.overwrite_output_dir = False
+    training_args.resume_from_checkpoint = True
+    if os.path.isdir(training_args.output_dir) and not training_args.overwrite_output_dir:
+        last_checkpoint = get_last_checkpoint(training_args.output_dir)
+        if last_checkpoint is None and len(os.listdir(training_args.output_dir)) &gt; 1:
+            raise ValueError(
+                f"Output directory ({training_args.output_dir}) already exists and is not empty. "
+                "Use --overwrite_output_dir to overcome."
+            )
+        elif last_checkpoint is not None and training_args.resume_from_checkpoint is None:
+            logger.info(
+                f"Checkpoint detected, resuming training at {last_checkpoint}. To avoid this behavior, change "
+                "the `--output_dir` or add `--overwrite_output_dir` to train from scratch."
+            )
+
+    global_step = 0
+    if training_args.resume_from_checkpoint and last_checkpoint is not None:
+        global_step = int(str(last_checkpoint).split("-")[-1])
+    &#47&#47 Define log writer
+    log_writer = None
+    if dp_rank == 0 and mp_rank == 0 and sharding_rank == 0:
+        log_writer_path = os.path.join(args.output_dir, default_logdir())
+        log_writer = LogWriter(log_writer_path)
+
+    WEIGHTS_NAME = "model_state.pdparams"
+    OPTIMIZER_NAME = <a id="change">"model_state_mp_{:0&gt;2d}_sharding_{:0&gt;2d}.pdopt".format(</a>mp_rank, sharding_rank<a id="change">)</a>
+
+    <a id="change">if args.mp_degree &gt; 1</a>:
+        WEIGHTS_NAME<a id="change"> = </a><a id="change">"model_state_mp_{:0&gt;2d}.pdparams".format(</a>mp_rank<a id="change">)</a>
+        GPTForSequenceClassification.resource_files_names = {"model_state": WEIGHTS_NAME}
+
+    model = GPTForSequenceClassification.from_pretrained(
+        args.model_name_or_path,</code></pre><h3>After Change</h3><pre><code class='java'>
+    WEIGHTS_NAME = "model_state.pdparams"
+    OPTIMIZER_NAME = "optimizer.pdopt"
+
+    <a id="change">if args.mp_degree &gt; 1 or args.sharding_degree &gt; 1</a>:
+        WEIGHTS_NAME<a id="change"> = </a><a id="change">_add_variant(</a>WEIGHTS_NAME, <a id="change">weight_name_suffix()</a><a id="change">)</a>
+        OPTIMIZER_NAME<a id="change"> = </a><a id="change">_add_variant(</a>OPTIMIZER_NAME, <a id="change">optimizer_name_suffix())</a>
+        &#47&#47 GPTForSequenceClassification using old style save_pretrained
+        &#47&#47 remove if CLASS using save_pretrained_v2
+        <a id="change">logger.info(f"{WEIGHTS_NAME}, {OPTIMIZER_NAME}, {optimizer_name_suffix()}"</a><a id="change">)</a>
+        <a id="change">if </a><a id="change">not GPTForSequenceClassification.constructed_from_pretrained_config()</a>:
+            GPTForSequenceClassification.resource_files_names = {"model_state": WEIGHTS_NAME}
+
+    model = GPTForSequenceClassification.from_pretrained(</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/paddlepaddle/paddlenlp/commit/218c7cbfe8f2089ad9b594dfe82f914a42b7e3d9#diff-a8fd6d6c07c957f737965208d017f120e9791f5ca24f265be30adbe3b5538b39L177' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 47241238</div><div id='project'> Project Name: paddlepaddle/paddlenlp</div><div id='commit'> Commit Name: 218c7cbfe8f2089ad9b594dfe82f914a42b7e3d9</div><div id='time'> Time: 2023-03-29</div><div id='author'> Author: zhonghui.net@gmail.com</div><div id='file'> File Name: examples/language_model/gpt-3/dygraph/run_glue_mp.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: do_train(1)</div><div id='n_method'> N Method Name: do_train(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples/language_model/gpt-3/dygraph/run_glue_mp.py</div><div id='n_file'> N File Name: examples/language_model/gpt-3/dygraph/run_glue_mp.py</div><div id='m_start'> M Start Line: 196</div><div id='m_end'> M End Line: 294</div><div id='n_start'> N Start Line: 290</div><div id='n_end'> N End Line: 302</div><BR>

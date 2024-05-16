@@ -1,0 +1,78 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                &#47&#47 load best performance epoch in this training session
+                model.load_weights(os.path.join(self.working_dir, &quottemp_network.h5&quot))
+                elapse_time = time.time() - start_time
+                <a id="change">sys.stderr.write(</a>"  %.3f sec\n"%elapse_time<a id="change">)</a>
+
+                start_time = time.time()
+                sys.stderr.write("[%s] Postprocessing.."% pid )
+                &#47&#47 evaluate the model by `reward_fn`</code></pre><h3>After Change</h3><pre><code class='java'>
+                sys.stderr.write("  %.3f sec\n"%elapse_time)
+                
+                model_arc_ = tuple(model_arc)
+                <a id="change">if model_arc_ in self.arc_records</a>:
+                    this_reward = self.arc_records[model_arc_][&quotreward&quot] 
+                    old_trial = self.arc_records[model_arc_][&quottrial&quot] 
+                    loss_and_metrics<a id="change"> = </a>self.arc_records[model_arc_][&quotloss_and_metrics&quot] 
+                    sys.stderr.write("[%s] Trial %i: Re-sampled from history %i\n" % (pid, old_trial))
+                else:
+                    &#47&#47 train the model using Keras methods
+                    start_time = time.time()
+                    sys.stderr.write("[%s] Trial %i: Start training model.." % (pid, trial))
+                    hist = model.fit(self.train_x, self.train_y,
+                                     batch_size=self.batchsize,
+                                     epochs=self.epochs,
+                                     verbose=self.verbose,
+                                     validation_data=self.validation_data,
+                                     callbacks=[ModelCheckpoint(os.path.join(self.working_dir, &quottemp_network.h5&quot),
+                                                                monitor=&quotval_loss&quot, verbose=self.verbose,
+                                                                save_best_only=True),
+                                                EarlyStopping(monitor=&quotval_loss&quot, patience=5, verbose=self.verbose)],
+                                     **self.fit_kwargs
+                                     )
+
+                    &#47&#47 load best performance epoch in this training session
+                    model.load_weights(os.path.join(self.working_dir, &quottemp_network.h5&quot))
+                    elapse_time = time.time() - start_time
+                    <a id="change">sys.stderr.write(</a>"  %.3f sec\n"%elapse_time<a id="change">)</a>
+
+                    start_time = time.time()
+                    sys.stderr.write("[%s] Postprocessing.."% pid )
+                    &#47&#47 evaluate the model by `reward_fn`
+                    this_reward, loss_and_metrics, reward_metrics = \
+                        self.reward_fn(model, self.validation_data,
+                                       session=train_sess,
+                                       )
+                    loss = loss_and_metrics.pop(0)
+                    loss_and_metrics = {str(self.model_compile_dict[&quotmetrics&quot][i]): loss_and_metrics[i] for i in
+                                        range(len(loss_and_metrics))}
+                    loss_and_metrics[&quotloss&quot] = loss
+                    if reward_metrics:
+                        loss_and_metrics.update(reward_metrics)
+
+                    &#47&#47 do any post processing,
+                    &#47&#47 e.g. save child net, plot training history, plot scattered prediction.
+                    if self.store_fn:
+                        val_pred = model.predict(self.validation_data)
+                        self.store_fn(
+                            trial=trial,
+                            model=model,
+                            hist=hist,
+                            data=self.validation_data,
+                            pred=val_pred,
+                            loss_and_metrics=loss_and_metrics,
+                            working_dir=self.working_dir,
+                            save_full_model=self.save_full_model,
+                            knowledge_func=self.reward_fn.knowledge_function
+                        )
+                    elapse_time = time.time() - start_time
+                    sys.stderr.write("  %.3f sec\n"%elapse_time)
+
+                    &#47&#47 store the rewards in records
+                    self.arc_records[model_arc_][&quottrial&quot]<a id="change"> = </a>trial
+                    self.arc_records[model_arc_][&quotreward&quot] = this_reward
+                    self.arc_records[model_arc_][&quotloss_and_metrics&quot] = loss_and_metrics
+</code></pre>

@@ -1,0 +1,311 @@
+<html><h3>Pattern ID :38389
+</h3><img src='109702474.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                if p.grad is None:
+                    continue
+
+                p_data_fp32 = <a id="change">p.data.float()</a>
+
+                d_p = p.grad.data.float()
+                param_state = self.state[p]
+                if &quotmomentum_buffer&quot not in param_state:
+                    param_state[&quotmomentum_buffer&quot] = torch.zeros_like(d_p)
+                else:
+                    param_state[&quotmomentum_buffer&quot] = param_state[&quotmomentum_buffer&quot].type_as(d_p)
+
+                buf = param_state[&quotmomentum_buffer&quot]
+
+                if weight_decay != 0:
+                    p_data_fp32.mul_(1 - lr * weight_decay)
+                p_data_fp32.add_(buf, alpha=momentum * momentum * lr_correct)
+                p_data_fp32.add_(d_p, alpha=-(1 + momentum) * lr)
+
+                buf.mul_(momentum * lr_correct).add_(d_p, alpha=-lr)
+
+                &#47&#47 TODO: remove check once pyTorch avoids a copy for this case
+                if <a id="change">p.data_ptr()</a> != <a id="change">p_data_fp32.data_ptr()</a>:
+                    p.data.copy_(p_data_fp32)
+
+            group[&quotlr_old&quot] = lr</code></pre><h3>After Change</h3><pre><code class='java'>
+                    continue
+
+                p_data_fp32 = p.data
+                <a id="change">if p_data_fp32.dtype in {torch.float16, torch.bfloat16}</a>:
+                    p_data_fp32<a id="change"> = </a><a id="change">p_data_fp32.float()</a>
+
+                d_p = p.grad.data.float()
+                param_state = self.state[p]
+                if &quotmomentum_buffer&quot not in param_state:
+                    param_state[&quotmomentum_buffer&quot] = torch.zeros_like(d_p)
+                else:
+                    param_state[&quotmomentum_buffer&quot] = param_state[&quotmomentum_buffer&quot].to(d_p)
+
+                buf = param_state[&quotmomentum_buffer&quot]
+
+                if weight_decay != 0:
+                    p_data_fp32.mul_(1 - lr * weight_decay)
+                p_data_fp32.add_(buf, alpha=momentum * momentum * lr_correct)
+                p_data_fp32.add_(d_p, alpha=-(1 + momentum) * lr)
+
+                buf.mul_(momentum * lr_correct).add_(d_p, alpha=-lr)
+
+                if p.data.dtype in <a id="change">{</a>torch.float16, torch.bfloat16<a id="change"></a>}:
+                    p.data.copy_(p_data_fp32)
+
+            group[&quotlr_old&quot] = lr</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 9</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/kssteven418/i-bert/commit/775122950d145382146e9120308432a9faf9a9b8#diff-4d9171175a0f1c4dd317d38b7189e54c34cab9fad3ee87b35a4d3388a9d3f212L74' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 109702474</div><div id='project'> Project Name: kssteven418/i-bert</div><div id='commit'> Commit Name: 775122950d145382146e9120308432a9faf9a9b8</div><div id='time'> Time: 2020-05-18</div><div id='author'> Author: myleott@fb.com</div><div id='file'> File Name: fairseq/optim/nag.py</div><div id='m_class'> M Class Name: NAG</div><div id='n_method'> N Class Name: NAG</div><div id='m_method'> M Method Name: step(2)</div><div id='n_method'> N Method Name: step(2)</div><div id='m_parent_class'> M Parent Class: Optimizer</div><div id='n_parent_class'> N Parent Class: Optimizer</div><div id='m_file'> M File Name: fairseq/optim/nag.py</div><div id='n_file'> N File Name: fairseq/optim/nag.py</div><div id='m_start'> M Start Line: 74</div><div id='m_end'> M End Line: 97</div><div id='n_start'> N Start Line: 74</div><div id='n_end'> N End Line: 98</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            loss = closure()
+
+        for group in self.param_groups:
+            for <a id="change">p</a> in group[&quotparams&quot]:
+                if p.grad is None:
+                    continue
+                grad = p.grad.data.float()
+                if grad.is_sparse:
+                    raise RuntimeError(&quotAdafactor does not support sparse gradients.&quot)
+
+                state = self.state[p]
+                grad_shape = grad.shape
+
+                factored, use_first_moment = self._get_options(group, grad_shape)
+                &#47&#47 State Initialization
+                if len(state) == 0:
+                    state[&quotstep&quot] = 0
+
+                    if use_first_moment:
+                        &#47&#47 Exponential moving average of gradient values
+                        state[&quotexp_avg&quot] = torch.zeros_like(grad)
+                    if factored:
+                        state[&quotexp_avg_sq_row&quot] = torch.zeros(grad_shape[:-1]).type_as(grad)
+                        state[&quotexp_avg_sq_col&quot] = torch.zeros(grad_shape[:-2] + grad_shape[-1:]).type_as(grad)
+                    else:
+                        state[&quotexp_avg_sq&quot] = torch.zeros_like(grad)
+
+                    state[&quotRMS&quot] = 0
+                else:
+                    if use_first_moment:
+                        state[&quotexp_avg&quot] = state[&quotexp_avg&quot].type_as(grad)
+                    if factored:
+                        state[&quotexp_avg_sq_row&quot] = state[&quotexp_avg_sq_row&quot].type_as(grad)
+                        state[&quotexp_avg_sq_col&quot] = state[&quotexp_avg_sq_col&quot].type_as(grad)
+                    else:
+                        state[&quotexp_avg_sq&quot] = state[&quotexp_avg_sq&quot].type_as(grad)
+
+                p_data_fp32 = <a id="change">p.data.float()</a>
+
+                state[&quotstep&quot] += 1
+                state[&quotRMS&quot] = self._rms(p_data_fp32)
+                group[&quotlr&quot] = self._get_lr(group, state)
+
+                beta2t = 1.0 - math.pow(state[&quotstep&quot], group[&quotdecay_rate&quot])
+                update = (grad**2) + group[&quoteps&quot][0]
+                if factored:
+                    exp_avg_sq_row = state[&quotexp_avg_sq_row&quot]
+                    exp_avg_sq_col = state[&quotexp_avg_sq_col&quot]
+
+                    exp_avg_sq_row.mul_(beta2t).add_(1.0 - beta2t, update.mean(dim=-1))
+                    exp_avg_sq_col.mul_(beta2t).add_(1.0 - beta2t, update.mean(dim=-2))
+
+                    &#47&#47 Approximation of exponential moving average of square of gradient
+                    self._approx_sq_grad(exp_avg_sq_row, exp_avg_sq_col, update)
+                    update.mul_(grad)
+                else:
+                    exp_avg_sq = state[&quotexp_avg_sq&quot]
+
+                    exp_avg_sq.mul_(beta2t).add_(1.0 - beta2t, update)
+                    torch.rsqrt(exp_avg_sq, out=update).mul_(grad)
+
+                update.div_(max(1.0, self._rms(update) / group[&quotclip_threshold&quot]))
+                update.mul_(group[&quotlr&quot])
+
+                if use_first_moment:
+                    exp_avg = state[&quotexp_avg&quot]
+                    exp_avg.mul_(group[&quotbeta1&quot]).add_(1 - group[&quotbeta1&quot], update)
+                    update = exp_avg
+
+                if group[&quotweight_decay&quot] != 0:
+                    p_data_fp32.add_(-group[&quotweight_decay&quot] * group[&quotlr&quot], p_data_fp32)
+
+                p_data_fp32.add_(-update)
+
+                &#47&#47 TODO: remove check once pyTorch avoids a copy for this case
+                if <a id="change">p.data_ptr()</a> != <a id="change">p_data_fp32.data_ptr()</a>:
+                    p.data.copy_(p_data_fp32)
+
+        return loss</code></pre><h3>After Change</h3><pre><code class='java'>
+            loss = closure()
+
+        for group in self.param_groups:
+            for <a id="change">p</a> in group[&quotparams&quot]:
+                if p.grad is None:
+                    continue
+                grad = p.grad.data
+                if grad.dtype in <a id="change">{</a>torch.float16, torch.bfloat16<a id="change"></a>}:
+                    grad = grad.float()
+                if grad.is_sparse:
+                    raise RuntimeError(&quotAdafactor does not support sparse gradients.&quot)
+
+                state = self.state[p]
+                grad_shape = grad.shape
+
+                factored, use_first_moment = self._get_options(group, grad_shape)
+                &#47&#47 State Initialization
+                if len(state) == 0:
+                    state[&quotstep&quot] = 0
+
+                    if use_first_moment:
+                        &#47&#47 Exponential moving average of gradient values
+                        state[&quotexp_avg&quot] = torch.zeros_like(grad)
+                    if factored:
+                        state[&quotexp_avg_sq_row&quot] = torch.zeros(grad_shape[:-1]).to(grad)
+                        state[&quotexp_avg_sq_col&quot] = torch.zeros(grad_shape[:-2] + grad_shape[-1:]).to(grad)
+                    else:
+                        state[&quotexp_avg_sq&quot] = torch.zeros_like(grad)
+
+                    state[&quotRMS&quot] = 0
+                else:
+                    if use_first_moment:
+                        state[&quotexp_avg&quot] = state[&quotexp_avg&quot].to(grad)
+                    if factored:
+                        state[&quotexp_avg_sq_row&quot] = state[&quotexp_avg_sq_row&quot].to(grad)
+                        state[&quotexp_avg_sq_col&quot] = state[&quotexp_avg_sq_col&quot].to(grad)
+                    else:
+                        state[&quotexp_avg_sq&quot] = state[&quotexp_avg_sq&quot].to(grad)
+
+                p_data_fp32 = p.data
+                <a id="change">if p.data.dtype in {torch.float16, torch.bfloat16}</a>:
+                    p_data_fp32<a id="change"> = </a><a id="change">p_data_fp32.float()</a>
+
+                state[&quotstep&quot] += 1
+                state[&quotRMS&quot] = self._rms(p_data_fp32)
+                group[&quotlr&quot] = self._get_lr(group, state)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/kssteven418/i-bert/commit/775122950d145382146e9120308432a9faf9a9b8#diff-c8ff6e9ad677733577ae29b16bab6bcd5f2a83bdb9fb9e5e7f79ee3f42939b1cL143' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 109702476</div><div id='project'> Project Name: kssteven418/i-bert</div><div id='commit'> Commit Name: 775122950d145382146e9120308432a9faf9a9b8</div><div id='time'> Time: 2020-05-18</div><div id='author'> Author: myleott@fb.com</div><div id='file'> File Name: fairseq/optim/adafactor.py</div><div id='m_class'> M Class Name: Adafactor</div><div id='n_method'> N Class Name: Adafactor</div><div id='m_method'> M Method Name: step(2)</div><div id='n_method'> N Method Name: step(2)</div><div id='m_parent_class'> M Parent Class: torch.optim.Optimizer</div><div id='n_parent_class'> N Parent Class: torch.optim.Optimizer</div><div id='m_file'> M File Name: fairseq/optim/adafactor.py</div><div id='n_file'> N File Name: fairseq/optim/adafactor.py</div><div id='m_start'> M Start Line: 155</div><div id='m_end'> M End Line: 227</div><div id='n_start'> N Start Line: 157</div><div id='n_end'> N End Line: 234</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            loss = closure()
+
+        for group in self.param_groups:
+            for <a id="change">p</a> in group[&quotparams&quot]:
+                if p.grad is None:
+                    continue
+                grad = p.grad.data.float()
+                if grad.is_sparse:
+                    raise RuntimeError(&quotAdam does not support sparse gradients, please consider SparseAdam instead&quot)
+                amsgrad = group[&quotamsgrad&quot]
+
+                p_data_fp32 = <a id="change">p.data.float()</a>
+
+                state = self.state[p]
+
+                &#47&#47 State initialization
+                if len(state) == 0:
+                    state[&quotstep&quot] = 0
+                    &#47&#47 Exponential moving average of gradient values
+                    state[&quotexp_avg&quot] = torch.zeros_like(p_data_fp32)
+                    &#47&#47 Exponential moving average of squared gradient values
+                    state[&quotexp_avg_sq&quot] = torch.zeros_like(p_data_fp32)
+                    if amsgrad:
+                        &#47&#47 Maintains max of all exp. moving avg. of sq. grad. values
+                        state[&quotmax_exp_avg_sq&quot] = torch.zeros_like(p_data_fp32)
+                else:
+                    state[&quotexp_avg&quot] = state[&quotexp_avg&quot].type_as(p_data_fp32)
+                    state[&quotexp_avg_sq&quot] = state[&quotexp_avg_sq&quot].type_as(p_data_fp32)
+                    if amsgrad:
+                        state[&quotmax_exp_avg_sq&quot] = state[&quotmax_exp_avg_sq&quot].type_as(p_data_fp32)
+
+                exp_avg, exp_avg_sq = state[&quotexp_avg&quot], state[&quotexp_avg_sq&quot]
+                if amsgrad:
+                    max_exp_avg_sq = state[&quotmax_exp_avg_sq&quot]
+                beta1, beta2 = group[&quotbetas&quot]
+
+                state[&quotstep&quot] += 1
+
+                &#47&#47 Decay the first and second moment running average coefficient
+                exp_avg.mul_(beta1).add_(grad, alpha=1 - beta1)
+                exp_avg_sq.mul_(beta2).addcmul_(grad, grad, value=1 - beta2)
+                if amsgrad:
+                    &#47&#47 Maintains the maximum of all 2nd moment running avg. till now
+                    torch.max(max_exp_avg_sq, exp_avg_sq, out=max_exp_avg_sq)
+                    &#47&#47 Use the max. for normalizing running avg. of gradient
+                    denom = max_exp_avg_sq.sqrt().add_(group[&quoteps&quot])
+                else:
+                    denom = exp_avg_sq.sqrt().add_(group[&quoteps&quot])
+
+                bias_correction1 = 1 - beta1 ** state[&quotstep&quot]
+                bias_correction2 = 1 - beta2 ** state[&quotstep&quot]
+                step_size = group[&quotlr&quot] * math.sqrt(bias_correction2) / bias_correction1
+
+                if group[&quotweight_decay&quot] != 0:
+                    p_data_fp32.add_(p_data_fp32, alpha=-group[&quotweight_decay&quot] * group[&quotlr&quot])
+
+                p_data_fp32.addcdiv_(exp_avg, denom, value=-step_size)
+
+                &#47&#47 TODO: remove check once pyTorch avoids a copy for this case
+                if <a id="change">p.data_ptr()</a> != <a id="change">p_data_fp32.data_ptr()</a>:
+                    p.data.copy_(p_data_fp32)
+
+        return loss</code></pre><h3>After Change</h3><pre><code class='java'>
+            loss = closure()
+
+        for group in self.param_groups:
+            for <a id="change">p</a> in group[&quotparams&quot]:
+                if p.grad is None:
+                    continue
+                grad = p.grad.data
+                if grad.dtype in {torch.float16, torch.bfloat16}:
+                    grad = grad.float()
+                if grad.is_sparse:
+                    raise RuntimeError(&quotAdam does not support sparse gradients, please consider SparseAdam instead&quot)
+                amsgrad = group[&quotamsgrad&quot]
+
+                p_data_fp32 = p.data
+                <a id="change">if p.data.dtype in {torch.float16, torch.bfloat16}</a>:
+                    p_data_fp32<a id="change"> = </a><a id="change">p_data_fp32.float()</a>
+
+                state = self.state[p]
+
+                &#47&#47 State initialization
+                if len(state) == 0:
+                    state[&quotstep&quot] = 0
+                    &#47&#47 Exponential moving average of gradient values
+                    state[&quotexp_avg&quot] = torch.zeros_like(p_data_fp32)
+                    &#47&#47 Exponential moving average of squared gradient values
+                    state[&quotexp_avg_sq&quot] = torch.zeros_like(p_data_fp32)
+                    if amsgrad:
+                        &#47&#47 Maintains max of all exp. moving avg. of sq. grad. values
+                        state[&quotmax_exp_avg_sq&quot] = torch.zeros_like(p_data_fp32)
+                else:
+                    state[&quotexp_avg&quot] = state[&quotexp_avg&quot].to(p_data_fp32)
+                    state[&quotexp_avg_sq&quot] = state[&quotexp_avg_sq&quot].to(p_data_fp32)
+                    if amsgrad:
+                        state[&quotmax_exp_avg_sq&quot] = state[&quotmax_exp_avg_sq&quot].to(p_data_fp32)
+
+                exp_avg, exp_avg_sq = state[&quotexp_avg&quot], state[&quotexp_avg_sq&quot]
+                if amsgrad:
+                    max_exp_avg_sq = state[&quotmax_exp_avg_sq&quot]
+                beta1, beta2 = group[&quotbetas&quot]
+
+                state[&quotstep&quot] += 1
+
+                &#47&#47 Decay the first and second moment running average coefficient
+                exp_avg.mul_(beta1).add_(grad, alpha=1 - beta1)
+                exp_avg_sq.mul_(beta2).addcmul_(grad, grad, value=1 - beta2)
+                if amsgrad:
+                    &#47&#47 Maintains the maximum of all 2nd moment running avg. till now
+                    torch.max(max_exp_avg_sq, exp_avg_sq, out=max_exp_avg_sq)
+                    &#47&#47 Use the max. for normalizing running avg. of gradient
+                    denom = max_exp_avg_sq.sqrt().add_(group[&quoteps&quot])
+                else:
+                    denom = exp_avg_sq.sqrt().add_(group[&quoteps&quot])
+
+                bias_correction1 = 1 - beta1 ** state[&quotstep&quot]
+                bias_correction2 = 1 - beta2 ** state[&quotstep&quot]
+                step_size = group[&quotlr&quot] * math.sqrt(bias_correction2) / bias_correction1
+
+                if group[&quotweight_decay&quot] != 0:
+                    p_data_fp32.add_(p_data_fp32, alpha=-group[&quotweight_decay&quot] * group[&quotlr&quot])
+
+                p_data_fp32.addcdiv_(exp_avg, denom, value=-step_size)
+
+                if p.data.dtype in <a id="change">{</a>torch.float16, torch.bfloat16<a id="change"></a>}:
+                    p.data.copy_(p_data_fp32)
+
+        return loss</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/kssteven418/i-bert/commit/775122950d145382146e9120308432a9faf9a9b8#diff-d0f1814d2f162ba7c67209130e8a071048855102aa528fbdae9b64fe5a0ab649L131' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 109702483</div><div id='project'> Project Name: kssteven418/i-bert</div><div id='commit'> Commit Name: 775122950d145382146e9120308432a9faf9a9b8</div><div id='time'> Time: 2020-05-18</div><div id='author'> Author: myleott@fb.com</div><div id='file'> File Name: fairseq/optim/adam.py</div><div id='m_class'> M Class Name: Adam</div><div id='n_method'> N Class Name: Adam</div><div id='m_method'> M Method Name: step(2)</div><div id='n_method'> N Method Name: step(2)</div><div id='m_parent_class'> M Parent Class: torch.optim.Optimizer</div><div id='n_parent_class'> N Parent Class: torch.optim.Optimizer</div><div id='m_file'> M File Name: fairseq/optim/adam.py</div><div id='n_file'> N File Name: fairseq/optim/adam.py</div><div id='m_start'> M Start Line: 143</div><div id='m_end'> M End Line: 199</div><div id='n_start'> N Start Line: 147</div><div id='n_end'> N End Line: 206</div><BR>

@@ -1,0 +1,27 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+    if batchwise:
+        &#47&#47 one mask for whole batch, quite a bit faster
+        block_mask = torch.rand((1<a id="change">, C, H, W</a>), dtype=x.dtype, device=x.device) &lt; gamma
+    else:
+        &#47&#47 mask per batch element
+        block_mask = torch.rand_like(x) &lt; gamma
+    block_mask = F.max_pool2d(
+        block_mask.to(x.dtype), kernel_size=clipped_block_size, stride=1, padding=clipped_block_size // 2)
+
+    if with_noise:
+        normal_noise = torch.randn((1<a id="change">, C, H, W</a>), dtype=x.dtype, device=x.device) if batchwise else torch.randn_like(x)
+        if inplace:
+            x.mul_(1. - block_mask).add_(normal_noise * block_mask)
+        else:</code></pre><h3>After Change</h3><pre><code class='java'>
+    gamma = gamma_scale * drop_prob * total_size / clipped_block_size ** 2 / (
+            (W - block_size + 1) * (H - block_size + 1))
+
+    block_mask = <a id="change">torch.empty_like(x).bernoulli_(</a>gamma<a id="change">)</a>
+    block_mask = F.max_pool2d(
+        block_mask.to(x.dtype), kernel_size=clipped_block_size, stride=1, padding=clipped_block_size // 2)
+
+    if with_noise:</code></pre>

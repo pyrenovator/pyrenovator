@@ -1,0 +1,27 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+    def training_epoch_end(self, outputs: Tuple[torch.Tensor, Dict]) -&gt; None:
+        It&quots calling at the end of the training epoch with the outputs of all training steps.
+        <a id="change">total_loss</a><a id="change">, tagged_loss_values</a> = outputs
+        avg_loss<a id="change"> = total_loss</a><a id="change">.mean()</a>
+        self.log(&quottrain/avg_loss&quot, avg_loss, on_step=False, on_epoch=True)
+
+        for tag, loss_value in <a id="change">tagged_loss_values.items()</a>:
+            self.log(f&quottrain/{tag}&quot, loss_value, on_step=False, on_epoch=True)
+
+        self.log(&quotstep&quot, self.current_epoch, on_step=False, on_epoch=True)</code></pre><h3>After Change</h3><pre><code class='java'>
+    def training_epoch_end(self,
+                           training_step_outputs: List[Dict[str, Union[torch.Tensor, Dict[str, Dict]]]]) -&gt; None:
+        It&quots calling at the end of the training epoch with the outputs of all training steps.
+        total_loss = <a id="change">torch.stack([x[&quotloss&quot] for x in training_step_outputs]).mean()</a>
+        self.log(&quottrain/total_loss&quot, total_loss, on_step=False, on_epoch=True)
+
+        for <a id="change">tag</a> in <a id="change">training_step_outputs[0][&quottagged_loss_values&quot].keys()</a>:
+            loss<a id="change"> = torch.stack([x[&quottagged_loss_values&quot][tag] for x in training_step_outputs]).mean()</a>
+            self.log(f&quottrain/{tag}&quot, loss, on_step=False, on_epoch=True)
+
+        self.log(&quotstep&quot, self.current_epoch, on_step=False, on_epoch=True)
+        self.log_dict(self._metrics_manager.on_epoch_end(Phase.TRAIN))</code></pre>

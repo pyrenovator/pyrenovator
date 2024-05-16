@@ -1,0 +1,33 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            num_threads,
+        )
+        pipeline_components: List[PipelineComponent]
+        pipeline_components<a id="change"> = </a><a id="change">[</a>predictor_pipe_component<a id="change"></a>]
+        for _ in range(num_threads):
+            pipeline_components.append(copy(predictor_pipe_component))
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        &#47&#47 try to copy as little as possible
+        assert isinstance(predictor_pipe_component.predictor, TPFrcnnDetector)
+        tmp_tp_predictor<a id="change"> = </a>predictor_pipe_component.predictor.tp_predictor
+        tmp_predictor = predictor_pipe_component.predictor
+        tmp_dp_manager<a id="change"> = </a>predictor_pipe_component.dp_manager
+        predictor_pipe_component.dp_manager = None  &#47&#47 type: ignore
+        predictor_pipe_component.predictor = None  &#47&#47 type: ignore
+        tmp_predictor.tp_predictor = None
+        <a id="change">for _</a> in range(num_threads - 1)<a id="change">:
+            </a>copy_pipe_component<a id="change"> = </a>copy(predictor_pipe_component)
+            copy_pipe_component.predictor<a id="change"> = </a>copy(tmp_predictor)
+            copy_pipe_component.predictor.tp_predictor<a id="change"> = </a>copy(tmp_tp_predictor)
+            copy_pipe_component.dp_manager<a id="change"> = </a>copy(tmp_dp_manager)
+            pipeline_components.append(copy_pipe_component)
+
+        predictor_pipe_component.dp_manager = tmp_dp_manager
+        predictor_pipe_component.predictor = tmp_predictor
+        predictor_pipe_component.predictor.tp_predictor<a id="change"> = </a>tmp_tp_predictor
+        pipeline_components.append(predictor_pipe_component)
+        self.dataset = dataset
+</code></pre>

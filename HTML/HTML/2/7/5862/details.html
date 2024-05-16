@@ -1,0 +1,113 @@
+<html><h3>Pattern ID :5862
+</h3><img src='20722044.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        faulthandler.dump_traceback_later(30, repeat=True)
+
+    with det._catch_sys_exit():
+        <a id="change">try:
+            &#47&#47 TODO: reorder object lifetimes so that the DistributedContext and the GenericContext
+            &#47&#47 are created here.  Nothing else in the TrialController or Trial code needs the
+            &#47&#47 rendezvous info.  Then we can remove the rendezvous info as an arg from the whole rest
+            &#47&#47 of the harness.
+            </a>rendezvous_info<a id="change"> = </a>info._rendezvous_info
+            assert rendezvous_info is not None
+            controller = load.prepare_controller(
+                env,
+                rendezvous_info,
+                hvd_config,
+            )
+        <a id="change">except </a>det.InvalidHP:
+            &#47&#47 build a Training API object just to call report_early_exit().
+            session = experimental.Session(None, None, None, certs.cli_cert)
+            training = _generic.Training(</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    config_logging(env.debug)
+
+    <a id="change">with maybe_periodic_stacktraces</a><a id="change">(env.debug):
+        &#47&#47 Step 1: Load user code.
+        &#47&#47 We can&quott build a generic.Context until we have a RankInfo, and we can&quott build a RankInfo
+        &#47&#47 without horovod, and we can&quott load the right horovod until we know which Trial class the
+        &#47&#47 user implemented.
+        </a>trial_class<a id="change">, controller_class = </a>load.get_trial_and_controller_class(env.experiment_config)
+
+        &#47&#47 Step 2: Initialize framework-specific details (horovod, random seeds, etc).
+        controller_class.pre_execute_hook(env, hvd_config)
+
+        &#47&#47 Step 3: Now that horovod is initialized, we can build a RankInfo object.
+        &#47&#47 It is always expected that the training code can figure this out based on how the
+        &#47&#47 launch layer launched the code.
+        if hvd_config.use:
+            distributed = _generic.DistributedContext(
+                rank=horovod.hvd.rank(),
+                size=horovod.hvd.size(),
+                local_rank=horovod.hvd.local_rank(),
+                local_size=horovod.hvd.local_size(),
+                cross_rank=horovod.hvd.cross_rank(),
+                cross_size=horovod.hvd.cross_size(),
+                chief_ip=chief_ip,
+                port_offset=info.task_type == "TRIAL" and info.trial._unique_port_offset or 0,
+            )
+        else:
+            distributed = _generic.DummyDistributed()
+
+        &#47&#47 Step 4: Let generic.init() create the generic.Context.
+        with _generic.init(distributed=distributed) as generic_context:
+            trial_context = trial_class.trial_context_class(generic_context, env, hvd_config)
+
+            &#47&#47 Step 5: Instantiate the user&quots Trial.
+            trial_inst = trial_class(trial_context)
+
+            &#47&#47 Step 6: Create a TrialController and execute training
+            logging.info(f"Creating {controller_class.__name__} with {trial_class.__name__}.")
+            controller<a id="change"> = </a>controller_class.from_trial(
+                trial_inst=trial_inst,
+                context=trial_context,
+                env=env,</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 7</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/determined-ai/determined/commit/97abf3e4bb62287c5b6e7c00a8aa2a8e0a952492#diff-e6e62283a80f48561c839b02d7fdc3631f92a851fe9b0e3acb1a74bf8af16f75L21' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 20722044</div><div id='project'> Project Name: determined-ai/determined</div><div id='commit'> Commit Name: 97abf3e4bb62287c5b6e7c00a8aa2a8e0a952492</div><div id='time'> Time: 2021-10-28</div><div id='author'> Author: rb@determined.ai</div><div id='file'> File Name: harness/determined/exec/harness.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(1)</div><div id='n_method'> N Method Name: main(0)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: harness/determined/exec/harness.py</div><div id='n_file'> N File Name: harness/determined/exec/harness.py</div><div id='m_start'> M Start Line: 21</div><div id='m_end'> M End Line: 114</div><div id='n_start'> N Start Line: 33</div><div id='n_end'> N End Line: 129</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    pred_score["score"] = _pred.iloc(axis=1)[0]
+
+    &#47&#47 get performance
+    <a id="change">try:
+        </a>model_score<a id="change"> = </a>model.score(x_test, y_test)
+    <a id="change">except </a>NotImplementedError:
+        model_score = None
+    &#47&#47 Remove rows from x, y and w, which contain Nan in any columns in y_test.
+    x_test, y_test, __ = drop_nan_by_y_index(x_test, y_test)</code></pre><h3>After Change</h3><pre><code class='java'>
+    dataset = init_instance_by_config(task["dataset"])
+
+    &#47&#47 start exp
+    <a id="change">with R</a><a id="change">.start(experiment_name="workflow"):
+        </a>R.log_params(**flatten_dict(task))
+        model.fit(dataset)
+
+        &#47&#47 prediction
+        recorder = R.get_recorder()
+        rid<a id="change"> = </a>recorder.id
+        sr = SignalRecord(model, dataset, recorder)
+        sr.generate()
+        pred_score<a id="change"> = </a>sr.load()
+
+    y_test = dataset.prepare("test", col_set="label")
+    pred_score, y_test, __ = drop_nan_by_y_index(pred_score, y_test)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/microsoft/qlib/commit/c22bd73f67ec445bc4f542ee9004667663c38f0e#diff-e85369ca90d47fb4376b973050e0f2bd66cca8aa16ab93949415c3af58b2a288L71' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 20722060</div><div id='project'> Project Name: microsoft/qlib</div><div id='commit'> Commit Name: c22bd73f67ec445bc4f542ee9004667663c38f0e</div><div id='time'> Time: 2020-11-20</div><div id='author'> Author: dw1920@nyu.edu</div><div id='file'> File Name: tests/test_all_pipeline.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train(0)</div><div id='n_method'> N Method Name: train(0)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: tests/test_all_pipeline.py</div><div id='n_file'> N File Name: tests/test_all_pipeline.py</div><div id='m_start'> M Start Line: 82</div><div id='m_end'> M End Line: 104</div><div id='n_start'> N Start Line: 111</div><div id='n_end'> N End Line: 130</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    except subprocess.CalledProcessError as e:
+        raise RuntimeError(&quotFail to build pip wheel for Sky. &quot
+                           f&quotError message: {e.stderr.decode()}&quot) from e
+    <a id="change">try:
+        </a>latest_wheel<a id="change"> = </a>max(wheel_dir.glob(&quotsky-*.whl&quot), key=os.path.getctime)
+    <a id="change">except </a>ValueError:
+        raise FileNotFoundError(&quotCould not find built Sky wheels.&quot) from None
+    cleanup_wheels_dir(wheel_dir, latest_wheel)
+    return wheel_dir.absolute()</code></pre><h3>After Change</h3><pre><code class='java'>
+    &#47&#47 This lock prevents that the wheel is updated while being copied.
+    &#47&#47 Although the current caller already uses a lock, we still lock it here
+    &#47&#47 to guarantee inherent consistency.
+    <a id="change">with filelock</a><a id="change">.FileLock(WHEEL_DIR.parent / &quot.wheels_lock&quot):  &#47&#47 pylint: disable=E0110
+        &#47&#47 This implements a classic "compare, update and clone" consistency
+        &#47&#47 protocol. "compare, update and clone" has to be atomic to avoid
+        &#47&#47 race conditions.
+        </a>last_modification_time<a id="change"> = </a>_get_latest_modification_time(SKY_PACKAGE_PATH)
+        last_wheel_modification_time<a id="change"> = </a>_get_latest_modification_time(WHEEL_DIR)
+
+        &#47&#47 only build wheels if the wheel is outdated
+        if last_wheel_modification_time &lt; last_modification_time:</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/skypilot-org/skypilot/commit/0a608d00efa0185e4df609396072acb18083db19#diff-45ea312d3249749a748781a6971d9914e88fe7c03e254fbbbcbe3de7661176e3L28' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 20722038</div><div id='project'> Project Name: skypilot-org/skypilot</div><div id='commit'> Commit Name: 0a608d00efa0185e4df609396072acb18083db19</div><div id='time'> Time: 2022-04-29</div><div id='author'> Author: suquark@gmail.com</div><div id='file'> File Name: sky/backends/wheel_utils.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: build_sky_wheel(0)</div><div id='n_method'> N Method Name: build_sky_wheel(0)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: sky/backends/wheel_utils.py</div><div id='n_file'> N File Name: sky/backends/wheel_utils.py</div><div id='m_start'> M Start Line: 39</div><div id='m_end'> M End Line: 73</div><div id='n_start'> N Start Line: 94</div><div id='n_end'> N End Line: 112</div><BR>

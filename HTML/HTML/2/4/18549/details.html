@@ -1,0 +1,63 @@
+<html><h3>Pattern ID :18549
+</h3><img src='60496746.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            average_dims = []
+        &#47&#47 attention is batch x time x heads x time_to_attend
+        &#47&#47 average over batches, heads + only keep prediction attention and attention on observed timesteps
+        <a id="change">if </a>attention_prediction_horizon is None:  &#47&#47 average over all horizons
+            attention<a id="change"> = </a>out["attention"][..., : self.hparams.encode_length].mean(
+                dim=average_dims + [2]
+            )  &#47&#47 todo: how to handle zero attention due to shorter encode length?
+            attention = attention / attention.sum(-1).unsqueeze(-1)  &#47&#47 renormalize</code></pre><h3>After Change</h3><pre><code class='java'>
+            attention = attention.mean(dim=0)
+            attention = attention / attention.sum(-1).unsqueeze(-1)  &#47&#47 renormalize
+
+            attention<a id="change"> = </a><a id="change">torch.zeros(self.hparams.max_encode_length).scatter(
+                dim=0,
+                index=torch.arange(self.hparams.max_encode_length - attention.size(0), self.hparams.max_encode_length),
+                src=attention,
+            )</a>
+        else:
+            attention = attention / attention.sum(-1).unsqueeze(-1)  &#47&#47 renormalize
+            attention = torch.zeros(attention.size(0), self.hparams.max_encode_length).scatter(
+                dim=1,</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/jdb78/pytorch-forecasting/commit/79cfec0818dbe78d8773534e6ce8f5fd578c3c3a#diff-326fa71fa47eb2d5a00ea5fa14cac5f65c967b6856192e5c0e687cbce8b581e3L553' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 60496746</div><div id='project'> Project Name: jdb78/pytorch-forecasting</div><div id='commit'> Commit Name: 79cfec0818dbe78d8773534e6ce8f5fd578c3c3a</div><div id='time'> Time: 2020-06-22</div><div id='author'> Author: beitner.jan@bcg.com</div><div id='file'> File Name: temporal_fusion_transformer_pytorch/model/__init__.py</div><div id='m_class'> M Class Name: TemporalFusionTransformer</div><div id='n_method'> N Class Name: TemporalFusionTransformer</div><div id='m_method'> M Method Name: interpret_output(4)</div><div id='n_method'> N Method Name: interpret_output(4)</div><div id='m_parent_class'> M Parent Class: pl.LightningModule</div><div id='n_parent_class'> N Parent Class: pl.LightningModule</div><div id='m_file'> M File Name: temporal_fusion_transformer_pytorch/model/__init__.py</div><div id='n_file'> N File Name: temporal_fusion_transformer_pytorch/model/__init__.py</div><div id='m_start'> M Start Line: 555</div><div id='m_end'> M End Line: 605</div><div id='n_start'> N Start Line: 553</div><div id='n_end'> N End Line: 610</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        tail_weights += torch.where(l_mask, left_weight, zero).sum(-1)
+
+        &#47&#47 a size (B,) mask that removes non-firing position
+        <a id="change">if </a>keep_all_tails:
+            extend_mask<a id="change"> = </a>feat_lengths.new_ones((B,))
+        else:
+            extend_mask = tail_weights &gt;= (beta / 2)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 extend 1 fire and upscale the weights
+        if extend_mask.any():
+            &#47&#47 (B, T, C), may have infs so need the mask
+            upscale<a id="change"> = </a>(
+                <a id="change">torch.ones_like(output)
+                .scatter(
+                    </a>1,
+                    feat_lengths.view(B, 1, 1).expand(-1, -1, C),
+                    beta / tail_weights.view(B, 1, 1).expand(-1, -1, C)<a id="change">,
+                )
+            )</a>
+            output[extend_mask] *= upscale[extend_mask]
+            feat_lengths += extend_mask.long()
+            T = feat_lengths.max()
+        output = output[:, :T, :]</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/george0828zhang/torch_cif/commit/68e2689c475308cd5043cf1d25c49891b23e946a#diff-32b811c4bee1b0d13968dded1dd3f2123be4bbc3124e6e5811c83d4fab99a456L23' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 60496745</div><div id='project'> Project Name: george0828zhang/torch_cif</div><div id='commit'> Commit Name: 68e2689c475308cd5043cf1d25c49891b23e946a</div><div id='time'> Time: 2022-02-23</div><div id='author'> Author: cc.chang0828@gmail.com</div><div id='file'> File Name: cif.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: cif_function(7)</div><div id='n_method'> N Method Name: cif_function(9)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: cif.py</div><div id='n_file'> N File Name: cif.py</div><div id='m_start'> M Start Line: 29</div><div id='m_end'> M End Line: 216</div><div id='n_start'> N Start Line: 27</div><div id='n_end'> N End Line: 197</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 help auto-solve a frequent area of confusion around input masks in auto-regressive
+        &#47&#47 if user supplies a mask that is only off by one from the source sequence, resolve it for them
+        mask = kwargs.get(&quotmask&quot, None)
+        <a id="change">if </a>mask is not None and mask.shape[1] == x.shape[1]:
+            mask<a id="change"> = </a>mask[:, :-1]
+            kwargs[&quotmask&quot] = mask
+
+        out = self.net(xi, **kwargs)</code></pre><h3>After Change</h3><pre><code class='java'>
+            rand[:, 0] = -torch.finfo(rand.dtype).max &#47&#47 first token should not be masked out
+            num_mask = min(int(seq * self.mask_prob), seq - 1)
+            indices = rand.topk(num_mask, dim = -1).indices
+            mask<a id="change"> = </a>~<a id="change">torch.zeros_like(inp).scatter(</a>1, indices, 1.<a id="change">)</a>.bool()
+            kwargs.update(context_mask = mask)
+
+        out = self.net(inp, **kwargs)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lucidrains/x-transformers/commit/595a4745d532c20b8ebd310256c342e946a4cef7#diff-b70a3173d353a448f8f499d8b685672d9bccac7b78bc1d36b77f84afe33be694L106' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 60496735</div><div id='project'> Project Name: lucidrains/x-transformers</div><div id='commit'> Commit Name: 595a4745d532c20b8ebd310256c342e946a4cef7</div><div id='time'> Time: 2022-11-02</div><div id='author'> Author: lucidrains@gmail.com</div><div id='file'> File Name: x_transformers/autoregressive_wrapper.py</div><div id='m_class'> M Class Name: AutoregressiveWrapper</div><div id='n_method'> N Class Name: AutoregressiveWrapper</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: x_transformers/autoregressive_wrapper.py</div><div id='n_file'> N File Name: x_transformers/autoregressive_wrapper.py</div><div id='m_start'> M Start Line: 107</div><div id='m_end'> M End Line: 118</div><div id='n_start'> N Start Line: 122</div><div id='n_end'> N End Line: 142</div><BR>

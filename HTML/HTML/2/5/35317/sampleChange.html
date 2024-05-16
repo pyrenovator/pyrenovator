@@ -1,0 +1,62 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            &#47&#47 These are the delayed state-value estimates we are looking for:
+            target_mod_val = [c(mod_augm_obs) for c in self.model_target.critics]
+            &#47&#47 print_debug(f"target_mod_val of all critics: {target_mod_val}")
+            target_mod_val = reduce(torch.min, <a id="change">torch.stack(</a>target_mod_val<a id="change">)</a>).squeeze()  &#47&#47 minimum target estimate
+            &#47&#47 print_debug(f"target_mod_val before removing terminal states: {target_mod_val}")
+            &#47&#47 print_debug(f"terminals.device:{terminals.device}")
+            &#47&#47 print_debug(f"target_mod_val.device:{target_mod_val.device}")
+            target_mod_val<a id="change"> = </a>target_mod_val * (1. - terminals)
+            &#47&#47 print_debug(f"target_mod_val after removing terminal states: {target_mod_val}")
+
+            &#47&#47 Now let us use this to compute the state-value targets of the batch of initial augmented states:
+
+            value_target = torch.zeros(batch_size, device=self.device)
+            backup_started = torch.zeros(batch_size, device=self.device)
+            &#47&#47 print_debug(f"self.discount: {self.discount}")
+            &#47&#47 print_debug(f"self.reward_scale: {self.reward_scale}")
+            &#47&#47 print_debug(f"self.entropy_scale: {self.entropy_scale}")
+            &#47&#47 print_debug(f"terminals: {terminals}")
+            for i in reversed(range(nstep_max_len + 1)):
+                start_backup_mask = nstep_one_hot[:, i]
+                backup_started += start_backup_mask
+                &#47&#47 print_debug(f"i: {i}")
+                &#47&#47 print_debug(f"start_backup_mask: {start_backup_mask}")
+                &#47&#47 print_debug(f"backup_started: {backup_started}")
+                value_target = self.reward_scale * rew_traj[i] - self.entropy_scale * self.traj_new_actions_log_prob_detach[i] + backup_started * self.discount * (value_target + start_backup_mask * target_mod_val)
+                &#47&#47 print_debug(f"rew_traj[i]: {rew_traj[i]}")
+                &#47&#47 print_debug(f"self.traj_new_actions_log_prob_detach[i]: {self.traj_new_actions_log_prob_detach[i]}")
+                &#47&#47 print_debug(f"new value_target: {value_target}")
+            &#47&#47 print_debug(f"state-value target: {value_target}")
+
+        &#47&#47 end of torch.no_grad()
+
+        assert values[0].shape == value_target.shape, f"values[0].shape : {values[0].shape} != value_target.shape : {value_target.shape}"
+        assert not value_target.requires_grad
+
+        &#47&#47 Now the critic loss is:
+
+        loss_critic = sum(mse_loss(v, value_target) for v in values)
+        &#47&#47 print_debug(f"loss_critic: {loss_critic}")
+
+        &#47&#47 actor loss:
+        &#47&#47 TODO: there is probably a way of merging this with the previous for loop
+
+        &#47&#47 print_debug(" --- ACTOR LOSS ---")
+
+        model_mod_val = [c(mod_augm_obs) for c in self.model_nograd.critics]
+        &#47&#47 print_debug(f"model_mod_val of all critics: {model_mod_val}")
+        model_mod_val = reduce(torch.min, <a id="change">torch.stack(</a>model_mod_val<a id="change">)</a>).squeeze()  &#47&#47 minimum model estimate
+        &#47&#47 print_debug(f"model_mod_val before removing terminal states: {model_mod_val}")
+        model_mod_val = model_mod_val * (1. - terminals)
+        &#47&#47 print_debug(f"model_mod_val after removing terminal states: {model_mod_val}")</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 model_mod_val = model_mod_val * (1. - terminals)
+        &#47&#47 print_debug(f"model_mod_val after removing terminal states: {model_mod_val}")
+
+        model_mod_vals = [reduce(torch.min, torch.stack([c(self.traj_new_augm_obs[i + 1]) for c in self.model_nograd.critics])).squeeze() * (1. - terminals) for i in <a id="change">range(</a>nstep_max_len + 1<a id="change">)</a>]
+
+        &#47&#47 target_mod_vals = [reduce(torch.min, torch.stack([c(self.traj_new_augm_obs[i + 1]) for c in self.model_target.critics])).squeeze() * (1. - terminals) for i in range(nstep_max_len + 1)]
+</code></pre>

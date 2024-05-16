@@ -1,0 +1,18 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        if writer_batch_size is None:
+            writer_batch_size = self.writer_batch_size
+        batches: List[pa.RecordBatch] = pa_table.to_batches(max_chunksize=writer_batch_size)
+        self._num_bytes += sum(<a id="change">batch</a>.nbytes <a id="change">for</a> batch in batches)
+        self._num_examples += pa_table.num_rows
+        for batch in batches:
+            self.pa_writer.write_batch(batch)</code></pre><h3>After Change</h3><pre><code class='java'>
+        schema = None if self.pa_writer is None and self.update_features else self._schema
+        try_schema = self._schema if self.pa_writer is None and self.update_features else None
+        typed_sequence_examples = {}
+        for col in <a id="change">sorted(</a>batch_examples.keys()<a id="change">)</a>:
+            col_type = schema.field(col).type if schema is not None else None
+            col_try_type = try_schema.field(col).type if try_schema is not None and col in try_schema.names else None
+            typed_sequence = TypedSequence(batch_examples[col], type=col_type, try_type=col_try_type)</code></pre>

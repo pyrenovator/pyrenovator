@@ -1,0 +1,35 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+        beta_read = bn_op.inputs[constants.BN_OP_PARAM_INDICES[&quotbeta&quot]].op
+
+        <a id="change">assert </a>beta_read.type == &quotReadVariableOp&quot
+        return beta_read
+
+    @staticmethod</code></pre><h3>After Change</h3><pre><code class='java'>
+         (is mul_1 op inside BN scope)
+        :return: beta read op
+        
+        <a id="change">if bn_op.type in [&quotMul&quot]</a>:
+            &#47&#47 For regular BN
+            &#47&#47 mul_1 -&gt; add_1 &lt;-- sub &lt;-- beta_read
+            assert len(bn_op.outputs) &gt;= 1, _BN_STRUCTURE_ERROR_MSG
+            add_1 = bn_op.outputs[0].consumers()[0]
+            assert len(add_1.inputs) &gt;= 2, _BN_STRUCTURE_ERROR_MSG
+            sub<a id="change"> = </a>add_1.inputs[1].op
+            <a id="change">assert </a>len(sub.inputs) &gt;= 1, _BN_STRUCTURE_ERROR_MSG
+            beta_read = sub.inputs[0].op
+        elif <a id="change">bn_op.type in [&quotFusedBatchNormV3&quot]</a>:
+            assert len(bn_op.inputs) == 5
+            beta_read = bn_op.inputs[constants.BN_OP_PARAM_INDICES[&quotbeta&quot]].op
+            <a id="change">if beta_read.type == &quotSwitch&quot</a>:      &#47&#47 tf slim bn using training tensor form
+                beta_read<a id="change"> = </a>beta_read.inputs[0].op
+                assert &quotread&quot in beta_read.name
+        else:
+            <a id="change">logger.error("Error, unknown BN op"</a><a id="change">)</a>
+            <a id="change">assert </a>False
+
+        assert beta_read.type in [&quotReadVariableOp&quot, &quotIdentity&quot]      &#47&#47 Will be identity for tf slim BNs
+        return beta_read</code></pre>

@@ -1,0 +1,121 @@
+<html><h3>Pattern ID :16288
+</h3><img src='54513454.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+            &#47&#47 TODO: make this work on multilpe outputs
+            result = op(sample.input, *sample.args, **sample.kwargs)
+            <a id="change">if </a>not isinstance(result, torch.Tensor):
+                <a id="change">continue</a>
+
+            diff_argnums = tuple(i for i, arg in enumerate(args)
+                                 if isinstance(arg, Tensor) and
+                                 torch.is_floating_point(arg))</code></pre><h3>After Change</h3><pre><code class='java'>
+class TestGradOpInfo(TestCase):
+    @ops(op_db, allowed_dtypes=(torch.float,))
+    def test_op(self, device, dtype, op):
+        op_skip<a id="change"> = </a>{
+            &quot__getitem__&quot,
+            &quot__rpow__&quot,
+            &quotlinalg.cholesky&quot,
+            &quotlinalg.inv&quot,
+            &quotlinalg.matrix_norm&quot,
+            &quotlinalg.matrix_power&quot,
+            &quotlinalg.norm&quot,
+            &quotnanquantile&quot,
+            &quotquantile&quot,
+            &quottensor_split&quot,
+        }
+        if op.name in op_skip:
+            self.skipTest("Skipped; Expected failures")
+            return
+
+        if not op.supports_autograd:
+            self.skipTest("Skipped! Autograd not supported.")
+            return
+
+        samples = op.sample_inputs(device, dtype, requires_grad=True)
+
+        def is_inplace(variant):
+            if hasattr(variant, "__wrapped__"):
+                return variant.__wrapped__ is op.get_inplace()
+            return variant is op.get_inplace()
+
+        for sample in samples:
+            &#47&#47 TODO: test in-place
+            if is_inplace(op.get_op()):
+                self.skipTest("Skipped! NYI: inplace-testing not supported.")
+                continue
+
+            args = [sample.input] + list(sample.args)
+            kwargs = sample.kwargs
+
+            def diff_arg(arg):
+                if is_iterable_of_tensors(arg):
+                    if all([a.requires_grad for a in arg]):
+                        return True
+                    if all([not a.requires_grad for a in arg]):
+                        return False
+                    raise RuntimeError("NYI: The test runner can&quott handle this")
+                return isinstance(arg, Tensor) and arg.requires_grad
+
+            diff_argnums = tuple(i for i, arg in enumerate(args) if diff_arg(arg))
+            <a id="change">assert </a>len(diff_argnums) &gt; 0
+            diff_args = tuple(args[i] for i in diff_argnums)
+
+            def wrapped_fn(*args, **kwargs):</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/pytorch/pytorch/commit/92a4886afa53202f3cff7a7074b8c9c276b2b67c#diff-405de16c609afb854f5766d7eb69859a32236fa5b26afdfb2ea271b77d36a75cL48' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 54513454</div><div id='project'> Project Name: pytorch/pytorch</div><div id='commit'> Commit Name: 92a4886afa53202f3cff7a7074b8c9c276b2b67c</div><div id='time'> Time: 2022-07-21</div><div id='author'> Author: zou3519@gmail.com</div><div id='file'> File Name: functorch/test/test_grad.py</div><div id='m_class'> M Class Name: TestGradOpInfo</div><div id='n_method'> N Class Name: TestGradOpInfo</div><div id='m_method'> M Method Name: test_op(4)</div><div id='n_method'> N Method Name: test_op(4)</div><div id='m_parent_class'> M Parent Class: TestCase</div><div id='n_parent_class'> N Parent Class: TestCase</div><div id='m_file'> M File Name: functorch/test/test_grad.py</div><div id='n_file'> N File Name: functorch/test/test_grad.py</div><div id='m_start'> M Start Line: 48</div><div id='m_end'> M End Line: 96</div><div id='n_start'> N Start Line: 50</div><div id='n_end'> N End Line: 96</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                fq = pt.tensor(mol["formal_charges"], dtype=pt.long)
+                q = fq.sum()
+
+                for <a id="change">conf</a> in mol["conformations"].values():
+
+                    &#47&#47 Skip failed calculations
+                    <a id="change">if </a>"formation_energy" not in conf:
+                        <a id="change">continue</a>
+
+                    assert conf["positions"].attrs["units"] == "Å"
+                    pos = pt.tensor(conf["positions"], dtype=pt.float32)
+                    assert pos.shape == (z.shape[0], 3)</code></pre><h3>After Change</h3><pre><code class='java'>
+
+            h5 = h5py.File(path)
+            assert h5.attrs["layout"] == "Ace"
+            version<a id="change"> = </a>h5.attrs["layout_version"]
+
+            mols = None
+            load_confs = None
+            if version == "1.0":
+                assert "name" in h5.attrs
+                mols = h5.items()
+                load_confs = self._load_confs_1_0
+            elif version == "2.0":
+                <a id="change">assert </a>len(h5.keys()) == 1
+                mols = list(h5.values())[0].items()
+                load_confs = self._load_confs_2_0
+            else:</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/torchmd/torchmd-net/commit/d23e6500f2cef1fa56d6c99ce5fdb983f1379bca#diff-56de3e28dd2b438171f4af7de59cc66305304d98e21b24faf4d744698d8c1aa3L72' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 54513436</div><div id='project'> Project Name: torchmd/torchmd-net</div><div id='commit'> Commit Name: d23e6500f2cef1fa56d6c99ce5fdb983f1379bca</div><div id='time'> Time: 2022-10-28</div><div id='author'> Author: peastman@stanford.edu</div><div id='file'> File Name: torchmdnet/datasets/ace.py</div><div id='m_class'> M Class Name: Ace</div><div id='n_method'> N Class Name: Ace</div><div id='m_method'> M Method Name: sample_iter(2)</div><div id='n_method'> N Method Name: sample_iter(1)</div><div id='m_parent_class'> M Parent Class: Dataset</div><div id='n_parent_class'> N Parent Class: Dataset</div><div id='m_file'> M File Name: torchmdnet/datasets/ace.py</div><div id='n_file'> N File Name: torchmdnet/datasets/ace.py</div><div id='m_start'> M Start Line: 72</div><div id='m_end'> M End Line: 123</div><div id='n_start'> N Start Line: 144</div><div id='n_end'> N End Line: 206</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                fq = pt.tensor(mol["formal_charges"], dtype=pt.long)
+                q = fq.sum()
+
+                for <a id="change">conf</a> in mol["conformations"].values():
+
+                    &#47&#47 Skip failed calculations
+                    <a id="change">if </a>"formation_energy" not in conf:
+                        <a id="change">continue</a>
+
+                    assert conf["positions"].attrs["units"] == "Å"
+                    pos = pt.tensor(conf["positions"][...], dtype=pt.float32)
+                    assert pos.shape == (z.shape[0], 3)</code></pre><h3>After Change</h3><pre><code class='java'>
+
+            h5 = h5py.File(path)
+            assert h5.attrs["layout"] == "Ace"
+            version<a id="change"> = </a>h5.attrs["layout_version"]
+
+            mols = None
+            if version == "1.0":
+                assert "name" in h5.attrs
+                mols = h5.items()
+            elif version == "2.0":
+                <a id="change">assert </a>len(h5.keys()) == 0
+                mols = list(h5.values())[0].items()
+            else:
+                raise RuntimeError(f"Unsuported layout verions: {version}")</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/torchmd/torchmd-net/commit/fdbbd9d91ea0ec8e8a0ea2ec63be8b8bd2e4cb61#diff-56de3e28dd2b438171f4af7de59cc66305304d98e21b24faf4d744698d8c1aa3L73' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 54513473</div><div id='project'> Project Name: torchmd/torchmd-net</div><div id='commit'> Commit Name: fdbbd9d91ea0ec8e8a0ea2ec63be8b8bd2e4cb61</div><div id='time'> Time: 2022-10-17</div><div id='author'> Author: r.galvelis@acellera.com</div><div id='file'> File Name: torchmdnet/datasets/ace.py</div><div id='m_class'> M Class Name: Ace</div><div id='n_method'> N Class Name: Ace</div><div id='m_method'> M Method Name: sample_iter(2)</div><div id='n_method'> N Method Name: sample_iter(2)</div><div id='m_parent_class'> M Parent Class: Dataset</div><div id='n_parent_class'> N Parent Class: Dataset</div><div id='m_file'> M File Name: torchmdnet/datasets/ace.py</div><div id='n_file'> N File Name: torchmdnet/datasets/ace.py</div><div id='m_start'> M Start Line: 81</div><div id='m_end'> M End Line: 125</div><div id='n_start'> N Start Line: 110</div><div id='n_end'> N End Line: 140</div><BR>

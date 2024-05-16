@@ -1,0 +1,66 @@
+<html><h3>Pattern ID :37593
+</h3><img src='108137463.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+        tot_features = sum(num_embeddings_per_feature)
+        &#47&#47 TODO: Other mode
+        tot_features += tot_features % <a id="change">gpc.get_world_size(</a>ParallelMode.PARALLEL_1D<a id="change">)</a>
+        self.embed = nn.Embedding(tot_features, embedding_dim)
+        offsets = np.array([0, *np.cumsum(num_embeddings_per_feature)[:-1]])
+        &#47&#47 TODO: check device
+        self.offsets = torch.from_numpy(offsets).to(get_current_device()).unsqueeze(0)</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        tot_features = sum(num_embeddings_per_feature)
+        &#47&#47 TODO: Other mode
+        tp_size = <a id="change">gpc.get_world_size(</a>ParallelMode.PARALLEL_1D<a id="change">)</a>
+        if tot_features<a id="change"> % </a>tp_size != 0:
+            tot_features += (tp_size - tot_features % tp_size)
+
+        self.embed = nn.Embedding(tot_features, embedding_dim)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 5</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/hpcaitech/cachedembedding/commit/1c7c9bce349b40617b010855643ffb50f16e636a#diff-e8a3112bbf9ad7ddb4d08b6efb743006585e650381233493a30d98a1ce7f9951L19' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 108137463</div><div id='project'> Project Name: hpcaitech/cachedembedding</div><div id='commit'> Commit Name: 1c7c9bce349b40617b010855643ffb50f16e636a</div><div id='time'> Time: 2022-05-25</div><div id='author'> Author: zhangg1998@outlook.com</div><div id='file'> File Name: modules/colossal_embedding.py</div><div id='m_class'> M Class Name: EmbeddingBag</div><div id='n_method'> N Class Name: EmbeddingBag</div><div id='m_method'> M Method Name: __init__(3)</div><div id='n_method'> N Method Name: __init__(3)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: modules/colossal_embedding.py</div><div id='n_file'> N File Name: modules/colossal_embedding.py</div><div id='m_start'> M Start Line: 19</div><div id='m_end'> M End Line: 21</div><div id='n_start'> N Start Line: 19</div><div id='n_end'> N End Line: 25</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            ]
+            flat_merged_partitions = self.flatten_dense_tensors_aligned(
+                merged_partitions,
+                <a id="change">dist.get_world_size(group=self.real_dp_process_group[i])</a>)
+            dp_partitions = self.get_data_parallel_partitions(flat_merged_partitions, i)
+            merged_single_partition_of_fp32_groups.append(dp_partitions[partition_id])
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            ]
+            flat_merged_partitions = self.flatten_dense_tensors_aligned(
+                merged_partitions,
+                self.nccl_start_alignment_factor<a id="change"> *
+                </a><a id="change">dist.get_world_size(group=self.real_dp_process_group[i])</a>)
+            dp_partitions = self.get_data_parallel_partitions(flat_merged_partitions, i)
+            merged_single_partition_of_fp32_groups.append(dp_partitions[partition_id])
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/microsoft/deepspeed/commit/2c62843965f777ead99719202cd31f70fd3ad0a3#diff-7fcd356717f706c544a469feeba2e0f7471e39499ff6a9cb05940ce490fa06fbL1987' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 108137447</div><div id='project'> Project Name: microsoft/deepspeed</div><div id='commit'> Commit Name: 2c62843965f777ead99719202cd31f70fd3ad0a3</div><div id='time'> Time: 2021-09-09</div><div id='author'> Author: 81309834+amathews-amd@users.noreply.github.com</div><div id='file'> File Name: deepspeed/runtime/zero/stage2.py</div><div id='m_class'> M Class Name: FP16_DeepSpeedZeroOptimizer</div><div id='n_method'> N Class Name: FP16_DeepSpeedZeroOptimizer</div><div id='m_method'> M Method Name: _restore_from_fp32_weights(2)</div><div id='n_method'> N Method Name: _restore_from_fp32_weights(2)</div><div id='m_parent_class'> M Parent Class: object</div><div id='n_parent_class'> N Parent Class: object</div><div id='m_file'> M File Name: deepspeed/runtime/zero/stage2.py</div><div id='n_file'> N File Name: deepspeed/runtime/zero/stage2.py</div><div id='m_start'> M Start Line: 1996</div><div id='m_end'> M End Line: 1996</div><div id='n_start'> N Start Line: 2007</div><div id='n_end'> N End Line: 2008</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        self.indices = [index for index in range(len(self.dataset))]
+
+        if num_replicas is None:
+            self.num_replicas = <a id="change">dist.get_world_size()</a>
+        else:
+            self.num_replicas = num_replicas
+        self.id = client_id
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        self.indices = [index for index in range(len(self.dataset))]
+
+        if num_replicas is None:
+            self.num_replicas = <a id="change">dist.get_world_size() - </a>1  &#47&#47 world size includes 1 server process
+        else:
+            self.num_replicas = num_replicas
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/smilelab-fl/fedlab/commit/e42d99102a3cbf75973e109fd970ebdfae9970a0#diff-e94ed981b6533e99d255e60d377102b7c785c686ca92d706ca1997db0b584f3dL47' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 108137460</div><div id='project'> Project Name: smilelab-fl/fedlab</div><div id='commit'> Commit Name: e42d99102a3cbf75973e109fd970ebdfae9970a0</div><div id='time'> Time: 2021-09-15</div><div id='author'> Author: zszxlsq@gmail.com</div><div id='file'> File Name: fedlab/utils/dataset/sampler.py</div><div id='m_class'> M Class Name: RawPartitionSampler</div><div id='n_method'> N Class Name: RawPartitionSampler</div><div id='m_method'> M Method Name: __init__(4)</div><div id='n_method'> N Method Name: __init__(4)</div><div id='m_parent_class'> M Parent Class: torch.utils.data.Sampler</div><div id='n_parent_class'> N Parent Class: torch.utils.data.Sampler</div><div id='m_file'> M File Name: fedlab/utils/dataset/sampler.py</div><div id='n_file'> N File Name: fedlab/utils/dataset/sampler.py</div><div id='m_start'> M Start Line: 47</div><div id='m_end'> M End Line: 53</div><div id='n_start'> N Start Line: 55</div><div id='n_end'> N End Line: 67</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            self.fp16_groups_flat.append(
+                self.flatten_dense_tensors_aligned(
+                    self.round_robin_fp16_groups[i],
+                    <a id="change">dist.get_world_size(group=self.real_dp_process_group[i])</a>).cuda(
+                        torch.cuda.current_device()))
+            see_memory_usage(f"After flattening and moving param group {i} to GPU",
+                             force=False)</code></pre><h3>After Change</h3><pre><code class='java'>
+            self.fp16_groups_flat.append(
+                self.flatten_dense_tensors_aligned(
+                    self.round_robin_fp16_groups[i],
+                    self.nccl_start_alignment_factor<a id="change"> *
+                    </a><a id="change">dist.get_world_size(group=self.real_dp_process_group[i])</a>).cuda(
+                        torch.cuda.current_device()))
+            see_memory_usage(f"After flattening and moving param group {i} to GPU",
+                             force=False)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/microsoft/deepspeed/commit/2c62843965f777ead99719202cd31f70fd3ad0a3#diff-7fcd356717f706c544a469feeba2e0f7471e39499ff6a9cb05940ce490fa06fbL82' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 108137448</div><div id='project'> Project Name: microsoft/deepspeed</div><div id='commit'> Commit Name: 2c62843965f777ead99719202cd31f70fd3ad0a3</div><div id='time'> Time: 2021-09-09</div><div id='author'> Author: 81309834+amathews-amd@users.noreply.github.com</div><div id='file'> File Name: deepspeed/runtime/zero/stage2.py</div><div id='m_class'> M Class Name: FP16_DeepSpeedZeroOptimizer</div><div id='n_method'> N Class Name: FP16_DeepSpeedZeroOptimizer</div><div id='m_method'> M Method Name: __init__(27)</div><div id='n_method'> N Method Name: __init__(27)</div><div id='m_parent_class'> M Parent Class: object</div><div id='n_parent_class'> N Parent Class: object</div><div id='m_file'> M File Name: deepspeed/runtime/zero/stage2.py</div><div id='n_file'> N File Name: deepspeed/runtime/zero/stage2.py</div><div id='m_start'> M Start Line: 286</div><div id='m_end'> M End Line: 286</div><div id='n_start'> N Start Line: 234</div><div id='n_end'> N End Line: 318</div><BR>

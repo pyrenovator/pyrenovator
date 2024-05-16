@@ -1,0 +1,76 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+    result = {}
+
+    result["grasp_pose"]<a id="change"> = </a>np.hstack(c_grasp.pose)
+    result["reorient_pose"]<a id="change"> = </a><a id="change">np.hstack(</a>c_reorient.pose<a id="change">)</a>
+
+    obj_af = mercury.pybullet.duplicate(
+        env.fg_object_id,
+        texture=False,
+        rgba_color=(0, 1, 0, 0.5),
+        position=c_reorient.position,
+        quaternion=c_reorient.quaternion,
+    )
+
+    def before_return():
+        env.ri.attachments = []
+        world_saver.restore()
+        pp.remove_body(obj_af)
+        &#47&#47 lock_renderer.restore()
+
+    result["j_init"] = env.ri.getj()
+
+    bg_object_ids = env.bg_objects + env.object_ids
+    bg_object_ids.remove(env.fg_object_id)
+
+    &#47&#47 solve j_grasp
+    c = mercury.geometry.Coordinate(
+        *mercury.geometry.pose_from_matrix(T_ee_af_to_world)
+    )
+    j = env.ri.solve_ik(c.pose)
+    if j is None:
+        logger.warning("j_grasp is not found")
+        before_return()
+        <a id="change">return </a>result
+    if not env.ri.validatej(j, obstacles=bg_object_ids):
+        logger.warning("j_grasp is invalid")
+        before_return()</code></pre><h3>After Change</h3><pre><code class='java'>
+            j = None
+    else:
+        logger.warning("j_grasp is not found")
+    <a id="change">if j is not None</a>:
+        result["j_grasp"] = j
+
+    obj_to_world = pp.get_pose(env.fg_object_id)
+    obj_to_ee = pp.multiply(pp.invert(ee_to_world), obj_to_world)
+    attachments = [
+        pp.Attachment(env.ri.robot, env.ri.ee, obj_to_ee, env.fg_object_id)
+    ]
+
+    &#47&#47 solve j_place
+    env.ri.attachments = attachments
+    with env.ri.enabling_attachments():
+        j = env.ri.solve_ik(
+            mercury.geometry.pose_from_matrix(T_obj_af_to_world),
+            move_target=env.ri.robot_model.attachment_link0,
+            thre=0.01,
+            rthre=np.deg2rad(10),
+        )
+    if j is not None:
+        if not env.ri.validatej(
+            j,
+            obstacles=bg_object_ids,
+            min_distances={(env.ri.attachments[0].child, -1): -0.01},
+        ):
+            logger.warning("j_place is invalid")
+            j = None
+    else:
+        logger.warning("j_place is not found")
+    <a id="change">if j</a><a id="change"> is not None</a>:
+        result["j_place"] = j
+
+    if "j_grasp" not in result or "j_place" not in result:</code></pre>

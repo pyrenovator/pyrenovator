@@ -1,0 +1,40 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        await asyncio.sleep(0.1)
+
+    head_pod.wait_start_success()
+    <a id="change">for </a>i, pod in enumerate(shard_pods)<a id="change">:
+        &#47&#47 this would be done by the Pod, its adding the worker to the head
+        </a>pod.wait_start_success()
+        <a id="change">activate_msg</a><a id="change"> = </a><a id="change">ControlRequest(command=&quotACTIVATE&quot)</a>
+        <a id="change">activate_msg.add_related_entity(
+            &quotworker&quot</a>, <a id="change">&quot127.0.0.1&quot</a>, pod.args.port<a id="change">, shard_id=i
+        )</a>
+        <a id="change">GrpcConnectionPool.send_request_sync(activate_msg</a>, <a id="change">f&quot127.0.0.1:{head_port}&quot</a><a id="change">)</a>
+
+    &#47&#47 create a single gateway pod
+    gateway_pod = _create_gateway_pod(graph_description, pod_addresses, port)
+    gateway_pod.start()</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    &#47&#47 create the shards
+    shard_pods = []
+    connection_list_dict<a id="change"> = </a>{}
+    for i in range(10):
+        &#47&#47 create worker
+        worker_port = port_generator()
+        &#47&#47 create a single worker pod
+        worker_pod = _create_worker_pod(worker_port, f&quotpod0/shard/{i}&quot)
+        shard_pods.append(worker_pod)
+        worker_pod.start()
+        connection_list_dict[i] = [f&quot127.0.0.1:{worker_port}&quot]
+
+        await asyncio.sleep(0.1)
+
+    &#47&#47 create a single head pod
+    head_pod<a id="change"> = </a><a id="change">_create_head_pod(</a>head_port, connection_list_dict, <a id="change">&quothead&quot</a>, polling<a id="change">)</a>
+    head_pod.start()
+
+    head_pod.wait_start_success()
+    for i, pod in enumerate(shard_pods):</code></pre>

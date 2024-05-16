@@ -1,0 +1,135 @@
+<html><h3>Pattern ID :10295
+</h3><img src='36268585.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        confusion_matrix: Dict[str, int]
+):
+    precision = confusion_matrix["TP"] / (confusion_matrix["TP"] + confusion_matrix["FP"])
+    recall = confusion_matrix["TP"] / (confusion_matrix["TP"] + <a id="change">confusion_matrix["FN"]</a>)
+    f1score = 2 * precision * recall / (precision + recall)
+
+    metrics = {</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    metrics = {}
+
+    <a id="change">for </a>label, idx in label2index.items()<a id="change">:
+
+        </a><a id="change">if label == "O"</a>:
+            <a id="change">continue</a>
+
+        metrics_per_label = {}
+
+        true_positive = confusion_matrix[idx][idx]
+        precision = true_positive / (np.sum(confusion_matrix[:][idx]))  &#47&#47 TODO check this
+        recall = true_positive / (np.sum(confusion_matrix[idx][:]))
+
+        metrics_per_label["precision"]<a id="change"> = </a>precision
+        metrics_per_label["recall"] = recall
+        metrics_per_label["f1-score"] = 2 * precision * recall / (precision + recall)
+        metrics_per_label["support"]<a id="change"> = </a>np.sum(confusion_matrix[idx][:])
+
+    return metrics
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 7</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/ovbystrova/instructionner/commit/2d15dfed62106e4131fae16bab517811fa49b418#diff-595e88de1f402f9e039ff56a467520ba15c29cdd5ca8f328091369c1440bae28L106' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 36268585</div><div id='project'> Project Name: ovbystrova/instructionner</div><div id='commit'> Commit Name: 2d15dfed62106e4131fae16bab517811fa49b418</div><div id='time'> Time: 2022-07-16</div><div id='author'> Author: OVlBystrova@sberbank.ru</div><div id='file'> File Name: src/metrics.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: calculate_metrics_from_confusion_matrix(2)</div><div id='n_method'> N Method Name: calculate_metrics_from_confusion_matrix(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/metrics.py</div><div id='n_file'> N File Name: src/metrics.py</div><div id='m_start'> M Start Line: 106</div><div id='m_end'> M End Line: 114</div><div id='n_start'> N Start Line: 111</div><div id='n_end'> N End Line: 133</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                    assert y.shape == ()
+
+                    assert conf["forces"].attrs["units"] == "eV/Å"
+                    dy = -pt.tensor(<a id="change">conf["forces"]</a>, dtype=pt.float32)
+                    assert dy.shape == pos.shape
+
+                    assert conf["partial_charges"].attrs["units"] == "e"</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        assert self.subsample_molecules &gt; 0
+
+        <a id="change">for </a><a id="change">path</a> in tqdm(self.raw_paths, desc="Files")<a id="change">:
+
+            </a>h5 = h5py.File(path)
+            assert h5.attrs["layout"] == "Ace"
+            version = h5.attrs["layout_version"]
+
+            mols = None
+            load_confs = None
+            if version == "1.0":
+                assert "name" in h5.attrs
+                mols = h5.items()
+                load_confs = self._load_confs_1_0
+            elif version == "2.0":
+                assert len(h5.keys()) == 1
+                mols = list(h5.values())[0].items()
+                load_confs = self._load_confs_2_0
+            else:
+                raise RuntimeError(f"Unsuported layout verions: {version}")
+
+            &#47&#47 Iterate over the molecules
+            for i_mol, (mol_id, mol) in tqdm(
+                enumerate(mols),
+                desc="Molecules",
+                total=len(mols),
+                leave=False,
+            ):
+
+                &#47&#47 Subsample molecules
+                <a id="change">if i_mol % self.subsample_molecules != 0</a>:
+                    <a id="change">continue</a>
+
+                z = pt.tensor(mol["atomic_numbers"], dtype=pt.long)
+                fq = pt.tensor(mol["formal_charges"], dtype=pt.long)
+                q = fq.sum()
+
+                for pos, y, neg_dy, pq, dp in load_confs(mol, n_atoms=len(z)):
+
+                    &#47&#47 Skip samples with large forces
+                    if self.max_gradient:
+                        if neg_dy.norm(dim=1).max() &gt; float(self.max_gradient):
+                            continue
+
+                    &#47&#47 Create a sample
+                    args = dict(
+                        z=z, pos=pos, y=y.view(1, 1), neg_dy=neg_dy, q=q, pq=pq, dp=dp
+                    )
+                    if mol_ids:
+                        args["mol_id"]<a id="change"> = </a>mol_id
+                    data<a id="change"> = </a>Data(**args)
+
+                    if self.pre_filter is not None and not self.pre_filter(data):
+                        continue</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/torchmd/torchmd-net/commit/d23e6500f2cef1fa56d6c99ce5fdb983f1379bca#diff-56de3e28dd2b438171f4af7de59cc66305304d98e21b24faf4d744698d8c1aa3L72' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 36268601</div><div id='project'> Project Name: torchmd/torchmd-net</div><div id='commit'> Commit Name: d23e6500f2cef1fa56d6c99ce5fdb983f1379bca</div><div id='time'> Time: 2022-10-28</div><div id='author'> Author: peastman@stanford.edu</div><div id='file'> File Name: torchmdnet/datasets/ace.py</div><div id='m_class'> M Class Name: Ace</div><div id='n_method'> N Class Name: Ace</div><div id='m_method'> M Method Name: sample_iter(2)</div><div id='n_method'> N Method Name: sample_iter(1)</div><div id='m_parent_class'> M Parent Class: Dataset</div><div id='n_parent_class'> N Parent Class: Dataset</div><div id='m_file'> M File Name: torchmdnet/datasets/ace.py</div><div id='n_file'> N File Name: torchmdnet/datasets/ace.py</div><div id='m_start'> M Start Line: 72</div><div id='m_end'> M End Line: 123</div><div id='n_start'> N Start Line: 144</div><div id='n_end'> N End Line: 206</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        confusion_matrix: Dict[str, int]
+):
+    precision = confusion_matrix["TP"] / (confusion_matrix["TP"] + confusion_matrix["FP"])
+    recall = confusion_matrix["TP"] / (confusion_matrix["TP"] + <a id="change">confusion_matrix["FN"]</a>)
+    f1score = 2 * precision * recall / (precision + recall)
+
+    metrics = {</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    metrics = {}
+
+    <a id="change">for </a>label, <a id="change">idx</a> in label2index.items()<a id="change">:
+
+        </a><a id="change">if label == "O"</a>:
+            <a id="change">continue</a>
+
+        metrics_per_label<a id="change"> = </a>{}
+
+        true_positive<a id="change"> = </a>confusion_matrix[idx][idx]
+        precision = true_positive / (np.sum(confusion_matrix[:][idx]))  &#47&#47 TODO check this
+        recall = true_positive / (np.sum(confusion_matrix[idx][:]))
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/ovbystrova/instructionner/commit/2d15dfed62106e4131fae16bab517811fa49b418#diff-595e88de1f402f9e039ff56a467520ba15c29cdd5ca8f328091369c1440bae28L103' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 36268584</div><div id='project'> Project Name: ovbystrova/instructionner</div><div id='commit'> Commit Name: 2d15dfed62106e4131fae16bab517811fa49b418</div><div id='time'> Time: 2022-07-16</div><div id='author'> Author: OVlBystrova@sberbank.ru</div><div id='file'> File Name: src/metrics.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: calculate_metrics_from_confusion_matrix(2)</div><div id='n_method'> N Method Name: calculate_metrics_from_confusion_matrix(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/metrics.py</div><div id='n_file'> N File Name: src/metrics.py</div><div id='m_start'> M Start Line: 106</div><div id='m_end'> M End Line: 114</div><div id='n_start'> N Start Line: 111</div><div id='n_end'> N End Line: 133</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    pred_keys = [result[&quotpred_key&quot] for result in results[0]]
+    ret = []
+    for i, pred_key in enumerate(pred_keys):
+      metrics_list = [<a id="change">result[i][&quotmetrics&quot]</a> for result in results]
+      costs = [self.get_cost(metrics_for_threshold, config)
+               for metrics_for_threshold in metrics_list]
+      best_idx = np.argmin(costs)</code></pre><h3>After Change</h3><pre><code class='java'>
+          indexed_inputs, model, dataset, model_outputs, metrics_config))
+
+      &#47&#47 Get and store the metrics for each facet of the dataset for this margin.
+      <a id="change">for </a><a id="change">facet_key</a> in config.facets<a id="change">:
+        </a><a id="change">if &quotdata&quot not in config.facets[facet_key]</a>:
+          <a id="change">continue</a>
+        if facet_key not in faceted_results:
+          faceted_results[facet_key]<a id="change"> = </a>[]
+        faceted_model_outputs<a id="change"> = </a>[
+            indexed_outputs[ex[&quotid&quot]]
+            for ex in config.facets[facet_key][&quotdata&quot]]
+        faceted_results[facet_key].append(self.metrics_gen.run_with_metadata(</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/pair-code/lit/commit/c5289c07a1ba31719eb4b4ddaf1aa8a3793f6e73#diff-6cae70c3c1981641d1f1ddee87470ae8ef95a8d0d94a9ef6af454f4569c2557fL68' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 36268662</div><div id='project'> Project Name: pair-code/lit</div><div id='commit'> Commit Name: c5289c07a1ba31719eb4b4ddaf1aa8a3793f6e73</div><div id='time'> Time: 2021-08-19</div><div id='author'> Author: jwexler@google.com</div><div id='file'> File Name: lit_nlp/components/thresholder.py</div><div id='m_class'> M Class Name: Thresholder</div><div id='n_method'> N Class Name: Thresholder</div><div id='m_method'> M Method Name: run_with_metadata(6)</div><div id='n_method'> N Method Name: run_with_metadata(6)</div><div id='m_parent_class'> M Parent Class: lit_components.Interpreter</div><div id='n_parent_class'> N Parent Class: lit_components.Interpreter</div><div id='m_file'> M File Name: lit_nlp/components/thresholder.py</div><div id='n_file'> N File Name: lit_nlp/components/thresholder.py</div><div id='m_start'> M Start Line: 87</div><div id='m_end'> M End Line: 125</div><div id='n_start'> N Start Line: 186</div><div id='n_end'> N End Line: 238</div><BR>

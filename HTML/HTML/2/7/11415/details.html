@@ -1,0 +1,114 @@
+<html><h3>Pattern ID :11415
+</h3><img src='38925505.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        if self.stop_gradient_from_energy_predictor:
+            energy_predictions = self.energy_predictor(encoded_texts.detach(), duration_masks.unsqueeze(-1))
+        else:
+            energy_predictions<a id="change"> = </a>self.energy_predictor(encoded_texts, <a id="change">duration_masks.unsqueeze(-1</a><a id="change">)</a>)
+
+        if gold_durations is not None:
+            duration_predictions = gold_durations</code></pre><h3>After Change</h3><pre><code class='java'>
+                                                     nonpadding=None,
+                                                     cond=encoded_texts.transpose(1, 2).detach(),
+                                                     utt_emb=utterance_embedding).transpose(1, 2)
+        predicted_durations<a id="change"> = </a><a id="change">self.duration_vae.decoder(duration_z,
+                                                        nonpadding=None,
+                                                        cond=encoded_texts.transpose(1, 2).detach(),
+                                                        utt_emb=utterance_embedding).squeeze(1</a><a id="change">)</a>
+
+        if gold_durations is not None:
+            predicted_durations = gold_durations
+        else:
+            predicted_durations = make_estimated_durations_usable_for_inference(predicted_durations)
+        if gold_pitch is not None:
+            pitch_predictions = gold_pitch
+        if gold_energy is not None:
+            energy_predictions = gold_energy
+
+        for phoneme_index, phoneme_vector in enumerate(text_tensors.squeeze(0)):
+            if phoneme_vector[get_feature_to_index_lookup()["voiced"]] == 0:
+                &#47&#47 this means the phoneme is unvoiced
+                pitch_predictions[0][phoneme_index] = 0.0
+            if phoneme_vector[get_feature_to_index_lookup()["silence"]] == 1 and pause_duration_scaling_factor != 1.0:
+                predicted_durations[0][phoneme_index] = torch.round(
+                    predicted_durations[0][phoneme_index].float() * pause_duration_scaling_factor)
+        pitch_predictions = _scale_variance(pitch_predictions, pitch_variance_scale)
+        energy_predictions = _scale_variance(energy_predictions, energy_variance_scale)
+
+        embedded_pitch_curve = self.pitch_embed(pitch_predictions.transpose(1, 2)).transpose(1, 2)
+        embedded_energy_curve = self.energy_embed(energy_predictions.transpose(1, 2)).transpose(1, 2)
+        encoded_texts = encoded_texts + embedded_energy_curve + embedded_pitch_curve
+        encoded_texts = self.length_regulator(encoded_texts, predicted_durations,
+                                              duration_scaling_factor)  &#47&#47 (B, Lmax, adim)
+        predicted_spectrogram_before_postnet = self.decoder(encoded_texts, nonpadding=None,
+                                                            utt_emb=utterance_embedding).transpose(1, 2)
+        predicted_spectrogram_before_postnet = self.out_proj(predicted_spectrogram_before_postnet).transpose(1, 2)
+
+        &#47&#47 forward flow post-net
+        predicted_spectrogram_after_postnet = self.run_post_glow(tgt_mels=None,
+                                                                 infer=True,
+                                                                 mel_out=predicted_spectrogram_before_postnet,
+                                                                 encoded_texts=encoded_texts,
+                                                                 tgt_nonpadding=None)
+
+        <a id="change">return </a>predicted_spectrogram_before_postnet, predicted_spectrogram_after_postnet, predicted_durations, pitch_predictions, energy_predictions
+
+    @torch.inference_mode()
+    def forward(self,</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 5</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/digitalphonetics/ims-toucan/commit/b94d11dc36ef0e5795446826678e202ad390f50b#diff-e3c4143cb425acc1cbdda5567d276c7b7759839b0680a60454efa104d720661eL185' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 38925505</div><div id='project'> Project Name: digitalphonetics/ims-toucan</div><div id='commit'> Commit Name: b94d11dc36ef0e5795446826678e202ad390f50b</div><div id='time'> Time: 2023-01-10</div><div id='author'> Author: lux.florian@gmail.com</div><div id='file'> File Name: InferenceInterfaces/InferenceArchitectures/InferencePortaSpeech.py</div><div id='m_class'> M Class Name: PortaSpeech</div><div id='n_method'> N Class Name: PortaSpeech</div><div id='m_method'> M Method Name: _forward(13)</div><div id='n_method'> N Method Name: _forward(13)</div><div id='m_parent_class'> M Parent Class: torch.nn.Module</div><div id='n_parent_class'> N Parent Class: torch.nn.Module</div><div id='m_file'> M File Name: InferenceInterfaces/InferenceArchitectures/InferencePortaSpeech.py</div><div id='n_file'> N File Name: InferenceInterfaces/InferenceArchitectures/InferencePortaSpeech.py</div><div id='m_start'> M Start Line: 185</div><div id='m_end'> M End Line: 231</div><div id='n_start'> N Start Line: 228</div><div id='n_end'> N End Line: 283</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            mode=mode
+        )
+
+        norm = <a id="change">torch.index_select(
+            self.relation_embedding,
+            dim=0,
+            index=sample[:, 1]
+        ).unsqueeze(1</a><a id="change">)</a>
+
+        norm = F.normalize(norm, p=2, dim=-1)
+        head = head - torch.sum(head * norm, dim=-1, keepdim=True) * norm
+        tail<a id="change"> = </a>tail - torch.sum(tail * norm, dim=-1, keepdim=True) * norm
+
+        score = (head + relation) - tail
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            mode=mode
+        )
+
+        h<a id="change"> = </a><a id="change">h.squeeze(1</a><a id="change">)</a>
+        r = r.squeeze(1)
+        t = t.squeeze(1)
+
+        if len(sample.shape) == 3:
+            sample = sample.unsqueeze(1)
+
+        norm = self.relation_norm(sample[:, 1])
+
+        h = self._transfer(e=h, norm=norm)
+        t = self._transfer(e=t, norm=norm)
+
+        if mode == &quothead-batch&quot:
+            score = h + (r - t)
+        else:
+            <a id="change">return </a>(h + r).shape, t.shape
+            score = (h + r) - t
+
+        score = self.gamma.item() - torch.norm(score, p=1, dim=-1)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/raphaelsty/mkb/commit/b011b91b4468b0d642af90229fa132774ea1e0d3#diff-b9b50058a107fc657ae969749f1656e6a0f30a08144b19b1325165baf2676617L62' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 38925492</div><div id='project'> Project Name: raphaelsty/mkb</div><div id='commit'> Commit Name: b011b91b4468b0d642af90229fa132774ea1e0d3</div><div id='time'> Time: 2020-09-21</div><div id='author'> Author: raphael.sourty@gmail.com</div><div id='file'> File Name: kdmkb/models/transh.py</div><div id='m_class'> M Class Name: TransH</div><div id='n_method'> N Class Name: TransH</div><div id='m_method'> M Method Name: forward(4)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: base.BaseModel</div><div id='n_parent_class'> N Parent Class: base.BaseModel</div><div id='m_file'> M File Name: kdmkb/models/transh.py</div><div id='n_file'> N File Name: kdmkb/models/transh.py</div><div id='m_start'> M Start Line: 62</div><div id='m_end'> M End Line: 79</div><div id='n_start'> N Start Line: 64</div><div id='n_end'> N End Line: 89</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47
+        &#47&#47 outputs = F.conv1d(x, kernel, stride=self.strides, groups=self.filter_size, padding=self.padding)
+        kernel = kernel.permute(2,0,1,3)
+        outputs = F.conv2d(<a id="change">x.unsqueeze(3</a><a id="change">)</a>, kernel, groups=self.filter_size, stride=(self.strides,1), padding=0)
+        outputs<a id="change"> = </a>outputs.permute(0,3,2,1)
+        pass
+
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    def forward(self, x):
+        kernel = impulse_responses.gaussian_lowpass(self._kernel, self.kernel_size)
+        kernel<a id="change"> = </a><a id="change">kernel.squeeze(3</a><a id="change">)</a>
+        kernel = kernel.permute(2, 0, 1)
+
+        outputs = F.conv1d(x, kernel, stride=self.strides, groups=self.filter_size, padding=self.padding)
+        <a id="change">return </a>outputs
+
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/denfed/leaf-audio-pytorch/commit/b6b509b534d209fab10378481a874ffbb5947504#diff-b70599df4bf83cc7224b9282c95a292ed36fa62bc18b42bfdbd9e0b3ca0d5017L40' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 38925500</div><div id='project'> Project Name: denfed/leaf-audio-pytorch</div><div id='commit'> Commit Name: b6b509b534d209fab10378481a874ffbb5947504</div><div id='time'> Time: 2021-03-26</div><div id='author'> Author: dcfedori@buffalo.edu</div><div id='file'> File Name: pooling.py</div><div id='m_class'> M Class Name: GaussianLowpass</div><div id='n_method'> N Class Name: GaussianLowpass</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: pooling.py</div><div id='n_file'> N File Name: pooling.py</div><div id='m_start'> M Start Line: 46</div><div id='m_end'> M End Line: 49</div><div id='n_start'> N Start Line: 41</div><div id='n_end'> N End Line: 46</div><BR>

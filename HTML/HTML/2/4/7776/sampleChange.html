@@ -1,0 +1,17 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    sum_loss = 0.0
+    num_pred = 0
+    for logits, idx in zip(roll_logits, roll_idx):
+        roll_targets = <a id="change">targets[..., idx : idx + H]</a>
+        ce<a id="change"> = </a>F.cross_entropy(logits, roll_targets, reduction="sum")
+        sum_loss = sum_loss + ce
+        num_pred = num_pred + roll_targets.numel()
+    return sum_loss / num_pred</code></pre><h3>After Change</h3><pre><code class='java'>
+    logits = roll_logits.reshape(R * B, Q, H)  &#47&#47 (R*B,Q,H)
+    targets = targets.unfold(-1, H, 1).permute(1, 0, 2)  &#47&#47 (W,B,H)
+    targets = targets[roll_idx].reshape(R * B, H)  &#47&#47 (R*B,H)
+    return torch.sum(logits.argmax(1) == targets) / <a id="change">targets.numel()</a>
+</code></pre>

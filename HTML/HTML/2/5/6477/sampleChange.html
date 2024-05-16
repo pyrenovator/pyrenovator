@@ -1,0 +1,26 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        tokenized_cap = tokenizer(caption, padding=True, return_tensors="pt")
+        tokenized_cap = {k: v.to(device) for k, v in tokenized_cap.items()}
+        probs = model(frames, tokenized_cap)[:, :-1, :]
+        loss = criterion(probs, <a id="change">tokenized_cap["input_ids"]</a>, tokenized_cap["attention_mask"])
+
+        loss.backward()
+        optimizer.step()</code></pre><h3>After Change</h3><pre><code class='java'>
+        tgt_input = tgt[:, :-1]  &#47&#47 N T-1
+        tgt_mask = generate_square_subsequent_mask(tgt_input.shape[1])
+
+        logits<a id="change"> = </a><a id="change">model(</a>src, tgt_input<a id="change">,
+                       tgt_mask=tgt_mask, tgt_padding_mask=tgt_padding_mask,
+                       src_mask=None, src_padding_mask=src_padding_mask)</a>  &#47&#47 N T-1 vocab_szie
+
+        optimizer.zero_grad()
+
+        tgt_out = tgt[:, 1:]  &#47&#47 N T-1
+        loss<a id="change"> = </a><a id="change">loss_fn(</a>logits.reshape(-1, logits.shape[-1]), tgt_out.reshape(-1)<a id="change">)</a>
+        loss.backward()
+
+        optimizer.step()
+        losses += loss.item()</code></pre>

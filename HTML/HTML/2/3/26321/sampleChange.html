@@ -1,0 +1,38 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        obs, actions, dones = data_dict[&quotstates&quot], data_dict[&quotactions&quot], data_dict[&quotdones&quot]
+        dataset = []
+        trajectory_ind = timestep = 0
+        for i in range(<a id="change">len(</a>dones<a id="change">)</a>):
+            if dones[i] or len(dones) == i + 1:
+                &#47&#47 If dones[i] is true, next obs is from new trajectory, skip; a bit hacky, but fine for prototype
+                trajectory_ind += 1</code></pre><h3>After Change</h3><pre><code class='java'>
+        trajectory_ind = timestep = 0
+        i = 0
+        while i &lt; len(dones) - self.k:
+            if <a id="change">np.any(</a>dones[i:i+self.k]<a id="change">)</a>:
+                &#47&#47 If dones[i] is true, next obs is from new trajectory, skip
+                &#47&#47 Also skip if we are
+                i += self.k
+                trajectory_ind += 1
+                timestep = 0
+                continue
+            try:
+                if self.mode is None:
+                    dataset.append({&quotcontext&quot: obs[i], &quottarget&quot: obs[i + self.k],
+                                    &quotextra_context&quot: [], &quottraj_ts_ids&quot: [trajectory_ind, timestep]})
+                elif self.mode == &quotdynamics&quot:
+                    dataset.append({&quotcontext&quot: obs[i], &quottarget&quot: obs[i + self.k],
+                                    &quotextra_context&quot: actions[i:i+self.k], &quottraj_ts_ids&quot: [trajectory_ind, timestep]})
+                elif self.mode == &quotinverse_dynamics&quot:
+                    dataset.append({&quotcontext&quot: obs[i], &quottarget&quot: actions[i:i+self.k],
+                                    &quotextra_context&quot: obs[i + self.k], &quottraj_ts_ids&quot: [trajectory_ind, timestep]})
+            except IndexError:
+                import pdb; pdb.set_trace()
+            timestep += 1
+            i<a id="change"> += </a>1
+        return dataset
+
+</code></pre>

@@ -1,0 +1,49 @@
+<html><h3>Pattern ID :36562
+</h3><img src='103931847.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        maxlen, batch_size = src.shape[0], src.shape[1]  &#47&#47 src.shape = [215, 128, 72]
+
+        Question: why 72 features (36 feature + 36 mask)?
+        src = self.encoder(src) * <a id="change">math.sqrt(</a>self.d_model<a id="change">)</a>  &#47&#47 linear layer: 72 --&gt; 32
+
+        pe = self.pos_encoder(times)  &#47&#47 times.shape = [215, 128], the values are hours.
+        &#47&#47 pe.shape = [215, 128, 32]</code></pre><h3>After Change</h3><pre><code class='java'>
+        maxlen, batch_size = src.shape[0], src.shape[1]  &#47&#47 src.shape = [215, 128, 72]
+
+        Take the observations, not the mask
+        src<a id="change"> = </a>src[:, :, :<a id="change">int(</a>src.shape[2]/2<a id="change">)</a>] &#47&#47 remove the mask info
+
+        Question: why 72 features (36 feature + 36 mask)?
+        src = self.encoder(src) &#47&#47* math.sqrt(self.d_model)  &#47&#47 linear layer: 72 --&gt; 32</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/mims-harvard/raindrop/commit/374ec29c5d9a02d9eea95cf7e681df1b9996406c#diff-db97f9cea8d826a284c0d1b1400d160c8ff39aec325b8bc0656d23d14f68d663L215' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 103931847</div><div id='project'> Project Name: mims-harvard/raindrop</div><div id='commit'> Commit Name: 374ec29c5d9a02d9eea95cf7e681df1b9996406c</div><div id='time'> Time: 2021-09-15</div><div id='author'> Author: xiang.alan.zhang@gmail.com</div><div id='file'> File Name: code/models_rd.py</div><div id='m_class'> M Class Name: TransformerModel2</div><div id='n_method'> N Class Name: TransformerModel2</div><div id='m_method'> M Method Name: forward(5)</div><div id='n_method'> N Method Name: forward(5)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: code/models_rd.py</div><div id='n_file'> N File Name: code/models_rd.py</div><div id='m_start'> M Start Line: 215</div><div id='m_end'> M End Line: 251</div><div id='n_start'> N Start Line: 215</div><div id='n_end'> N End Line: 258</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            if low_rank:
+                low_rank = int(low_rank)
+            else:
+                low_rank = int(<a id="change">math.sqrt(</a>(self.state_rank * self.measure_rank) / (self.state_rank + self.measure_rank)<a id="change">)</a>)
+            self.lr1 = torch.nn.Parameter(.1 * torch.randn(self.state_rank, low_rank))
+            self.lr2 = torch.nn.Parameter(.1 * torch.randn(low_rank, self.measure_rank))
+        else:</code></pre><h3>After Change</h3><pre><code class='java'>
+                low_rank = int(low_rank)
+            else:
+                ub = (len(self.full_states) * self.measure_rank) / (len(self.full_states) + self.measure_rank)
+                low_rank<a id="change"> = </a><a id="change">int(</a>math.sqrt(ub)<a id="change">)</a>
+            self.lr1 = torch.nn.Parameter(.1 * torch.randn(len(self.full_states), low_rank))
+            self.lr2 = torch.nn.Parameter(.1 * torch.randn(low_rank, self.measure_rank))
+        else:
+            raise ValueError(f"Unrecognized method `{method}`")</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/strongio/torchcast/commit/f47fb0ea7f8de78c4034c228363a96dc283c6d75#diff-a2f5a3ada061321f831ac60ebcad98aa787a94e1fbb5d031c635efd269a7d90fL50' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 103931849</div><div id='project'> Project Name: strongio/torchcast</div><div id='commit'> Commit Name: f47fb0ea7f8de78c4034c228363a96dc283c6d75</div><div id='time'> Time: 2021-06-28</div><div id='author'> Author: jacob.dink@strong.io</div><div id='file'> File Name: torchcast/exp_smooth/smoothing_matrix.py</div><div id='m_class'> M Class Name: SmoothingMatrix</div><div id='n_method'> N Class Name: SmoothingMatrix</div><div id='m_method'> M Method Name: __init__(8)</div><div id='n_method'> N Method Name: __init__(8)</div><div id='m_parent_class'> M Parent Class: torch.nn.Module</div><div id='n_parent_class'> N Parent Class: torch.nn.Module</div><div id='m_file'> M File Name: torchcast/exp_smooth/smoothing_matrix.py</div><div id='n_file'> N File Name: torchcast/exp_smooth/smoothing_matrix.py</div><div id='m_start'> M Start Line: 61</div><div id='m_end'> M End Line: 88</div><div id='n_start'> N Start Line: 60</div><div id='n_end'> N End Line: 84</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        self.bb = self.add_weight(name="positional_embedding", shape=(kk_blocks, num_heads), initializer="zeros", trainable=True)
+        strides = int(tf.math.ceil(tf.math.sqrt(float(kk_blocks / qq_blocks))))
+        q_blocks_h = q_blocks_w = int(tf.math.sqrt(float(qq_blocks)))
+        k_blocks_h = k_blocks_w = int(<a id="change">tf.math.sqrt(</a>float(kk_blocks)<a id="change">)</a>)
+
+        x1, y1 = tf.meshgrid(range(q_blocks_h), range(q_blocks_w))
+        x2, y2 = tf.meshgrid(range(k_blocks_h), range(k_blocks_w))</code></pre><h3>After Change</h3><pre><code class='java'>
+            k_blocks_h = q_blocks_h * strides
+            while kk_blocks % k_blocks_h != 0:
+                k_blocks_h -= 1
+            k_blocks_w<a id="change"> = </a><a id="change">int(</a>kk_blocks / k_blocks_h<a id="change">)</a>
+        else:
+            k_blocks_h, k_blocks_w = self.key_height, int(kk_blocks / self.key_height)
+        self.k_blocks_h, self.k_blocks_w = k_blocks_h, k_blocks_w
+        &#47&#47 print(f"{q_blocks_h = }, {q_blocks_w = }, {k_blocks_h = }, {k_blocks_w = }, {strides = }")</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/leondgarse/keras_cv_attention_models/commit/4b675139fef68fbaf97bd575c11ea1736ee6de94#diff-419ea771811e38fb2e106cf19724ad992d4d6f2fbae3c511c734548a78b6d63bL22' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 103931851</div><div id='project'> Project Name: leondgarse/keras_cv_attention_models</div><div id='commit'> Commit Name: 4b675139fef68fbaf97bd575c11ea1736ee6de94</div><div id='time'> Time: 2022-07-22</div><div id='author'> Author: leondgarse@gmail.com</div><div id='file'> File Name: keras_cv_attention_models/levit/levit.py</div><div id='m_class'> M Class Name: MultiHeadPositionalEmbedding</div><div id='n_method'> N Class Name: MultiHeadPositionalEmbedding</div><div id='m_method'> M Method Name: build(2)</div><div id='n_method'> N Method Name: build(2)</div><div id='m_parent_class'> M Parent Class: keras.layers.Layer</div><div id='n_parent_class'> N Parent Class: keras.layers.Layer</div><div id='m_file'> M File Name: keras_cv_attention_models/levit/levit.py</div><div id='n_file'> N File Name: keras_cv_attention_models/levit/levit.py</div><div id='m_start'> M Start Line: 26</div><div id='m_end'> M End Line: 27</div><div id='n_start'> N Start Line: 27</div><div id='n_end'> N End Line: 40</div><BR>

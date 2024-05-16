@@ -1,0 +1,23 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    &#47&#47 Get projection matrix for tgt camera frame to source pixel frame
+    proj_cam_to_src_pixel = intrinsics @ rot_mat  &#47&#47 [B, 3, 3]
+
+    src_pixel_coords<a id="change">, computed_depth</a> = cam2pixel2(
+        cam_coords, proj_cam_to_src_pixel, None, padding_mode)  &#47&#47 [B,H,W,2]
+    projected_img = F.grid_sample(
+        img, src_pixel_coords, padding_mode=padding_mode, align_corners=True)</code></pre><h3>After Change</h3><pre><code class='java'>
+    R = euler2mat(rot)  &#47&#47 [B, 3, 3]
+    P = torch.matmul(intrinsics, R)
+
+    world_points = depth_to_3d(<a id="change">torch.ones(B, 1, H, W).type_as(</a>img<a id="change">)</a>, intrinsics) &#47&#47 B 3 H W
+    cam_points = torch.matmul(P, world_points.view(B, 3, -1))
+
+    pix_coords = cam_points[:, :2, :] / (cam_points[:, 2, :].unsqueeze(1) + 1e-7)
+    pix_coords = pix_coords.view(B, 2, H, W)
+    pix_coords<a id="change"> = </a>pix_coords.permute(0, 2, 3, 1)
+    pix_coords[..., 0] /= W - 1
+    pix_coords[..., 1] /= H - 1
+    pix_coords = (pix_coords - 0.5) * 2  </code></pre>

@@ -1,0 +1,33 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        assert x.shape[1] == self.channels
+        &#47&#47 BxCxL
+        theta = torch.mean(x, axis=-1)
+        theta<a id="change"> = self</a><a id="change">.fc1(</a>theta<a id="change">)</a>
+        theta = self.relu(theta)
+        theta<a id="change"> = self.fc2(</a>theta<a id="change">)</a>
+        theta = 2 * self.sigmoid(theta) - 1
+
+        relu_coefs = theta.view(-1, self.channels, 2*self.k) * self.lambdas + self.init_v
+        &#47&#47 BxCxL -&gt; LxBxCx1</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        relu_coefs = theta.view(-1, self.channels, 2*self.k) * self.lambdas + self.init_v
+
+        <a id="change">if self.conv_type == &quot1d&quot</a>:
+            &#47&#47 BxCxL -&gt; LxBxCx1
+            x_perm = x.permute(2, 0, 1).unsqueeze(-1)
+            output = x_perm * relu_coefs[:, :, :self.k] + relu_coefs[:, :, self.k:]
+            &#47&#47 LxBxCx2 -&gt; BxCxL
+            result = torch.max(output, dim=-1)[0].permute(1, 2, 0)
+
+        elif self.conv_type == &quot2d&quot:
+            &#47&#47 BxCxHxW -&gt; HxWxBxCx1
+            x_perm = x.permute(2, 3, 0, 1).unsqueeze(-1)
+            output = x_perm * relu_coefs[:, :, :self.k] + relu_coefs[:, :, self.k:]
+            &#47&#47 HxWxBxCx2 -&gt; BxCxHxW
+            result<a id="change"> = </a>torch.max(output, dim=-1)[0].permute(2, 3, 0, 1)
+
+        return result
+</code></pre>

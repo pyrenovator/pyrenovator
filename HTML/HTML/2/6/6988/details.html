@@ -1,0 +1,96 @@
+<html><h3>Pattern ID :6988
+</h3><img src='23315139.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            outputs = self.model(data)
+            loss = self.loss(outputs, labels)
+
+            shared_grads += <a id="change">[</a>torch.autograd.grad(loss, self.model.parameters())<a id="change"></a>]
+            shared_buffers += [[b.clone().detach() for b in self.model.buffers()]]
+
+        shared_data = dict(gradients=shared_grads, buffers=shared_buffers,</code></pre><h3>After Change</h3><pre><code class='java'>
+                    buffer.copy_(server_state.to(**self.setup))
+
+            optimizer = torch.optim.SGD(self.model.parameters(), lr=self.local_learning_rate)
+            seen_data_idx<a id="change"> = </a>0
+
+            for step in range(self.num_local_updates):
+
+                data<a id="change"> = </a>user_data[seen_data_idx: seen_data_idx<a id="change"> + </a>self.num_data_per_local_update_step]
+                labels = user_labels[seen_data_idx: seen_data_idx + self.num_data_per_local_update_step]
+                seen_data_idx += self.num_data_per_local_update_step
+                seen_data_idx<a id="change"> = </a>seen_data_idx % self.num_data_points
+
+                optimizer.zero_grad()
+                &#47&#47 Compute the forward pass
+                outputs = self.model(data)
+                loss = self.loss(outputs, labels)
+                <a id="change">loss.backward()</a>
+                optimizer.step()
+
+            &#47&#47 Share differential to server version:
+            &#47&#47 This is equivalent to sending the new stuff and letting the server do it, but in line</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 6</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/jonasgeiping/breaching/commit/1ab2867fea20551797c9aea8ae67099093ec7180#diff-222118a39af19077a8b428b60923841d31a00f445f3963533670a0eaa87a9924L151' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 23315139</div><div id='project'> Project Name: jonasgeiping/breaching</div><div id='commit'> Commit Name: 1ab2867fea20551797c9aea8ae67099093ec7180</div><div id='time'> Time: 2021-10-01</div><div id='author'> Author: jonas.geiping@googlemail.com</div><div id='file'> File Name: breaching/cases/users.py</div><div id='m_class'> M Class Name: UserMultiStep</div><div id='n_method'> N Class Name: UserMultiStep</div><div id='m_method'> M Method Name: compute_local_updates(2)</div><div id='n_method'> N Method Name: compute_local_updates(2)</div><div id='m_parent_class'> M Parent Class: UserSingleStep</div><div id='n_parent_class'> N Parent Class: UserSingleStep</div><div id='m_file'> M File Name: breaching/cases/users.py</div><div id='n_file'> N File Name: breaching/cases/users.py</div><div id='m_start'> M Start Line: 151</div><div id='m_end'> M End Line: 187</div><div id='n_start'> N Start Line: 158</div><div id='n_end'> N End Line: 200</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+        self.tot_update_count += 1
+        
+        return <a id="change">{
+            </a>"loss/v": v_loss_value, 
+            "loss/policy": policy_loss_value,
+            "info/entropy": entropy_val,
+            "info/kl_div":approx_kl<a id="change">
+        }</a>
+            
+    def select_action(self, state, evaluate=False):
+        if type(state) != torch.tensor:
+            state = torch.FloatTensor([state]).to(util.device)</code></pre><h3>After Change</h3><pre><code class='java'>
+        
+
+        &#47&#47entropy loss
+        entropy_loss<a id="change"> = </a>-torch.mean(-new_log_pi) * self.entropy_coeff
+        entropy_loss_value<a id="change"> = </a>entropy_loss.item()
+
+        &#47&#47compute policy loss
+        if self.policy_loss_type == "clipped_surrogate":
+            surrogate1 = advantages * ratio_batch
+            &#47&#47print(self.clip_range, advantages.shape, ratio_batch.shape)
+            surrogate2 =  advantages * torch.clamp(ratio_batch, 1 - self.clip_range, 1 + self.clip_range)
+            min_surrogate = - torch.min(surrogate1, surrogate2)
+            policy_loss = min_surrogate.mean()
+        elif self.policy_loss_type == "naive":
+            raise NotImplementedError
+        elif self.policy_loss_type == "adaptive_kl":
+            raise NotImplementedError
+        policy_loss_value = policy_loss.detach().cpu().numpy()
+        tot_policy_loss<a id="change"> = </a>policy_loss<a id="change"> + </a>self.entropy_coeff * entropy_loss
+        self.policy_optimizer.zero_grad()
+        <a id="change">tot_policy_loss.backward()</a>
+        self.policy_optimizer.step()
+
+        &#47&#47compute value loss
+        v_loss = F.mse_loss(curr_state_v, future_return_batch)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/x35f/unstable_baselines/commit/f41e2cf788d0214add3fb342aee698910c63e651#diff-52f03432c99c716ff4dd3aab99ae6fafde4ebca9abe1cdbec481a8fee78251bcL74' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 23315159</div><div id='project'> Project Name: x35f/unstable_baselines</div><div id='commit'> Commit Name: f41e2cf788d0214add3fb342aee698910c63e651</div><div id='time'> Time: 2021-04-01</div><div id='author'> Author: 1621322691@qq.com</div><div id='file'> File Name: ppo/model.py</div><div id='m_class'> M Class Name: PPOAgent</div><div id='n_method'> N Class Name: PPOAgent</div><div id='m_method'> M Method Name: update(2)</div><div id='n_method'> N Method Name: update(2)</div><div id='m_parent_class'> M Parent Class: BaseAgent,torch.nn.Module</div><div id='n_parent_class'> N Parent Class: BaseAgent,torch.nn.Module</div><div id='m_file'> M File Name: ppo/model.py</div><div id='n_file'> N File Name: ppo/model.py</div><div id='m_start'> M Start Line: 83</div><div id='m_end'> M End Line: 126</div><div id='n_start'> N Start Line: 79</div><div id='n_end'> N End Line: 137</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+        self.tot_update_count += 1
+        
+        return <a id="change">{
+            </a>"loss/v": v_loss_value, 
+            "loss/policy": policy_loss_value<a id="change">,
+        }</a>
+            
+    def select_action(self, state, evaluate=False):
+        if type(state) != torch.tensor:
+            state = torch.FloatTensor([state]).to(util.device)</code></pre><h3>After Change</h3><pre><code class='java'>
+        policy_loss_value = policy_loss.detach().cpu().numpy()
+
+        &#47&#47entropy loss
+        entropy_loss<a id="change"> = </a>-torch.mean(dist_entropy)
+        entropy_loss_value<a id="change"> =  </a>entropy_loss.detach().cpu().numpy()
+        tot_loss<a id="change"> = </a>v_loss<a id="change"> + entropy_loss + </a>policy_loss
+
+        self.policy_optimizer.zero_grad()
+        self.v_optimizer.zero_grad()
+        <a id="change">tot_loss.backward()</a>
+        self.policy_optimizer.step()
+        self.v_optimizer.step()
+
+        self.tot_update_count += 1</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/x35f/unstable_baselines/commit/5af9f89c6d399a424b451a524af66c97ab900df8#diff-52f03432c99c716ff4dd3aab99ae6fafde4ebca9abe1cdbec481a8fee78251bcL74' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 23315108</div><div id='project'> Project Name: x35f/unstable_baselines</div><div id='commit'> Commit Name: 5af9f89c6d399a424b451a524af66c97ab900df8</div><div id='time'> Time: 2021-03-30</div><div id='author'> Author: 1621322691@qq.com</div><div id='file'> File Name: ppo/model.py</div><div id='m_class'> M Class Name: PPOAgent</div><div id='n_method'> N Class Name: PPOAgent</div><div id='m_method'> M Method Name: update(2)</div><div id='n_method'> N Method Name: update(2)</div><div id='m_parent_class'> M Parent Class: BaseAgent,torch.nn.Module</div><div id='n_parent_class'> N Parent Class: BaseAgent,torch.nn.Module</div><div id='m_file'> M File Name: ppo/model.py</div><div id='n_file'> N File Name: ppo/model.py</div><div id='m_start'> M Start Line: 78</div><div id='m_end'> M End Line: 118</div><div id='n_start'> N Start Line: 79</div><div id='n_end'> N End Line: 125</div><BR>

@@ -1,0 +1,167 @@
+<html><h3>Pattern ID :38025
+</h3><img src='108872269.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        pos_scores = torch.sum(torch.mul(u_embeddings, posi_embeddings), axis=1)
+        neg_scores = torch.sum(torch.mul(u_embeddings, negi_embeddings), axis=1)
+
+        mf_loss<a id="change"> = </a>torch.mean(<a id="change">self.softplus(</a>-(pos_scores - neg_scores)<a id="change">)</a>)
+
+        &#47&#47 maxi = self.sigmoid(pos_scores - neg_scores)
+        &#47&#47 mf_loss = -1 * torch.mean(maxi)
+
+        &#47&#47 cul regularizer
+        u_embeddings_pre = self.user_embedding.weight[user, :]
+        posi_embeddings_pre = self.item_embedding.weight[pos_item, :]
+        negi_embeddings_pre = self.item_embedding.weight[neg_item, :]
+        &#47&#47 regularizer = torch.norm(u_embeddings, p=2)+torch.norm(posi_embeddings, p=2)+torch.norm(negi_embeddings, p=2)
+        regularizer = torch.norm(u_embeddings_pre, p=2) + torch.norm(posi_embeddings_pre, p=2) +\
+                      torch.norm(negi_embeddings_pre, p=2)
+        emb_loss = self.delay * regularizer / self.batch_size
+        &#47&#47 print("basic loss cost time: {}".format(time.time() - st))
+
+        if self.n_factors &gt; 1 and self.cor_decay &gt; 1e-9:
+            cor_users, cor_items = sample_cor_samples(self.n_users, self.n_items, self.cor_batch_size)
+            cor_users = torch.LongTensor(cor_users).to(self.device)
+            cor_items = torch.LongTensor(cor_items).to(self.device)
+            cor_u_embeddings = torch.index_select(u_embedding, dim=0, index=cor_users)
+            cor_i_embeddings = torch.index_select(i_embedding, dim=0, index=cor_items)
+            cor_loss = self.create_cor_loss(cor_u_embeddings, cor_i_embeddings)
+            loss = mf_loss + emb_loss + self.cor_decay * cor_loss
+            &#47&#47 print("mf :{:.4f}, emb :{:.4f}, cor :{:.4f}".format(mf_loss.item(), regularizer.item(), cor_loss.item()))
+        else:
+            loss = mf_loss<a id="change"> + </a>emb_loss
+            &#47&#47 print("mf :{:.4f}, emb :{:.4f}, cor :{:.4f}".format(mf_loss.item(), regularizer.item(), 0.0))
+        &#47&#47 print("full loss cost time: {}".format(time.time() - st))
+        return loss</code></pre><h3>After Change</h3><pre><code class='java'>
+        return u_g_embeddings, i_g_embeddings
+
+    def calculate_loss(self, interaction):
+        <a id="change">if self.restore_user_e is not None</a> or self.restore_item_e is not None:
+            self.restore_user_e, self.restore_item_e = None, None
+
+        user = interaction[self.USER_ID]</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 5</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/rucaibox/recbole/commit/210deb20fdbedae80baa4e808ed08326a696027f#diff-14106ff9adef120156a9a983191ad888dcda6d271a4b38b15e4023638b778004L204' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 108872269</div><div id='project'> Project Name: rucaibox/recbole</div><div id='commit'> Commit Name: 210deb20fdbedae80baa4e808ed08326a696027f</div><div id='time'> Time: 2020-09-12</div><div id='author'> Author: 2015201909@ruc.edu.cn</div><div id='file'> File Name: recbox/model/general_recommender/dgcf.py</div><div id='m_class'> M Class Name: DGCF</div><div id='n_method'> N Class Name: DGCF</div><div id='m_method'> M Method Name: calculate_loss(2)</div><div id='n_method'> N Method Name: calculate_loss(2)</div><div id='m_parent_class'> M Parent Class: GeneralRecommender</div><div id='n_parent_class'> N Parent Class: GeneralRecommender</div><div id='m_file'> M File Name: recbox/model/general_recommender/dgcf.py</div><div id='n_file'> N File Name: recbox/model/general_recommender/dgcf.py</div><div id='m_start'> M Start Line: 231</div><div id='m_end'> M End Line: 270</div><div id='n_start'> N Start Line: 204</div><div id='n_end'> N End Line: 235</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    def forward(self, batch_size,z=None):
+        z = Variable(torch.rand(batch_size, self.z_dim), requires_grad = False).to(self.device) if z is None else z
+        x<a id="change"> = </a><a id="change">F.softplus(</a>self.bn1(self.fc1(z)) + self.bn1_b<a id="change">)</a>
+        x = F.softplus(self.bn2(self.fc2(x))<a id="change"> + </a>self.bn2_b)
+        x = F.softplus(self.fc3(x))
+        return x
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        z = Variable(torch.rand(batch_size, self.z_dim), requires_grad = False).to(self.device) if z is None else z
+        for _ in range(self.num_hidden):
+            z = self.activations[_](self.bn_layers[_](self.layers[_](z)) + self.bn_b[_])
+        <a id="change">if len(self.activations)==self.num_hidden+1</a>:
+            z = self.activations[self.num_hidden](self.fc(z))
+        return z
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/ygzwqzd/lamda-ssl/commit/ea5ee280fc4c0242970da002d41f42c1aaed9c96#diff-72cf7a184e0e3476b2e50c4e1939413e43421cb45b09cfeab614ed346f61e702L73' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 108872277</div><div id='project'> Project Name: ygzwqzd/lamda-ssl</div><div id='commit'> Commit Name: ea5ee280fc4c0242970da002d41f42c1aaed9c96</div><div id='time'> Time: 2022-03-18</div><div id='author'> Author: 1129198222@qq.com</div><div id='file'> File Name: Semi_sklearn/Network/ImprovedGan.py</div><div id='m_class'> M Class Name: Generator</div><div id='n_method'> N Class Name: Generator</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: Semi_sklearn/Network/ImprovedGan.py</div><div id='n_file'> N File Name: Semi_sklearn/Network/ImprovedGan.py</div><div id='m_start'> M Start Line: 74</div><div id='m_end'> M End Line: 78</div><div id='n_start'> N Start Line: 95</div><div id='n_end'> N End Line: 100</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        loss_q = loss_q1 + loss_q2
+
+
+        cql_alpha<a id="change"> = </a><a id="change">torch.nn.functional.softplus(</a>self.lamda<a id="change">)</a>.data[0]
+        self.logger.store(CQLalpha=cql_alpha)
+        if &quotrho&quot in self.algo:
+            samples = 10
+            &#47&#47 Sample from previous policy (10 samples)
+            cql_loss_q1 = None
+            cql_loss_q2 = None
+            for sample in range(samples):
+                sample_action, _ = self.ac.pi(o)
+                if cql_loss_q1 is None:
+                    cql_loss_q1 = self.ac.q1(o,sample_action).view(-1,1)
+                    cql_loss_q2 = self.ac.q2(o,sample_action).view(-1,1)
+                else:
+                    cql_loss_q1 = torch.cat((cql_loss_q1,self.ac.q1(o,sample_action).view(-1,1) ),dim=1)
+                    cql_loss_q2 = torch.cat((cql_loss_q2,self.ac.q2(o,sample_action).view(-1,1) ),dim=1)
+
+            cql_loss_q1 = cql_loss_q1-np.log(samples)
+            cql_loss_q2 = cql_loss_q2-np.log(samples)
+
+            cql_loss_q1 = torch.logsumexp(cql_loss_q1,dim=1).mean()
+            cql_loss_q2 = torch.logsumexp(cql_loss_q2,dim=1).mean()
+            
+            &#47&#47 Sample from dataset
+            cql_loss_q1 -= self.ac.q1(o, a).mean()
+            cql_loss_q2 -= self.ac.q2(o, a).mean()
+            avg_q = 0.5*(cql_loss_q1.mean() + cql_loss_q2.mean()).detach().cpu()
+            loss_q += cql_alpha*(cql_loss_q1.mean() + cql_loss_q2.mean())
+        else:
+            samples = 10 
+            q1_pi_samples = None
+            q2_pi_samples = None
+            &#47&#47 Add samples from previous policy
+            o_rep = o.repeat_interleave(repeats=samples,dim=0)
+            o2_rep = o2.repeat_interleave(repeats=samples,dim=0)
+            &#47&#47 o_rep = o.repeat_interleave(samples,1)
+
+            &#47&#47 Samples from current policy
+            sample_action, logpi = self.ac.pi(o_rep)
+            q1_pi_samples = self.ac.q1(o_rep,sample_action).view(-1,1) - logpi.view(-1,1).detach()
+            q2_pi_samples = self.ac.q2(o_rep,sample_action).view(-1,1) - logpi.view(-1,1).detach()
+            q1_pi_samples = q1_pi_samples.view((o.shape[0],-1))
+            q2_pi_samples = q2_pi_samples.view((o.shape[0],-1))
+
+            sample_next_action, logpi_n = self.ac.pi(o2_rep)
+            q1_next_pi_samples = self.ac.q1(o2_rep,sample_next_action).view(-1,1) - logpi_n.view(-1,1).detach()
+            q2_next_pi_samples = self.ac.q2(o2_rep,sample_next_action).view(-1,1) - logpi_n.view(-1,1).detach()
+            q1_next_pi_samples = q1_next_pi_samples.view((o2.shape[0],-1))
+            q2_next_pi_samples = q2_next_pi_samples.view((o2.shape[0],-1))
+
+
+            &#47&#47 import ipdb; ipdb.set_trace()
+
+            &#47&#47 for sample in range(samples):
+            &#47&#47     sample_action, logpi = self.ac.pi(o)
+            &#47&#47     if q1_pi_samples is None:
+            &#47&#47         q1_pi_samples = self.ac.q1(o,sample_action).view(-1,1) - logpi.view(-1,1)
+            &#47&#47         q2_pi_samples = self.ac.q2(o,sample_action).view(-1,1) - logpi.view(-1,1)
+            &#47&#47     else:
+            &#47&#47         q1_pi_samples = torch.cat((q1_pi_samples,self.ac.q1(o,sample_action).view(-1,1) - logpi.view(-1,1) ),dim=1)
+            &#47&#47         q2_pi_samples = torch.cat((q2_pi_samples,self.ac.q2(o,sample_action).view(-1,1) - logpi.view(-1,1) ),dim=1)
+            
+            &#47&#47 Add samples from uniform sampling
+            sample_action = np.random.uniform(low=self.env.action_space.low,high=self.env.action_space.high,size=(q1_pi_samples.shape[0]*10,self.env.action_space.high.shape[0]))
+            sample_action = torch.FloatTensor(sample_action)
+            log_pi = torch.FloatTensor([np.log(1/np.prod(self.env.action_space.high-self.env.action_space.low))])
+
+
+            q1_rand_samples = self.ac.q1(o_rep,sample_action).view(-1,1) - log_pi.view(-1,1).detach()
+            q2_rand_samples = self.ac.q2(o_rep,sample_action).view(-1,1) - log_pi.view(-1,1).detach()
+            &#47&#47-torch.FloatTensor([np.log(2*samples)])
+
+
+            q1_rand_samples = q1_rand_samples.view((o.shape[0],-1))
+            q2_rand_samples = q2_rand_samples.view((o.shape[0],-1))
+            
+            cql_loss_q1 = torch.logsumexp(torch.cat([q1_pi_samples,q1_next_pi_samples,q1_rand_samples],dim=1),dim=1).mean() 
+            cql_loss_q2 = torch.logsumexp(torch.cat((q2_pi_samples,q2_next_pi_samples,q2_rand_samples),dim=1),dim=1).mean() 
+
+
+            &#47&#47 for sample in range(samples):
+            &#47&#47     sample_action = np.random.uniform(low=self.env.action_space.low,high=self.env.action_space.high,size=(q1_pi_samples.shape[0],self.env.action_space.high.shape[0]))
+            &#47&#47     sample_action = torch.FloatTensor(sample_action)
+            &#47&#47     log_pi = np.log(1/np.prod(self.env.action_space.high-self.env.action_space.low))
+            &#47&#47     q1_pi_samples = torch.cat((q1_pi_samples,self.ac.q1(o,sample_action).view(-1,1) - log_pi.view(-1,1) ),dim=1)
+            &#47&#47     q2_pi_samples = torch.cat((q2_pi_samples,self.ac.q2(o,sample_action).view(-1,1) - log_pi.view(-1,1) ),dim=1)
+            &#47&#47 cql_loss_q1 = q1_pi_samples-np.log(2*samples)
+            &#47&#47 cql_loss_q2 = q2_pi_samples-np.log(2*samples)
+            &#47&#47 cql_loss_q1 = torch.logsumexp(cql_loss_q1,dim=1).mean()
+            &#47&#47 cql_loss_q2 = torch.logsumexp(cql_loss_q2,dim=1).mean()
+            
+            &#47&#47 Sample from dataset
+            cql_loss_q1 -= self.ac.q1(o, a).mean()
+            cql_loss_q2 -= self.ac.q2(o, a).mean()
+            avg_q = 0.5*(cql_loss_q1.mean() + cql_loss_q2.mean()).detach().cpu()
+            loss_q += cql_alpha<a id="change">*</a>(cql_loss_q1.mean() + cql_loss_q2.mean())
+
+
+        &#47&#47 Useful info for logging</code></pre><h3>After Change</h3><pre><code class='java'>
+            cql_loss_q2 -= self.ac.q2(o, a).mean()*self.lamda
+
+            &#47&#47 Update the cql-alpha
+            <a id="change">if &quotlagrange&quot in self.algo</a>:
+                cql_alpha = torch.clamp(self.log_lamda.exp(), min=0.0, max=1000000.0)
+                self.lamda = cql_alpha
+                cql_loss_q1 = cql_alpha*(cql_loss_q1-self.target_action_gap)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/hari-sikchi/offline_rl/commit/bf9dfc7b6c75f6f21296e7f7e5190e5abb675603#diff-a198312cfba35007e403a8fa0bfe963689597155e00a327674eb23e7bc6352c4L241' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 108872258</div><div id='project'> Project Name: hari-sikchi/offline_rl</div><div id='commit'> Commit Name: bf9dfc7b6c75f6f21296e7f7e5190e5abb675603</div><div id='time'> Time: 2021-10-04</div><div id='author'> Author: harshitsikchi8@gmail.com</div><div id='file'> File Name: CQL/cql.py</div><div id='m_class'> M Class Name: CQL</div><div id='n_method'> N Class Name: CQL</div><div id='m_method'> M Method Name: compute_loss_q(2)</div><div id='n_method'> N Method Name: compute_loss_q(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: CQL/cql.py</div><div id='n_file'> N File Name: CQL/cql.py</div><div id='m_start'> M Start Line: 264</div><div id='m_end'> M End Line: 358</div><div id='n_start'> N Start Line: 327</div><div id='n_end'> N End Line: 362</div><BR>

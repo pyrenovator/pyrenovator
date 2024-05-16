@@ -1,0 +1,131 @@
+<html><h3>Pattern ID :15775
+</h3><img src='53245868.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            continue
+
+        &#47&#47 If the current layer is a subclassed layer, extract the layers from the subclassed layer
+        <a id="change">if </a>current_layer.submodules and "tensorflow.python.keras" not in current_layer.__module__:
+            logger.debug("Subclass layer \&quot%s\&quot found. Extracting layers.", current_layer.name)
+            &#47&#47 Converts CamelCase to snake_case of subclassed layers class name
+            class_names.append(
+                regex_for_camel_case_to_snake_case.sub("_", current_layer.__class__.__name__).lower())
+
+            &#47&#47 First, get the input shape of the subclassed layer and create an input layer with that shape
+            &#47&#47 This is used to great a model based on the subclassed layer
+            temp_input_shape<a id="change"> = </a>prev_layer.shape[1:]
+            temp_input = tf.keras.Input(shape=temp_input_shape)
+
+            &#47&#47 Create a model based on the subclassed layer.
+            &#47&#47 This is done with the input layer created above being used for two reasons:
+            &#47&#47 1) The input layer is used to create the temporary functional model
+            &#47&#47 2) The input layer is used in the subclass layers call function as a symbolic tensor to get internal layers
+            temp_model = tf.keras.Model(inputs=[temp_input], outputs=current_layer.call(temp_input, training=False))
+            <a id="change">logger.debug("Model created for layer %s"</a>, current_layer.name<a id="change">)</a>
+            temp_model.summary(print_fn=logger.debug)
+
+            prev_layer = _prepare_model_helper(temp_model, prev_layer, class_names=class_names)
+
+        &#47&#47 If the current layer is a functional layer, call the layer with the previous layer
+        elif isinstance(current_layer, Functional):
+            prev_layer = current_layer.call(prev_layer)
+
+        &#47&#47 If a normal Keras defined layer
+        elif <a id="change"></a>not isinstance(current_layer, TFOpLambda) and not isinstance(current_layer, tf.keras.layers.MultiHeadAttention):
+            prev_layer = current_layer(prev_layer)
+
+        &#47&#47 Call entire model if the current model doesn&quott have any Functional or Subclassed layers</code></pre><h3>After Change</h3><pre><code class='java'>
+        layer_input = _get_layer_input(current_layer, network_dict)
+
+        &#47&#47 If the current layer is a subclassed layer, extract the layers from the subclassed layer
+        <a id="change">if </a>_is_subclass_layer(current_layer):
+            new_output_tensor = _handle_subclassed_layer(current_layer, layer_input, network_dict, class_names, model_outputs)
+
+        &#47&#47 If a functional model is found, then we unwrap the model and recursively call the prepare model helper
+        elif _is_functional_model(current_layer):
+            new_output_tensor = _handle_functional_model(current_layer, layer_input, network_dict)
+
+        &#47&#47 If a normally defined layer is found, add it to the functional model
+        else:
+            new_output_tensor<a id="change"> = </a>_handle_normal_keras_layer(current_layer, layer_input)
+
+        _update_output_tensors_in_network_dict(current_layer, new_output_tensor, model, network_dict, model_outputs)
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 6</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/quic/aimet/commit/f4563cae877e6bf97e799193c3905b44ad0d6041#diff-7cb3317ad0f99fc193434f8b23a229e4150daf83caf0181d78a7cab0949e48a0L139' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 53245868</div><div id='project'> Project Name: quic/aimet</div><div id='commit'> Commit Name: f4563cae877e6bf97e799193c3905b44ad0d6041</div><div id='time'> Time: 2023-04-16</div><div id='author'> Author: quic_ernst@quicinc.com</div><div id='file'> File Name: TrainingExtensions/tensorflow/src/python/aimet_tensorflow/keras/model_preparer.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: _prepare_model_helper(4)</div><div id='n_method'> N Method Name: _prepare_model_helper(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: TrainingExtensions/tensorflow/src/python/aimet_tensorflow/keras/model_preparer.py</div><div id='n_file'> N File Name: TrainingExtensions/tensorflow/src/python/aimet_tensorflow/keras/model_preparer.py</div><div id='m_start'> M Start Line: 139</div><div id='m_end'> M End Line: 190</div><div id='n_start'> N Start Line: 320</div><div id='n_end'> N End Line: 349</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    
+    received_ID_col = False
+    received_single_time_series = True
+    <a id="change">if </a>isinstance(df, pd.DataFrame):
+        new_df = df.copy(deep=True)
+        if "ID" in df.columns:
+            received_ID_col<a id="change"> = </a>True
+            log.debug("Received df with ID col")
+            if len(new_df["ID"].unique()) &gt; 1:
+                <a id="change">log.debug("Received df with many time series"</a><a id="change">)</a>
+                received_single_time_series = False
+            else:
+                log.debug("Received df with single time series")
+        else:
+            new_df["ID"] = "__df__"
+            log.debug("Received df with single time series")
+    elif <a id="change"></a>df is None:
+        raise ValueError("df is None")
+    else:
+        raise ValueError("Please, insert valid df type (pd.DataFrame)")</code></pre><h3>After Change</h3><pre><code class='java'>
+        list
+            list of IDs
+    
+    <a id="change">if </a>not isinstance(df, pd.DataFrame):
+        raise ValueError("Provided DataFrame (df) must be of pd.DataFrame type.")
+
+    &#47&#47 Create a copy of the dataframe
+    df_copy = df.copy(deep=True)
+
+    df_has_id_column = "ID" in df_copy.columns
+
+    &#47&#47 If there is no ID column, then add one with a single value
+    if not df_has_id_column:
+        log.debug("Provided DataFrame (df) contains a single time series.")
+        df_copy["ID"]<a id="change"> = </a>"__df__"
+        return df_copy, df_has_id_column, True, ["__df__"]
+
+    &#47&#47 Create a list of unique ID values</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/ourownstory/neural_prophet/commit/ddcb2d23c702ca2583d530c67b4ba2fe673cedd0#diff-cb8ae2d50e5d5d245ed6fcc8cadf2baf7294fa9ac5c63e819fbfe34f0e4c2552L25' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 53245869</div><div id='project'> Project Name: ourownstory/neural_prophet</div><div id='commit'> Commit Name: ddcb2d23c702ca2583d530c67b4ba2fe673cedd0</div><div id='time'> Time: 2023-03-01</div><div id='author'> Author: noxan@users.noreply.github.com</div><div id='file'> File Name: neuralprophet/df_utils.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: prep_or_copy_df(1)</div><div id='n_method'> N Method Name: prep_or_copy_df(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: neuralprophet/df_utils.py</div><div id='n_file'> N File Name: neuralprophet/df_utils.py</div><div id='m_start'> M Start Line: 25</div><div id='m_end'> M End Line: 63</div><div id='n_start'> N Start Line: 25</div><div id='n_end'> N End Line: 64</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    logging.debug(f"Using a test experiment config: {env.experiment_config}")
+
+    with local_execution_manager(context_path):
+        <a id="change">if </a>not trial_class:
+            <a id="change">logging.debug("Loading trial class from experiment configuration"</a><a id="change">)</a>
+            trial_class<a id="change"> = </a>load.load_trial_implementation(env.experiment_config["entrypoint"])
+
+        controller = load.load_controller_from_trial(
+            trial_class=trial_class,</code></pre><h3>After Change</h3><pre><code class='java'>
+    logging.info(f"Using hyperparameters: {env.hparams}")
+    logging.debug(f"Using a test experiment config: {env.experiment_config}")
+
+    <a id="change">if </a>native_context_cls is not None and controller_cls is not None:
+        &#47&#47 Case 1: test one batch for Native implementation.
+        controller_cls.pre_execute_hook(env=env, hvd_config=hvd_config)
+        context<a id="change"> = </a>native_context_cls(env=env, hvd_config=hvd_config)
+
+        def train_fn() -&gt; None:
+            controller = cast(Type[det.TrialController], controller_cls).from_native(
+                context=context,
+                env=env,
+                workloads=workloads,
+                load_path=None,
+                rendezvous_info=rendezvous_info,
+                hvd_config=hvd_config,
+            )
+            controller.run()
+            checkpoint_dir.cleanup()
+
+        context._set_train_fn(train_fn)
+        logging.info(
+            "Note: to submit an experiment to the cluster, change mode argument to Mode.CLUSTER"
+        )
+        return context
+
+    elif <a id="change"></a>trial_class is not None:
+        &#47&#47 Case 2: test one batch for Trial implementation.
+        controller = load.load_controller_from_trial(
+            trial_class=trial_class,</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/determined-ai/determined/commit/03270c0aafa01876b93c31eeb61b052807608307#diff-2e9eea92d2d4e898e5ac7ab67a269b4276d4b0c5d909e1321e370f5d74155039L431' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 53245899</div><div id='project'> Project Name: determined-ai/determined</div><div id='commit'> Commit Name: 03270c0aafa01876b93c31eeb61b052807608307</div><div id='time'> Time: 2020-05-15</div><div id='author'> Author: shiyuan@determined.ai</div><div id='file'> File Name: harness/determined/experimental/_native.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: test_one_batch(4)</div><div id='n_method'> N Method Name: test_one_batch(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: harness/determined/experimental/_native.py</div><div id='n_file'> N File Name: harness/determined/experimental/_native.py</div><div id='m_start'> M Start Line: 432</div><div id='m_end'> M End Line: 466</div><div id='n_start'> N Start Line: 325</div><div id='n_end'> N End Line: 387</div><BR>

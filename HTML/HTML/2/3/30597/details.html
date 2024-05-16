@@ -1,0 +1,135 @@
+<html><h3>Pattern ID :30597
+</h3><img src='90409479.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        loss = (self.entropy_coeff * log_probs - values).mean()
+
+        optimizer.zero_grad()
+        <a id="change">loss.backward()</a>
+        if self.max_grad &gt; 0:
+            T.nn.utils.clip_grad_norm_(actor.parameters(), self.max_grad)
+        optimizer.step()
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        :param observations:
+        
+        actor_parameters = actor.parameters()
+        optimizer<a id="change"> = </a>self.optimizer_class(actor_parameters, lr=self.lr)
+        &#47&#47 make sure critic isn&quott updated!
+        if critic2 is not None:
+            critic_variables = critic1.parameters() + critic2.parameters()
+        else:
+            critic_variables = critic1.parameters()
+        for var in critic_variables:
+            var.requires_grad = False
+
+        distributions = actor.get_action_distribution(observations)
+        &#47&#47 use the reparametrization trick for backpropagation
+        &#47&#47 https://gregorygundersen.com/blog/2018/04/29/reparameterization/
+        actions = distributions.rsample()
+        if self.squashed_output:
+            actions = T.tanh(actions)
+        log_probs = distributions.log_prob(actions)
+        entropy = distributions.entropy().mean()
+
+        values1 = critic1(observations, actions)
+        if critic2 is not None:
+            values2 = critic2(observations, actions)
+            values = T.min(values1, values2)
+        else:
+            values = values1
+
+        loss = (self.entropy_coeff * log_probs - values).mean()
+
+        <a id="change">self.run_optimizer(</a>optimizer, loss, actor_parameters<a id="change">)</a>
+
+        &#47&#47 reset critic parameters
+        for var in critic_variables:
+            var.requires_grad = True</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/londonnode/pearl/commit/5c22c7fc250069e06ba0836af2978123ce60e6a8#diff-b68c703d61b55535b734b62646c41dc40f50b287ada3402dbf6b5a6cd37fddceL256' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 90409479</div><div id='project'> Project Name: londonnode/pearl</div><div id='commit'> Commit Name: 5c22c7fc250069e06ba0836af2978123ce60e6a8</div><div id='time'> Time: 2021-09-24</div><div id='author'> Author: rohan.tangri@gmail.com</div><div id='file'> File Name: anvil/updaters/actors.py</div><div id='m_class'> M Class Name: SoftPolicyGradient</div><div id='n_method'> N Class Name: SoftPolicyGradient</div><div id='m_method'> M Method Name: __call__(5)</div><div id='n_method'> N Method Name: __call__(5)</div><div id='m_parent_class'> M Parent Class: BaseActorUpdater</div><div id='n_parent_class'> N Parent Class: object</div><div id='m_file'> M File Name: anvil/updaters/actors.py</div><div id='n_file'> N File Name: anvil/updaters/actors.py</div><div id='m_start'> M Start Line: 256</div><div id='m_end'> M End Line: 290</div><div id='n_start'> N Start Line: 275</div><div id='n_end'> N End Line: 309</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        loss = batch_loss + entropy_loss
+
+        optimizer.zero_grad()
+        <a id="change">loss.backward()</a>
+        if self.max_grad &gt; 0:
+            T.nn.utils.clip_grad_norm_(model.parameters(), self.max_grad)
+        optimizer.step()
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        :param advantages:
+        :param old_log_probs:
+        
+        actor_parameters<a id="change"> = </a>self._get_model_parameters(model)
+        optimizer = self.optimizer_class(actor_parameters, lr=self.lr)
+        distributions = model.get_action_distribution(observations)
+        new_log_probs = distributions.log_prob(actions).sum(dim=-1)
+        entropy = distributions.entropy().mean()
+
+        batch_loss = -(advantages * new_log_probs).mean()
+        entropy_loss = -self.entropy_coeff * entropy
+
+        loss = batch_loss + entropy_loss
+
+        <a id="change">self.run_optimizer(</a>optimizer, loss, actor_parameters<a id="change">)</a>
+
+        loss = loss.detach()
+        entropy = entropy.detach()
+        if old_log_probs is not None:</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/londonnode/pearl/commit/5c22c7fc250069e06ba0836af2978123ce60e6a8#diff-b68c703d61b55535b734b62646c41dc40f50b287ada3402dbf6b5a6cd37fddceL34' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 90409478</div><div id='project'> Project Name: londonnode/pearl</div><div id='commit'> Commit Name: 5c22c7fc250069e06ba0836af2978123ce60e6a8</div><div id='time'> Time: 2021-09-24</div><div id='author'> Author: rohan.tangri@gmail.com</div><div id='file'> File Name: anvil/updaters/actors.py</div><div id='m_class'> M Class Name: PolicyGradient</div><div id='n_method'> N Class Name: PolicyGradient</div><div id='m_method'> M Method Name: __call__(6)</div><div id='n_method'> N Method Name: __call__(6)</div><div id='m_parent_class'> M Parent Class: BaseActorUpdater</div><div id='n_parent_class'> N Parent Class: object</div><div id='m_file'> M File Name: anvil/updaters/actors.py</div><div id='n_file'> N File Name: anvil/updaters/actors.py</div><div id='m_start'> M Start Line: 51</div><div id='m_end'> M End Line: 65</div><div id='n_start'> N Start Line: 85</div><div id='n_end'> N End Line: 96</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        loss = -values.mean()
+
+        optimizer.zero_grad()
+        <a id="change">loss.backward()</a>
+        if self.max_grad &gt; 0:
+            T.nn.utils.clip_grad_norm_(actor.parameters(), self.max_grad)
+        optimizer.step()
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        :param observations:
+        
+        actor_parameters = actor.parameters()
+        optimizer<a id="change"> = </a>self.optimizer_class(actor_parameters, lr=self.lr)
+        &#47&#47 make sure critic isn&quott updated!
+        for var in critic.parameters():
+            var.requires_grad = False
+
+        actions = actor(observations)
+        values = critic(observations, actions)
+
+        loss = -values.mean()
+
+        <a id="change">self.run_optimizer(</a>optimizer, loss, actor_parameters<a id="change">)</a>
+
+        &#47&#47 reset critic parameters
+        for var in critic.parameters():
+            var.requires_grad = True</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/londonnode/pearl/commit/5c22c7fc250069e06ba0836af2978123ce60e6a8#diff-b68c703d61b55535b734b62646c41dc40f50b287ada3402dbf6b5a6cd37fddceL180' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 90409481</div><div id='project'> Project Name: londonnode/pearl</div><div id='commit'> Commit Name: 5c22c7fc250069e06ba0836af2978123ce60e6a8</div><div id='time'> Time: 2021-09-24</div><div id='author'> Author: rohan.tangri@gmail.com</div><div id='file'> File Name: anvil/updaters/actors.py</div><div id='m_class'> M Class Name: DeterministicPolicyGradient</div><div id='n_method'> N Class Name: DeterministicPolicyGradient</div><div id='m_method'> M Method Name: __call__(4)</div><div id='n_method'> N Method Name: __call__(4)</div><div id='m_parent_class'> M Parent Class: BaseActorUpdater</div><div id='n_parent_class'> N Parent Class: object</div><div id='m_file'> M File Name: anvil/updaters/actors.py</div><div id='n_file'> N File Name: anvil/updaters/actors.py</div><div id='m_start'> M Start Line: 193</div><div id='m_end'> M End Line: 213</div><div id='n_start'> N Start Line: 217</div><div id='n_end'> N End Line: 234</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        loss = batch_loss + entropy_loss
+
+        optimizer.zero_grad()
+        <a id="change">loss.backward()</a>
+        if self.max_grad &gt; 0:
+            T.nn.utils.clip_grad_norm_(model.parameters(), self.max_grad)
+        optimizer.step()
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        :param advantages:
+        :param old_log_probs:
+        
+        actor_parameters<a id="change"> = </a>self._get_model_parameters(model)
+        optimizer = self.optimizer_class(actor_parameters, lr=self.lr)
+        distributions = model.get_action_distribution(observations)
+        new_log_probs = distributions.log_prob(actions).sum(dim=-1)
+        entropy = distributions.entropy().mean()
+
+        ratios = (new_log_probs - old_log_probs).exp()
+
+        raw_loss = ratios * advantages
+        clipped_loss = (
+            T.clamp(ratios, 1 - self.ratio_clip, 1 + self.ratio_clip) * advantages
+        )
+
+        batch_loss = -(T.min(raw_loss, clipped_loss)).mean()
+        entropy_loss = -self.entropy_coeff * entropy
+
+        loss = batch_loss + entropy_loss
+
+        <a id="change">self.run_optimizer(</a>optimizer, loss, actor_parameters<a id="change">)</a>
+
+        loss = loss.detach()
+        entropy = entropy.detach()
+        if old_log_probs is not None:</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/londonnode/pearl/commit/5c22c7fc250069e06ba0836af2978123ce60e6a8#diff-b68c703d61b55535b734b62646c41dc40f50b287ada3402dbf6b5a6cd37fddceL108' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 90409480</div><div id='project'> Project Name: londonnode/pearl</div><div id='commit'> Commit Name: 5c22c7fc250069e06ba0836af2978123ce60e6a8</div><div id='time'> Time: 2021-09-24</div><div id='author'> Author: rohan.tangri@gmail.com</div><div id='file'> File Name: anvil/updaters/actors.py</div><div id='m_class'> M Class Name: ProximalPolicyClip</div><div id='n_method'> N Class Name: ProximalPolicyClip</div><div id='m_method'> M Method Name: __call__(6)</div><div id='n_method'> N Method Name: __call__(6)</div><div id='m_parent_class'> M Parent Class: BaseActorUpdater</div><div id='n_parent_class'> N Parent Class: object</div><div id='m_file'> M File Name: anvil/updaters/actors.py</div><div id='n_file'> N File Name: anvil/updaters/actors.py</div><div id='m_start'> M Start Line: 125</div><div id='m_end'> M End Line: 146</div><div id='n_start'> N Start Line: 154</div><div id='n_end'> N End Line: 172</div><BR>

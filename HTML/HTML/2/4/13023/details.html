@@ -1,0 +1,71 @@
+<html><h3>Pattern ID :13023
+</h3><img src='44026078.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        :return:
+        
+        batch_size, N, _ = tar_candidate.size()
+        tar_pred_prob, dx, dy, top_m_indices = <a id="change">self.forward(</a>feat_in, tar_candidate<a id="change">)</a>
+
+        &#47&#47 select the M output and gt
+        index_offset = torch.arange(0, batch_size, device=self.device).view(batch_size, -1).repeat(1, self.M).view(-1)
+        top_m_indices = top_m_indices.view(-1) + index_offset * N</code></pre><h3>After Change</h3><pre><code class='java'>
+        m_candidate_loss = F.binary_cross_entropy(tar_pred_prob_selected, candidate_gt_selected, reduction=reduction)
+
+        &#47&#47 pred offset and compute regression loss
+        feat_in_reg = torch.cat(<a id="change">[</a>feat_in, tar_candidate[candidate_gt.bool()]<a id="change"></a>], dim=1)  &#47&#47 [batch_size, feat_dim + 2]
+        tar_offset_mean<a id="change"> = </a>self.mean_mlp(feat_in_reg)                            &#47&#47 [batch_size, 2]
+        offset_loss<a id="change"> = </a>F.smooth_l1_loss(tar_offset_mean,
+                                       offset_gt,
+                                       reduction=reduction)
+        return n_candidate_loss + m_candidate_loss + offset_loss</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/henry1iu/tnt-trajectory-prediction/commit/f39d0655e9e763f4dd61411259fdd4d214f6f34d#diff-62f1e94c741c7f9de60de56afd69a4d711a920fcbe44cef948ec2491a6158b3eL92' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 44026078</div><div id='project'> Project Name: henry1iu/tnt-trajectory-prediction</div><div id='commit'> Commit Name: f39d0655e9e763f4dd61411259fdd4d214f6f34d</div><div id='time'> Time: 2021-04-09</div><div id='author'> Author: liu.jb.henry@gmail.com</div><div id='file'> File Name: core/model/layers/target_prediction.py</div><div id='m_class'> M Class Name: TargetPred</div><div id='n_method'> N Class Name: TargetPred</div><div id='m_method'> M Method Name: loss(6)</div><div id='n_method'> N Method Name: loss(6)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: core/model/layers/target_prediction.py</div><div id='n_file'> N File Name: core/model/layers/target_prediction.py</div><div id='m_start'> M Start Line: 92</div><div id='m_end'> M End Line: 107</div><div id='n_start'> N Start Line: 93</div><div id='n_end'> N End Line: 112</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    def predict(self, interaction):
+        user = interaction[self.USER_ID]
+        item = interaction[self.ITEM_ID]
+        return <a id="change">self.forward(</a>user, item<a id="change">)</a>
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        user = interaction[self.USER_ID]
+        user_ids = user.unique()
+        user_iters, item_nums = self.get_input(user_ids)
+        scores<a id="change"> = </a><a id="change">[]</a>
+        for user_input, item_num in zip(user_iters, item_nums.squeeze(1)):
+            if self.split_to &lt;= 0:
+                output = self.user_forward(user_input, item_num, repeats=self.n_items)
+            else:
+                output = []
+                for mask in self.group:
+                    tmp_output = self.user_forward(user_input, item_num, repeats=len(mask), pred_slc=mask)
+                    output.append(tmp_output)
+                output = torch.cat(output, dim=0)
+            scores.append(output)
+        result<a id="change"> = </a>torch.cat(scores, dim=0)
+        return result
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/rucaibox/recbole/commit/98a9cc5f81ea2e9c8bf65c681610136fbd7d2e73#diff-aae1d3969c69e2b1d82221a072a835ccf8a5d91136e8e7989802de328ef7e2eeL134' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 44026094</div><div id='project'> Project Name: rucaibox/recbole</div><div id='commit'> Commit Name: 98a9cc5f81ea2e9c8bf65c681610136fbd7d2e73</div><div id='time'> Time: 2020-09-03</div><div id='author'> Author: 1337990880@qq.com</div><div id='file'> File Name: recbox/model/general_recommender/nais.py</div><div id='m_class'> M Class Name: NAIS</div><div id='n_method'> N Class Name: NAIS</div><div id='m_method'> M Method Name: predict(2)</div><div id='n_method'> N Method Name: predict(2)</div><div id='m_parent_class'> M Parent Class: GeneralRecommender</div><div id='n_parent_class'> N Parent Class: GeneralRecommender</div><div id='m_file'> M File Name: recbox/model/general_recommender/nais.py</div><div id='n_file'> N File Name: recbox/model/general_recommender/nais.py</div><div id='m_start'> M Start Line: 135</div><div id='m_end'> M End Line: 137</div><div id='n_start'> N Start Line: 172</div><div id='n_end'> N End Line: 187</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            model_dir=modeldir,
+            text_field=preprocessor.text_field,
+            config=preprocessor.config)
+        print(<a id="change">model.forward(</a>None<a id="change">)</a>)
+        &#47&#47 pipeline = DialogGenerationPipeline(
+        &#47&#47     model=model, preprocessor=preprocessor)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            model_dir=cache_path,
+            text_field=preprocessor.text_field,
+            config=preprocessor.config)
+        pipelines<a id="change"> = </a><a id="change">[
+            </a>DialogGenerationPipeline(model=model, preprocessor=preprocessor),
+            pipeline(
+                task=Tasks.dialog_generation,
+                model=model,
+                preprocessor=preprocessor)<a id="change"></a>
+        ]
+
+        result = {}
+        for step, item in enumerate(self.test_case[&quotsng0073&quot][&quotlog&quot]):
+            user = item[&quotuser&quot]
+            print(&quotuser: {}&quot.format(user))
+
+            result<a id="change"> = </a>pipelines[step % 2]({
+                &quotuser_input&quot: user,
+                &quothistory&quot: result
+            })</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/modelscope/modelscope/commit/3c687c9f3773f6420e486324cdbae2104e518b20#diff-652d9e1103ab38ef3b135b3f61c98450b2785baabd80907498d714b3164b22f5L94' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 44026104</div><div id='project'> Project Name: modelscope/modelscope</div><div id='commit'> Commit Name: 3c687c9f3773f6420e486324cdbae2104e518b20</div><div id='time'> Time: 2022-06-15</div><div id='author'> Author: ly119399@alibaba-inc.com</div><div id='file'> File Name: tests/pipelines/nlp/test_dialog_generation.py</div><div id='m_class'> M Class Name: DialogGenerationTest</div><div id='n_method'> N Class Name: DialogGenerationTest</div><div id='m_method'> M Method Name: test_run(1)</div><div id='n_method'> N Method Name: test_run(1)</div><div id='m_parent_class'> M Parent Class: unittest.TestCase</div><div id='n_parent_class'> N Parent Class: unittest.TestCase</div><div id='m_file'> M File Name: tests/pipelines/nlp/test_dialog_generation.py</div><div id='n_file'> N File Name: tests/pipelines/nlp/test_dialog_generation.py</div><div id='m_start'> M Start Line: 99</div><div id='m_end'> M End Line: 117</div><div id='n_start'> N Start Line: 106</div><div id='n_end'> N End Line: 125</div><BR>

@@ -1,0 +1,89 @@
+<html><h3>Pattern ID :37487
+</h3><img src='108005584.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        for batch_idx, (data, target) in enumerate(self.data_loader):
+            data, target = data.to(self.device), target.to(self.device)
+
+            <a id="change">self.optimizer.zero_grad()</a>
+            output = self.model(data)
+            loss = self.criterion(output, target)
+            loss.backward()
+            self.optimizer.step()</code></pre><h3>After Change</h3><pre><code class='java'>
+            loss = self.criterion(output, target)
+            loss = loss / self.accumulation_steps
+            loss.backward()
+            <a id="change">if (batch_idx+1) % self.accumulation_steps == 0</a>:
+                self.optimizer.step()
+                <a id="change">self.optimizer.zero_grad()</a>
+
+            self._logging(batch_idx, epoch, data, output, target, loss)
+
+            if batch_idx == self.len_epoch:</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 6</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/lehduong/knowledge-distillation-by-replacing-cheap-conv/commit/6a2fac62789427919e4a6d91296bdb0801eecb79#diff-0564ece5aadc13d5923043addc422a8058c6d96026493e84652cedc2f1bdca99L68' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 108005584</div><div id='project'> Project Name: lehduong/knowledge-distillation-by-replacing-cheap-conv</div><div id='commit'> Commit Name: 6a2fac62789427919e4a6d91296bdb0801eecb79</div><div id='time'> Time: 2020-01-20</div><div id='author'> Author: oopsxilitol@gmail.com</div><div id='file'> File Name: trainer/trainer.py</div><div id='m_class'> M Class Name: Trainer</div><div id='n_method'> N Class Name: Trainer</div><div id='m_method'> M Method Name: _train_epoch(2)</div><div id='n_method'> N Method Name: _train_epoch(2)</div><div id='m_parent_class'> M Parent Class: BaseTrainer</div><div id='n_parent_class'> N Parent Class: BaseTrainer</div><div id='m_file'> M File Name: trainer/trainer.py</div><div id='n_file'> N File Name: trainer/trainer.py</div><div id='m_start'> M Start Line: 117</div><div id='m_end'> M End Line: 121</div><div id='n_start'> N Start Line: 68</div><div id='n_end'> N End Line: 79</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            &#47&#47 accumulated_batches = 4  &#47&#47 accumulate gradient for 4 batches before stepping optimizer
+            &#47&#47 if ((i+1) % accumulated_batches == 0) or (i == len(dataloader) - 1):
+            optimizer.step()
+            <a id="change">optimizer.zero_grad()</a>
+
+            &#47&#47 Compute running epoch-means of tracked metrics
+            ui += 1
+            metrics += model.losses[&quotmetrics&quot]</code></pre><h3>After Change</h3><pre><code class='java'>
+        rloss = defaultdict(float)  &#47&#47 running loss
+        metrics = torch.zeros(3, num_classes)
+        optimizer.zero_grad()
+        for <a id="change">i</a>, (imgs, targets) in enumerate(dataloader):
+            if sum([len(x) for x in targets]) &lt; 1:  &#47&#47 if no targets continue
+                continue
+
+            &#47&#47 SGD burn-in
+            if (epoch == 0) & (i &lt;= 1000):
+                lr = 1e-3 * (i / 1000) ** 4
+                for g in optimizer.param_groups:
+                    g[&quotlr&quot] = lr
+
+            &#47&#47 Compute loss, compute gradient, update parameters
+            loss = model(imgs.to(device), targets, requestPrecision=True)
+            loss.backward()
+
+            accumulated_batches = 4  &#47&#47 accumulate gradient for 4 batches before stepping optimizer
+            <a id="change">if ((i+1) % accumulated_batches == 0)</a> or (i == len(dataloader) - 1):
+                optimizer.step()
+                <a id="change">optimizer.zero_grad()</a>
+
+            &#47&#47 Compute running epoch-means of tracked metrics
+            ui += 1
+            metrics += model.losses[&quotmetrics&quot]</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/nightsnack/yolobile/commit/6e5da1ce274abf9d22815eac04ae6aa16a2209b8#diff-ed183d67207df065a11e1289f19d34cc2abbc5448dea952683cfe9728c342b95L30' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 108005586</div><div id='project'> Project Name: nightsnack/yolobile</div><div id='commit'> Commit Name: 6e5da1ce274abf9d22815eac04ae6aa16a2209b8</div><div id='time'> Time: 2018-11-05</div><div id='author'> Author: glenn.jocher@ultralytics.com</div><div id='file'> File Name: train.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(1)</div><div id='n_method'> N Method Name: main(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: train.py</div><div id='n_file'> N File Name: train.py</div><div id='m_start'> M Start Line: 133</div><div id='m_end'> M End Line: 134</div><div id='n_start'> N Start Line: 45</div><div id='n_end'> N End Line: 137</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        
+        for batch_idx, (data, target) in enumerate(self.data_loader):
+            data, target = data.to(self.device), target.to(self.device)
+            <a id="change">self.optimizer.zero_grad()</a>
+
+            output_tc = self.teacher(data)
+            output_tc = torch.tensor(output_tc.detach().cpu().numpy()).cuda()
+            </code></pre><h3>After Change</h3><pre><code class='java'>
+        self.student.train()
+        self.train_metrics.reset()
+        
+        for <a id="change">batch_idx</a>, (data, target) in enumerate(self.data_loader):
+            data, target = data.to(self.device), target.to(self.device)
+
+            output_tc = self.teacher(data)
+            &#47&#47 TODO: Find an elegant way to free the feature map and computation graph
+            output_tc = torch.tensor(output_tc.detach().cpu().numpy()).cuda()
+            
+            output_st = self.student(data)
+            supervised_loss = self.criterion(output_st, target)
+            kd_loss = self.kd_criterion(output_st, output_tc)
+
+            loss = (1 - self.lamb) * supervised_loss + self.lamb* kd_loss
+            loss = loss / self.accumulation_steps
+            loss.backward()
+
+            <a id="change">if (batch_idx+1) % self.accumulation_steps == 0</a>:
+                self.optimizer.step()
+                <a id="change">self.optimizer.zero_grad()</a>
+
+            self.writer.set_step((epoch - 1) * self.len_epoch + batch_idx)
+            self.train_metrics.update(&quotloss&quot, loss.item())
+            for met in self.metric_ftns:</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lehduong/knowledge-distillation-by-replacing-cheap-conv/commit/6a2fac62789427919e4a6d91296bdb0801eecb79#diff-0564ece5aadc13d5923043addc422a8058c6d96026493e84652cedc2f1bdca99L214' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 108005582</div><div id='project'> Project Name: lehduong/knowledge-distillation-by-replacing-cheap-conv</div><div id='commit'> Commit Name: 6a2fac62789427919e4a6d91296bdb0801eecb79</div><div id='time'> Time: 2020-01-20</div><div id='author'> Author: oopsxilitol@gmail.com</div><div id='file'> File Name: trainer/trainer.py</div><div id='m_class'> M Class Name: TrainerTeacherAssistant</div><div id='n_method'> N Class Name: TrainerTeacherAssistant</div><div id='m_method'> M Method Name: _train_epoch(2)</div><div id='n_method'> N Method Name: _train_epoch(2)</div><div id='m_parent_class'> M Parent Class: BaseTrainer,BaseKnowledgeDistillationTrainer</div><div id='n_parent_class'> N Parent Class: BaseTrainer,BaseKnowledgeDistillationTrainer</div><div id='m_file'> M File Name: trainer/trainer.py</div><div id='n_file'> N File Name: trainer/trainer.py</div><div id='m_start'> M Start Line: 215</div><div id='m_end'> M End Line: 234</div><div id='n_start'> N Start Line: 174</div><div id='n_end'> N End Line: 193</div><BR>

@@ -1,0 +1,61 @@
+<html><h3>Pattern ID :30170
+</h3><img src='89403364.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            inputs.append(input)
+            outputs.append(output)
+        gradients = torch.autograd.grad(inputs, outputs, grad_outputs=self.gradient_mapper(grad_output, outputs))
+        <a id="change">return </a>self.reducer([input.detach_() for input in inputs], [gradient.detach_() for gradient in gradients])
+
+    def copy(self):
+        &quot&quot&quotReturn a copy of this hook.</code></pre><h3>After Change</h3><pre><code class='java'>
+        outputs = []
+        for in_mod, param_mod in zip(self.input_modifiers, self.param_modifiers):
+            input = in_mod(self.input[0].detach()).requires_grad_()
+            with mod_params(module, param_mod) as modified, <a id="change">torch.autograd.enable_grad():
+                </a>output = modified.forward(input)
+            inputs.append(input)
+            outputs.append(output)
+        gradients = torch.autograd.grad(outputs, inputs, grad_outputs=self.gradient_mapper(grad_output[0], outputs))</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/chr5tphr/zennit/commit/bdde3c04887a3f0182c57d10439ef77590c4225d#diff-3ef0ee9bb8222874fd6032880e02f6e56b7459d101f274b574d76801f2981affL138' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 89403364</div><div id='project'> Project Name: chr5tphr/zennit</div><div id='commit'> Commit Name: bdde3c04887a3f0182c57d10439ef77590c4225d</div><div id='time'> Time: 2020-10-29</div><div id='author'> Author: chrstphr@posteo.eu</div><div id='file'> File Name: zennit/core.py</div><div id='m_class'> M Class Name: LinearHook</div><div id='n_method'> N Class Name: LinearHook</div><div id='m_method'> M Method Name: backward(4)</div><div id='n_method'> N Method Name: backward(4)</div><div id='m_parent_class'> M Parent Class: Hook</div><div id='n_parent_class'> N Parent Class: Hook</div><div id='m_file'> M File Name: zennit/core.py</div><div id='n_file'> N File Name: zennit/core.py</div><div id='m_start'> M Start Line: 138</div><div id='m_end'> M End Line: 146</div><div id='n_start'> N Start Line: 138</div><div id='n_end'> N End Line: 147</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        fn_input.detach_()
+        args = (fn_input, sequence_input, linear_param0, linear_param1, bn_weight0, bn_bias0, bn_weight1, bn_bias1)
+        grad_out = ReversibleRNNFunction._forward_pass(*args)
+        <a id="change">return </a>torch.autograd.grad(grad_out, args, grad_output) + (None,)
+
+
+class RevRNN(torch.nn.Module):</code></pre><h3>After Change</h3><pre><code class='java'>
+        with torch.no_grad():
+            inp0 = out0 - ReversibleRNNFunction._calc(out1, sequence_input, bn_weight1, bn_bias1, linear_param1)
+            inp1 = out1 - ReversibleRNNFunction._calc(inp0, sequence_input, bn_weight0, bn_bias0, linear_param0)
+        <a id="change">with torch</a><a id="change">.enable_grad():
+            </a>fn_input = torch.cat([inp0, inp1], -1)
+            fn_input.detach_()
+            fn_input.requires_grad_(True)
+            args = (fn_input, sequence_input, linear_param0, linear_param1, bn_weight0, bn_bias0, bn_weight1, bn_bias1)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/homebrewnlp/homebrewnlp/commit/a0f0b4030e607ddb8baa74812668409814dc9a48#diff-c98bba8dbdd18eb4e9fa8ae11c28e350c08ee816fce50f9fb86d61cbcd345276L46' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 89403365</div><div id='project'> Project Name: homebrewnlp/homebrewnlp</div><div id='commit'> Commit Name: a0f0b4030e607ddb8baa74812668409814dc9a48</div><div id='time'> Time: 2020-07-13</div><div id='author'> Author: 39779310+ClashLuke@users.noreply.github.com</div><div id='file'> File Name: module.py</div><div id='m_class'> M Class Name: ReversibleRNNFunction</div><div id='n_method'> N Class Name: ReversibleRNNFunction</div><div id='m_method'> M Method Name: backward(2)</div><div id='n_method'> N Method Name: backward(2)</div><div id='m_parent_class'> M Parent Class: torch.autograd.Function</div><div id='n_parent_class'> N Parent Class: torch.autograd.Function</div><div id='m_file'> M File Name: module.py</div><div id='n_file'> N File Name: module.py</div><div id='m_start'> M Start Line: 50</div><div id='m_end'> M End Line: 58</div><div id='n_start'> N Start Line: 51</div><div id='n_end'> N End Line: 67</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    @staticmethod
+    def backward(ctx, *grad_outputs):
+        <a id="change">return </a>super().backward(ctx, *grad_outputs)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        mask = ctx.mask
+        x1, x2 = ctx.function.reverse(y1, y2, mask)
+        Reversible.outputs = (x1, x2)
+        <a id="change">with torch</a><a id="change">.enable_grad():
+            </a>x1.requires_grad = True
+            x2.requires_grad = True
+            y1, y2 = ctx.function(x1, x2, mask)
+        grad = torch.autograd.grad(outputs=(y1, y2), inputs=(x1, x2), grad_outputs=grad_outputs)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/rick-mccoy/reformer-pytorch/commit/4da6d0fcb3ce7e616d2e8cc9195b5b21dfd431cb#diff-e3774f35f62b92bb1d53bca86868831d64cd22450484b63085497e63bb739c16L21' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 89403366</div><div id='project'> Project Name: rick-mccoy/reformer-pytorch</div><div id='commit'> Commit Name: 4da6d0fcb3ce7e616d2e8cc9195b5b21dfd431cb</div><div id='time'> Time: 2020-01-10</div><div id='author'> Author: rickmccoy3141@gmail.com</div><div id='file'> File Name: model/reversible.py</div><div id='m_class'> M Class Name: Reversible</div><div id='n_method'> N Class Name: Reversible</div><div id='m_method'> M Method Name: backward(1)</div><div id='n_method'> N Method Name: backward(1)</div><div id='m_parent_class'> M Parent Class: Function</div><div id='n_parent_class'> N Parent Class: Function</div><div id='m_file'> M File Name: model/reversible.py</div><div id='n_file'> N File Name: model/reversible.py</div><div id='m_start'> M Start Line: 22</div><div id='m_end'> M End Line: 22</div><div id='n_start'> N Start Line: 24</div><div id='n_end'> N End Line: 34</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                x2.requires_grad = True
+            y1, y2 = ctx.function(x1, x2, mask)
+        grad = torch.autograd.grad(outputs=(y1, y2), inputs=(x1, x2), grad_outputs=grad_outputs)
+        <a id="change">return </a>(None, *grad, None)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            x1_grad = y1_grad + y1.grad
+            y1.grad = None
+
+        <a id="change">with torch</a><a id="change">.enable_grad():
+            </a>x2.requires_grad = True
+            fx2 = ctx.layer.f_block(x2, mask)
+            fx2.backward(x1_grad)
+        </code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/rick-mccoy/reformer-pytorch/commit/ba4ca176c189afc7a5ab76d9aea596478ea128a8#diff-e3774f35f62b92bb1d53bca86868831d64cd22450484b63085497e63bb739c16L23' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 89403367</div><div id='project'> Project Name: rick-mccoy/reformer-pytorch</div><div id='commit'> Commit Name: ba4ca176c189afc7a5ab76d9aea596478ea128a8</div><div id='time'> Time: 2020-01-15</div><div id='author'> Author: rickmccoy3141@gmail.com</div><div id='file'> File Name: model/reversible.py</div><div id='m_class'> M Class Name: Reversible</div><div id='n_method'> N Class Name: Reversible</div><div id='m_method'> M Method Name: backward(1)</div><div id='n_method'> N Method Name: backward(1)</div><div id='m_parent_class'> M Parent Class: Function</div><div id='n_parent_class'> N Parent Class: Function</div><div id='m_file'> M File Name: model/reversible.py</div><div id='n_file'> N File Name: model/reversible.py</div><div id='m_start'> M Start Line: 26</div><div id='m_end'> M End Line: 36</div><div id='n_start'> N Start Line: 24</div><div id='n_end'> N End Line: 49</div><BR>

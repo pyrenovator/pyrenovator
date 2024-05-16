@@ -1,0 +1,26 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    membrane_output = layer(input_current)
+
+    &#47&#47 first time step is not decayed
+    membrane_decay = <a id="change">torch.exp(torch.tensor(</a><a id="change">-(time_steps-1)/time_steps</a><a id="change">)</a><a id="change">)</a>
+    &#47&#47 account for rounding errors with .isclose()
+    assert (membrane_output[:,0] == 1).all(), "Output for first time step is not correct."
+    assert (membrane_output[:,-1] == layer.state).all(), "Output of last time step does not correspond to last layer state."
+    assert torch.isclose(layer.state, membrane_decay, atol=1e-08).all(), "Neuron membrane potentials do not seems to decay correctly."</code></pre><h3>After Change</h3><pre><code class='java'>
+def test_leaky_membrane_decay():
+    batch_size = 10
+    time_steps = 100
+    alpha = <a id="change">torch.tensor(0.99</a><a id="change">)</a>
+    input_current = torch.zeros(batch_size, time_steps, 2, 7, 7)
+    input_current[:,0] = 1 &#47&#47 only inject current in the first time step
+    layer = ExpLeak(alpha_mem=alpha)
+    membrane_output = layer(input_current)
+
+    &#47&#47 first time step is not decayed
+    membrane_decay = alpha<a id="change"> ** </a>(<a id="change">time_steps</a><a id="change">-1</a>)
+    &#47&#47 account for rounding errors with .isclose()
+    assert (membrane_output[:,0] == 1).all(), "Output for first time step is not correct."
+    assert (membrane_output[:,-1] == layer.state).all(), "Output of last time step does not correspond to last layer state."</code></pre>

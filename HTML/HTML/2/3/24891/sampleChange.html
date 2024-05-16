@@ -1,0 +1,44 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+  else: raise Exception(f"{op} isn&quott supported")
+  &#47&#47 TODO: this is insanely slow
+  &#47&#47 NOTE: ret.shape can be (1,), it&quots mostly by luck that this works
+  reduce = <a id="change">clbuild("reduce"</a>, 
+  __kernel void reduce(__global const float *a_g, int sz, __global float *res_g, int prod, int n_dims,
+                       __global const int *shape_x, __global const int *shape_ret) {
+    int gid = get_global_id(0);
+
+    float out = +start+;
+    for (int x = 0; x &lt; sz; x++) {
+      int idx = 0;  // compute index into a_g
+      int tprod = prod;
+      int tsz = sz;
+      for (int dim = 0; dim &lt; n_dims; dim++) {
+        idx *= shape_x[dim];
+        if (shape_x[dim] == shape_ret[dim]) {   // dim from gid, don&quott reduce
+          tprod /= shape_x[dim];
+          idx += (gid / tprod) % shape_x[dim];
+        } else {  // dim from x
+          tsz /= shape_x[dim];
+          idx += (x / tsz) % shape_x[dim];
+        }
+      }
+      float a = a_g[idx];
+      +code+;
+    }
+    res_g[gid] = out;
+  }<a id="change">)</a>
+  reduce([prod(ret.shape)], None, inp.cl,
+    i32(prod(inp.shape)//prod(ret.shape)), ret.cl,
+    i32(prod(ret.shape)), i32(len(ret.shape)),
+    buffer_np(np.array(inp.shape, dtype=np.int32)),</code></pre><h3>After Change</h3><pre><code class='java'>
+  view = View(ret.shape, strides_for_shape(inp.shape))
+
+  acc = 1
+  loop_start, loop_end = []<a id="change">, []</a>
+  for i,o in list(zip(inp.shape, ret.shape))[::-1]:
+    if i != o:    &#47&#47 reduce axis
+      assert o == 1
+      loop_start.append(f"for (int axis_{len(loop_start)} = 0; axis_{len(loop_start)} &lt; {i}; axis_{len(loop_start)}++) {{")</code></pre>

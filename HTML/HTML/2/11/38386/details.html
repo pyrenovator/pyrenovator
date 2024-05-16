@@ -1,0 +1,73 @@
+<html><h3>Pattern ID :38386
+</h3><img src='109700808.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        parameter_lr = lr * ctx.parameter_variance.get(param_name, 1)
+        grad = grad.astype(ctx.model.storage_dtype)
+        grad = adaptive_gradient_clipping(inner_ctx, param_name, grad)
+        <a id="change">if </a>"norm" in param_name.lower() or "rezero" in param_name.lower() or grad.ndim &lt; 2:
+            grad = adam(inner_ctx, param_name, grad, current_step)  &#47&#47 Do adam update for small parameters
+        else:
+            grad<a id="change"> = </a><a id="change">sm3(inner_ctx</a>, param_name, grad<a id="change">)</a>
+            grad<a id="change"> = </a><a id="change">ema(inner_ctx</a>, param_name, grad, current_step, <a id="change">1</a><a id="change"> - </a>ctx.optimizer.momentum_beta, <a id="change">"momentum"</a>, True<a id="change">)</a>
+            ctx.parameters[param_name] = (1 + ctx.optimizer.weight_decay * parameter_lr) * ctx.parameters[param_name]
+        grad *= parameter_lr
+        ctx.parameters[param_name] = grad + ctx.parameters[param_name]
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    state = ShampooState(count=count, stats=stats)
+    init, update_fn = distributed_shampoo(1, 1024)
+    grads = {k: adaptive_gradient_clipping(ctx, k, v.astype(ctx.model.storage_dtype)) for k, v in grads.items()}
+    updates, state = update_fn(grads, state, {k: p for k, p in ctx.parameters.items() if <a id="change">not k.startswith(&quotshampoo/&quot)</a>})
+    for k, s in state.stats.items():
+        ctx.parameters[&quotshampoo/stats/&quot + k] = s
+    ctx.parameters[&quotshampoo/count&quot] = state.count</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 8</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/homebrewnlp/olmax/commit/c9ecfae9c07532698f99f867beea0394b618a860#diff-4540d7c8541eb25568b448ea775d64c43be83ce020bc67dd8340da4d4e804846L75' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 109700808</div><div id='project'> Project Name: homebrewnlp/olmax</div><div id='commit'> Commit Name: c9ecfae9c07532698f99f867beea0394b618a860</div><div id='time'> Time: 2022-05-10</div><div id='author'> Author: 39779310+ClashLuke@users.noreply.github.com</div><div id='file'> File Name: src/optimizer.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: update(3)</div><div id='n_method'> N Method Name: update(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/optimizer.py</div><div id='n_file'> N File Name: src/optimizer.py</div><div id='m_start'> M Start Line: 75</div><div id='m_end'> M End Line: 91</div><div id='n_start'> N Start Line: 76</div><div id='n_end'> N End Line: 89</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    for param_name, grad in grads.items():
+        if "optimizer" in param_name:
+            continue
+        <a id="change">inner_ctx</a> = ctx.add_to_prefix(param_name, count=False)
+        parameter_lr = lr * ctx.parameter_variance.get(param_name, 1)
+        grad = grad.astype(ctx.model.storage_dtype)
+        grad = adaptive_gradient_clipping(ctx, param_name, grad)
+
+        <a id="change">if </a>small_parameter(param_name, grad):  &#47&#47 Do adam update for small parameters
+            grad = adam(inner_ctx, grad, step)
+        else:  &#47&#47 Do shampoo-sm3 update for large parameters
+            grad<a id="change"> = </a>graft(<a id="change">sm3(</a>inner_ctx, param_name, grad<a id="change">)</a>, shampoo(inner_ctx, param_name, grad, step))
+            grad<a id="change"> = </a><a id="change">ema(</a>inner_ctx, grad, step, <a id="change">1</a><a id="change"> - </a>ctx.optimizer.momentum_beta, <a id="change">"momentum"</a><a id="change">, heavyball=True)</a>
+            ctx.parameters[param_name] = (1 + ctx.optimizer.weight_decay * parameter_lr) * ctx.parameters[param_name]
+        ctx.parameters[param_name] = grad * parameter_lr + ctx.parameters[param_name]
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        grad = grad.astype(ctx.model.storage_dtype)
+        grad = adaptive_gradient_clipping(ctx, param_name, grad)
+        grad = adam(inner_ctx, grad, step)
+        <a id="change">if not small_parameter(param_name, grad)</a>:  &#47&#47 Do adam update for small parameters
+            ctx.parameters[param_name] = (1 + ctx.optimizer.weight_decay * parameter_lr) * ctx.parameters[param_name]
+        ctx.parameters[param_name] = grad * parameter_lr + ctx.parameters[param_name]
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/homebrewnlp/olmax/commit/25284bfcb3490aeb00640dc38021ee60faa3a9e3#diff-4540d7c8541eb25568b448ea775d64c43be83ce020bc67dd8340da4d4e804846L116' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 109700813</div><div id='project'> Project Name: homebrewnlp/olmax</div><div id='commit'> Commit Name: 25284bfcb3490aeb00640dc38021ee60faa3a9e3</div><div id='time'> Time: 2022-06-19</div><div id='author'> Author: 39779310+ClashLuke@users.noreply.github.com</div><div id='file'> File Name: src/optimizer.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: update(3)</div><div id='n_method'> N Method Name: update(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/optimizer.py</div><div id='n_file'> N File Name: src/optimizer.py</div><div id='m_start'> M Start Line: 117</div><div id='m_end'> M End Line: 134</div><div id='n_start'> N Start Line: 120</div><div id='n_end'> N End Line: 130</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    ctx = ctx.add_to_prefix("optimizer")
+    lr = -get_current_lr(ctx, current_step)
+
+    for <a id="change">param_name</a>, grad in grads.items():
+        inner_ctx = ctx.add_to_prefix(param_name, count=False)
+        if "optimizer" in param_name:
+            continue
+        parameter_lr = lr * ctx.parameter_variance.get(param_name, 1)
+        grad = grad.astype(ctx.model.storage_dtype)
+        grad = adaptive_gradient_clipping(inner_ctx, param_name, grad)
+        <a id="change">if </a>"norm" in param_name.lower() or "rezero" in param_name.lower() or grad.ndim &lt; 2:
+            grad = adam(inner_ctx, param_name, grad, current_step)  &#47&#47 Do adam update for small parameters
+        else:
+            grad<a id="change"> = </a><a id="change">sm3(</a>inner_ctx, param_name, grad<a id="change">)</a>
+            grad<a id="change"> = </a><a id="change">ema(</a>inner_ctx, param_name, grad, current_step, <a id="change">1</a><a id="change"> - </a>ctx.optimizer.momentum_beta, <a id="change">"momentum"</a>, True<a id="change">)</a>
+            ctx.parameters[param_name] = (1 + ctx.optimizer.weight_decay * parameter_lr) * ctx.parameters[param_name]
+        grad *= parameter_lr
+        ctx.parameters[param_name] = grad + ctx.parameters[param_name]
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    state = ShampooState(count=count, stats=stats)
+    init, update_fn = distributed_shampoo(1, 1024)
+    grads = {k: adaptive_gradient_clipping(ctx, k, v.astype(ctx.model.storage_dtype)) for k, v in grads.items()}
+    updates, state = update_fn(grads, state, {k: p for k, p in ctx.parameters.items() if <a id="change">not k.startswith(&quotshampoo/&quot)</a>})
+    for k, s in state.stats.items():
+        ctx.parameters[&quotshampoo/stats/&quot + k] = s
+    ctx.parameters[&quotshampoo/count&quot] = state.count</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/homebrewnlp/olmax/commit/c9ecfae9c07532698f99f867beea0394b618a860#diff-4540d7c8541eb25568b448ea775d64c43be83ce020bc67dd8340da4d4e804846L74' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 109700814</div><div id='project'> Project Name: homebrewnlp/olmax</div><div id='commit'> Commit Name: c9ecfae9c07532698f99f867beea0394b618a860</div><div id='time'> Time: 2022-05-10</div><div id='author'> Author: 39779310+ClashLuke@users.noreply.github.com</div><div id='file'> File Name: src/optimizer.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: update(3)</div><div id='n_method'> N Method Name: update(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/optimizer.py</div><div id='n_file'> N File Name: src/optimizer.py</div><div id='m_start'> M Start Line: 75</div><div id='m_end'> M End Line: 91</div><div id='n_start'> N Start Line: 76</div><div id='n_end'> N End Line: 89</div><BR>

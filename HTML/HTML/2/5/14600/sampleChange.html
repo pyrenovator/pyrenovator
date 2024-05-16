@@ -1,0 +1,54 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+            traj = traj.to(DEVICE).float()
+
+            <a id="change">if last_traj is not None</a>:
+                print("traj == last_traj ?", torch.equal(traj, last_traj)) if debug else None
+
+            &#47&#47 with torch.autograd.detect_anomaly():</code></pre><h3>After Change</h3><pre><code class='java'>
+            &#47&#47     print("traj == last_traj ?", torch.equal(traj, last_traj)) if debug else None
+
+            &#47&#47 with torch.autograd.detect_anomaly():
+            <a id="change">try:
+                </a>loss, loss_list = Loss.get_sl_loss(traj, agent.model)
+                optimizer.zero_grad()
+                loss.backward()  &#47&#47 note, we don&quott need retain_graph=True if we set hidden_state.detach()
+
+                &#47&#47 add a grad clip
+                &#47&#47 parameters = [p for p in agent.model.parameters() if p is not None and p.requires_grad]
+                &#47&#47 torch.nn.utils.clip_grad_norm_(parameters, CLIP)
+
+                optimizer.step()
+                loss_sum += loss.item()
+
+                print("One batch loss: {:.6f}.".format(loss.item()))
+                writer.add_scalar(&quotOneBatch/Loss&quot, loss.item(), batch_iter)
+
+                if True:
+                    print("One batch action_type_loss loss: {:.6f}.".format(loss_list[0].item()))
+                    writer.add_scalar(&quotOneBatch/action_type_loss&quot, loss_list[0].item(), batch_iter)
+
+                    print("One batch delay_loss loss: {:.6f}.".format(loss_list[1].item()))
+                    writer.add_scalar(&quotOneBatch/delay_loss&quot, loss_list[1].item(), batch_iter)
+
+                    print("One batch queue_loss loss: {:.6f}.".format(loss_list[2].item()))
+                    writer.add_scalar(&quotOneBatch/queue_loss&quot, loss_list[2].item(), batch_iter)
+
+                    print("One batch units_loss loss: {:.6f}.".format(loss_list[3].item()))
+                    writer.add_scalar(&quotOneBatch/units_loss&quot, loss_list[3].item(), batch_iter)
+
+                    print("One batch target_unit_loss loss: {:.6f}.".format(loss_list[4].item()))
+                    writer.add_scalar(&quotOneBatch/target_unit_loss&quot, loss_list[4].item(), batch_iter)
+
+                    print("One batch target_location_loss loss: {:.6f}.".format(loss_list[5].item()))
+                    writer.add_scalar(&quotOneBatch/target_location_loss&quot, loss_list[5].item(), batch_iter)
+
+            &#47&#47last_traj = traj.clone().detach()
+            <a id="change">except </a>Exception as e:               
+                print(<a id="change">traceback.format_exc()</a>)
+
+            i += 1
+            batch_iter += 1</code></pre>

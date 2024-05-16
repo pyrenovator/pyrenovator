@@ -1,0 +1,183 @@
+<html><h3>Pattern ID :31560
+</h3><img src='92241676.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                        heuristic_count += 1
+                        continue
+                    should_skip = False
+                    <a id="change">for </a>q in quote_values<a id="change">:
+                        </a><a id="change">if </a>q not in all_input_columns:
+                            heuristic_count<a id="change"> += </a>1
+                            should_skip = True
+                            break
+                    if should_skip:
+                        <a id="change">continue</a>
+                if args.remove_duplicates:
+                    normalized_example = re.sub(&quot\s+&quot, &quot&quot, &quot&quot.join([o[i] for i in args.no_duplication_columns]))
+                    &#47&#47 print(normalized_example)
+                    if normalized_example in seen_examples:</code></pre><h3>After Change</h3><pre><code class='java'>
+        written_count = 0
+        if args.remove_duplicates:
+            seen_examples = set()
+        all_thrown_away_rows<a id="change"> = []</a>
+        for row in tqdm(reader, desc=&quotLines&quot):
+            output_rows = []
+            thrown_away_rows = []
+            if args.transformation == &quotremove_thingtalk_quotes&quot:
+                row[args.thingtalk_column], _ = remove_thingtalk_quotes(row[args.thingtalk_column])
+            if args.transformation == &quotremove_wrong_thingtalk&quot:
+                if row[args.thingtalk_column] == gold_thingtalks[gold_thingtalk_count]:
+                    output_rows = [row]
+                else:
+                    output_rows = []
+                    thrown_away_rows = [row]
+                gold_thingtalk_count += 1
+            elif args.transformation == &quotget_wrong_thingtalk&quot:
+                if row[args.thingtalk_column] != gold_thingtalks[gold_thingtalk_count]:
+                    if args.replace_with_gold:
+                        row[args.thingtalk_column] = gold_thingtalks[gold_thingtalk_count]
+                    output_rows = [row]
+                else:
+                    output_rows = []
+                gold_thingtalk_count += 1
+            elif args.transformation == &quotmerge_input_file_with_query_file&quot:
+                output_rows.append(row)
+                for _ in range(args.num_new_queries):
+                    row = row.copy()
+                    row[args.utterance_column] = new_queries[new_query_count]
+                    output_rows.append(row)
+                    new_query_count += 1
+            elif args.transformation == &quotreplace_queries&quot:
+                for idx in range(args.num_new_queries):
+                    copy_row = row.copy()
+                    copy_row[args.utterance_column] = new_queries[new_query_count]
+                    copy_row[args.id_column] = &quotA&quot + copy_row[args.id_column] + &quot-&quot + str(idx) &#47&#47 add &quotA&quot for auto-paraphrasing
+                    output_rows.append(copy_row)
+                    new_query_count += 1
+            else:
+                assert args.transformation == &quotnone&quot
+                &#47&#47 do basic clean-up because old generation code missed these
+                row[args.utterance_column] = row[args.utterance_column].replace(&quot&lt;pad&gt;&quot, &quot&quot)
+                row[args.utterance_column] = re.sub(&quot\s\s+&quot, &quot &quot, row[args.utterance_column])
+                row[args.utterance_column] = row[args.utterance_column].strip()
+                output_rows = [row]
+            
+            for o in output_rows:
+                output_row = ""
+                if args.remove_with_heuristics:
+                    if not passes_heuristic_checks(o, args):
+                        heuristic_count += 1
+                        continue
+                if args.remove_duplicates:
+                    normalized_example = re.sub(&quot\s+&quot, &quot&quot, &quot&quot.join([o[i] for i in args.no_duplication_columns]))
+                    &#47&#47 print(normalized_example)
+                    if normalized_example in seen_examples:
+                        duplicate_count += 1
+                        continue
+                    else:
+                        seen_examples.add(normalized_example)
+                written_count += 1
+                for i, column in enumerate(args.output_columns):
+                    output_row += o[column]
+                    if i &lt; len(args.output_columns)-1:
+                        output_row += &quot\t&quot
+                output_file.write(output_row + &quot\n&quot)
+            <a id="change">for </a>o in thrown_away_rows<a id="change">:
+                </a>if args.remove_with_heuristics and passes_heuristic_checks(o, args):
+                    <a id="change">all_thrown_away_rows.append(</a>o<a id="change">)</a>
+
+        if args.thrown_away is not None:
+            &#47&#47 write the thrown away exampels into a file
+            with open(args.thrown_away, &quotw&quot) as output_file:
+                <a id="change">for </a>o in all_thrown_away_rows<a id="change">:
+                    </a>output_row = ""
+                    for i, column in enumerate(args.output_columns):
+                        output_row += o[column]
+                        if i &lt; len(args.output_columns)-1:</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 9</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/stanford-oval/genienlp/commit/d2eacd4e5c5347cb45907aea9e0a81a54b9fd5bf#diff-ee119052413383bfd6476efcd585c7782e225b9afadedd52e593204c70c2e120L31' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 92241676</div><div id='project'> Project Name: stanford-oval/genienlp</div><div id='commit'> Commit Name: d2eacd4e5c5347cb45907aea9e0a81a54b9fd5bf</div><div id='time'> Time: 2020-05-26</div><div id='author'> Author: s.j.semnani@gmail.com</div><div id='file'> File Name: genienlp/paraphrase/scripts/transform_dataset.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(0)</div><div id='n_method'> N Method Name: main(0)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: genienlp/paraphrase/scripts/transform_dataset.py</div><div id='n_file'> N File Name: genienlp/paraphrase/scripts/transform_dataset.py</div><div id='m_start'> M Start Line: 55</div><div id='m_end'> M End Line: 162</div><div id='n_start'> N Start Line: 31</div><div id='n_end'> N End Line: 196</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            dampening = group[&quotdampening&quot]
+            nesterov = group[&quotnesterov&quot]
+
+            <a id="change">for </a><a id="change">p</a> in group[&quotparams&quot]<a id="change">:
+                </a><a id="change">if </a>p.grad is None:
+                    <a id="change">continue</a>
+                d_p<a id="change"> = </a>p.grad
+                if weight_decay != 0:
+                    d_p = d_p.add(p, alpha=weight_decay)
+                if momentum != 0:</code></pre><h3>After Change</h3><pre><code class='java'>
+                loss = closure()
+
+        for group in self.param_groups:
+            params_with_grad<a id="change"> = []</a>
+            d_p_list = []
+            momentum_buffer_list = []
+            weight_decay = group[&quotweight_decay&quot]
+            momentum = group[&quotmomentum&quot]
+            dampening = group[&quotdampening&quot]
+            nesterov = group[&quotnesterov&quot]
+            lr = group[&quotlr&quot]
+
+            <a id="change">for </a>p in group[&quotparams&quot]<a id="change">:
+                </a>if p.grad is not None:
+                    <a id="change">params_with_grad.append(</a>p<a id="change">)</a>
+                    d_p_list.append(p.grad)
+
+                    state = self.state[p]
+                    if &quotmomentum_buffer&quot not in state:
+                        momentum_buffer_list.append(None)
+                    else:
+                        momentum_buffer_list.append(state[&quotmomentum_buffer&quot])
+
+            F.sgd(params_with_grad,
+                  d_p_list,
+                  momentum_buffer_list,
+                  weight_decay,
+                  momentum,
+                  lr,
+                  dampening,
+                  nesterov)
+
+            &#47&#47 update momentum_buffers in state
+            <a id="change">for </a>p, momentum_buffer in zip(params_with_grad, momentum_buffer_list)<a id="change">:
+                </a>state = self.state[p]
+                state[&quotmomentum_buffer&quot] = momentum_buffer
+
+        return loss</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/pytorch/pytorch/commit/a0cf5566d88533c5caa7a490beb6eb0760eee9b4#diff-e5ea47a2193f1cfb039210c5c0ff83e8175739afc0551866052f6ad31bb91482L76' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 92241675</div><div id='project'> Project Name: pytorch/pytorch</div><div id='commit'> Commit Name: a0cf5566d88533c5caa7a490beb6eb0760eee9b4</div><div id='time'> Time: 2021-01-21</div><div id='author'> Author: wanchaol@users.noreply.github.com</div><div id='file'> File Name: torch/optim/sgd.py</div><div id='m_class'> M Class Name: SGD</div><div id='n_method'> N Class Name: SGD</div><div id='m_method'> M Method Name: step(2)</div><div id='n_method'> N Method Name: step(2)</div><div id='m_parent_class'> M Parent Class: Optimizer</div><div id='n_parent_class'> N Parent Class: Optimizer</div><div id='m_file'> M File Name: torch/optim/sgd.py</div><div id='n_file'> N File Name: torch/optim/sgd.py</div><div id='m_start'> M Start Line: 88</div><div id='m_end'> M End Line: 114</div><div id='n_start'> N Start Line: 89</div><div id='n_end'> N End Line: 124</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        int(math.log2(edge_type_num)+1)
+    step_cnt = 0
+
+    <a id="change">for </a><a id="change">_</a> in range(edge_type_num)<a id="change">:
+        </a>while True:
+            &#47&#47 Avoid infinite loop.
+            step_cnt += 1
+            if step_cnt &gt; maximal_reasonable_steps or len(remaining_edge_types) == 0:
+                warnings.warn(
+                    f"Can&quott find enough ({edge_type_num}) edge types!", UserWarning)
+                break
+
+            edge_type_idx = random.randint(0, len(remaining_edge_types)-1)
+            new_edge_type = remaining_edge_types[edge_type_idx]
+            new_edge_type_tuple = EdgeTypeStr2Tuple(new_edge_type)
+            <a id="change">if </a>len(set(new_edge_type_tuple) & explored_node_type_set) == 0:
+                <a id="change">continue</a>
+            chosen_edge_types_list.append(new_edge_type)
+            explored_node_type_set<a id="change"> |= </a>set(new_edge_type_tuple)
+            remaining_edge_types.pop(edge_type_idx)
+            break
+    return tuple(sorted(chosen_edge_types_list))</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    for _ in range(edge_type_num):
+        &#47&#47 Move edge types from other_edge_types_list to candidate_edge_types_list.
+        idx_to_rm<a id="change"> = []</a>
+        <a id="change">for </a>idx, et in enumerate(other_edge_types_list)<a id="change">:
+            </a>et_tuple = EdgeTypeStr2Tuple(et)
+            if len(set(et_tuple) & explored_node_type_set) &gt; 0:
+                candidate_edge_types_list.append(et)
+                <a id="change">idx_to_rm.append(</a>idx<a id="change">)</a>
+        &#47&#47 Since pop() will change the index of following elements,
+        &#47&#47 we need to reverse the order of idx_to_rm.
+        <a id="change">for </a>idx in reversed(idx_to_rm)<a id="change">:
+            </a>other_edge_types_list.pop(idx)
+
+        if len(candidate_edge_types_list) == 0:
+            warnings.warn(</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/pku-dair/sgl/commit/93e7aac75c7a5fe5266c08615e4e5c0de463a86d#diff-a42813c7bb6f36db6c7dc4df3f1fb029e01d435597a169b5c1ae027c2d0ae0e3L27' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 92241664</div><div id='project'> Project Name: pku-dair/sgl</div><div id='commit'> Commit Name: 93e7aac75c7a5fe5266c08615e4e5c0de463a86d</div><div id='time'> Time: 2022-04-21</div><div id='author'> Author: 82886739+ZhenbangYou@users.noreply.github.com</div><div id='file'> File Name: dataset/choose_edge_type.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: ChooseEdgeType(3)</div><div id='n_method'> N Method Name: ChooseEdgeType(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: dataset/choose_edge_type.py</div><div id='n_file'> N File Name: dataset/choose_edge_type.py</div><div id='m_start'> M Start Line: 29</div><div id='m_end'> M End Line: 56</div><div id='n_start'> N Start Line: 31</div><div id='n_end'> N End Line: 62</div><BR>

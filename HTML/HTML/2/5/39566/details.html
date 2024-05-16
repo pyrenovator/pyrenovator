@@ -1,0 +1,45 @@
+<html><h3>Pattern ID :39566
+</h3><img src='112637618.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        expanded_v = v[...,None,:].repeat((1,)*len(v.shape[:-1])+(nsamples,1)) &#47&#47 (bs,n,c) -&gt; (bs,n,1,c) -&gt; (bs,n,ns,c)
+        expanded_v = expanded_v.reshape(*expanded_a.shape[:-1],v.shape[-1]) &#47&#47 (bs,n,ns,c) -&gt; (bs,n*ns,c)
+        expanded_mask = m[...,None].repeat((1,)*len(v.shape[:-1])+(nsamples,)) &#47&#47 (bs,n) -&gt; (bs,n,ns)
+        expanded_mask = expanded_mask.reshape(*<a id="change">expanded_a.shape[:-1]</a>) &#47&#47 (bs,n,ns) -&gt; (bs,n*ns)
+        &#47&#47 convert from elems to pairs
+        paired_a = self.elems2pairs(expanded_a) &#47&#47(bs,n*ns,d) -&gt; (bs,n*ns,n*ns,d)
+        if expanded_q is not None:</code></pre><h3>After Change</h3><pre><code class='java'>
+        nsamples = expanded_a.shape[-2]//m.shape[-1]
+        &#47&#47 expand v and mask like q
+        expanded_v = repeat(v, &quotb n c -&gt; b n m c&quot, m = nsamples) &#47&#47 (bs,n,c) -&gt; (bs,n,1,c) -&gt; (bs,n,ns,c)
+        expanded_v = <a id="change">rearrange(</a>expanded_v, <a id="change">&quotb n m c -&gt; b (n m) c&quot</a><a id="change">)</a> &#47&#47 (bs,n,ns,c) -&gt; (bs,n*ns,c)
+        expanded_mask = repeat(m, &quotb n -&gt; b n m&quot, m = nsamples) &#47&#47 (bs,n) -&gt; (bs,n,ns)
+        expanded_mask = rearrange(expanded_mask, &quotb n m -&gt; b (n m)&quot) &#47&#47 (bs,n,ns) -&gt; (bs,n*ns)
+        &#47&#47 convert from elems to pairs</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/lucidrains/lie-transformer-pytorch/commit/ed2f4167fb4eefe8946eb137f1e9ff6fc7d93d23#diff-40ebcc8bd6e39283fc9e88b016f526166bdca01222593ccce308f5a80ddbf772L56' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 112637618</div><div id='project'> Project Name: lucidrains/lie-transformer-pytorch</div><div id='commit'> Commit Name: ed2f4167fb4eefe8946eb137f1e9ff6fc7d93d23</div><div id='time'> Time: 2021-01-22</div><div id='author'> Author: lucidrains@gmail.com</div><div id='file'> File Name: lie_transformer_pytorch/se3.py</div><div id='m_class'> M Class Name: LieGroup</div><div id='n_method'> N Class Name: LieGroup</div><div id='m_method'> M Method Name: lift(3)</div><div id='n_method'> N Method Name: lift(3)</div><div id='m_parent_class'> M Parent Class: object</div><div id='n_parent_class'> N Parent Class: object</div><div id='m_file'> M File Name: lie_transformer_pytorch/se3.py</div><div id='n_file'> N File Name: lie_transformer_pytorch/se3.py</div><div id='m_start'> M Start Line: 56</div><div id='m_end'> M End Line: 61</div><div id='n_start'> N Start Line: 58</div><div id='n_end'> N End Line: 61</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        return transform
+
+    def decode(self, transform: Tensor) -&gt; Tensor:
+        b, c, length = *<a id="change">transform.shape[0:2]</a>, self.block_length
+        crops_windowed = torch.fft.fft(transform)
+        crops = einsum("... t k, t k -&gt; ... t k", crops_windowed, self.windows_inverse)
+        frequencies = torch.zeros(b, c, length).to(transform)</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 Go back to real waveform domain
+        waveform = torch.fft.irfft(frequencies, t)
+        &#47&#47 Rearrange waveform blocks timewise
+        return <a id="change">rearrange(</a>waveform, <a id="change">"(b n) c t -&gt; b c (n t)"</a><a id="change">, n=n)</a>
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/archinetai/cqt-pytorch/commit/3c0dbb33d23c749bcab5fff275ca7c6be90d894f#diff-eff7ecf52b3c6db366a721fe45d28f2b72f2d84c4a659c3ea7c15cb5eb735fe3L147' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 112637604</div><div id='project'> Project Name: archinetai/cqt-pytorch</div><div id='commit'> Commit Name: 3c0dbb33d23c749bcab5fff275ca7c6be90d894f</div><div id='time'> Time: 2022-12-09</div><div id='author'> Author: flavio.schneider.97@gmail.com</div><div id='file'> File Name: cqt_pytorch/cqt.py</div><div id='m_class'> M Class Name: CQT</div><div id='n_method'> N Class Name: CQT</div><div id='m_method'> M Method Name: decode(2)</div><div id='n_method'> N Method Name: decode(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: cqt_pytorch/cqt.py</div><div id='n_file'> N File Name: cqt_pytorch/cqt.py</div><div id='m_start'> M Start Line: 148</div><div id='m_end'> M End Line: 158</div><div id='n_start'> N Start Line: 169</div><div id='n_end'> N End Line: 190</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    
+    def expand_like(self,v,m,a):
+        nsamples = a.shape[-2]//m.shape[-1]
+        expanded_v = v[...,None,:].repeat((1,)*len(<a id="change">v.shape[:-1]</a>)+(nsamples,1)) &#47&#47 (bs,n,c) -&gt; (bs,n,1,c) -&gt; (bs,n,ns,c)
+        expanded_v = expanded_v.reshape(*a.shape[:2],v.shape[-1]) &#47&#47 (bs,n,ns,c) -&gt; (bs,n*ns,c)
+        expanded_mask = m[...,None].repeat((1,)*len(v.shape[:-1])+(nsamples,)) &#47&#47 (bs,n) -&gt; (bs,n,ns)
+        expanded_mask = expanded_mask.reshape(*a.shape[:2]) &#47&#47 (bs,n,ns) -&gt; (bs,n*ns)</code></pre><h3>After Change</h3><pre><code class='java'>
+        expanded_v = repeat(v, &quotb n c -&gt; b n m c&quot, m = nsamples) &#47&#47 (bs,n,c) -&gt; (bs,n,1,c) -&gt; (bs,n,ns,c)
+        expanded_v = rearrange(expanded_v, &quotb n m c -&gt; b (n m) c&quot) &#47&#47 (bs,n,ns,c) -&gt; (bs,n*ns,c)
+        expanded_mask = repeat(m, &quotb n -&gt; b n m&quot, m = nsamples) &#47&#47 (bs,n) -&gt; (bs,n,ns)
+        expanded_mask = <a id="change">rearrange(</a>expanded_mask, <a id="change">&quotb n m -&gt; b (n m)&quot</a><a id="change">)</a> &#47&#47 (bs,n,ns) -&gt; (bs,n*ns)
+        return expanded_v, expanded_mask
+    
+    def elems2pairs(self,a):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lucidrains/lie-transformer-pytorch/commit/ed2f4167fb4eefe8946eb137f1e9ff6fc7d93d23#diff-40ebcc8bd6e39283fc9e88b016f526166bdca01222593ccce308f5a80ddbf772L72' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 112637619</div><div id='project'> Project Name: lucidrains/lie-transformer-pytorch</div><div id='commit'> Commit Name: ed2f4167fb4eefe8946eb137f1e9ff6fc7d93d23</div><div id='time'> Time: 2021-01-22</div><div id='author'> Author: lucidrains@gmail.com</div><div id='file'> File Name: lie_transformer_pytorch/se3.py</div><div id='m_class'> M Class Name: LieGroup</div><div id='n_method'> N Class Name: LieGroup</div><div id='m_method'> M Method Name: expand_like(4)</div><div id='n_method'> N Method Name: expand_like(4)</div><div id='m_parent_class'> M Parent Class: object</div><div id='n_parent_class'> N Parent Class: object</div><div id='m_file'> M File Name: lie_transformer_pytorch/se3.py</div><div id='n_file'> N File Name: lie_transformer_pytorch/se3.py</div><div id='m_start'> M Start Line: 73</div><div id='m_end'> M End Line: 77</div><div id='n_start'> N Start Line: 74</div><div id='n_end'> N End Line: 77</div><BR>

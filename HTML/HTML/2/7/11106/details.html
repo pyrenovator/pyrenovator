@@ -1,0 +1,87 @@
+<html><h3>Pattern ID :11106
+</h3><img src='38181557.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            bucketed_tensors[Lg].append(c)
+
+        &#47&#47 bucket-wise ifft
+        <a id="change">for </a>b, v in <a id="change">bucketed_tensors.items():
+            </a>ret[b] = ifft(torch.cat(v, dim=2))
+
+        return ret
+        </code></pre><h3>After Change</h3><pre><code class='java'>
+    else:
+        block_ptr = -1
+        bucketed_tensors = []
+        ret<a id="change"> = </a><a id="change">[]</a>
+
+        for j, (mii,win_range,Lg,col) in enumerate(loopparams):
+            
+            c = torch.zeros(*f_slices.shape[:2], 1, Lg, dtype=ft.dtype, device=torch.device(device))
+
+            t = ft[:, :, win_range]*torch.fft.fftshift(giis[j, :Lg])
+
+            sl1 = slice(None,(Lg+1)//2)
+            sl2 = slice(-(Lg//2),None)
+
+            c[:, :, 0, sl1] = t[:, :, Lg//2:]  &#47&#47 if mii is odd, this is of length mii-mii//2
+            c[:, :, 0, sl2] = t[:, :, :Lg//2]  &#47&#47 if mii is odd, this is of length mii//2
+
+            &#47&#47 start a new block
+            if block_ptr == -1 or bucketed_tensors[block_ptr][0].shape[-1] != Lg:
+                bucketed_tensors.append(c)
+                block_ptr += 1
+            else:
+                &#47&#47 concat block to previous contiguous frequency block with same time resolution
+                bucketed_tensors[block_ptr] = torch.cat([bucketed_tensors[block_ptr], c], dim=2)
+
+        &#47&#47 bucket-wise ifft
+        <a id="change">for </a>bucketed_tensor in bucketed_tensors<a id="change">:
+            </a><a id="change">ret.append(</a>ifft(bucketed_tensor)<a id="change">)</a>
+
+        return ret
+        
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 6</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/sevagh/xumx-slicq/commit/d131db1101720e6dc56837e284de1801fd9dded1#diff-4c0868827df638665d7d7d7991c1c4d0d6ac05b4c63f606f5209b592e83727c8L22' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 38181557</div><div id='project'> Project Name: sevagh/xumx-slicq</div><div id='commit'> Commit Name: d131db1101720e6dc56837e284de1801fd9dded1</div><div id='time'> Time: 2021-07-01</div><div id='author'> Author: sevagh@protonmail.com</div><div id='file'> File Name: openunmix/nsgt/nsgtf.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: nsgtf_sl(11)</div><div id='n_method'> N Method Name: nsgtf_sl(12)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: openunmix/nsgt/nsgtf.py</div><div id='n_file'> N File Name: openunmix/nsgt/nsgtf.py</div><div id='m_start'> M Start Line: 22</div><div id='m_end'> M End Line: 95</div><div id='n_start'> N Start Line: 75</div><div id='n_end'> N End Line: 103</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    print(f"  The density maps to be visually compared are being saved to "
+          f"{os.path.relpath(abs_path, os.getcwd())}")
+    <a id="change">for </a>dm1, (k2, dm2) in zip(my_dmaps_dict.values(), <a id="change">xhp_dmaps_dict.items()</a>)<a id="change">:
+        </a>skimage.io.imsave(
+            pjn(abs_path, f"{k2}_my.png"),
+            (dm1 / np.max(dm1) * 255).astype(np.uint8))
+        skimage.io.imsave(</code></pre><h3>After Change</h3><pre><code class='java'>
+    my_dmaps_dict_keys_chunks = chunks(my_dmaps_dict_keys, chunk_size)
+    xhp_dmaps_dict_keys_chunks = chunks(xhp_dmaps_dict_keys, chunk_size)
+    
+    procs<a id="change"> = </a><a id="change">[]</a>
+    zipped_chunks = zip(my_dmaps_dict_keys_chunks, xhp_dmaps_dict_keys_chunks)
+    <a id="change">for </a>ch1, <a id="change">ch2</a> in zipped_chunks<a id="change">:
+        </a>p = Process(
+            target=func, 
+            args=(ch1, ch2, my_dmaps_dict, xhp_dmaps_dict, abs_path)
+        )
+        p.start()
+        <a id="change">procs.append(</a>p<a id="change">)</a>
+    
+    for p in procs:
+        p.join()
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/dmburd/s-dcnet/commit/8f8d444aed755176ec870c1d36c4923b0a22c0eb#diff-10d0bf34bed9dce9a195bf4b5f1474157a051e63a27a5c08131db3eff3769ce0L271' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 38181560</div><div id='project'> Project Name: dmburd/s-dcnet</div><div id='commit'> Commit Name: 8f8d444aed755176ec870c1d36c4923b0a22c0eb</div><div id='time'> Time: 2020-05-24</div><div id='author'> Author: dmitry.burdeiny@gmail.com</div><div id='file'> File Name: gen_density_maps.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: compare_to_xhp_dmaps(3)</div><div id='n_method'> N Method Name: compare_to_xhp_dmaps(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: gen_density_maps.py</div><div id='n_file'> N File Name: gen_density_maps.py</div><div id='m_start'> M Start Line: 290</div><div id='m_end'> M End Line: 309</div><div id='n_start'> N Start Line: 324</div><div id='n_end'> N End Line: 374</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            metric = metric_cls(device=self.device)
+            if isinstance(self.calculated_metrics[metric.name], dict):
+                metrics_summary[metric.name] = {}
+                <a id="change">for </a>k, v in <a id="change">self.calculated_metrics[metric.name].items():
+                    </a>metrics_summary[metric.name][k] = np.nanmean(
+                        self.calculated_metrics[metric.name][k]
+                    )
+            else:</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    def get_scores(self, metrics):
+        Returns the specified metrics
+        result<a id="change"> = </a><a id="change">[]</a>
+        <a id="change">for metric</a> in metrics<a id="change">:
+            </a><a id="change">result.append(</a>getattr(self, metric)()<a id="change">)</a>
+        return result
+
+
+class MultiClassRunningScore(RunningScore):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/biasvariancelabs/aitlas/commit/c5d3452f6986bb725b1e32c029e1b7b065acf4ad#diff-c0d71207f64739512046cec6efdc4d6e7d3cbd93d90bb13154c3dfebe606609eL37' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 38181561</div><div id='project'> Project Name: biasvariancelabs/aitlas</div><div id='commit'> Commit Name: c5d3452f6986bb725b1e32c029e1b7b065acf4ad</div><div id='time'> Time: 2021-03-15</div><div id='author'> Author: ivan.kitanovski@gmail.com</div><div id='file'> File Name: aitlas/base/metrics.py</div><div id='m_class'> M Class Name: RunningScore</div><div id='n_method'> N Class Name: RunningScore</div><div id='m_method'> M Method Name: get_scores(2)</div><div id='n_method'> N Method Name: get_scores(1)</div><div id='m_parent_class'> M Parent Class: object</div><div id='n_parent_class'> N Parent Class: object</div><div id='m_file'> M File Name: aitlas/base/metrics.py</div><div id='n_file'> N File Name: aitlas/base/metrics.py</div><div id='m_start'> M Start Line: 38</div><div id='m_end'> M End Line: 51</div><div id='n_start'> N Start Line: 81</div><div id='n_end'> N End Line: 86</div><BR>

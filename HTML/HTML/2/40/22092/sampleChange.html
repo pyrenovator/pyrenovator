@@ -1,0 +1,47 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            layer_outputs = layer(hidden_states, attention_mask=attention_mask, output_attentions=output_attentions)
+
+            &#47&#47 add LayerDrop (see https://arxiv.org/abs/1909.11556 for description)
+            dropout_probability<a id="change"> = </a>torch.rand(tuple())
+            <a id="change">skip_the_layer = </a><a id="change">torch.tensor(self.training) and (dropout_probability &lt; self.config.layerdrop)</a>
+            if self.config.layerdrop &gt; 0.0:
+                hidden_states = <a id="change">torch.where(skip_the_layer</a>, hidden_states, <a id="change">layer_outputs[0]</a><a id="change">)</a>
+            else:
+                hidden_states = layer_outputs[0]
+
+            <a id="change">if skip_the_layer</a>:
+                layer_outputs = (None<a id="change">, None</a>)
+
+            if output_attentions:
+                all_self_attentions<a id="change"> = </a>all_self_attentions + (layer_outputs[1],)
+
+        if output_hidden_states:
+            all_hidden_states = all_hidden_states + (hidden_states,)</code></pre><h3>After Change</h3><pre><code class='java'>
+            if output_hidden_states:
+                all_hidden_states = all_hidden_states + (hidden_states,)
+
+            <a id="change">layer_outputs</a> = layer(hidden_states, attention_mask=attention_mask, output_attentions=output_attentions)
+
+            &#47&#47 add LayerDrop (see https://arxiv.org/abs/1909.11556 for description)
+            &#47&#47 Modify LayerDrop so it can be statically compiled without eager mode
+            if self.config.layerdrop &gt; 0.0:
+                dropout_probability<a id="change"> = </a>torch.rand(tuple(), device=hidden_states.device)
+                <a id="change">skip_the_layer = </a><a id="change">(
+                    torch.tensor(self.training, device=hidden_states.device)
+                    & (dropout_probability &lt; self.config.layerdrop)
+                ).to(dtype=hidden_states.dtype)</a>
+                hidden_states = hidden_states<a id="change"> * skip_the_layer + layer_outputs</a><a id="change">[0]</a><a id="change"> * </a>(<a id="change">1</a><a id="change"> - skip_the_layer</a>)
+            else:
+                hidden_states = layer_outputs[0]
+
+            if output_attentions:
+                <a id="change">if self.config.layerdrop &gt; 0.0</a>:
+                    all_self_attentions<a id="change"> = </a>all_self_attentions<a id="change"> + </a>((<a id="change">1</a><a id="change"> - </a>skip_the_layer)<a id="change"> * layer_outputs</a><a id="change">[1]</a>,)
+                else:
+                    all_self_attentions<a id="change"> = </a>all_self_attentions + (layer_outputs[1],)
+
+        if output_hidden_states:
+            all_hidden_states = all_hidden_states + (hidden_states,)</code></pre>

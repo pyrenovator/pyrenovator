@@ -1,0 +1,22 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        inp = inp.reshape(*transposed_shape)
+        inp = jnp.einsum("bfsr,sz,sz-&gt;bfrz", inp, wgt, mask)
+    for _ in range(len(weights) - 1):
+        inp = <a id="change">inp.transpose(</a>0, <a id="change">1</a>, 3, <a id="change">2</a><a id="change">)</a>
+        inp = inp.reshape(*shape)
+    return inp.transpose(0, 2, 3, 1).reshape(original_shape)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    inp = inp.reshape(ctx.dims.batch, -1, *[ctx.dims.spatial_mixing_kernel] * max_dims, ctx.dims.features)
+    original_dims = &quot&quot.join(chr(ord(&quota&quot) + i) for i in range(len(inp.ndim)))
+    for i, <a id="change">wgt</a> in enumerate(weights):
+        new_dims = original_dims[:i + 2] + "z" + <a id="change">original_dims[i + 3:]</a>
+        reduced_dim = original_dims[i + 2]
+        <a id="change">if i &gt; 0</a>:
+            inp<a id="change"> = </a>activate(inp)
+        inp = jnp.einsum(f"{original_dims},{reduced_dim}z,{reduced_dim}z-&gt;{new_dims}", inp, wgt, mask)
+    return inp.reshape(original_shape)
+</code></pre>

@@ -1,0 +1,107 @@
+<html><h3>Pattern ID :11332
+</h3><img src='38531283.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        (service_to_process_cmd). After calling the method of a phase of all
+        ProcessModels the runtime service is informed about completion. The
+        loop ends when the STOP command is received.
+        <a id="change">while </a>True<a id="change">:
+            &#47&#47 Probe if there is a new command from the runtime service
+            </a>if self.service_to_process_cmd.probe():
+                phase = self.service_to_process_cmd.recv()
+                if np.array_equal(phase, MGMT_COMMAND.STOP):
+                    self.process_to_service_ack.send(MGMT_RESPONSE.TERMINATED)</code></pre><h3>After Change</h3><pre><code class='java'>
+        loop ends when the STOP command is received.
+        selector = CspSelector()
+        action = &quotcmd&quot
+        <a id="change">while </a>True<a id="change">:
+            </a>if action == &quotcmd&quot:
+                phase = self.service_to_process_cmd.recv()
+                if enum_equal(phase, MGMT_COMMAND.STOP):
+                    self.process_to_service_ack.send(MGMT_RESPONSE.TERMINATED)
+                    self.join()
+                    return
+                &#47&#47 Spiking phase - increase time step
+                if enum_equal(phase, PyLoihiProcessModel.Phase.SPK):
+                    self.current_ts += 1
+                    self.run_spk()
+                    self.process_to_service_ack.send(MGMT_RESPONSE.DONE)
+                &#47&#47 Pre-management phase
+                elif enum_equal(phase, PyLoihiProcessModel.Phase.PRE_MGMT):
+                    &#47&#47 Enable via guard method
+                    if self.pre_guard():
+                        self.run_pre_mgmt()
+                    self.process_to_service_ack.send(MGMT_RESPONSE.DONE)
+                &#47&#47 Learning phase
+                elif enum_equal(phase, PyLoihiProcessModel.Phase.LRN):
+                    &#47&#47 Enable via guard method
+                    if self.lrn_guard():
+                        self.run_lrn()
+                    self.process_to_service_ack.send(MGMT_RESPONSE.DONE)
+                &#47&#47 Post-management phase
+                elif enum_equal(phase, PyLoihiProcessModel.Phase.POST_MGMT):
+                    &#47&#47 Enable via guard method
+                    if self.post_guard():
+                        self.run_post_mgmt()
+                    self.process_to_service_ack.send(MGMT_RESPONSE.DONE)
+                &#47&#47 Host phase - called at the last time step before STOP
+                elif enum_equal(phase, PyLoihiProcessModel.Phase.HOST):
+                    pass
+                else:
+                    raise ValueError(f"Wrong Phase Info Received : {phase}")
+            elif action == &quotreq&quot:
+                &#47&#47 Handle get/set Var requests from runtime service
+                self._handle_get_set_var()
+            else:
+                &#47&#47 Handle VarPort requests from RefPorts
+                self._handle_var_port(action)
+
+            channel_actions = [(self.service_to_process_cmd, lambda: &quotcmd&quot)]
+            if enum_equal(phase, PyLoihiProcessModel.Phase.PRE_MGMT) or \
+                    enum_equal(phase, PyLoihiProcessModel.Phase.POST_MGMT):
+                for var_port in self.var_ports:
+                    for csp_port in var_port.csp_ports:
+                        <a id="change">if </a><a id="change">isinstance(</a>csp_port, CspRecvPort<a id="change">)</a>:
+                            channel_actions.append((csp_port, lambda: var_port))
+            elif enum_equal(phase, PyLoihiProcessModel.Phase.HOST):
+                channel_actions.append((self.service_to_process_req,</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/lava-nc/lava/commit/38e14d5b53c075923760faeff19781a3ae9ea4da#diff-7139b79a62cfae58ae9c7223148b62c98773436033c5e0938e2fc7aac075e3a4L116' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 38531283</div><div id='project'> Project Name: lava-nc/lava</div><div id='commit'> Commit Name: 38e14d5b53c075923760faeff19781a3ae9ea4da</div><div id='time'> Time: 2021-11-22</div><div id='author'> Author: 87097499+harryliu-intel@users.noreply.github.com</div><div id='file'> File Name: src/lava/magma/core/model/py/model.py</div><div id='m_class'> M Class Name: PyLoihiProcessModel</div><div id='n_method'> N Class Name: PyLoihiProcessModel</div><div id='m_method'> M Method Name: run(1)</div><div id='n_method'> N Method Name: run(1)</div><div id='m_parent_class'> M Parent Class: AbstractPyProcessModel</div><div id='n_parent_class'> N Parent Class: AbstractPyProcessModel</div><div id='m_file'> M File Name: src/lava/magma/core/model/py/model.py</div><div id='n_file'> N File Name: src/lava/magma/core/model/py/model.py</div><div id='m_start'> M Start Line: 116</div><div id='m_end'> M End Line: 161</div><div id='n_start'> N Start Line: 118</div><div id='n_end'> N End Line: 175</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+        &#47&#47 clone environment state
+        target_env = self.env
+        <a id="change">while </a>hasattr(target_env, "env")<a id="change">:
+            </a>target_env = target_env.env
+        assert isinstance(target_env, gym.Env)
+
+        source_env = env.env</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 clone environment state
+        target_env = self.env
+        source_env = env.env
+        <a id="change">while </a>hasattr(target_env, "env")<a id="change">:
+            </a>assert hasattr(source_env, "env")
+
+            &#47&#47 copy state of time limit wrapper
+            <a id="change">if </a><a id="change">isinstance(</a>target_env, TimeLimit<a id="change">)</a>:
+                assert isinstance(source_env, TimeLimit)
+                target_env._max_episode_steps = source_env._max_episode_steps
+                target_env._elapsed_steps = source_env._elapsed_steps</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/enlite-ai/maze/commit/dce2cb3f77fbe07fc9cb218c003bd0b2d6167c15#diff-1225ac7cdf2bc8e81c15e813cac3ad7ac611adc782ea1febc30485f48f031d22L231' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 38531282</div><div id='project'> Project Name: enlite-ai/maze</div><div id='commit'> Commit Name: dce2cb3f77fbe07fc9cb218c003bd0b2d6167c15</div><div id='time'> Time: 2021-06-14</div><div id='author'> Author: office@enlite.ai</div><div id='file'> File Name: maze/core/wrappers/maze_gym_env_wrapper.py</div><div id='m_class'> M Class Name: GymCoreEnv</div><div id='n_method'> N Class Name: GymCoreEnv</div><div id='m_method'> M Method Name: clone_from(2)</div><div id='n_method'> N Method Name: clone_from(2)</div><div id='m_parent_class'> M Parent Class: CoreEnv</div><div id='n_parent_class'> N Parent Class: CoreEnv</div><div id='m_file'> M File Name: maze/core/wrappers/maze_gym_env_wrapper.py</div><div id='n_file'> N File Name: maze/core/wrappers/maze_gym_env_wrapper.py</div><div id='m_start'> M Start Line: 238</div><div id='m_end'> M End Line: 246</div><div id='n_start'> N Start Line: 239</div><div id='n_end'> N End Line: 255</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+                elms_tup: List[Note] = [elm]
+                elm_ = next(it, None)
+                <a id="change">while </a>elm_ is not None and tup in elm_.fullName<a id="change">:  &#47&#47 Look for all elements of the same `n_tup`
+                    </a>elms_tup.append(elm_)
+                    elm_ = next(it, None)  &#47&#47 Peeked 1 ahead
+
+                &#47&#47 Consecutive tuplet notes =&gt; (potentially multiple) groups</code></pre><h3>After Change</h3><pre><code class='java'>
+
+                elms_tup: List[Note] = [elm]
+                elm_ = next(it, None)
+                <a id="change">while </a>elm_ is not None<a id="change">:
+                    &#47&#47 ic(&quotone iteration&quot)
+                    &#47&#47 if number == 5:
+                    &#47&#47     ic(elm_, elm_.fullName, elms_tup)
+                    &#47&#47 For poor transcription quality, skip over non-note elements in the middle
+                    </a><a id="change">if </a><a id="change">isinstance(</a>elm_, m21.clef.TrebleClef<a id="change">)</a>:
+                        &#47&#47 ic(&quotnot here&quot)
+                        elm_ = next(it, None)
+                    elif tup in elm_.fullName:  &#47&#47 Look for all elements of the same `n_tup`</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/stefanheng/symbolic-music-generation/commit/76648b0ddce904e5504489b6762589a55ba1433d#diff-d695f4eee85e0c6394143835ebda0f848963d843fb77ab25aefdda75f0df044cL108' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 38531280</div><div id='project'> Project Name: stefanheng/symbolic-music-generation</div><div id='commit'> Commit Name: 76648b0ddce904e5504489b6762589a55ba1433d</div><div id='time'> Time: 2022-02-05</div><div id='author'> Author: 43276957+SpongeBobBang@users.noreply.github.com</div><div id='file'> File Name: musicnlp/preprocess/music_extractor.py</div><div id='m_class'> M Class Name: MusicTokenizer</div><div id='n_method'> N Class Name: MusicTokenizer</div><div id='m_method'> M Method Name: expand_bar(4)</div><div id='n_method'> N Method Name: expand_bar(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: musicnlp/preprocess/music_extractor.py</div><div id='n_file'> N File Name: musicnlp/preprocess/music_extractor.py</div><div id='m_start'> M Start Line: 136</div><div id='m_end'> M End Line: 228</div><div id='n_start'> N Start Line: 165</div><div id='n_end'> N End Line: 303</div><BR>

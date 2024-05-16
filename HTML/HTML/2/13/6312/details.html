@@ -1,0 +1,141 @@
+<html><h3>Pattern ID :6312
+</h3><img src='21897359.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        obs(weights)
+        qparams = obs.calculate_qparams()
+        &#47&#47 Quantize the weights to 8bits
+        qweight<a id="change"> = </a>torch.quantize_per_channel(weights, qparams[0], qparams[1], axis=0, dtype=torch.quint8)
+        qemb<a id="change"> = </a>nnq.Embedding(num_embeddings=num_embeddings, embedding_dim=embedding_dim)
+        qemb.set_weight(qweight)
+        qemb(indices)
+
+        &#47&#47 Ensure the module has the correct weights
+        <a id="change">self.assertEqual(</a>qweight, qemb.weight()<a id="change">)</a>
+
+        w_packed<a id="change"> = </a>qemb._packed_params._packed_weight
+        module_out = qemb(indices)
+
+        &#47&#47 Call the qembedding operator directly
+        ref = torch.ops.quantized.embedding_byte(w_packed, indices, pruned_weights=False)
+        <a id="change">self.assertEqual(</a>module_out, ref<a id="change">)</a>
+        self.checkEmbeddingSerialization(qemb, num_embeddings, embedding_dim, indices, None, set_qconfig=False, is_emb_bag=False)
+
+
+    @given(</code></pre><h3>After Change</h3><pre><code class='java'>
+        obs(weights)
+        qparams = obs.calculate_qparams()
+
+        dtypes = <a id="change">[</a>torch.quint4x2, torch.quint8<a id="change"></a>]
+        embedding_funcs = [torch.ops.quantized.embedding_4bit, torch.ops.quantized.embedding_byte]
+
+        <a id="change">for </a>dtype, <a id="change">embedding_func</a> in zip(dtypes, embedding_funcs)<a id="change">:
+            &#47&#47 Quantize the weights
+            </a>qweight<a id="change"> = </a>torch.quantize_per_channel(weights, qparams[0], qparams[1], axis=0, dtype=dtype)
+            qemb<a id="change"> = </a>nnq.Embedding(num_embeddings=num_embeddings, embedding_dim=embedding_dim, dtype=dtype)
+            qemb.set_weight(qweight)
+            qemb(indices)
+
+            &#47&#47 Ensure the module has the correct weights
+            <a id="change">self.assertEqual(</a>qweight, qemb.weight()<a id="change">)</a>
+            w_packed<a id="change"> = </a>qemb._packed_params._packed_weight
+            module_out = qemb(indices)
+
+            &#47&#47 Call the bit qembedding operator directly
+            ref = embedding_func(w_packed, indices, pruned_weights=False)
+            <a id="change">self.assertEqual(</a>module_out, ref<a id="change">)</a>
+            self.checkEmbeddingSerialization(qemb, num_embeddings, embedding_dim, indices, None, set_qconfig=False,
+                                             is_emb_bag=False, dtype=dtype)
+
+    @given(</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 12</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/pytorch/pytorch/commit/9f512e129b48a84ca742f64d1a4c742361b3300c#diff-daa03e81d706f5eb9d02e3c68221dc7735672898f9859b83de883d0a5706391fL816' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 21897359</div><div id='project'> Project Name: pytorch/pytorch</div><div id='commit'> Commit Name: 9f512e129b48a84ca742f64d1a4c742361b3300c</div><div id='time'> Time: 2021-12-18</div><div id='author'> Author: dzdang@fb.com</div><div id='file'> File Name: test/quantization/core/test_quantized_module.py</div><div id='m_class'> M Class Name: TestStaticQuantizedModule</div><div id='n_method'> N Class Name: TestStaticQuantizedModule</div><div id='m_method'> M Method Name: test_embedding_api(4)</div><div id='n_method'> N Method Name: test_embedding_api(4)</div><div id='m_parent_class'> M Parent Class: QuantizationTestCase</div><div id='n_parent_class'> N Parent Class: QuantizationTestCase</div><div id='m_file'> M File Name: test/quantization/core/test_quantized_module.py</div><div id='n_file'> N File Name: test/quantization/core/test_quantized_module.py</div><div id='m_start'> M Start Line: 816</div><div id='m_end'> M End Line: 837</div><div id='n_start'> N Start Line: 816</div><div id='n_end'> N End Line: 844</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        qparams = obs.calculate_qparams()
+        &#47&#47 Quantize the weights to 8bits
+        qweight = torch.quantize_per_channel(weights, qparams[0], qparams[1], axis=0, dtype=torch.quint8)
+        qemb<a id="change"> = </a>nnq.Embedding(num_embeddings=num_embeddings, embedding_dim=embedding_dim)
+        qemb.set_weight(qweight)
+        qemb(indices)
+
+        &#47&#47 Ensure the module has the correct weights
+        <a id="change">self.assertEqual(</a>qweight, qemb.weight()<a id="change">)</a>
+
+        w_packed<a id="change"> = </a>qemb._packed_params._packed_weight
+        module_out<a id="change"> = </a>qemb(indices)
+
+        &#47&#47 Call the qembedding operator directly
+        ref = torch.ops.quantized.embedding_byte(w_packed, indices, pruned_weights=False)
+        <a id="change">self.assertEqual(</a>module_out, ref<a id="change">)</a>
+        self.checkEmbeddingSerialization(qemb, num_embeddings, embedding_dim, indices, None, set_qconfig=False, is_emb_bag=False)
+
+
+    @given(</code></pre><h3>After Change</h3><pre><code class='java'>
+        obs(weights)
+        qparams = obs.calculate_qparams()
+
+        dtypes = <a id="change">[</a>torch.quint4x2, torch.quint8<a id="change"></a>]
+        embedding_funcs = [torch.ops.quantized.embedding_4bit, torch.ops.quantized.embedding_byte]
+
+        <a id="change">for </a>dtype, <a id="change">embedding_func</a> in zip(dtypes, embedding_funcs)<a id="change">:
+            &#47&#47 Quantize the weights
+            </a>qweight = torch.quantize_per_channel(weights, qparams[0], qparams[1], axis=0, dtype=dtype)
+            qemb<a id="change"> = </a>nnq.Embedding(num_embeddings=num_embeddings, embedding_dim=embedding_dim, dtype=dtype)
+            qemb.set_weight(qweight)
+            qemb(indices)
+
+            &#47&#47 Ensure the module has the correct weights
+            <a id="change">self.assertEqual(</a>qweight, qemb.weight()<a id="change">)</a>
+            w_packed<a id="change"> = </a>qemb._packed_params._packed_weight
+            module_out<a id="change"> = </a>qemb(indices)
+
+            &#47&#47 Call the bit qembedding operator directly
+            ref = embedding_func(w_packed, indices, pruned_weights=False)
+            <a id="change">self.assertEqual(</a>module_out, ref<a id="change">)</a>
+            self.checkEmbeddingSerialization(qemb, num_embeddings, embedding_dim, indices, None, set_qconfig=False,
+                                             is_emb_bag=False, dtype=dtype)
+
+    @given(</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/pytorch/pytorch/commit/bfdf45cc8950c1f5a5e448217cdfda3591da81d0#diff-daa03e81d706f5eb9d02e3c68221dc7735672898f9859b83de883d0a5706391fL907' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 21897366</div><div id='project'> Project Name: pytorch/pytorch</div><div id='commit'> Commit Name: bfdf45cc8950c1f5a5e448217cdfda3591da81d0</div><div id='time'> Time: 2022-02-04</div><div id='author'> Author: dzdang@umich.edu</div><div id='file'> File Name: test/quantization/core/test_quantized_module.py</div><div id='m_class'> M Class Name: TestStaticQuantizedModule</div><div id='n_method'> N Class Name: TestStaticQuantizedModule</div><div id='m_method'> M Method Name: test_embedding_api(4)</div><div id='n_method'> N Method Name: test_embedding_api(4)</div><div id='m_parent_class'> M Parent Class: QuantizationTestCase</div><div id='n_parent_class'> N Parent Class: QuantizationTestCase</div><div id='m_file'> M File Name: test/quantization/core/test_quantized_module.py</div><div id='n_file'> N File Name: test/quantization/core/test_quantized_module.py</div><div id='m_start'> M Start Line: 911</div><div id='m_end'> M End Line: 932</div><div id='n_start'> N Start Line: 911</div><div id='n_end'> N End Line: 939</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        observer = default_observer
+        quant_min = 0
+        quant_max = 255
+        fq_module<a id="change"> = </a>FakeQuantize(observer, quant_min, quant_max)
+        scripted_module<a id="change"> = </a>torch.jit.script(fq_module)
+
+        X = torch.tensor([-5, -3.5, -2, 0, 3, 5, 7], dtype=torch.float32)
+
+        fq_module(X)
+        scripted_module(X)
+        <a id="change">self.assertEqual(</a>fq_module.calculate_qparams(),
+                         scripted_module.calculate_qparams()<a id="change">)</a>
+
+        buf = io.BytesIO()
+        torch.jit.save(scripted_module, buf)
+        buf.seek(0)
+        loaded_module<a id="change"> = </a>torch.jit.load(buf)
+        <a id="change">self.assertEqual(</a>fq_module.calculate_qparams(),
+                         loaded_module.calculate_qparams()<a id="change">)</a>
+
+
+    @given(device=st.sampled_from([&quotcpu&quot, &quotcuda&quot] if torch.cuda.is_available() else [&quotcpu&quot]),
+           X=hu.per_channel_tensor(shapes=hu.array_shapes(1, 5,),</code></pre><h3>After Change</h3><pre><code class='java'>
+        observer = default_observer
+        quant_min = 0
+        quant_max = 255
+        <a id="change">for </a><a id="change">FakeQuantizeClass</a> in <a id="change">[</a>FakeQuantize, _LearnableFakeQuantize<a id="change"></a>]<a id="change">:
+            </a>fq_module<a id="change"> = </a>FakeQuantizeClass(observer, quant_min, quant_max)
+            scripted_module<a id="change"> = </a>torch.jit.script(fq_module)
+
+            X = torch.tensor([-5, -3.5, -2, 0, 3, 5, 7], dtype=torch.float32)
+
+            fq_module(X)
+            scripted_module(X)
+            <a id="change">self.assertEqual(</a>fq_module.calculate_qparams(), scripted_module.calculate_qparams()<a id="change">)</a>
+
+            buf = io.BytesIO()
+            torch.jit.save(scripted_module, buf)
+            buf.seek(0)
+            loaded_module<a id="change"> = </a>torch.jit.load(buf)
+            <a id="change">self.assertEqual(</a>fq_module.calculate_qparams(), loaded_module.calculate_qparams()<a id="change">)</a>
+
+
+    @given(device=st.sampled_from([&quotcpu&quot, &quotcuda&quot] if torch.cuda.is_available() else [&quotcpu&quot]),
+           X=hu.per_channel_tensor(shapes=hu.array_shapes(1, 5,),</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/pytorch/pytorch/commit/0c60922fb0614132433779ad45ab8f30783db2ae#diff-a1ad3ccb2c291d8bbc6e0a986f133b7da6bb380e3dd5d2ae6e428c4efd780738L1240' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 21897367</div><div id='project'> Project Name: pytorch/pytorch</div><div id='commit'> Commit Name: 0c60922fb0614132433779ad45ab8f30783db2ae</div><div id='time'> Time: 2021-02-03</div><div id='author'> Author: haichuan@fb.com</div><div id='file'> File Name: test/quantization/test_workflow_module.py</div><div id='m_class'> M Class Name: TestFakeQuantize</div><div id='n_method'> N Class Name: TestFakeQuantize</div><div id='m_method'> M Method Name: fake_quant_scriptable(1)</div><div id='n_method'> N Method Name: fake_quant_scriptable(1)</div><div id='m_parent_class'> M Parent Class: TestCase</div><div id='n_parent_class'> N Parent Class: TestCase</div><div id='m_file'> M File Name: test/quantization/test_workflow_module.py</div><div id='n_file'> N File Name: test/quantization/test_workflow_module.py</div><div id='m_start'> M Start Line: 1244</div><div id='m_end'> M End Line: 1259</div><div id='n_start'> N Start Line: 1198</div><div id='n_end'> N End Line: 1215</div><BR>

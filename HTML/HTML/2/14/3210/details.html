@@ -1,0 +1,206 @@
+<html><h3>Pattern ID :3210
+</h3><img src='12243158.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        is_last_partition = self.is_last_partition
+        run_batch_backward = self.run_batch_backward if not is_last_partition else self.last_partition_batch_backward
+        run_batch_forward = self.run_batch_forward
+        <a id="change">async_bwd_objects = </a>self.async_bwd_objects
+        async_fwd_objects = self.async_fwd_objects
+        wait_on_sent_object = self.wait_on_sent_object
+
+        mark_bwd_start = 0  &#47&#47 To handle LIFO
+
+        while done_bwds &lt; num_batches:
+            &#47&#47 Act according to some policy
+            action_is_fwd = work_scheduler(stage, num_stages, num_batches,
+                                           done_fwds, done_bwds)
+            if action_is_fwd:
+                &#47&#47 micro_batch_to_run = done_fwds - done_bwds
+                sent_request_objects = run_batch_forward(done_fwds,
+                                                         num_batches,
+                                                         done_bwds=done_bwds)
+                if sent_request_objects:
+                    &#47&#47 wait on prev send
+                    if async_fwd_objects:
+                        wait_on_sent_object(is_fwd=True)
+                    async_fwd_objects[done_fwds] = sent_request_objects
+                done_fwds += 1
+            else:
+                &#47&#47 NOTE: we want LIFO order
+                if done_fwds == done_bwds + self.step_every or done_bwds == self.first_effected_batch:
+                    mark_bwd_start = done_bwds
+
+                micro_batch_to_run = done_fwds - 1 - done_bwds
+                batch_idx_to_run = mark_bwd_start + micro_batch_to_run
+
+                sent_request_objects = run_batch_backward(
+                    batch_idx_to_run, num_batches)
+
+                <a id="change">if </a>not (is_first_partition):
+                    &#47&#47 wait on prev send
+                    <a id="change">if async_bwd_objects</a>:
+                        <a id="change">wait_on_sent_object(is_fwd=False)</a>
+                    &#47&#47 HACK: we laizly insert at wrong index to to avoid ordering issues
+                    <a id="change">async_bwd_objects[done_bwds] = </a>sent_request_objects
+                done_bwds += 1
+
+        while len(async_fwd_objects) &gt; 0:
+            wait_on_sent_object(is_fwd=True, fin=True)
+
+        <a id="change">while len(async_bwd_objects</a><a id="change">) &gt; 0:
+            wait_on_sent_object(is_fwd=False, fin=True)</a>
+
+        &#47&#47 Do a scheduler step at the end of epoch if not already doing so each step.
+        if not self.trainer.PER_STEP_SCHEDULER:
+            self.lr_scheduler.step()</code></pre><h3>After Change</h3><pre><code class='java'>
+                                       num_batches,
+                                       done_bwds=done_bwds)
+
+                <a id="change">futures_handler.after_forward(</a>ro, done_fwds, True<a id="change">)</a>
+
+                done_fwds += 1
+            else:
+                &#47&#47 NOTE: we want LIFO order</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 11</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/saareliad/ftpipe/commit/8cecdc492a71696ab0f9ab97babd670e9c105270#diff-5e076251e3138c824f1e98c9223b2f4507d35059d327da1d43d1ec4e31c68bd3L911' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 12243158</div><div id='project'> Project Name: saareliad/ftpipe</div><div id='commit'> Commit Name: 8cecdc492a71696ab0f9ab97babd670e9c105270</div><div id='time'> Time: 2020-05-26</div><div id='author'> Author: saareliad@campus.technion.ac.il</div><div id='file'> File Name: pipeline/partition_manager.py</div><div id='m_class'> M Class Name: GPipePartitionManager</div><div id='n_method'> N Class Name: GPipePartitionManager</div><div id='m_method'> M Method Name: run_until_flush(2)</div><div id='n_method'> N Method Name: run_until_flush(2)</div><div id='m_parent_class'> M Parent Class: SinglePartitionManager</div><div id='n_parent_class'> N Parent Class: SinglePartitionManager</div><div id='m_file'> M File Name: pipeline/partition_manager.py</div><div id='n_file'> N File Name: pipeline/partition_manager.py</div><div id='m_start'> M Start Line: 988</div><div id='m_end'> M End Line: 1050</div><div id='n_start'> N Start Line: 911</div><div id='n_end'> N End Line: 958</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            eval() was called
+        
+
+        <a id="change">async_fwd_objects = </a>self.async_fwd_objects
+        wait_on_sent_object = self.wait_on_sent_object
+        run_batch_forward = self.run_batch_forward
+
+        for done_fwds in range(num_batches):
+            sent_request_objects = run_batch_forward(done_fwds, num_batches)
+            <a id="change">if </a>sent_request_objects:  &#47&#47 last partition returns empty list.
+                <a id="change">if async_fwd_objects</a>:
+                    <a id="change">wait_on_sent_object(is_fwd=True)</a>
+                <a id="change">async_fwd_objects[done_fwds] = </a>sent_request_objects
+
+        &#47&#47 Also clear in the end, just in case...
+        <a id="change">while len(</a><a id="change">async_fwd_objects) &gt; 0:
+            wait_on_sent_object(is_fwd=True, fin=True)</a>
+
+    def run_until_flush(self, num_batches):
+        
+        Requires:</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        for done_fwds in range(num_batches):
+            ro = run_batch_forward(done_fwds, num_batches)
+            <a id="change">futures_handler.after_forward(</a>ro, done_fwds, False<a id="change">)</a>
+        futures_handler.clean_eval()
+
+    def run_until_flush(self, num_batches):
+        </code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/saareliad/ftpipe/commit/8cecdc492a71696ab0f9ab97babd670e9c105270#diff-5e076251e3138c824f1e98c9223b2f4507d35059d327da1d43d1ec4e31c68bd3L636' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 12243159</div><div id='project'> Project Name: saareliad/ftpipe</div><div id='commit'> Commit Name: 8cecdc492a71696ab0f9ab97babd670e9c105270</div><div id='time'> Time: 2020-05-26</div><div id='author'> Author: saareliad@campus.technion.ac.il</div><div id='file'> File Name: pipeline/partition_manager.py</div><div id='m_class'> M Class Name: SinglePartitionManager</div><div id='n_method'> N Class Name: SinglePartitionManager</div><div id='m_method'> M Method Name: run_forward_until_flush(2)</div><div id='n_method'> N Method Name: run_forward_until_flush(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: pipeline/partition_manager.py</div><div id='n_file'> N File Name: pipeline/partition_manager.py</div><div id='m_start'> M Start Line: 644</div><div id='m_end'> M End Line: 659</div><div id='n_start'> N Start Line: 586</div><div id='n_end'> N End Line: 592</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        run_batch_backward = self.run_batch_backward if not is_last_partition else self.last_partition_batch_backward
+        run_batch_forward = self.run_batch_forward
+        async_bwd_objects = self.async_bwd_objects
+        <a id="change">async_fwd_objects = </a>self.async_fwd_objects
+        wait_on_sent_object = self.wait_on_sent_object
+
+        mark_bwd_start = 0  &#47&#47 To handle LIFO
+
+        while done_bwds &lt; num_batches:
+            &#47&#47 Act according to some policy
+            action_is_fwd = work_scheduler(stage, num_stages, num_batches,
+                                           done_fwds, done_bwds)
+            if action_is_fwd:
+                &#47&#47 micro_batch_to_run = done_fwds - done_bwds
+                sent_request_objects = run_batch_forward(done_fwds,
+                                                         num_batches,
+                                                         done_bwds=done_bwds)
+                <a id="change">if </a>sent_request_objects:
+                    &#47&#47 wait on prev send
+                    <a id="change">if async_fwd_objects</a>:
+                        <a id="change">wait_on_sent_object(is_fwd=True)</a>
+                    <a id="change">async_fwd_objects[done_fwds] = </a>sent_request_objects
+                done_fwds += 1
+            else:
+                &#47&#47 NOTE: we want LIFO order
+                if done_fwds == done_bwds + self.step_every or done_bwds == self.first_effected_batch:
+                    mark_bwd_start = done_bwds
+
+                micro_batch_to_run = done_fwds - 1 - done_bwds
+                batch_idx_to_run = mark_bwd_start + micro_batch_to_run
+
+                sent_request_objects = run_batch_backward(
+                    batch_idx_to_run, num_batches)
+
+                if not (is_first_partition):
+                    &#47&#47 wait on prev send
+                    if async_bwd_objects:
+                        wait_on_sent_object(is_fwd=False)
+                    &#47&#47 HACK: we laizly insert at wrong index to to avoid ordering issues
+                    async_bwd_objects[done_bwds] = sent_request_objects
+                done_bwds += 1
+
+        <a id="change">while len(</a><a id="change">async_fwd_objects) &gt; 0:
+            wait_on_sent_object(is_fwd=True, fin=True)</a>
+
+        while len(async_bwd_objects) &gt; 0:
+            wait_on_sent_object(is_fwd=False, fin=True)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+                                       num_batches,
+                                       done_bwds=done_bwds)
+
+                <a id="change">futures_handler.after_forward(</a>ro, done_fwds, True<a id="change">)</a>
+
+                done_fwds += 1
+            else:
+                &#47&#47 NOTE: we want LIFO order</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/saareliad/ftpipe/commit/8cecdc492a71696ab0f9ab97babd670e9c105270#diff-5e076251e3138c824f1e98c9223b2f4507d35059d327da1d43d1ec4e31c68bd3L980' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 12243156</div><div id='project'> Project Name: saareliad/ftpipe</div><div id='commit'> Commit Name: 8cecdc492a71696ab0f9ab97babd670e9c105270</div><div id='time'> Time: 2020-05-26</div><div id='author'> Author: saareliad@campus.technion.ac.il</div><div id='file'> File Name: pipeline/partition_manager.py</div><div id='m_class'> M Class Name: GPipePartitionManager</div><div id='n_method'> N Class Name: GPipePartitionManager</div><div id='m_method'> M Method Name: run_until_flush(2)</div><div id='n_method'> N Method Name: run_until_flush(2)</div><div id='m_parent_class'> M Parent Class: SinglePartitionManager</div><div id='n_parent_class'> N Parent Class: SinglePartitionManager</div><div id='m_file'> M File Name: pipeline/partition_manager.py</div><div id='n_file'> N File Name: pipeline/partition_manager.py</div><div id='m_start'> M Start Line: 988</div><div id='m_end'> M End Line: 1050</div><div id='n_start'> N Start Line: 911</div><div id='n_end'> N End Line: 958</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        is_last_partition = self.is_last_partition
+        run_batch_backward = self.run_batch_backward
+        run_batch_forward = self.run_batch_forward
+        <a id="change">async_bwd_objects = </a>self.async_bwd_objects
+        async_fwd_objects = self.async_fwd_objects
+        wait_on_sent_object = self.wait_on_sent_object
+
+        while done_bwds &lt; num_batches:
+            &#47&#47 Act according to some policy
+            action_is_fwd = work_scheduler(stage, num_stages, num_batches,
+                                           done_fwds, done_bwds)
+            if action_is_fwd:
+                sent_request_objects = run_batch_forward(done_fwds,
+                                                         num_batches,
+                                                         done_bwds=done_bwds)
+                &#47&#47 NOTE: Last partition inserts its gradients into async_fwd_objects,
+                &#47&#47 wait on prev send
+                if async_fwd_objects:
+                    wait_on_sent_object(is_fwd=True)
+                async_fwd_objects[done_fwds] = sent_request_objects
+            else:
+                sent_request_objects = run_batch_backward(
+                    done_bwds, num_batches)
+                <a id="change">if </a>not (is_first_partition):
+                    &#47&#47 wait on prev send
+                    <a id="change">if async_bwd_objects</a>:
+                        <a id="change">wait_on_sent_object(is_fwd=False)</a>
+                    <a id="change">async_bwd_objects[done_bwds] = </a>sent_request_objects
+
+            &#47&#47 Increase counters
+            if is_last_partition:
+                done_bwds += 1
+                done_fwds += 1
+            else:
+                if action_is_fwd:
+                    done_fwds += 1
+                else:
+                    done_bwds += 1
+
+        while len(async_fwd_objects) &gt; 0:
+            wait_on_sent_object(is_fwd=True, fin=True)
+
+        <a id="change">while len(</a><a id="change">async_bwd_objects) &gt; 0:
+            wait_on_sent_object(is_fwd=False, fin=True)</a>
+
+        &#47&#47 Do a scheduler step at the end of epoch if not already doing so each step.
+        if not self.trainer.PER_STEP_SCHEDULER:
+            self.lr_scheduler.step()</code></pre><h3>After Change</h3><pre><code class='java'>
+                if is_last_partition:
+                    futures_handler.after_backward(ro, done_fwds)
+                else:
+                    <a id="change">futures_handler.after_forward(</a>ro, done_fwds, True<a id="change">)</a>
+
+            else:
+                ro = run_batch_backward(done_bwds, num_batches)
+                futures_handler.after_backward(ro, done_fwds)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/saareliad/ftpipe/commit/8cecdc492a71696ab0f9ab97babd670e9c105270#diff-5e076251e3138c824f1e98c9223b2f4507d35059d327da1d43d1ec4e31c68bd3L659' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 12243157</div><div id='project'> Project Name: saareliad/ftpipe</div><div id='commit'> Commit Name: 8cecdc492a71696ab0f9ab97babd670e9c105270</div><div id='time'> Time: 2020-05-26</div><div id='author'> Author: saareliad@campus.technion.ac.il</div><div id='file'> File Name: pipeline/partition_manager.py</div><div id='m_class'> M Class Name: SinglePartitionManager</div><div id='n_method'> N Class Name: SinglePartitionManager</div><div id='m_method'> M Method Name: run_until_flush(2)</div><div id='n_method'> N Method Name: run_until_flush(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: pipeline/partition_manager.py</div><div id='n_file'> N File Name: pipeline/partition_manager.py</div><div id='m_start'> M Start Line: 665</div><div id='m_end'> M End Line: 723</div><div id='n_start'> N Start Line: 601</div><div id='n_end'> N End Line: 646</div><BR>

@@ -1,0 +1,33 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        tail_weights += torch.where(l_mask, left_weight, zero).sum(-1)
+
+        &#47&#47 a size (B,) mask that removes non-firing position
+        <a id="change">if </a>keep_all_tails:
+            extend_mask<a id="change"> = </a><a id="change">feat_lengths.new_ones(</a>(B,)<a id="change">)</a>
+        else:
+            extend_mask = tail_weights &gt;= (beta / 2)
+
+        &#47&#47 &#47&#47 extend 1 fire and upscale the weights</code></pre><h3>After Change</h3><pre><code class='java'>
+        tail_weights += torch.where(l_mask, left_weight, zero).sum(-1)
+
+        &#47&#47 a size (B,) mask that extends position that passed threshold.
+        extend_mask = <a id="change">tail_weights &gt;= tail_thres</a>
+
+        &#47&#47 extend 1 fire and upscale the weights
+        <a id="change">if </a>extend_mask.any():
+            &#47&#47 (B, T, C), may have infs so need the mask
+            upscale = (
+                torch.ones_like(output)
+                .scatter(
+                    1,
+                    feat_lengths.view(B, 1, 1).expand(-1, -1, C),
+                    beta / tail_weights.view(B, 1, 1).expand(-1, -1, C),
+                )
+            )
+            output[extend_mask]<a id="change"> *= </a>upscale[extend_mask]
+            feat_lengths += extend_mask.long()
+            T = feat_lengths.max()
+        output = output[:, :T, :]</code></pre>

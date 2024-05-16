@@ -1,0 +1,225 @@
+<html><h3>Pattern ID :674
+</h3><img src='3281826.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    batch_size = segmask_array.shape[0]
+    &#47&#47 batch_stack = None
+    def_shape = segmask_array.shape
+    batch_stack = <a id="change">np.zeros(</a>[def_shape[0], len(class_list), def_shape[2], def_shape[3], def_shape[4]]<a id="change">, dtype=np.float32)</a>
+    for b in range(batch_size):
+        &#47&#47 one_hot_stack = np.zeros([len(class_list), def_shape[2], def_shape[3], def_shape[4]])
+        &#47&#47 since the input tensor is 5D, with [batch_size, modality, x, y, z], we do not need to consider the modality dimension for labels
+        segmask_array_iter = segmask_array[b, 0, ...]
+        bin_mask = (segmask_array_iter == 0).numpy()  &#47&#47 initialize bin_mask
+        &#47&#47 this implementation allows users to combine logical operands
+
+        class_idx = 0
+        for _class in class_list:
+            if isinstance(_class, str):
+                if "||" in _class:  &#47&#47 special case
+                    class_split = _class.split("||")
+                    bin_mask = segmask_array_iter == int(class_split[0])
+                    for i in range(1, len(class_split)):
+                        bin_mask = bin_mask | (
+                            segmask_array_iter == int(class_split[i])
+                        )
+                elif "|" in _class:  &#47&#47 special case
+                    class_split = _class.split("|")
+                    bin_mask = segmask_array_iter == int(class_split[0])
+                    for i in range(1, len(class_split)):
+                        bin_mask = bin_mask | (
+                            segmask_array_iter == int(class_split[i])
+                        )
+                else:
+                    &#47&#47 assume that it is a simple int
+                    bin_mask = segmask_array_iter == int(_class)
+            else:
+                bin_mask = segmask_array_iter == int(_class)
+            bin_mask = bin_mask.long()
+            &#47&#47 we always ensure the append happens in dim 0, which is blank
+            bin_mask = bin_mask.unsqueeze(0)
+
+            <a id="change">batch_stack[b, class_idx, ...]</a> = bin_mask
+            class_idx += 1
+                
+        &#47&#47     if one_hot_stack is None:
+        &#47&#47         one_hot_stack = bin_mask
+        &#47&#47     else:
+        &#47&#47         one_hot_stack = torch.cat((one_hot_stack, bin_mask))
+                
+        &#47&#47 if batch_stack is None:
+        &#47&#47     batch_stack = one_hot_stack
+        &#47&#47     &#47&#47 always ensure we are returning a tensor with batch_size encoded
+        &#47&#47     batch_stack = batch_stack.unsqueeze(0)
+        &#47&#47 else:
+        &#47&#47     if one_hot_stack.shape != batch_stack.shape:
+        &#47&#47         one_hot_stack = one_hot_stack.unsqueeze(0)
+        &#47&#47     batch_stack = torch.cat((batch_stack, one_hot_stack))
+    
+    return <a id="change">torch.from_numpy(batch_stack</a><a id="change">)</a>
+
+
+def reverse_one_hot(predmask_array, class_list):
+    </code></pre><h3>After Change</h3><pre><code class='java'>
+    batch_size = segmask_array.shape[0]
+    &#47&#47 batch_stack = None
+    def_shape = segmask_array.shape
+    batch_stack = <a id="change">torch.zeros(</a>def_shape[0], len(class_list), def_shape[2], def_shape[3], def_shape[4]<a id="change">, dtype=torch.float32)</a>
+    for b in range(batch_size):
+        &#47&#47 one_hot_stack = np.zeros([len(class_list), def_shape[2], def_shape[3], def_shape[4]])
+        &#47&#47 since the input tensor is 5D, with [batch_size, modality, x, y, z], we do not need to consider the modality dimension for labels
+        segmask_array_iter = segmask_array[b, 0, ...]
+        bin_mask = (segmask_array_iter == 0)  &#47&#47 initialize bin_mask
+        &#47&#47 this implementation allows users to combine logical operands
+
+        class_idx = 0
+        for _class in class_list:
+            if isinstance(_class, str):
+                if "||" in _class:  &#47&#47 special case
+                    class_split = _class.split("||")
+                    bin_mask = segmask_array_iter == int(class_split[0])
+                    for i in range(1, len(class_split)):
+                        bin_mask = bin_mask | (
+                            segmask_array_iter == int(class_split[i])
+                        )
+                elif "|" in _class:  &#47&#47 special case
+                    class_split = _class.split("|")
+                    bin_mask = segmask_array_iter == int(class_split[0])
+                    for i in range(1, len(class_split)):
+                        bin_mask = bin_mask | (
+                            segmask_array_iter == int(class_split[i])
+                        )
+                else:
+                    &#47&#47 assume that it is a simple int
+                    bin_mask = segmask_array_iter == int(_class)
+            else:
+                bin_mask = segmask_array_iter == int(_class)
+            bin_mask = bin_mask.long()
+            &#47&#47 we always ensure the append happens in dim 0, which is blank
+            bin_mask = bin_mask.unsqueeze(0)
+
+            <a id="change">batch_stack[b, class_idx, ...]</a> = bin_mask
+            class_idx += 1
+                
+        &#47&#47     if one_hot_stack is None:</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 5</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/mlcommons/gandlf/commit/3363c71600c709a5f238714c2885e1096698c454#diff-bb94cfa3aa2c4896ffc51250bc8aaa76a69755d33e3ec31c80f29b9c9353119bL21' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 3281826</div><div id='project'> Project Name: mlcommons/gandlf</div><div id='commit'> Commit Name: 3363c71600c709a5f238714c2885e1096698c454</div><div id='time'> Time: 2021-10-04</div><div id='author'> Author: sarthak.pati@hotmail.com</div><div id='file'> File Name: GANDLF/utils/tensor.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: one_hot(2)</div><div id='n_method'> N Method Name: one_hot(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: GANDLF/utils/tensor.py</div><div id='n_file'> N File Name: GANDLF/utils/tensor.py</div><div id='m_start'> M Start Line: 21</div><div id='m_end'> M End Line: 73</div><div id='n_start'> N Start Line: 21</div><div id='n_end'> N End Line: 73</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    batch_size = segmask_array.shape[0]
+    &#47&#47 batch_stack = None
+    def_shape = segmask_array.shape
+    batch_stack = <a id="change">np.zeros(</a>[def_shape[0], len(class_list), def_shape[2], def_shape[3], def_shape[4]]<a id="change">, dtype=np.float32)</a>
+    for b in range(batch_size):
+        &#47&#47 one_hot_stack = np.zeros([len(class_list), def_shape[2], def_shape[3], def_shape[4]])
+        &#47&#47 since the input tensor is 5D, with [batch_size, modality, x, y, z], we do not need to consider the modality dimension for labels
+        segmask_array_iter = segmask_array[b, 0, ...]
+        bin_mask = (segmask_array_iter == 0).numpy()  &#47&#47 initialize bin_mask
+        &#47&#47 this implementation allows users to combine logical operands
+
+        class_idx = 0
+        for _class in class_list:
+            if isinstance(_class, str):
+                if "||" in _class:  &#47&#47 special case
+                    class_split = _class.split("||")
+                    bin_mask = segmask_array_iter == int(class_split[0])
+                    for i in range(1, len(class_split)):
+                        bin_mask = bin_mask | (
+                            segmask_array_iter == int(class_split[i])
+                        )
+                elif "|" in _class:  &#47&#47 special case
+                    class_split = _class.split("|")
+                    bin_mask = segmask_array_iter == int(class_split[0])
+                    for i in range(1, len(class_split)):
+                        bin_mask = bin_mask | (
+                            segmask_array_iter == int(class_split[i])
+                        )
+                else:
+                    &#47&#47 assume that it is a simple int
+                    bin_mask = segmask_array_iter == int(_class)
+            else:
+                bin_mask = segmask_array_iter == int(_class)
+            bin_mask = bin_mask.long()
+            &#47&#47 we always ensure the append happens in dim 0, which is blank
+            bin_mask = bin_mask.unsqueeze(0)
+
+            <a id="change">batch_stack[b, class_idx, ...]</a> = bin_mask
+            class_idx += 1
+                
+        &#47&#47     if one_hot_stack is None:
+        &#47&#47         one_hot_stack = bin_mask
+        &#47&#47     else:
+        &#47&#47         one_hot_stack = torch.cat((one_hot_stack, bin_mask))
+                
+        &#47&#47 if batch_stack is None:
+        &#47&#47     batch_stack = one_hot_stack
+        &#47&#47     &#47&#47 always ensure we are returning a tensor with batch_size encoded
+        &#47&#47     batch_stack = batch_stack.unsqueeze(0)
+        &#47&#47 else:
+        &#47&#47     if one_hot_stack.shape != batch_stack.shape:
+        &#47&#47         one_hot_stack = one_hot_stack.unsqueeze(0)
+        &#47&#47     batch_stack = torch.cat((batch_stack, one_hot_stack))
+    
+    return <a id="change">torch.from_numpy(</a>batch_stack<a id="change">)</a>
+
+
+def reverse_one_hot(predmask_array, class_list):
+    </code></pre><h3>After Change</h3><pre><code class='java'>
+    batch_size = segmask_array.shape[0]
+    &#47&#47 batch_stack = None
+    def_shape = segmask_array.shape
+    batch_stack = <a id="change">torch.zeros(</a>def_shape[0], len(class_list), def_shape[2], def_shape[3], def_shape[4]<a id="change">, dtype=torch.float32)</a>
+    for b in range(batch_size):
+        &#47&#47 one_hot_stack = np.zeros([len(class_list), def_shape[2], def_shape[3], def_shape[4]])
+        &#47&#47 since the input tensor is 5D, with [batch_size, modality, x, y, z], we do not need to consider the modality dimension for labels
+        segmask_array_iter = segmask_array[b, 0, ...]
+        bin_mask = (segmask_array_iter == 0)  &#47&#47 initialize bin_mask
+        &#47&#47 this implementation allows users to combine logical operands
+
+        class_idx = 0
+        for _class in class_list:
+            if isinstance(_class, str):
+                if "||" in _class:  &#47&#47 special case
+                    class_split = _class.split("||")
+                    bin_mask = segmask_array_iter == int(class_split[0])
+                    for i in range(1, len(class_split)):
+                        bin_mask = bin_mask | (
+                            segmask_array_iter == int(class_split[i])
+                        )
+                elif "|" in _class:  &#47&#47 special case
+                    class_split = _class.split("|")
+                    bin_mask = segmask_array_iter == int(class_split[0])
+                    for i in range(1, len(class_split)):
+                        bin_mask = bin_mask | (
+                            segmask_array_iter == int(class_split[i])
+                        )
+                else:
+                    &#47&#47 assume that it is a simple int
+                    bin_mask = segmask_array_iter == int(_class)
+            else:
+                bin_mask = segmask_array_iter == int(_class)
+            bin_mask = bin_mask.long()
+            &#47&#47 we always ensure the append happens in dim 0, which is blank
+            bin_mask = bin_mask.unsqueeze(0)
+
+            <a id="change">batch_stack[b, class_idx, ...]</a> = bin_mask
+            class_idx += 1
+                
+        &#47&#47     if one_hot_stack is None:</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/cbica/gandlf/commit/3363c71600c709a5f238714c2885e1096698c454#diff-bb94cfa3aa2c4896ffc51250bc8aaa76a69755d33e3ec31c80f29b9c9353119bL8' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 3281828</div><div id='project'> Project Name: cbica/gandlf</div><div id='commit'> Commit Name: 3363c71600c709a5f238714c2885e1096698c454</div><div id='time'> Time: 2021-10-04</div><div id='author'> Author: sarthak.pati@hotmail.com</div><div id='file'> File Name: GANDLF/utils/tensor.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: one_hot(2)</div><div id='n_method'> N Method Name: one_hot(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: GANDLF/utils/tensor.py</div><div id='n_file'> N File Name: GANDLF/utils/tensor.py</div><div id='m_start'> M Start Line: 21</div><div id='m_end'> M End Line: 73</div><div id='n_start'> N Start Line: 21</div><div id='n_end'> N End Line: 73</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    mapping = params["data_postprocessing"]["mapping"]
+
+    output = <a id="change">np.zeros(</a>input_arr.shape<a id="change">)</a>
+
+    for key, value in mapping.items():
+        <a id="change">output[input_arr == key]</a> = value
+
+    return <a id="change">torch.from_numpy(</a>output<a id="change">)</a>
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    mapping = params["data_postprocessing"]["mapping"]
+
+    output = <a id="change">torch.zeros(</a>input_tensor.shape<a id="change">)</a>
+
+    for key, value in mapping.items():
+        <a id="change">output[input_tensor == key]</a> = value
+
+    return output
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/mlcommons/gandlf/commit/ebdeedbfa7ec3d26859724958de184f5af1a42c6#diff-4129d449fa317da760faaf0568b384f19fbbb0f7efc426757f4dc4e195a04010L6' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 3281829</div><div id='project'> Project Name: mlcommons/gandlf</div><div id='commit'> Commit Name: ebdeedbfa7ec3d26859724958de184f5af1a42c6</div><div id='time'> Time: 2022-09-05</div><div id='author'> Author: sarthak.pati@hotmail.com</div><div id='file'> File Name: GANDLF/data/post_process/tensor.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: get_mapped_label(2)</div><div id='n_method'> N Method Name: get_mapped_label(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: GANDLF/data/post_process/tensor.py</div><div id='n_file'> N File Name: GANDLF/data/post_process/tensor.py</div><div id='m_start'> M Start Line: 16</div><div id='m_end'> M End Line: 30</div><div id='n_start'> N Start Line: 15</div><div id='n_end'> N End Line: 26</div><BR>

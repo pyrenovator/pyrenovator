@@ -1,0 +1,23 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    if isinstance(batch, dict):
+        return [batch_type(dict(zip(batch, default_uncollate(t)))) for t in zip(*batch.values())]
+
+    <a id="change">if </a><a id="change">isinstance(</a>batch, tuple<a id="change">)</a> and hasattr(batch, "_fields"):  &#47&#47 namedtuple
+        <a id="change">return </a>[batch_type(*sample) for sample in zip(*batch)]
+
+    if isinstance(batch, Sequence) and not isinstance(batch, str):
+        return <a id="change">[sample for sample in batch]</a>
+
+    <a id="change">return </a>batch
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        ValueError: If the input is not a ``dict`` or list-like.
+    
+
+    <a id="change">if </a>isinstance(batch, dict):
+        if any(<a id="change">not</a> _is_list_like_excluding_str(sub_batch) <a id="change">for</a> sub_batch in batch.values()):
+            raise ValueError("When uncollating a dict, all sub-batches (values) are expected to be list-like.")
+        if len({len(sub_batch) for sub_batch in batch.values()}) &gt; 1:
+            raise ValueError("When uncollating a dict, all sub-batches (values) are expected to have the same length.")</code></pre>

@@ -1,0 +1,35 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                    if not token_list:
+                        continue
+                    if mode == &quotpredict&quot:
+                        <a id="change">predict_results.setdefault(reverse_categories[predicate1], set()).add(</a>tokenizer.decode(token_list)<a id="change">)</a>
+                    else:
+                        predict_results.setdefault(predicate1, set()).add(str(token_list))
+                    break
+    return predict_results</code></pre><h3>After Change</h3><pre><code class='java'>
+    predict_results = {}
+    encode_results = tokenizer(text, padding=&quotmax_length&quot)
+    input_ids = encode_results.get(&quotinput_ids&quot)
+    token<a id="change"> = </a>tokenizer.convert_ids_to_tokens(input_ids)
+    <a id="change">mapping</a> = rematch(text, token)
+    token_ids = torch.unsqueeze(torch.LongTensor(input_ids), 0).to(device)
+    attention_mask = torch.unsqueeze(torch.LongTensor(encode_results.get(&quotattention_mask&quot)), 0).to(device)
+    bert_hidden_states = bert_model(token_ids, attention_mask=attention_mask)[0].to(device)
+    model_outputs = model(bert_hidden_states).detach().to(&quotcpu&quot)
+    decision_threshold = float(configs.decision_threshold)
+    for model_output in model_outputs:
+        start = np.where(model_output[:, :, 0] &gt; decision_threshold)
+        end = np.where(model_output[:, :, 1] &gt; decision_threshold)
+        for _start, predicate1 in zip(*start):
+            for _end, predicate2 in zip(*end):
+                if _start &lt;= _end and predicate1 == predicate2:
+                    <a id="change">if len(mapping[_start]) &gt; 0</a><a id="change"> and len(mapping[_end]) &gt; 0</a>:
+                        start_in_text = <a id="change">mapping[_start][0]</a>
+                        end_in_text = <a id="change">mapping[_end][-1]</a>
+                        entity_text = text[start_in_text: end_in_text + 1]
+                        predict_results.setdefault(predicate1, set()).add(entity_text)
+                    break
+    return predict_results</code></pre>

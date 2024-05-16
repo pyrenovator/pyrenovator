@@ -1,0 +1,24 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    &#47&#47 p4 ─&gt; p4p5 ─&gt; pan_out1
+    &#47&#47         ↓         ↑
+    &#47&#47 p3 ─&gt; pan_out2 ───┘
+    csp_depth = <a id="change">max(</a>round(depth_mul<a id="change"> * 2</a>), <a id="change">1</a><a id="change">)</a>
+    p3, p4, p5 = features  &#47&#47 p3: [64, 64, 256], p4: [32, 32, 512], p5: [16, 16, 512]
+    p3 = conv_dw_pw_block(p3, p3.shape[-1] // 2, kernel_size=1, activation=activation, name=name + "p3_down_")  &#47&#47 [64, 64, 128]
+    p4 = conv_dw_pw_block(p4, p4.shape[-1] // 2, kernel_size=1, activation=activation, name=name + "p4_down_")  &#47&#47 [32, 32, 256]
+
+    &#47&#47 p4p5: [32, 32, 256]
+    p4p5<a id="change"> = </a>upsample_merge([p4, p5], csp_depth, use_depthwise_conv=use_depthwise_conv, activation=activation, name=name + "p4p5_")
+    &#47&#47 pan_out2: [64, 64, 128]
+    pan_out2 = upsample_merge([p3, p4p5], csp_depth, use_depthwise_conv=use_depthwise_conv, activation=activation, name=name + "p3p4p5_")
+    &#47&#47 pan_out1: [32, 32, 256]</code></pre><h3>After Change</h3><pre><code class='java'>
+        nn = upsample_merge([nn, upsamples[-1]], fpn_depth, use_depthwise_conv=use_depthwise_conv, activation=activation, name=name + p_name)
+        upsamples.append(nn)
+
+    downsamples = [<a id="change">upsamples[-1]</a>]
+    &#47&#47 downsamples: [p3p4p5], upsamples[:-1][::-1]: [p4p5, p5] -&gt; [p5, p4p5, p3p4p5]
+    for id, ii in enumerate(upsamples[:-1][::-1]):
+        cur_name = name + "c3n{}_".format(id + 3)</code></pre>

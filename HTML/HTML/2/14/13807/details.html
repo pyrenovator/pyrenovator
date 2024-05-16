@@ -1,0 +1,332 @@
+<html><h3>Pattern ID :13807
+</h3><img src='46065340.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+    model_train.train()
+    print(&quotStart Train&quot)
+    <a id="change">with tqdm</a><a id="change">(total=epoch_step,desc=f&quotEpoch {epoch + 1}/{Epoch}&quot,postfix=dict,mininterval=0.3) as pbar:
+        </a>for iteration, batch in enumerate(gen):
+            if iteration &gt;= epoch_step: 
+                break
+            imgs, pngs, labels = batch
+
+            with torch.no_grad():
+                imgs    = torch.from_numpy(imgs).type(torch.FloatTensor)
+                pngs    = torch.from_numpy(pngs).long()
+                labels<a id="change">  = torch.from_numpy(labels).type(</a>torch.FloatTensor<a id="change">)</a>
+                weights = torch.from_numpy(cls_weights)
+                if cuda:
+                    imgs    = imgs.cuda()
+                    pngs    = pngs.cuda()
+                    labels  = labels.cuda()
+                    weights = weights.cuda()
+
+            optimizer.zero_grad()
+            if not fp16:
+                outputs = model_train(imgs)
+                if focal_loss:
+                    loss = Focal_Loss(outputs, pngs, weights, num_classes = num_classes)
+                else:
+                    loss = CE_Loss(outputs, pngs, weights, num_classes = num_classes)
+
+                if dice_loss:
+                    main_dice = Dice_loss(outputs, labels)
+                    loss      = loss + main_dice
+
+                with torch.no_grad():
+                    &#47&#47-------------------------------&#47&#47
+                    &#47&#47   计算f_score
+                    &#47&#47-------------------------------&#47&#47
+                    _f_score = f_score(outputs, labels)
+
+                loss.backward()
+                optimizer.step()
+            else:
+                from torch.cuda.amp import autocast
+                with autocast():
+                    outputs = model_train(imgs)
+                    if focal_loss:
+                        loss = Focal_Loss(outputs, pngs, weights, num_classes = num_classes)
+                    else:
+                        loss = CE_Loss(outputs, pngs, weights, num_classes = num_classes)
+
+                    if dice_loss:
+                        main_dice = Dice_loss(outputs, labels)
+                        loss      = loss + main_dice
+
+                    with torch.no_grad():
+                        &#47&#47-------------------------------&#47&#47
+                        &#47&#47   计算f_score
+                        &#47&#47-------------------------------&#47&#47
+                        _f_score = f_score(outputs, labels)
+                        
+                &#47&#47----------------------&#47&#47
+                &#47&#47   反向传播
+                &#47&#47----------------------&#47&#47
+                scaler.scale(loss).backward()
+                scaler.step(optimizer)
+                scaler.update()
+
+            total_loss      += loss.item()
+            total_f_score   += _f_score.item()
+            
+            pbar.set_postfix(**{&quottotal_loss&quot: total_loss / (iteration + 1), 
+                                &quotf_score&quot   : total_f_score / (iteration + 1),
+                                &quotlr&quot        : get_lr(optimizer)})
+            pbar.update(1)
+
+    print(&quotFinish Train&quot)
+
+    model_train.eval()
+    print(&quotStart Validation&quot)
+    <a id="change">with tqdm</a><a id="change">(total=epoch_step_val, desc=f&quotEpoch {epoch + 1}/{Epoch}&quot,postfix=dict,mininterval=0.3) as pbar:
+        </a>for iteration, batch in enumerate(gen_val):
+            if iteration &gt;= epoch_step_val:
+                break
+            imgs, pngs, labels = batch
+            with torch.no_grad():
+                imgs<a id="change">    = torch.from_numpy(imgs).type(</a>torch.FloatTensor<a id="change">)</a>
+                pngs    = torch.from_numpy(pngs).long()
+                labels  = torch.from_numpy(labels).type(torch.FloatTensor)
+                weights = torch.from_numpy(cls_weights)
+                if cuda:</code></pre><h3>After Change</h3><pre><code class='java'>
+            pbar.update(1)
+            
+    if local_rank == 0:
+        <a id="change">pbar.close()</a>
+        print(&quotFinish Validation&quot)
+        loss_history.append_loss(epoch + 1, total_loss / epoch_step, val_loss / epoch_step_val)
+        print(&quotEpoch:&quot+ str(epoch + 1) + &quot/&quot + str(Epoch))
+        print(&quotTotal Loss: %.3f || Val Loss: %.3f &quot % (total_loss / epoch_step, val_loss / epoch_step_val))</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 11</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/bubbliiiing/hrnet-pytorch/commit/db25ef252fa24b7ff1ebd48ef7c8b918ff707e18#diff-1159d7fa34eff8cbe9fa807908c5121873390f54788a592aa0a1605ee5d1e0a4L11' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 46065340</div><div id='project'> Project Name: bubbliiiing/hrnet-pytorch</div><div id='commit'> Commit Name: db25ef252fa24b7ff1ebd48ef7c8b918ff707e18</div><div id='time'> Time: 2022-04-15</div><div id='author'> Author: 3323290568@qq.com</div><div id='file'> File Name: utils/utils_fit.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: fit_one_epoch(20)</div><div id='n_method'> N Method Name: fit_one_epoch(19)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: utils/utils_fit.py</div><div id='n_file'> N File Name: utils/utils_fit.py</div><div id='m_start'> M Start Line: 11</div><div id='m_end'> M End Line: 138</div><div id='n_start'> N Start Line: 12</div><div id='n_end'> N End Line: 139</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    
+    val_loss = 0
+    print(&quotStart Train&quot)
+    <a id="change">with tqdm</a><a id="change">(total=epoch_step,desc=f&quotEpoch {epoch + 1}/{Epoch}&quot,postfix=dict,mininterval=0.3) as pbar:
+        </a>for iteration, batch in enumerate(gen):
+            if iteration &gt;= epoch_step:
+                break
+            images, boxes, labels = batch[0], batch[1], batch[2]
+            with torch.no_grad():
+                images<a id="change"> = torch.from_numpy(images).type(</a>torch.FloatTensor<a id="change">)</a>
+                if cuda:
+                    images = images.cuda()
+
+            rpn_loc, rpn_cls, roi_loc, roi_cls, total = train_util.train_step(images, boxes, labels, 1)
+            total_loss      += total.item()
+            rpn_loc_loss    += rpn_loc.item()
+            rpn_cls_loss    += rpn_cls.item()
+            roi_loc_loss    += roi_loc.item()
+            roi_cls_loss    += roi_cls.item()
+            
+            pbar.set_postfix(**{&quottotal_loss&quot    : total_loss / (iteration + 1), 
+                                &quotrpn_loc&quot       : rpn_loc_loss / (iteration + 1),  
+                                &quotrpn_cls&quot       : rpn_cls_loss / (iteration + 1), 
+                                &quotroi_loc&quot       : roi_loc_loss / (iteration + 1), 
+                                &quotroi_cls&quot       : roi_cls_loss / (iteration + 1), 
+                                &quotlr&quot            : get_lr(optimizer)})
+            pbar.update(1)
+
+    print(&quotFinish Train&quot)
+
+    print(&quotStart Validation&quot)
+    <a id="change">with tqdm</a><a id="change">(total=epoch_step_val, desc=f&quotEpoch {epoch + 1}/{Epoch}&quot,postfix=dict,mininterval=0.3) as pbar:
+        </a>for iteration, batch in enumerate(gen_val):
+            if iteration &gt;= epoch_step_val:
+                break
+            images,boxes,labels = batch[0], batch[1], batch[2]
+            with torch.no_grad():
+                images<a id="change"> = torch.from_numpy(images).type(</a>torch.FloatTensor<a id="change">)</a>
+                if cuda:
+                    images = images.cuda()
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            pbar.update(1)
+
+    if local_rank == 0:
+        <a id="change">pbar.close()</a>
+        print(&quotFinish Train&quot)
+        print(&quotStart Validation&quot)
+        pbar = tqdm(total=epoch_step_val, desc=f&quotEpoch {epoch + 1}/{Epoch}&quot,postfix=dict,mininterval=0.3)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/bubbliiiing/faster-rcnn-pytorch/commit/05e6e50b241e1ae4707e28c3b3fc388fd7141eb4#diff-1159d7fa34eff8cbe9fa807908c5121873390f54788a592aa0a1605ee5d1e0a4L9' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 46065324</div><div id='project'> Project Name: bubbliiiing/faster-rcnn-pytorch</div><div id='commit'> Commit Name: 05e6e50b241e1ae4707e28c3b3fc388fd7141eb4</div><div id='time'> Time: 2022-04-20</div><div id='author'> Author: 3323290568@qq.com</div><div id='file'> File Name: utils/utils_fit.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: fit_one_epoch(16)</div><div id='n_method'> N Method Name: fit_one_epoch(13)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: utils/utils_fit.py</div><div id='n_file'> N File Name: utils/utils_fit.py</div><div id='m_start'> M Start Line: 17</div><div id='m_end'> M End Line: 68</div><div id='n_start'> N Start Line: 9</div><div id='n_end'> N End Line: 72</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    if local_rank == 0:
+        print(&quotStart Train&quot)
+    model_train.train()
+    <a id="change">with tqdm</a><a id="change">(total=epoch_step,desc=f&quotEpoch {epoch + 1}/{Epoch}&quot,postfix=dict,mininterval=0.3) as pbar:
+        </a>for iteration, batch in enumerate(gen):
+            if iteration &gt;= epoch_step:
+                break
+            images, targets = batch[0], batch[1]
+            with torch.no_grad():
+                if cuda:
+                    images  = torch.from_numpy(images).type(torch.FloatTensor).cuda()
+                    targets<a id="change"> = torch.from_numpy(targets).type(</a>torch.FloatTensor<a id="change">)</a>.cuda()
+                else:
+                    images  = torch.from_numpy(images).type(torch.FloatTensor)
+                    targets = torch.from_numpy(targets).type(torch.FloatTensor) 
+            &#47&#47----------------------&#47&#47
+            &#47&#47   前向传播
+            &#47&#47----------------------&#47&#47
+            out = model_train(images)
+            if not fp16:
+                &#47&#47----------------------&#47&#47
+                &#47&#47   清零梯度
+                &#47&#47----------------------&#47&#47
+                optimizer.zero_grad()
+                &#47&#47----------------------&#47&#47
+                &#47&#47   计算损失
+                &#47&#47----------------------&#47&#47
+                loss = ssd_loss.forward(targets, out)
+                &#47&#47----------------------&#47&#47
+                &#47&#47   反向传播
+                &#47&#47----------------------&#47&#47
+                loss.backward()
+                optimizer.step()
+            else:
+                from torch.cuda.amp import autocast
+                with autocast():
+                    &#47&#47----------------------&#47&#47
+                    &#47&#47   清零梯度
+                    &#47&#47----------------------&#47&#47
+                    optimizer.zero_grad()
+                    &#47&#47----------------------&#47&#47
+                    &#47&#47   计算损失
+                    &#47&#47----------------------&#47&#47
+                    loss = ssd_loss.forward(targets, out)
+
+                &#47&#47----------------------&#47&#47
+                &#47&#47   反向传播
+                &#47&#47----------------------&#47&#47
+                scaler.scale(loss).backward()
+                scaler.step(optimizer)
+                scaler.update()
+
+            total_loss += loss.item()
+            
+            if local_rank == 0:
+                pbar.set_postfix(**{&quottotal_loss&quot    : total_loss / (iteration + 1), 
+                                    &quotlr&quot            : get_lr(optimizer)})
+                pbar.update(1)
+                
+    if local_rank == 0:
+        print(&quotFinish Train&quot)
+        print(&quotStart Validation&quot)
+
+    model_train.eval()
+    <a id="change">with tqdm</a><a id="change">(total=epoch_step_val, desc=f&quotEpoch {epoch + 1}/{Epoch}&quot,postfix=dict,mininterval=0.3) as pbar:
+        </a>for iteration, batch in enumerate(gen_val):
+            if iteration &gt;= epoch_step_val:
+                break
+            images, targets = batch[0], batch[1]
+            with torch.no_grad():
+                if cuda:
+                    images  = torch.from_numpy(images).type(torch.FloatTensor).cuda()
+                    targets<a id="change"> = torch.from_numpy(targets).type(</a>torch.FloatTensor<a id="change">)</a>.cuda()
+                else:
+                    images  = torch.from_numpy(images).type(torch.FloatTensor)
+                    targets = torch.from_numpy(targets).type(torch.FloatTensor) </code></pre><h3>After Change</h3><pre><code class='java'>
+            pbar.update(1)
+                
+    if local_rank == 0:
+        <a id="change">pbar.close()</a>
+        print(&quotFinish Train&quot)
+        print(&quotStart Validation&quot)
+        pbar = tqdm(total=epoch_step_val, desc=f&quotEpoch {epoch + 1}/{Epoch}&quot,postfix=dict,mininterval=0.3)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/bubbliiiing/ssd-pytorch/commit/02588e0ad65091d2cb5eb53ee2d15ddd5da9ca09#diff-1159d7fa34eff8cbe9fa807908c5121873390f54788a592aa0a1605ee5d1e0a4L9' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 46065339</div><div id='project'> Project Name: bubbliiiing/ssd-pytorch</div><div id='commit'> Commit Name: 02588e0ad65091d2cb5eb53ee2d15ddd5da9ca09</div><div id='time'> Time: 2022-04-16</div><div id='author'> Author: 3323290568@qq.com</div><div id='file'> File Name: utils/utils_fit.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: fit_one_epoch(17)</div><div id='n_method'> N Method Name: fit_one_epoch(17)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: utils/utils_fit.py</div><div id='n_file'> N File Name: utils/utils_fit.py</div><div id='m_start'> M Start Line: 16</div><div id='m_end'> M End Line: 100</div><div id='n_start'> N Start Line: 15</div><div id='n_end'> N End Line: 99</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    model_train.train()
+    print(&quotStart Train&quot)
+    <a id="change">with tqdm</a><a id="change">(total=epoch_step,desc=f&quotEpoch {epoch + 1}/{Epoch}&quot,postfix=dict,mininterval=0.3) as pbar:
+        </a>for iteration, batch in enumerate(gen):
+            if iteration &gt;= epoch_step: 
+                break
+            imgs, pngs, labels = batch
+
+            with torch.no_grad():
+                imgs    = torch.from_numpy(imgs).type(torch.FloatTensor)
+                pngs    = torch.from_numpy(pngs).long()
+                labels<a id="change">  = torch.from_numpy(labels).type(</a>torch.FloatTensor<a id="change">)</a>
+                weights = torch.from_numpy(cls_weights)
+                if cuda:
+                    imgs    = imgs.cuda()
+                    pngs    = pngs.cuda()
+                    labels  = labels.cuda()
+                    weights = weights.cuda()
+
+            optimizer.zero_grad()
+            if not fp16:
+                outputs = model_train(imgs)
+                if focal_loss:
+                    loss = Focal_Loss(outputs, pngs, weights, num_classes = num_classes)
+                else:
+                    loss = CE_Loss(outputs, pngs, weights, num_classes = num_classes)
+
+                if dice_loss:
+                    main_dice = Dice_loss(outputs, labels)
+                    loss      = loss + main_dice
+
+                with torch.no_grad():
+                    &#47&#47-------------------------------&#47&#47
+                    &#47&#47   计算f_score
+                    &#47&#47-------------------------------&#47&#47
+                    _f_score = f_score(outputs, labels)
+
+                loss.backward()
+                optimizer.step()
+            else:
+                from torch.cuda.amp import autocast
+                with autocast():
+                    outputs = model_train(imgs)
+                    if focal_loss:
+                        loss = Focal_Loss(outputs, pngs, weights, num_classes = num_classes)
+                    else:
+                        loss = CE_Loss(outputs, pngs, weights, num_classes = num_classes)
+
+                    if dice_loss:
+                        main_dice = Dice_loss(outputs, labels)
+                        loss      = loss + main_dice
+
+                    with torch.no_grad():
+                        &#47&#47-------------------------------&#47&#47
+                        &#47&#47   计算f_score
+                        &#47&#47-------------------------------&#47&#47
+                        _f_score = f_score(outputs, labels)
+                        
+                &#47&#47----------------------&#47&#47
+                &#47&#47   反向传播
+                &#47&#47----------------------&#47&#47
+                scaler.scale(loss).backward()
+                scaler.step(optimizer)
+                scaler.update()
+
+            total_loss      += loss.item()
+            total_f_score   += _f_score.item()
+            
+            pbar.set_postfix(**{&quottotal_loss&quot: total_loss / (iteration + 1), 
+                                &quotf_score&quot   : total_f_score / (iteration + 1),
+                                &quotlr&quot        : get_lr(optimizer)})
+            pbar.update(1)
+
+    print(&quotFinish Train&quot)
+
+    model_train.eval()
+    print(&quotStart Validation&quot)
+    <a id="change">with tqdm</a><a id="change">(total=epoch_step_val, desc=f&quotEpoch {epoch + 1}/{Epoch}&quot,postfix=dict,mininterval=0.3) as pbar:
+        </a>for iteration, batch in enumerate(gen_val):
+            if iteration &gt;= epoch_step_val:
+                break
+            imgs, pngs, labels = batch
+            with torch.no_grad():
+                imgs    = torch.from_numpy(imgs).type(torch.FloatTensor)
+                pngs    = torch.from_numpy(pngs).long()
+                labels<a id="change">  = torch.from_numpy(labels).type(</a>torch.FloatTensor<a id="change">)</a>
+                weights = torch.from_numpy(cls_weights)
+                if cuda:
+                    imgs    = imgs.cuda()
+                    pngs    = pngs.cuda()</code></pre><h3>After Change</h3><pre><code class='java'>
+            pbar.update(1)
+
+    if local_rank == 0:
+        <a id="change">pbar.close()</a>
+        print(&quotFinish Train&quot)
+        print(&quotStart Validation&quot)
+        pbar = tqdm(total=epoch_step_val, desc=f&quotEpoch {epoch + 1}/{Epoch}&quot,postfix=dict,mininterval=0.3)
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/bubbliiiing/hrnet-pytorch/commit/db25ef252fa24b7ff1ebd48ef7c8b918ff707e18#diff-1159d7fa34eff8cbe9fa807908c5121873390f54788a592aa0a1605ee5d1e0a4L11' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 46065335</div><div id='project'> Project Name: bubbliiiing/hrnet-pytorch</div><div id='commit'> Commit Name: db25ef252fa24b7ff1ebd48ef7c8b918ff707e18</div><div id='time'> Time: 2022-04-15</div><div id='author'> Author: 3323290568@qq.com</div><div id='file'> File Name: utils/utils_fit.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: fit_one_epoch(20)</div><div id='n_method'> N Method Name: fit_one_epoch(19)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: utils/utils_fit.py</div><div id='n_file'> N File Name: utils/utils_fit.py</div><div id='m_start'> M Start Line: 11</div><div id='m_end'> M End Line: 138</div><div id='n_start'> N Start Line: 12</div><div id='n_end'> N End Line: 139</div><BR>

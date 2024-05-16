@@ -1,0 +1,316 @@
+<html><h3>Pattern ID :20736
+</h3><img src='66852604.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 Prefill
+        if past_key_values is None:
+            &#47&#47 Create past tensor
+            <a id="change">past_key_values</a> = hidden_states.new_empty(
+                (
+                    len(self.layers),
+                    <a id="change">len(hidden_states</a><a id="change">)</a>,
+                    2,
+                    self.num_heads,
+                    self.head_size,
+                )
+            )
+            layer_past_present_indices = None
+            cu_seqlens_q = None
+        &#47&#47 Decode
+        else:
+            &#47&#47 Create indices from cumulative sequence lengths
+            layer_past_present_indices = cu_seqlens[1:] - 1
+            cu_seqlens_q = torch.arange(
+                cu_seqlens.shape[0], dtype=torch.int32, device=hidden_states.device
+            )
+
+        &#47&#47 Get rotary cos and sin for this forward
+        &#47&#47 Avoid to index in each layer
+        cos, sin = self.layers[0].attention.rotary_emb.get_cos_sin(
+            position_ids, max_s, hidden_states.dtype
+        )
+
+        residual = None
+        for i, layer in enumerate(self.layers):
+            <a id="change">hidden_states</a><a id="change">, residual</a> = <a id="change">layer(
+                hidden_states</a>,
+                <a id="change">residual</a>,
+                cos,
+                sin,
+                cu_seqlens,
+                max_s,
+                <a id="change">past_key_values[i]</a>,
+                layer_past_present_indices,
+                cu_seqlens_q<a id="change">,
+            )</a>
+
+        hidden_states, _ = self.final_layer_norm(hidden_states, residual)
+
+        return hidden_states, past_key_values</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 Prefill
+        if past_key_values is None:
+            &#47&#47 Create past tensor
+            <a id="change">past_key_values</a> = hidden_states.new_empty(
+                (
+                    len(self.layers),
+                    <a id="change">len(hidden_states</a><a id="change">)
+                    if </a><a id="change">pre_allocate_past_size is None
+                    else </a>pre_allocate_past_size,
+                    2,
+                    self.num_heads,
+                    self.head_size,
+                )
+            )
+            layer_past_present_indices = None
+            cu_seqlens_q = None
+            slice_past_index<a id="change"> = </a><a id="change">len(hidden_states</a><a id="change">)</a>
+        &#47&#47 Decode
+        else:
+            &#47&#47 Create indices from cumulative sequence lengths
+            layer_past_present_indices = cu_seqlens[1:] - 1
+            cu_seqlens_q = torch.arange(
+                cu_seqlens.shape[0], dtype=torch.int32, device=hidden_states.device
+            )
+            slice_past_index<a id="change"> = None</a>
+
+        &#47&#47 Get rotary cos and sin for this forward
+        &#47&#47 Avoid to index in each layer
+        cos, sin = self.layers[0].attention.rotary_emb.get_cos_sin(
+            position_ids, max_s, hidden_states.dtype
+        )
+
+        <a id="change">residual</a> = None
+        for i, layer in enumerate(self.layers):
+            &#47&#47 We added padding that now need to slice
+            layer_past_key_values = (
+                <a id="change">past_key_values[i]</a><a id="change">
+                if slice_past_index</a><a id="change"> is None
+                else past_key_values[i, :slice_past_index]</a>
+            )
+
+            <a id="change">hidden_states</a><a id="change">, residual = </a><a id="change">layer(
+                hidden_states</a>,
+                <a id="change">residual</a>,
+                cos,
+                sin,
+                cu_seqlens,
+                max_s,
+                layer_past_key_values,
+                layer_past_present_indices,
+                cu_seqlens_q<a id="change">,
+            )</a>
+
+        hidden_states, _ = self.final_layer_norm(hidden_states, residual)
+
+        return hidden_states, past_key_values</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 20</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/huggingface/text-generation-inference/commit/db4cb5e4ed2b994131fc575eff6689da9b661679#diff-e24db7a565766a50b02649a0a1ac904f9bacff6ae58a2901fefc092befcbd980L622' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 66852604</div><div id='project'> Project Name: huggingface/text-generation-inference</div><div id='commit'> Commit Name: db4cb5e4ed2b994131fc575eff6689da9b661679</div><div id='time'> Time: 2023-04-21</div><div id='author'> Author: olivier@huggingface.co</div><div id='file'> File Name: server/text_generation_server/models/custom_modeling/flash_neox_modeling.py</div><div id='m_class'> M Class Name: FlashGPTNeoXModel</div><div id='n_method'> N Class Name: FlashGPTNeoXModel</div><div id='m_method'> M Method Name: forward(7)</div><div id='n_method'> N Method Name: forward(6)</div><div id='m_parent_class'> M Parent Class: FlashGPTNeoXPreTrainedModel</div><div id='n_parent_class'> N Parent Class: FlashGPTNeoXPreTrainedModel</div><div id='m_file'> M File Name: server/text_generation_server/models/custom_modeling/flash_neox_modeling.py</div><div id='n_file'> N File Name: server/text_generation_server/models/custom_modeling/flash_neox_modeling.py</div><div id='m_start'> M Start Line: 622</div><div id='m_end'> M End Line: 664</div><div id='n_start'> N Start Line: 622</div><div id='n_end'> N End Line: 677</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        max_s,
+        past_key_values=None,
+    ):
+        <a id="change">hidden_states</a> = self.embed_tokens(input_ids)
+
+        &#47&#47 Prefill
+        if past_key_values is None:
+            &#47&#47 Create past tensor
+            <a id="change">past_key_values</a> = hidden_states.new_empty(
+                (
+                    len(self.layers),
+                    <a id="change">len(</a>hidden_states<a id="change">)</a>,
+                    2,
+                    self.num_heads,
+                    self.head_size,
+                )
+            )
+            layer_past_present_indices = None
+            cu_seqlens_q = None
+        &#47&#47 Decode
+        else:
+            &#47&#47 Create indices from cumulative sequence lengths
+            layer_past_present_indices = cu_seqlens[1:] - 1
+            cu_seqlens_q = torch.arange(
+                cu_seqlens.shape[0], dtype=torch.int32, device=hidden_states.device
+            )
+
+        &#47&#47 Get rotary cos and sin for this forward
+        &#47&#47 Avoid to index in each layer
+        cos, sin = self.layers[0].self_attn.rotary_emb.get_cos_sin(
+            position_ids, max_s, hidden_states.dtype
+        )
+
+        <a id="change">residual</a> = None
+        for i, layer in enumerate(self.layers):
+            hidden_states<a id="change">, residual</a> = <a id="change">layer(
+                </a>hidden_states,
+                residual,
+                cos,
+                sin,
+                cu_seqlens,
+                max_s,
+                <a id="change">past_key_values[i]</a>,
+                layer_past_present_indices,
+                cu_seqlens_q<a id="change">,
+            )</a>
+
+        hidden_states, _ = self.norm(hidden_states, residual)
+
+        return hidden_states, past_key_values</code></pre><h3>After Change</h3><pre><code class='java'>
+        past_key_values: Optional[torch.Tensor] = None,
+        pre_allocate_past_size: Optional[int] = None,
+    ):
+        <a id="change">hidden_states</a> = self.embed_tokens(input_ids)
+
+        &#47&#47 Prefill
+        if past_key_values is None:
+            &#47&#47 Create past tensor
+            <a id="change">past_key_values</a> = hidden_states.new_empty(
+                (
+                    len(self.layers),
+                    <a id="change">len(</a>hidden_states<a id="change">)
+                    if </a><a id="change">pre_allocate_past_size is None
+                    else </a>pre_allocate_past_size,
+                    2,
+                    self.num_heads,
+                    self.head_size,
+                )
+            )
+            layer_past_present_indices = None
+            cu_seqlens_q = None
+            slice_past_index<a id="change"> = </a><a id="change">len(</a>hidden_states<a id="change">)</a>
+        &#47&#47 Decode
+        else:
+            &#47&#47 Create indices from cumulative sequence lengths
+            layer_past_present_indices = cu_seqlens[1:] - 1
+            cu_seqlens_q = torch.arange(
+                cu_seqlens.shape[0], dtype=torch.int32, device=hidden_states.device
+            )
+            slice_past_index<a id="change"> = </a>None
+
+        &#47&#47 Get rotary cos and sin for this forward
+        &#47&#47 Avoid to index in each layer
+        cos, sin = self.layers[0].self_attn.rotary_emb.get_cos_sin(
+            position_ids, max_s, hidden_states.dtype
+        )
+
+        <a id="change">residual</a> = None
+        for i, layer in enumerate(self.layers):
+            &#47&#47 We added padding that now need to slice
+            layer_past_key_values = (
+                <a id="change">past_key_values[i]</a><a id="change">
+                if </a><a id="change">slice_past_index is None
+                else past_key_values[i, :slice_past_index]</a>
+            )
+
+            hidden_states<a id="change">, residual = </a><a id="change">layer(
+                </a>hidden_states,
+                residual,
+                cos,
+                sin,
+                cu_seqlens,
+                max_s,
+                layer_past_key_values,
+                layer_past_present_indices,
+                cu_seqlens_q<a id="change">,
+            )</a>
+
+        hidden_states, _ = self.norm(hidden_states, residual)
+
+        return hidden_states, past_key_values</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/huggingface/text-generation-inference/commit/db4cb5e4ed2b994131fc575eff6689da9b661679#diff-dfc5ec09e8b044b6547f6be43fce7be9bf8af736997fdae0c8e18fa0ac87445bL551' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 66852605</div><div id='project'> Project Name: huggingface/text-generation-inference</div><div id='commit'> Commit Name: db4cb5e4ed2b994131fc575eff6689da9b661679</div><div id='time'> Time: 2023-04-21</div><div id='author'> Author: olivier@huggingface.co</div><div id='file'> File Name: server/text_generation_server/models/custom_modeling/flash_llama_modeling.py</div><div id='m_class'> M Class Name: FlashLlamaModel</div><div id='n_method'> N Class Name: FlashLlamaModel</div><div id='m_method'> M Method Name: forward(7)</div><div id='n_method'> N Method Name: forward(6)</div><div id='m_parent_class'> M Parent Class: torch.nn.Module</div><div id='n_parent_class'> N Parent Class: torch.nn.Module</div><div id='m_file'> M File Name: server/text_generation_server/models/custom_modeling/flash_llama_modeling.py</div><div id='n_file'> N File Name: server/text_generation_server/models/custom_modeling/flash_llama_modeling.py</div><div id='m_start'> M Start Line: 557</div><div id='m_end'> M End Line: 601</div><div id='n_start'> N Start Line: 558</div><div id='n_end'> N End Line: 614</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        max_s,
+        past_key_values=None,
+    ):
+        <a id="change">hidden_states</a> = self.wte(input_ids) + self.wpe(position_ids)
+        if self.tp_embeddings:
+            torch.distributed.all_reduce(hidden_states, group=self.process_group)
+
+        &#47&#47 Prefill
+        if past_key_values is None:
+            &#47&#47 Create past tensor
+            <a id="change">past_key_values</a> = hidden_states.new_empty(
+                (
+                    len(self.h),
+                    <a id="change">len(</a>hidden_states<a id="change">)</a>,
+                    2,
+                    1,
+                    self.head_size,
+                )
+            )
+            layer_past_present_indices = None
+            cu_seqlens_q = None
+        &#47&#47 Decode
+        else:
+            &#47&#47 Create indices from cumulative sequence lengths
+            layer_past_present_indices = cu_seqlens[1:] - 1
+            cu_seqlens_q = torch.arange(
+                cu_seqlens.shape[0], dtype=torch.int32, device=hidden_states.device
+            )
+
+        <a id="change">residual</a> = None
+        for i, layer in enumerate(self.h):
+            hidden_states<a id="change">, residual</a> = <a id="change">layer(
+                </a>hidden_states,
+                residual,
+                cu_seqlens,
+                max_s,
+                <a id="change">past_key_values[i]</a>,
+                layer_past_present_indices,
+                cu_seqlens_q<a id="change">,
+            )</a>
+
+        hidden_states, _ = self.ln_f(hidden_states, residual)
+
+        return hidden_states, past_key_values</code></pre><h3>After Change</h3><pre><code class='java'>
+        past_key_values: Optional[torch.Tensor] = None,
+        pre_allocate_past_size: Optional[int] = None,
+    ):
+        <a id="change">hidden_states</a> = self.wte(input_ids) + self.wpe(position_ids)
+        if self.tp_embeddings:
+            torch.distributed.all_reduce(hidden_states, group=self.process_group)
+
+        &#47&#47 Prefill
+        if past_key_values is None:
+            &#47&#47 Create past tensor
+            <a id="change">past_key_values</a> = hidden_states.new_empty(
+                (
+                    len(self.h),
+                    <a id="change">len(</a>hidden_states<a id="change">)
+                    if </a><a id="change">pre_allocate_past_size is None
+                    else </a>pre_allocate_past_size,
+                    2,
+                    1,
+                    self.head_size,
+                )
+            )
+            layer_past_present_indices = None
+            cu_seqlens_q = None
+            slice_past_index<a id="change"> = </a><a id="change">len(</a>hidden_states<a id="change">)</a>
+        &#47&#47 Decode
+        else:
+            &#47&#47 Create indices from cumulative sequence lengths
+            layer_past_present_indices = cu_seqlens[1:] - 1
+            cu_seqlens_q = torch.arange(
+                cu_seqlens.shape[0], dtype=torch.int32, device=hidden_states.device
+            )
+            slice_past_index<a id="change"> = </a>None
+
+        <a id="change">residual</a> = None
+        for i, layer in enumerate(self.h):
+            &#47&#47 We added padding that now need to slice
+            layer_past_key_values = (
+                <a id="change">past_key_values[i]</a><a id="change">
+                if </a><a id="change">slice_past_index is None
+                else past_key_values[i, :slice_past_index]</a>
+            )
+
+            hidden_states<a id="change">, residual = </a><a id="change">layer(
+                </a>hidden_states,
+                residual,
+                cu_seqlens,
+                max_s,
+                layer_past_key_values,
+                layer_past_present_indices,
+                cu_seqlens_q<a id="change">,
+            )</a>
+
+        hidden_states, _ = self.ln_f(hidden_states, residual)
+
+        return hidden_states, past_key_values</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/huggingface/text-generation-inference/commit/db4cb5e4ed2b994131fc575eff6689da9b661679#diff-4294535c61ba845a58c3811602b0f1895f3ce53ab074172e37be99a81e32129fL481' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 66852601</div><div id='project'> Project Name: huggingface/text-generation-inference</div><div id='commit'> Commit Name: db4cb5e4ed2b994131fc575eff6689da9b661679</div><div id='time'> Time: 2023-04-21</div><div id='author'> Author: olivier@huggingface.co</div><div id='file'> File Name: server/text_generation_server/models/custom_modeling/flash_santacoder_modeling.py</div><div id='m_class'> M Class Name: FlashSantacoderModel</div><div id='n_method'> N Class Name: FlashSantacoderModel</div><div id='m_method'> M Method Name: forward(7)</div><div id='n_method'> N Method Name: forward(6)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: server/text_generation_server/models/custom_modeling/flash_santacoder_modeling.py</div><div id='n_file'> N File Name: server/text_generation_server/models/custom_modeling/flash_santacoder_modeling.py</div><div id='m_start'> M Start Line: 487</div><div id='m_end'> M End Line: 525</div><div id='n_start'> N Start Line: 488</div><div id='n_end'> N End Line: 538</div><BR>

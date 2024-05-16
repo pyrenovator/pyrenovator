@@ -1,0 +1,33 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 combine masks along attended time - first encoder and then decoder
+        mask = torch.cat(
+            (
+                <a id="change">encoder_mask.unsqueeze(1).expand(-1</a>, decoder_length, <a id="change">-1</a><a id="change">),
+                decoder_mask.unsqueeze(0).expand(encoder_lengths.size(0), -1, -1)</a>,
+            ),
+            dim=2,
+        )</code></pre><h3>After Change</h3><pre><code class='java'>
+        Returns causal mask to apply for self-attention layer.
+        
+        decoder_length = decoder_lengths.max()
+        <a id="change">if </a>self.hparams.causal_attention:
+            &#47&#47 indices to which is attended
+            attend_step = torch.arange(decoder_length, device=self.device)
+            &#47&#47 indices for which is predicted
+            predict_step = torch.arange(0, decoder_length, device=self.device)[:, None]
+            &#47&#47 do not attend to steps to self or after prediction
+            decoder_mask = (attend_step &gt;= predict_step).unsqueeze(0).expand(encoder_lengths.size(0), -1, -1)
+        else:
+            &#47&#47 there is value in attending to future forecasts if they are made with knowledge currently
+            &#47&#47   available
+            &#47&#47   one possibility is here to use a second attention layer for future attention (assuming different effects
+            &#47&#47   matter in the future than the past)
+            &#47&#47   or alternatively using the same layer but allowing forward attention - i.e. only
+            &#47&#47   masking out non-available data and self
+            decoder_mask<a id="change"> = </a>create_mask(decoder_length, decoder_lengths).unsqueeze(1).expand(-1, decoder_length, -1)
+        &#47&#47 do not attend to steps where data is padded
+        encoder_mask = create_mask(encoder_lengths.max(), encoder_lengths).unsqueeze(1).expand(-1, decoder_length, -1)
+        &#47&#47 combine masks along attended time - first encoder and then decoder</code></pre>

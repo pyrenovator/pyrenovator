@@ -1,0 +1,74 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+        &#47&#47 5-level loop, forgive me...
+        for xi, xs in enumerate(X):
+            for yi, ys in <a id="change">enumerate(</a>Y<a id="change">)</a>:
+                for zi, zs in enumerate(Z):
+                    lx, ly, lz = len(xs), len(ys), len(zs)
+                    &#47&#47 construct points
+                    xx, yy, zz = custom_meshgrid(xs, ys, zs)
+                    world_xyzs = torch.cat([xx.reshape(-1, 1), yy.reshape(-1, 1), zz.reshape(-1, 1)], dim=-1).unsqueeze(0).to(count.device) &#47&#47 [1, N, 3]
+
+                    &#47&#47 cascading
+                    for cas in range(self.cascade):
+                        bound = min(2 ** cas, self.bound)
+                        half_grid_size = bound / resolution
+                        &#47&#47 scale to current cascade&quots resolution
+                        cas_world_xyzs = world_xyzs * (bound - half_grid_size)
+
+                        &#47&#47 split batch to avoid OOM
+                        head = 0
+                        while head &lt; B:
+                            tail = min(head + S, B)
+
+                            &#47&#47 world2cam transform (poses is c2w, so we need to transpose it. Another transpose is needed for batched matmul, so the final form is without transpose.)
+                            cam_xyzs = cas_world_xyzs - poses[head:tail, :3, 3].unsqueeze(1)
+                            cam_xyzs = cam_xyzs @ poses[head:tail, :3, :3] &#47&#47 [S, N, 3]
+                            
+                            &#47&#47 query if point is covered by any camera
+                            mask_z = cam_xyzs[:, :, 2] &gt; 0 &#47&#47 [S, N]
+                            mask_x = torch.abs(cam_xyzs[:, :, 0]) &lt; cx / fx * cam_xyzs[:, :, 2] + half_grid_size * 2
+                            mask_y = torch.abs(cam_xyzs[:, :, 1]) &lt; cy / fy * cam_xyzs[:, :, 2] + half_grid_size * 2
+                            mask = (mask_z & mask_x & mask_y).sum(0).reshape(lx, ly, lz) &#47&#47 [N] --&gt; [lx, ly, lz]
+
+                            &#47&#47 update count 
+                            count[cas, xi * S: xi<a id="change"> * </a>S + lx, yi * S: yi * S + ly, zi * S: zi * S + lz] += mask
+                            head += S
+    
+        &#47&#47 mark untrained grid as -1</code></pre><h3>After Change</h3><pre><code class='java'>
+                    &#47&#47 construct points
+                    xx, yy, zz = custom_meshgrid(xs, ys, zs)
+                    coords = torch.cat([xx.reshape(-1, 1), yy.reshape(-1, 1), zz.reshape(-1, 1)], dim=-1) &#47&#47 [N, 3], in [0, 128)
+                    indices<a id="change"> = </a><a id="change">raymarching.morton3D(coords).long()</a> &#47&#47 [N]
+                    world_xyzs = (2 * coords.float() / (self.grid_size - 1) - 1).unsqueeze(0) &#47&#47 [1, N, 3] in [-1, 1]
+
+                    &#47&#47 cascading
+                    for cas in range(self.cascade):
+                        bound = min(2 ** cas, self.bound)
+                        half_grid_size = bound / self.grid_size
+                        &#47&#47 scale to current cascade&quots resolution
+                        cas_world_xyzs = world_xyzs * (bound - half_grid_size)
+
+                        &#47&#47 split batch to avoid OOM
+                        head = 0
+                        while head &lt; B:
+                            tail = min(head + S, B)
+
+                            &#47&#47 world2cam transform (poses is c2w, so we need to transpose it. Another transpose is needed for batched matmul, so the final form is without transpose.)
+                            cam_xyzs = cas_world_xyzs - poses[head:tail, :3, 3].unsqueeze(1)
+                            cam_xyzs = cam_xyzs @ poses[head:tail, :3, :3] &#47&#47 [S, N, 3]
+                            
+                            &#47&#47 query if point is covered by any camera
+                            mask_z = cam_xyzs[:, :, 2] &gt; 0 &#47&#47 [S, N]
+                            mask_x = torch.abs(cam_xyzs[:, :, 0]) &lt; cx / fx * cam_xyzs[:, :, 2] + half_grid_size * 2
+                            mask_y = torch.abs(cam_xyzs[:, :, 1]) &lt; cy / fy * cam_xyzs[:, :, 2] + half_grid_size * 2
+                            mask = (mask_z & mask_x & mask_y).sum(0).reshape(-1) &#47&#47 [N]
+
+                            &#47&#47 update count 
+                            count[cas<a id="change">, indices</a>] += mask
+                            head += S
+    
+        &#47&#47 mark untrained grid as -1</code></pre>

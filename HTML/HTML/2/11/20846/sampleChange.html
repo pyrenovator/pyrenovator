@@ -1,0 +1,62 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            [sample.file_name for sample in samples],
+            custom_metadata,
+        )
+        <a id="change">if len(filename_to_metadata) != len(custom_metadata[COCO_ANNOTATION_KEYS.images])</a>:
+            <a id="change">raise ValueError(
+                f&quotThere is a mismatch between the number of images &quot
+                f&quotin the metadata file ({len(filename_to_metadata)}) and on the &quot
+                f&quotserver ({len(custom_metadata[COCO_ANNOTATION_KEYS.images])}).&quot</a><a id="change">
+            )</a>
+
+        &#47&#47 retry upload if it times out
+        def upload_sample_metadata(args):
+            request, sample = args
+            return retry(
+                self._samples_api.update_sample_by_id,
+                request,
+                dataset_id=self.dataset_id,
+                sample_id=sample.id,
+            )
+
+        &#47&#47 create a list of all the requests and their corresponding samples
+        sample_requests<a id="change"> = </a>[]
+        for sample in samples:
+            metadata = filename_to_metadata[sample.file_name]
+            if metadata is not None:
+                update_sample_request<a id="change"> = </a>SampleUpdateRequest(
+                    custom_meta_data=metadata
+                )
+                sample_requests.append((update_sample_request, sample))</code></pre><h3>After Change</h3><pre><code class='java'>
+        }
+
+        upload_requests = []
+        <a id="change">for </a>metadata in custom_metadata[COCO_ANNOTATION_KEYS.custom_metadata]<a id="change">:
+            </a>image_id = metadata[COCO_ANNOTATION_KEYS.custom_metadata_image_id]
+            filename = image_id_to_filename.get(image_id, None)
+            if filename is None:
+                print_as_warning(
+                    f&quotNo image found for custom metadata annotation &quot
+                    f&quotwith image_id {image_id}. &quot
+                    f&quotThis custom metadata annotation is skipped. &quot,
+                    InvalidCustomMetadataWarning
+                )
+                continue
+            sample_id = filename_to_sample_id.get(filename, None)
+            <a id="change">if </a>sample_id is None:
+                print_as_warning(
+                    f&quotYou tried to upload custom metadata for a sample with &quot
+                    f&quotfilename {{{filename}}}, &quot
+                    f&quotbut a sample with this filename &quot
+                    f&quotdoes not exist on the server. &quot
+                    f&quotThis custom metadata annotation is skipped. &quot,
+                    InvalidCustomMetadataWarning
+                )
+                <a id="change">continue</a>
+            upload_request = (metadata, sample_id)
+            upload_requests.append(upload_request)
+
+        &#47&#47 retry upload if it times out</code></pre>

@@ -1,0 +1,73 @@
+<html><h3>Pattern ID :25330
+</h3><img src='77537469.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+  @staticmethod
+  def backward(ctx, grad_output):
+    x,y,prg = ctx.saved_tensors
+    gx<a id="change"> = </a><a id="change">buffer_like(</a>ctx, x<a id="change">)</a>
+    gy = buffer_like(ctx, y)
+    prg.mul(ctx.cl_queue, <a id="change">[</a>gx.size//4<a id="change"></a>], None, y, grad_output, gx)
+    prg.mul(ctx.cl_queue, [gy.size//4], None, x, grad_output, gy)
+    <a id="change">return </a>gx, gy
+register(&quotmul&quot, Mul, gpu=True)
+
+class Sum(Function):</code></pre><h3>After Change</h3><pre><code class='java'>
+  @staticmethod
+  def backward(ctx, grad_output):
+    x,y = ctx.saved_tensors
+    <a id="change">return </a><a id="change">in_place_op(</a>ctx, <a id="change">&quotres_g[gid] = a_g[gid] * b_g[gid];&quot</a>, y, grad_output<a id="change">)</a>,\
+           in_place_op(ctx, &quotres_g[gid] = a_g[gid] * b_g[gid];&quot, x, grad_output)
+register(&quotmul&quot, Mul, gpu=True)
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 6</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/geohot/tinygrad/commit/82fc842b40fe03742e4e56683788bf6fb2072956#diff-b7e8a4d3462e65523c8cfd523079177ad58eb9176481ea76a4dedbe501683059L66' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 77537469</div><div id='project'> Project Name: geohot/tinygrad</div><div id='commit'> Commit Name: 82fc842b40fe03742e4e56683788bf6fb2072956</div><div id='time'> Time: 2020-11-02</div><div id='author'> Author: geohot@gmail.com</div><div id='file'> File Name: tinygrad/opsgpu.py</div><div id='m_class'> M Class Name: Mul</div><div id='n_method'> N Class Name: Mul</div><div id='m_method'> M Method Name: backward(2)</div><div id='n_method'> N Method Name: backward(2)</div><div id='m_parent_class'> M Parent Class: Function</div><div id='n_parent_class'> N Parent Class: Function</div><div id='m_file'> M File Name: tinygrad/opsgpu.py</div><div id='n_file'> N File Name: tinygrad/opsgpu.py</div><div id='m_start'> M Start Line: 88</div><div id='m_end'> M End Line: 93</div><div id='n_start'> N Start Line: 66</div><div id='n_end'> N End Line: 67</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+class Sub(Function):
+  @staticmethod
+  def forward(ctx, x, y):
+    ret<a id="change"> = </a><a id="change">buffer_like(</a>ctx, x<a id="change">)</a>
+    prg = cl.Program(ctx.cl_ctx, 
+    __kernel void sub(
+        __global const float *a_g, __global const float *b_g, __global float *res_g)
+    {
+      int gid = get_global_id(0);
+      res_g[gid] = a_g[gid] - b_g[gid];
+    }
+    ).build()
+    prg.sub(ctx.cl_queue, <a id="change">[</a>np.prod(ret.shape)<a id="change"></a>], None, x, y, ret)
+    <a id="change">return </a>ret
+
+  @staticmethod
+  def backward(ctx, grad_output):</code></pre><h3>After Change</h3><pre><code class='java'>
+class Sub(Function):
+  @staticmethod
+  def forward(ctx, x, y):
+    <a id="change">return </a><a id="change">in_place_op(</a>ctx, <a id="change">&quotres_g[gid] = a_g[gid] - b_g[gid];&quot</a>, x, y<a id="change">)</a>
+
+  @staticmethod
+  def backward(ctx, grad_output):
+    &#47&#47 WRONG</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/geohot/tinygrad/commit/82fc842b40fe03742e4e56683788bf6fb2072956#diff-b7e8a4d3462e65523c8cfd523079177ad58eb9176481ea76a4dedbe501683059L36' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 77537467</div><div id='project'> Project Name: geohot/tinygrad</div><div id='commit'> Commit Name: 82fc842b40fe03742e4e56683788bf6fb2072956</div><div id='time'> Time: 2020-11-02</div><div id='author'> Author: geohot@gmail.com</div><div id='file'> File Name: tinygrad/opsgpu.py</div><div id='m_class'> M Class Name: Sub</div><div id='n_method'> N Class Name: Sub</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: Function</div><div id='n_parent_class'> N Parent Class: Function</div><div id='m_file'> M File Name: tinygrad/opsgpu.py</div><div id='n_file'> N File Name: tinygrad/opsgpu.py</div><div id='m_start'> M Start Line: 37</div><div id='m_end'> M End Line: 47</div><div id='n_start'> N Start Line: 40</div><div id='n_end'> N End Line: 40</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+class Add(Function):
+  @staticmethod
+  def forward(ctx, x, y):
+    ret<a id="change"> = </a><a id="change">buffer_like(</a>ctx, x<a id="change">)</a>
+    prg = cl.Program(ctx.cl_ctx, 
+    __kernel void add(
+        __global const float *a_g, __global const float *b_g, __global float *res_g)
+    {
+      int gid = get_global_id(0);
+      res_g[gid] = a_g[gid] + b_g[gid];
+    }
+    ).build()
+    prg.add(ctx.cl_queue, <a id="change">[</a>np.prod(ret.shape)<a id="change"></a>], None, x, y, ret)
+    <a id="change">return </a>ret
+
+  @staticmethod
+  def backward(ctx, grad_output):</code></pre><h3>After Change</h3><pre><code class='java'>
+class Add(Function):
+  @staticmethod
+  def forward(ctx, x, y):
+    <a id="change">return </a><a id="change">in_place_op(</a>ctx, <a id="change">&quotres_g[gid] = a_g[gid] + b_g[gid];&quot</a>, x, y<a id="change">)</a>
+
+  @staticmethod
+  def backward(ctx, grad_output):
+    return grad_output, grad_output</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/geohot/tinygrad/commit/82fc842b40fe03742e4e56683788bf6fb2072956#diff-b7e8a4d3462e65523c8cfd523079177ad58eb9176481ea76a4dedbe501683059L16' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 77537466</div><div id='project'> Project Name: geohot/tinygrad</div><div id='commit'> Commit Name: 82fc842b40fe03742e4e56683788bf6fb2072956</div><div id='time'> Time: 2020-11-02</div><div id='author'> Author: geohot@gmail.com</div><div id='file'> File Name: tinygrad/opsgpu.py</div><div id='m_class'> M Class Name: Add</div><div id='n_method'> N Class Name: Add</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: Function</div><div id='n_parent_class'> N Parent Class: Function</div><div id='m_file'> M File Name: tinygrad/opsgpu.py</div><div id='n_file'> N File Name: tinygrad/opsgpu.py</div><div id='m_start'> M Start Line: 17</div><div id='m_end'> M End Line: 27</div><div id='n_start'> N Start Line: 30</div><div id='n_end'> N End Line: 30</div><BR>

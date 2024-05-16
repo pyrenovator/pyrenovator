@@ -1,0 +1,32 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                )
+
+    def _reduce_and_log_stats(self, logging_outputs, sample_size):
+        if logging_outputs is None or <a id="change">len(logging_outputs) == 0</a>:
+            return <a id="change">{</a>"sample_size": sample_size<a id="change">}</a>
+        with metrics.aggregate() as agg:
+            &#47&#47 convert logging_outputs to CPU to avoid unnecessary
+            &#47&#47 device-to-host transfers in reduce_metrics
+            logging_outputs = utils.apply_to_sample(</code></pre><h3>After Change</h3><pre><code class='java'>
+    def _reduce_and_log_stats(self, logging_outputs, sample_size, grad_norm=None):
+        if grad_norm is not None:
+            metrics.log_speed("ups", 1., priority=100, round=2)
+            <a id="change">metrics.log_scalar("gnorm"</a>, grad_norm<a id="change">, priority=400, round=3)</a>
+            if self.args.clip_norm &gt; 0:
+                <a id="change">metrics.log_scalar(
+                    "clip"</a>,
+                    torch.where(
+                        grad_norm &gt; self.args.clip_norm,
+                        grad_norm.new_tensor(100),
+                        grad_norm.new_tensor(0),
+                    )<a id="change">,
+                    priority=500,
+                    round=1,
+                )</a>
+
+        with metrics.aggregate() as agg:
+            if logging_outputs is not None:
+                self.task.reduce_metrics(logging_outputs, self.get_criterion())</code></pre>

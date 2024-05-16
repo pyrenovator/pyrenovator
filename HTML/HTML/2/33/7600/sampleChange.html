@@ -1,0 +1,60 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            self._run_train()
+
+    def _run_collect(self, n_steps: int = 1) -&gt; None:
+        <a id="change">for _</a> in <a id="change">range(</a>n_steps<a id="change">)</a><a id="change">:
+            </a>act = self.agent.sample(self.obs)
+            next_obs, reward, done, infos = self.envs.step(act)
+            real_next_obs = next_obs.copy()
+
+            for idx, d in enumerate(done):
+                if d and infos[idx].get("terminal_observation") is not None:
+                    real_next_obs[idx] = infos[idx]["terminal_observation"]
+
+            self.buffer.add(self.obs, real_next_obs, act, reward, done, infos)
+            self.obs = next_obs
+
+            &#47&#47 logger
+            <a id="change">for </a>info in infos<a id="change">:
+                </a>if "episode" in info.keys():
+                    <a id="change">writer.add_scalar(
+                        "collect/episodic_length"</a>,
+                        <a id="change">info["episode"]["l"]</a>,
+                        self.agent.sample_step<a id="change">,
+                    )</a>
+                    <a id="change">writer.add_scalar(
+                        "collect/episodic_return"</a>,
+                        <a id="change">info["episode"]["r"]</a>,
+                        self.agent.sample_step<a id="change">,
+                    )</a>
+                    <a id="change">print(
+                        </a><a id="change">f"{self.agent.sample_step}: "</a><a id="change">
+                        + f"episodic_length {info[&quotepisode&quot][&quotl&quot]}, "
+                        + f"episodic_return {info[&quotepisode&quot][&quotr&quot]}"
+                    )</a>
+                    <a id="change">break</a>
+
+    def _run_train(self) -&gt; None:
+        data = self.buffer.sample(self.kwargs["batch_size"])
+        log_data = self.agent.learn(data)</code></pre><h3>After Change</h3><pre><code class='java'>
+        self.buffer.add(self.obs, real_next_obs, act, reward, done, infos)
+        self.obs = next_obs
+
+        <a id="change">for </a><a id="change">info</a> in infos<a id="change">:
+            </a>if "episode" in info.keys():
+                <a id="change">return {
+                    </a>"log_type": "collect",
+                    "sample_step": self.agent.sample_step,
+                    "logs": <a id="change">{
+                        </a>"episodic_length": <a id="change">info["episode"]["l"]</a>,
+                        "episodic_return": <a id="change">info["episode"]["r"],
+                    },
+                }</a>
+        <a id="change">return {</a>"log_type": "collect"<a id="change">}</a>
+
+    def _run_train(self) -&gt; Dict:
+        data = self.buffer.sample(self.kwargs["batch_size"])
+        log_data = self.agent.learn(data)</code></pre>

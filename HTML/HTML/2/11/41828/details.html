@@ -1,0 +1,62 @@
+<html><h3>Pattern ID :41828
+</h3><img src='117236601.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        hidden_states, present = self.gpt_neox(
+            input_ids, position_ids, cu_seqlens, max_s, past_key_values
+        )
+        return self.embed_out(hidden_states)<a id="change">, present</a>
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        )
+        logits = self.embed_out(hidden_states)
+
+        <a id="change">if self.gpt_neox.tp_embeddings</a>:
+            &#47&#47 Logits are sharded, so we need to gather them
+            <a id="change">world_logits = </a><a id="change">[torch.empty_like(logits) for _ in range(self.world_size)]</a>
+            <a id="change">torch.distributed.all_gather(world_logits</a>, logits<a id="change">, group=self.process_group)</a>
+            world_logits<a id="change"> = torch.cat(world_logits</a><a id="change">, dim=1)</a>
+
+            return world_logits, present
+        return logits, present
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 9</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/huggingface/text-generation-inference/commit/9987960062e40de2deae030ab7e4ad6f57de0b20#diff-e24db7a565766a50b02649a0a1ac904f9bacff6ae58a2901fefc092befcbd980L671' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 117236601</div><div id='project'> Project Name: huggingface/text-generation-inference</div><div id='commit'> Commit Name: 9987960062e40de2deae030ab7e4ad6f57de0b20</div><div id='time'> Time: 2023-04-09</div><div id='author'> Author: olivier@huggingface.co</div><div id='file'> File Name: server/text_generation_server/models/custom_modeling/flash_neox_modeling.py</div><div id='m_class'> M Class Name: FlashGPTNeoXForCausalLM</div><div id='n_method'> N Class Name: FlashGPTNeoXForCausalLM</div><div id='m_method'> M Method Name: forward(6)</div><div id='n_method'> N Method Name: forward(6)</div><div id='m_parent_class'> M Parent Class: FlashGPTNeoXPreTrainedModel</div><div id='n_parent_class'> N Parent Class: FlashGPTNeoXPreTrainedModel</div><div id='m_file'> M File Name: server/text_generation_server/models/custom_modeling/flash_neox_modeling.py</div><div id='n_file'> N File Name: server/text_generation_server/models/custom_modeling/flash_neox_modeling.py</div><div id='m_start'> M Start Line: 671</div><div id='m_end'> M End Line: 671</div><div id='n_start'> N Start Line: 674</div><div id='n_end'> N End Line: 683</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+        num_samples = self.num_save_images
+        if num_samples:
+            shape = (num_samples<a id="change"></a>,) + self.shape
+            &#47&#47 fixed x_T for image generation
+            &#47&#47 not of much importance since the entire reverse process is stochastic
+            noise = torch.randn(shape)</code></pre><h3>After Change</h3><pre><code class='java'>
+
+            if not (e + 1) % self.image_intv and num_samples and image_dir:
+                x = self.sample_fn(noise)
+                <a id="change">if self.distributed</a>:
+                    &#47&#47 balance GPU memory usages within the same process group
+                    <a id="change">x_list = </a><a id="change">[torch.zeros(shape, device=self.device) for _ in range(self.world_size)]</a>
+                    <a id="change">dist.all_gather(</a>x_list, x<a id="change">)</a>
+                    x<a id="change"> = torch.cat(</a>x_list<a id="change">, dim=0)</a>
+                x = x.cpu()
+                if self.is_main:
+                    save_image(x.cpu(), os.path.join(image_dir, f"{e + 1}.jpg"))
+            if not (e + 1) % self.chkpt_intv and chkpt_path and self.is_main:</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/tqch/ddpm-torch/commit/ae680b0f9dd35ff43532d9a7e0106948ba7ca4ba#diff-224fbf952bfa20d6bacac4aa1ff482e260225b426f41671e84b29058d14d3980L149' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 117236602</div><div id='project'> Project Name: tqch/ddpm-torch</div><div id='commit'> Commit Name: ae680b0f9dd35ff43532d9a7e0106948ba7ca4ba</div><div id='time'> Time: 2022-11-12</div><div id='author'> Author: tqch2020@gmail.com</div><div id='file'> File Name: ddpm_torch/utils/train.py</div><div id='m_class'> M Class Name: Trainer</div><div id='n_method'> N Class Name: Trainer</div><div id='m_method'> M Method Name: train(4)</div><div id='n_method'> N Method Name: train(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: ddpm_torch/utils/train.py</div><div id='n_file'> N File Name: ddpm_torch/utils/train.py</div><div id='m_start'> M Start Line: 151</div><div id='m_end'> M End Line: 184</div><div id='n_start'> N Start Line: 164</div><div id='n_end'> N End Line: 207</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        hidden_states, present = self.transformer(
+            input_ids, position_ids, cu_seqlens, max_s, past_key_values
+        )
+        return self.lm_head(hidden_states)<a id="change">, present</a>
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        )
+        logits = self.lm_head(hidden_states)
+
+        <a id="change">if self.transformer.tp_embeddings</a>:
+            &#47&#47 Logits are sharded, so we need to gather them
+            <a id="change">world_logits = </a><a id="change">[
+                torch.empty_like(logits) for _ in range(self.transformer.tp_world_size)
+            ]</a>
+            <a id="change">torch.distributed.all_gather(
+                </a>world_logits, logits<a id="change">, group=self.transformer.process_group
+            )</a>
+            world_logits<a id="change"> = torch.cat(</a>world_logits<a id="change">, dim=1)</a>
+
+            return world_logits, present
+
+        return logits, present</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/huggingface/text-generation-inference/commit/880a76eed5f058043367d9643be8a498b286bde2#diff-4294535c61ba845a58c3811602b0f1895f3ce53ab074172e37be99a81e32129fL344' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 117236598</div><div id='project'> Project Name: huggingface/text-generation-inference</div><div id='commit'> Commit Name: 880a76eed5f058043367d9643be8a498b286bde2</div><div id='time'> Time: 2023-04-12</div><div id='author'> Author: olivier@huggingface.co</div><div id='file'> File Name: server/text_generation_server/models/custom_modeling/flash_santacoder_modeling.py</div><div id='m_class'> M Class Name: FlashSantacoderForCausalLM</div><div id='n_method'> N Class Name: FlashSantacoderForCausalLM</div><div id='m_method'> M Method Name: forward(6)</div><div id='n_method'> N Method Name: forward(6)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: server/text_generation_server/models/custom_modeling/flash_santacoder_modeling.py</div><div id='n_file'> N File Name: server/text_generation_server/models/custom_modeling/flash_santacoder_modeling.py</div><div id='m_start'> M Start Line: 355</div><div id='m_end'> M End Line: 355</div><div id='n_start'> N Start Line: 526</div><div id='n_end'> N End Line: 540</div><BR>

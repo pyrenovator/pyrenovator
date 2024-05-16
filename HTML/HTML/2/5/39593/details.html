@@ -1,0 +1,429 @@
+<html><h3>Pattern ID :39593
+</h3><img src='112670935.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 IterableDataset that joins several individual datasets by taking a
+        &#47&#47 random number of samples from each. (or we could just have tiny,
+        &#47&#47 one-trajectory shards)
+        dataloader<a id="change"> = </a><a id="change">DataLoader(</a>dataset<a id="change">, num_workers=wds_workers,
+                                batch_size=None)</a>
+
+        loss_record = []
+
+        if self.scheduler_cls is not None:
+            if self.scheduler_cls in [CosineAnnealingLR, LinearWarmupCosine]:
+                self.scheduler = self.scheduler_cls(self.optimizer, training_epochs, **to_dict(self.scheduler_kwargs))
+            else:
+                self.scheduler = self.scheduler_cls(self.optimizer, **to_dict(self.scheduler_kwargs))
+
+        self.encoder.train(True)
+        self.decoder.train(True)
+        batches_trained = 0
+        epochs_trained = 0
+        training_complete<a id="change"> = </a>False
+        logging.debug(f"Training with {training_epochs} epochs and {training_batches} batches")
+        logging.debug(f"Batch size is {self.batch_size}")
+
+        while not training_complete:
+            loss_meter = AverageMeter()
+            &#47&#47 Set encoder and decoder to be in training mode
+
+            for step, batch in enumerate(dataloader):
+                &#47&#47 Construct batch (currently just using Torch&quots default batch-creator)
+                contexts, targets, traj_ts_info, extra_context = self.unpack_batch(batch)
+
+                &#47&#47 Use an algorithm-specific augmentation strategy to augment either
+                &#47&#47 just context, or both context and targets
+                contexts, targets = self._prep_tensors(contexts), self._prep_tensors(targets)
+                extra_context = self._prep_tensors(extra_context)
+                traj_ts_info = self._prep_tensors(traj_ts_info)
+                &#47&#47 Note: preprocessing might be better to do on CPU if, in future, we can parallelize doing so
+                contexts = self._preprocess(contexts)
+                if self.preprocess_target:
+                    targets = self._preprocess(targets)
+                contexts, targets = self.augmenter(contexts, targets)
+                extra_context = self._preprocess_extra_context(extra_context)
+
+
+                &#47&#47 These will typically just use the forward() function for the encoder, but can optionally
+                &#47&#47 use a specific encode_context and encode_target if one is implemented
+                encoded_contexts = self.encoder.encode_context(contexts, traj_ts_info)
+                encoded_targets = self.encoder.encode_target(targets, traj_ts_info)
+                &#47&#47 Typically the identity function
+                extra_context = self.encoder.encode_extra_context(extra_context, traj_ts_info)
+
+                &#47&#47 Use an algorithm-specific decoder to "decode" the representations into a loss-compatible tensor
+                &#47&#47 As with encode, these will typically just use forward()
+                decoded_contexts = self.decoder.decode_context(encoded_contexts, traj_ts_info, extra_context)
+                decoded_targets = self.decoder.decode_target(encoded_targets, traj_ts_info, extra_context)
+
+                &#47&#47 Optionally add to the batch before loss. By default, this is an identity operation, but
+                &#47&#47 can also implement momentum queue logic
+                decoded_contexts, decoded_targets = self.batch_extender(decoded_contexts, decoded_targets)
+
+                &#47&#47 Use an algorithm-specific loss function. Typically this only requires decoded_contexts and
+                &#47&#47 decoded_targets, but VAE requires encoded_contexts, so we pass it in here
+
+                loss = self.loss_calculator(decoded_contexts, decoded_targets, encoded_contexts)
+                loss_item = loss.item()
+                assert not np.isnan(loss_item), "Loss is not NAN"
+                loss_meter.update(loss_item)
+
+                self.optimizer.zero_grad()
+                loss.backward()
+                self.optimizer.step()
+                del loss  &#47&#47 so we don&quott use again
+
+                gradient_norm, weight_norm = self._calculate_norms()
+
+                &#47&#47 FIXME(sam): don&quott plot this every batch, plot it every k
+                &#47&#47 batches (will make log files much smaller & let us stream
+                &#47&#47 them to head node on Ray cluster)
+                loss_meter.update(loss_item)
+                logger.record(&quotloss&quot, loss_item)
+                logger.record(&quotgradient_norm&quot, gradient_norm.item())
+                logger.record(&quotweight_norm&quot, weight_norm.item())
+                logger.record(&quotepoch&quot, epochs_trained)
+                logger.record(&quotwithin_epoch_step&quot, step)
+                logger.record(&quotbatches_trained&quot, batches_trained)
+                logger.dump(step=batches_trained)
+                batches_trained += 1
+                if (training_batches is not None and batches_trained &gt;= training_batches):
+                    logging.info(f"Breaking out of training in epoch {epochs_trained} because max batches "
+                                 f"value of {training_batches} has been reached")
+                    training_complete = True
+                    break
+
+            assert batches_trained &gt; 0, \
+                "went through training loop with no batches---empty dataset?"
+            if epochs_trained == 0:
+                &#47&#47 we infer the size of the dataset from the number of
+                &#47&#47 iterations through the loop the first time
+                logging.debug(f"Dataset size is {batches_trained}")
+
+            if self.scheduler is not None:
+                self.scheduler.step()
+            loss_record.append(loss_meter.avg)
+
+            epochs_trained += 1
+            if (training_epochs is not None and epochs_trained &gt;= training_epochs):
+                training_complete<a id="change"> = </a>True
+
+            should_save_checkpoint = (training_complete or
+                                      epochs_trained % self.save_interval == 0)</code></pre><h3>After Change</h3><pre><code class='java'>
+            f"Training for {n_epochs} epochs, each of {batches_per_epoch} "
+            f"batches (batch size {self.batch_size})")
+
+        <a id="change">for </a>epoch_num in range(1, n_epochs + 1)<a id="change">:
+            </a>loss_meter = AverageMeter()
+            &#47&#47 Set encoder and decoder to be in training mode
+
+            for step, batch in enumerate(dataloader):</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 5</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/humancompatibleai/eirli/commit/579e0a8ca8ba0c924b8c8f393d9445915448617d#diff-da75b71a2421881ac87f16bdedbc66a6eee21a60650cb052fb123cfe1436b72fL220' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 112670935</div><div id='project'> Project Name: humancompatibleai/eirli</div><div id='commit'> Commit Name: 579e0a8ca8ba0c924b8c8f393d9445915448617d</div><div id='time'> Time: 2020-11-19</div><div id='author'> Author: sam@qxcv.net</div><div id='file'> File Name: src/il_representations/algos/representation_learner.py</div><div id='m_class'> M Class Name: RepresentationLearner</div><div id='n_method'> N Class Name: RepresentationLearner</div><div id='m_method'> M Method Name: learn(4)</div><div id='n_method'> N Method Name: learn(4)</div><div id='m_parent_class'> M Parent Class: BaseEnvironmentLearner</div><div id='n_parent_class'> N Parent Class: BaseEnvironmentLearner</div><div id='m_file'> M File Name: src/il_representations/algos/representation_learner.py</div><div id='n_file'> N File Name: src/il_representations/algos/representation_learner.py</div><div id='m_start'> M Start Line: 220</div><div id='m_end'> M End Line: 354</div><div id='n_start'> N Start Line: 220</div><div id='n_end'> N End Line: 343</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 IterableDataset that joins several individual datasets by taking a
+        &#47&#47 random number of samples from each. (or we could just have tiny,
+        &#47&#47 one-trajectory shards)
+        dataloader<a id="change"> = </a><a id="change">DataLoader(</a>dataset<a id="change">, num_workers=wds_workers,
+                                batch_size=None)</a>
+
+        loss_record = []
+
+        if self.scheduler_cls is not None:
+            if self.scheduler_cls in [CosineAnnealingLR, LinearWarmupCosine]:
+                self.scheduler = self.scheduler_cls(self.optimizer, training_epochs, **to_dict(self.scheduler_kwargs))
+            else:
+                self.scheduler = self.scheduler_cls(self.optimizer, **to_dict(self.scheduler_kwargs))
+
+        self.encoder.train(True)
+        self.decoder.train(True)
+        batches_trained = 0
+        epochs_trained = 0
+        training_complete<a id="change"> = </a>False
+        logging.debug(f"Training with {training_epochs} epochs and {training_batches} batches")
+        logging.debug(f"Batch size is {self.batch_size}")
+
+        while not training_complete:
+            loss_meter = AverageMeter()
+            &#47&#47 Set encoder and decoder to be in training mode
+
+            for step, batch in enumerate(dataloader):
+                &#47&#47 Construct batch (currently just using Torch&quots default batch-creator)
+                contexts, targets, traj_ts_info, extra_context = self.unpack_batch(batch)
+
+                &#47&#47 Use an algorithm-specific augmentation strategy to augment either
+                &#47&#47 just context, or both context and targets
+                contexts, targets = self._prep_tensors(contexts), self._prep_tensors(targets)
+                extra_context = self._prep_tensors(extra_context)
+                traj_ts_info = self._prep_tensors(traj_ts_info)
+                &#47&#47 Note: preprocessing might be better to do on CPU if, in future, we can parallelize doing so
+                contexts = self._preprocess(contexts)
+                if self.preprocess_target:
+                    targets = self._preprocess(targets)
+                contexts, targets = self.augmenter(contexts, targets)
+                extra_context = self._preprocess_extra_context(extra_context)
+
+
+                &#47&#47 These will typically just use the forward() function for the encoder, but can optionally
+                &#47&#47 use a specific encode_context and encode_target if one is implemented
+                encoded_contexts = self.encoder.encode_context(contexts, traj_ts_info)
+                encoded_targets = self.encoder.encode_target(targets, traj_ts_info)
+                &#47&#47 Typically the identity function
+                extra_context = self.encoder.encode_extra_context(extra_context, traj_ts_info)
+
+                &#47&#47 Use an algorithm-specific decoder to "decode" the representations into a loss-compatible tensor
+                &#47&#47 As with encode, these will typically just use forward()
+                decoded_contexts = self.decoder.decode_context(encoded_contexts, traj_ts_info, extra_context)
+                decoded_targets = self.decoder.decode_target(encoded_targets, traj_ts_info, extra_context)
+
+                &#47&#47 Optionally add to the batch before loss. By default, this is an identity operation, but
+                &#47&#47 can also implement momentum queue logic
+                decoded_contexts, decoded_targets = self.batch_extender(decoded_contexts, decoded_targets)
+
+                &#47&#47 Use an algorithm-specific loss function. Typically this only requires decoded_contexts and
+                &#47&#47 decoded_targets, but VAE requires encoded_contexts, so we pass it in here
+
+                loss = self.loss_calculator(decoded_contexts, decoded_targets, encoded_contexts)
+                loss_item = loss.item()
+                assert not np.isnan(loss_item), "Loss is not NAN"
+                loss_meter.update(loss_item)
+
+                self.optimizer.zero_grad()
+                loss.backward()
+                self.optimizer.step()
+                del loss  &#47&#47 so we don&quott use again
+
+                gradient_norm, weight_norm = self._calculate_norms()
+
+                &#47&#47 FIXME(sam): don&quott plot this every batch, plot it every k
+                &#47&#47 batches (will make log files much smaller & let us stream
+                &#47&#47 them to head node on Ray cluster)
+                loss_meter.update(loss_item)
+                logger.record(&quotloss&quot, loss_item)
+                logger.record(&quotgradient_norm&quot, gradient_norm.item())
+                logger.record(&quotweight_norm&quot, weight_norm.item())
+                logger.record(&quotepoch&quot, epochs_trained)
+                logger.record(&quotwithin_epoch_step&quot, step)
+                logger.record(&quotbatches_trained&quot, batches_trained)
+                logger.dump(step=batches_trained)
+                batches_trained += 1
+                if (training_batches is not None and batches_trained &gt;= training_batches):
+                    logging.info(f"Breaking out of training in epoch {epochs_trained} because max batches "
+                                 f"value of {training_batches} has been reached")
+                    training_complete = True
+                    break
+
+            assert batches_trained &gt; 0, \
+                "went through training loop with no batches---empty dataset?"
+            if epochs_trained == 0:
+                &#47&#47 we infer the size of the dataset from the number of
+                &#47&#47 iterations through the loop the first time
+                logging.debug(f"Dataset size is {batches_trained}")
+
+            if self.scheduler is not None:
+                self.scheduler.step()
+            loss_record.append(loss_meter.avg)
+
+            epochs_trained<a id="change"> += </a>1
+            if (training_epochs is not None and epochs_trained &gt;= training_epochs):
+                training_complete = True
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            f"Training for {n_epochs} epochs, each of {batches_per_epoch} "
+            f"batches (batch size {self.batch_size})")
+
+        <a id="change">for </a>epoch_num in range(1, n_epochs + 1)<a id="change">:
+            </a>loss_meter = AverageMeter()
+            &#47&#47 Set encoder and decoder to be in training mode
+
+            for step, batch in enumerate(dataloader):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/humancompatibleai/eirli/commit/ccdc28141c799043c5385b20f1201bc6971e462b#diff-da75b71a2421881ac87f16bdedbc66a6eee21a60650cb052fb123cfe1436b72fL215' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 112670951</div><div id='project'> Project Name: humancompatibleai/eirli</div><div id='commit'> Commit Name: ccdc28141c799043c5385b20f1201bc6971e462b</div><div id='time'> Time: 2020-11-19</div><div id='author'> Author: sam@qxcv.net</div><div id='file'> File Name: src/il_representations/algos/representation_learner.py</div><div id='m_class'> M Class Name: RepresentationLearner</div><div id='n_method'> N Class Name: RepresentationLearner</div><div id='m_method'> M Method Name: learn(4)</div><div id='n_method'> N Method Name: learn(4)</div><div id='m_parent_class'> M Parent Class: BaseEnvironmentLearner</div><div id='n_parent_class'> N Parent Class: BaseEnvironmentLearner</div><div id='m_file'> M File Name: src/il_representations/algos/representation_learner.py</div><div id='n_file'> N File Name: src/il_representations/algos/representation_learner.py</div><div id='m_start'> M Start Line: 220</div><div id='m_end'> M End Line: 354</div><div id='n_start'> N Start Line: 220</div><div id='n_end'> N End Line: 343</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        pin_memory=pin_memory, drop_last=True,
+    )
+
+    queryloader<a id="change"> = </a><a id="change">DataLoader(
+        </a>VideoDataset(dataset.query, seq_len=args.seq_len, sample=&quotevenly&quot, transform=transform_test)<a id="change">,
+        batch_size=args.test_batch, shuffle=False, num_workers=args.workers,
+        pin_memory=pin_memory, drop_last=False,
+    )</a>
+
+    galleryloader<a id="change"> = </a>DataLoader(
+        VideoDataset(dataset.gallery, seq_len=args.seq_len, sample=&quotevenly&quot, transform=transform_test),
+        batch_size=args.test_batch, shuffle=False, num_workers=args.workers,
+        pin_memory=pin_memory, drop_last=False,
+    )
+
+    print("Initializing model: {}".format(args.arch))
+    model = models.init_model(name=args.arch, num_classes=dataset.num_train_pids, loss={&quotxent&quot})
+    print("Model size: {:.3f} M".format(count_num_param(model)))
+
+    criterion = CrossEntropyLoss(num_classes=dataset.num_train_pids, use_gpu=use_gpu, label_smooth=args.label_smooth)
+    optimizer = init_optim(args.optim, model.parameters(), args.lr, args.weight_decay)
+    scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=args.stepsize, gamma=args.gamma)
+
+    if args.fixbase_epoch &gt; 0:
+        if hasattr(model, &quotclassifier&quot) and isinstance(model.classifier, nn.Module):
+            optimizer_tmp = init_optim(args.optim, model.classifier.parameters(), args.fixbase_lr, args.weight_decay)
+        else:
+            print("Warn: model has no attribute &quotclassifier&quot and fixbase_epoch is reset to 0")
+            args.fixbase_epoch = 0
+
+    if args.load_weights and check_isfile(args.load_weights):
+        &#47&#47 load pretrained weights but ignore layers that don&quott match in size
+        checkpoint = torch.load(args.load_weights)
+        pretrain_dict = checkpoint[&quotstate_dict&quot]
+        model_dict = model.state_dict()
+        pretrain_dict = {k: v for k, v in pretrain_dict.items() if k in model_dict and model_dict[k].size() == v.size()}
+        model_dict.update(pretrain_dict)
+        model.load_state_dict(model_dict)
+        print("Loaded pretrained weights from &quot{}&quot".format(args.load_weights))
+
+    if args.resume and check_isfile(args.resume):
+        checkpoint = torch.load(args.resume)
+        model.load_state_dict(checkpoint[&quotstate_dict&quot])
+        args.start_epoch = checkpoint[&quotepoch&quot] + 1
+        best_rank1 = checkpoint[&quotrank1&quot]
+        print("Loaded checkpoint from &quot{}&quot".format(args.resume))
+        print("- start_epoch: {}\n- rank1: {}".format(args.start_epoch, best_rank1))
+
+    if use_gpu:
+        model = nn.DataParallel(model).cuda()
+
+    if args.evaluate:
+        print("Evaluate only")
+        distmat = test(model, queryloader, galleryloader, args.pool, use_gpu, return_distmat=True)
+        if args.visualize_ranks:
+            visualize_ranked_results(
+                distmat, dataset,
+                save_dir=osp.join(args.save_dir, &quotranked_results&quot),
+                topk=20,
+            )
+        return
+
+    start_time = time.time()
+    train_time = 0
+    best_epoch = args.start_epoch
+    print("==&gt; Start training")
+
+    if args.fixbase_epoch &gt; 0:
+        print("Train classifier for {} epochs while keeping base network frozen".format(args.fixbase_epoch))
+
+        for epoch in range(args.fixbase_epoch):
+            start_train_time = time.time()
+            train(epoch, model, criterion, optimizer_tmp, trainloader, use_gpu, freeze_bn=True)
+            train_time += round(time.time() - start_train_time)
+
+        del optimizer_tmp
+        print("Now open all layers for training")
+
+    for epoch in range(args.start_epoch, args.max_epoch):
+        start_train_time = time.time()
+        train(epoch, model, criterion, optimizer, trainloader, use_gpu)
+        train_time += round(time.time() - start_train_time)
+        
+        scheduler.step()
+        
+        if (epoch + 1) &gt; args.start_eval and args.eval_step &gt; 0 and (epoch + 1) % args.eval_step == 0 or (epoch + 1) == args.max_epoch:
+            print("==&gt; Test")
+            rank1 = test(model, queryloader, galleryloader, args.pool, use_gpu)
+            is_best = rank1 &gt; best_rank1
+            
+            if is_best:
+                best_rank1 = rank1
+                best_epoch<a id="change"> = </a>epoch + 1
+
+            if use_gpu:
+                state_dict = model.module.state_dict()</code></pre><h3>After Change</h3><pre><code class='java'>
+    if args.evaluate:
+        print("Evaluate only")
+
+        <a id="change">for </a>name in args.target<a id="change">:
+            </a>print("Evaluating {} ...".format(name))
+            queryloader = testloader_dict[name][&quotquery&quot]
+            galleryloader = testloader_dict[name][&quotgallery&quot]
+            distmat = test(model, queryloader, galleryloader, args.pool, use_gpu, return_distmat=True)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/vlsomers/bpbreid/commit/2ecd8e57044c13adc4c105b2d58aa07697384590#diff-e6c0c833279ad43f0c76b2e4799c36ce85c9cbbcd1aeb2f6e0af3401a600792eL104' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 112670964</div><div id='project'> Project Name: vlsomers/bpbreid</div><div id='commit'> Commit Name: 2ecd8e57044c13adc4c105b2d58aa07697384590</div><div id='time'> Time: 2018-11-07</div><div id='author'> Author: k.zhou@qmul.ac.uk</div><div id='file'> File Name: train_vidreid_xent.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(0)</div><div id='n_method'> N Method Name: main(0)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: train_vidreid_xent.py</div><div id='n_file'> N File Name: train_vidreid_xent.py</div><div id='m_start'> M Start Line: 125</div><div id='m_end'> M End Line: 247</div><div id='n_start'> N Start Line: 58</div><div id='n_end'> N End Line: 163</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        pin_memory=pin_memory, drop_last=True,
+    )
+
+    queryloader<a id="change"> = </a>DataLoader(
+        ImageDataset(dataset.query, transform=transform_test),
+        batch_size=args.test_batch, shuffle=False, num_workers=args.workers,
+        pin_memory=pin_memory, drop_last=False,
+    )
+
+    galleryloader<a id="change"> = </a><a id="change">DataLoader(
+        </a>ImageDataset(dataset.gallery, transform=transform_test)<a id="change">,
+        batch_size=args.test_batch, shuffle=False, num_workers=args.workers,
+        pin_memory=pin_memory, drop_last=False,
+    )</a>
+
+    print("Initializing model: {}".format(args.arch))
+    model = models.init_model(name=args.arch, num_classes=dataset.num_train_pids, loss={&quotxent&quot, &quothtri&quot})
+    print("Model size: {:.3f} M".format(count_num_param(model)))
+
+    criterion = CrossEntropyLoss(num_classes=dataset.num_train_pids, use_gpu=use_gpu, label_smooth=args.label_smooth)
+    criterion_htri = TripletLoss(margin=args.margin)
+    
+    optimizer = init_optim(args.optim, model.parameters(), args.lr, args.weight_decay)
+    scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=args.stepsize, gamma=args.gamma)
+
+    if args.load_weights and check_isfile(args.load_weights):
+        &#47&#47 load pretrained weights but ignore layers that don&quott match in size
+        checkpoint = torch.load(args.load_weights)
+        pretrain_dict = checkpoint[&quotstate_dict&quot]
+        model_dict = model.state_dict()
+        pretrain_dict = {k: v for k, v in pretrain_dict.items() if k in model_dict and model_dict[k].size() == v.size()}
+        model_dict.update(pretrain_dict)
+        model.load_state_dict(model_dict)
+        print("Loaded pretrained weights from &quot{}&quot".format(args.load_weights))
+
+    if args.resume and check_isfile(args.resume):
+        checkpoint = torch.load(args.resume)
+        model.load_state_dict(checkpoint[&quotstate_dict&quot])
+        args.start_epoch = checkpoint[&quotepoch&quot] + 1
+        best_rank1 = checkpoint[&quotrank1&quot]
+        print("Loaded checkpoint from &quot{}&quot".format(args.resume))
+        print("- start_epoch: {}\n- rank1: {}".format(args.start_epoch, best_rank1))
+
+    if use_gpu:
+        model = nn.DataParallel(model).cuda()
+
+    if args.evaluate:
+        print("Evaluate only")
+        distmat = test(model, queryloader, galleryloader, use_gpu, return_distmat=True)
+        if args.visualize_ranks:
+            visualize_ranked_results(
+                distmat, dataset,
+                save_dir=osp.join(args.save_dir, &quotranked_results&quot),
+                topk=20,
+            )
+        return
+
+    start_time = time.time()
+    train_time = 0
+    best_epoch = args.start_epoch
+    print("==&gt; Start training")
+
+    for epoch in range(args.start_epoch, args.max_epoch):
+        start_train_time = time.time()
+        train(epoch, model, criterion_xent, criterion_htri, optimizer, trainloader, use_gpu)
+        train_time += round(time.time() - start_train_time)
+        
+        scheduler.step()
+        
+        if (epoch + 1) &gt; args.start_eval and args.eval_step &gt; 0 and (epoch + 1) % args.eval_step == 0 or (epoch + 1) == args.max_epoch:
+            print("==&gt; Test")
+            rank1 = test(model, queryloader, galleryloader, use_gpu)
+            is_best = rank1 &gt; best_rank1
+            
+            if is_best:
+                best_rank1 = rank1
+                best_epoch<a id="change"> = </a>epoch + 1
+
+            if use_gpu:
+                state_dict = model.module.state_dict()</code></pre><h3>After Change</h3><pre><code class='java'>
+        if (epoch + 1) &gt; args.start_eval and args.eval_step &gt; 0 and (epoch + 1) % args.eval_step == 0 or (epoch + 1) == args.max_epoch:
+            print("==&gt; Test")
+            
+            <a id="change">for </a>name in args.target<a id="change">:
+                </a>print("Evaluating {} ...".format(name))
+                queryloader = testloader_dict[name][&quotquery&quot]
+                galleryloader = testloader_dict[name][&quotgallery&quot]
+                rank1 = test(model, queryloader, galleryloader, use_gpu)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/vlsomers/bpbreid/commit/a96dd6b91631f43e3706a3e5ba6a090939f13036#diff-6ccf2248732c83e1d2f8243161a5b3c8d670eecf27610049e0d02319deb8eb69L116' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 112670932</div><div id='project'> Project Name: vlsomers/bpbreid</div><div id='commit'> Commit Name: a96dd6b91631f43e3706a3e5ba6a090939f13036</div><div id='time'> Time: 2018-11-05</div><div id='author'> Author: k.zhou@qmul.ac.uk</div><div id='file'> File Name: train_imgreid_xent_htri.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(0)</div><div id='n_method'> N Method Name: main(0)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: train_imgreid_xent_htri.py</div><div id='n_file'> N File Name: train_imgreid_xent_htri.py</div><div id='m_start'> M Start Line: 137</div><div id='m_end'> M End Line: 241</div><div id='n_start'> N Start Line: 134</div><div id='n_end'> N End Line: 224</div><BR>

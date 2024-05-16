@@ -1,0 +1,35 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                    bin_low = bins[i]
+                    bin_high = bins[i+1]
+        d1 = abs(bin_low - target.item())
+        d2<a id="change"> = </a><a id="change">abs(</a>bin_high - target.item()<a id="change">)</a>
+        output = torch.tensor(output,dtype=torch.float32, device=self.device,requires_grad=True)
+        target = torch.tensor(target,dtype=torch.float32, device=self.device, requires_grad=True)
+        bin_high = torch.tensor(bin_high,dtype=torch.float32, device=self.device, requires_grad=True)
+        bin_low = torch.tensor(bin_low,dtype=torch.float32, device=self.device, requires_grad=True)</code></pre><h3>After Change</h3><pre><code class='java'>
+    def forward(self,outputs,targets,bins,batch_size):
+        loss = torch.zeros([batch_size],requires_grad= True).to(self.device)
+        bin_low = torch.zeros([batch_size],requires_grad= True).to(self.device)
+        bin_high = torch.zeros(<a id="change">[</a>batch_size<a id="change"></a>],requires_grad= True).to(self.device)
+        greater_mask = outputs &gt; targets
+        lesser_mask = outputs &lt; targets        
+
+        for ind,target in enumerate(targets):
+            for i in range(len(bins)-1):
+                if target.item() != 0:
+                    if target.item()&gt;bins[i] and target.item()&lt;=bins[i+1]:
+                        bin_low[ind] = bins[i] 
+                        bin_high[ind] = bins[i+1]
+                else:
+                    if target.item()&gt;=bins[i] and target.item()&lt;=bins[i+1]: 
+                        bin_low[ind] = bins[i]
+                        bin_high[ind] = bins[i+1]
+        
+        k =1
+        
+        loss = greater_mask * torch.max(torch.tensor(k* torch.log(1+ torch.abs(outputs - targets)),dtype=torch.float32, device=self.device, requires_grad=True), (outputs - bin_high)) + lesser_mask * torch.max(torch.tensor(k* torch.log(1+ torch.abs(outputs - targets)),dtype=torch.float32, device=self.device, requires_grad=True), (bin_low - outputs))
+        <a id="change">return </a>loss.mean()        
+</code></pre>

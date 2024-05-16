@@ -1,0 +1,59 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+    columns = mycols_pq if engine == "parquet" else mycols_csv
+    columns_ctx = {}
+    columns_ctx["all"] = <a id="change">{}</a>
+    columns_ctx["all"]["base"] = columns
+
+    filter_op<a id="change"> = </a>ops.Filter(f=lambda df: df[df["y"] &gt; 0.5])
+    new_gdf = filter_op.apply_op(df, columns_ctx, "all", target_cols=columns)
+    assert new_gdf.columns.all() == df.columns.all()
+
+    &#47&#47 return isnull() rows
+    <a id="change">columns_ctx["continuous"]</a> = <a id="change">{}</a>
+    <a id="change">columns_ctx["continuous"]["base"] = </a>cont_names
+
+    for col in cont_names:
+        idx = np.random.choice(df.shape[0] - 1, int(df.shape[0] * 0.2))
+        df[col].iloc[idx] = None
+
+    filter_op = ops.Filter(f=lambda df: df[df.x.isnull()])
+    new_gdf = filter_op.apply_op(df, columns_ctx, "all", target_cols=columns)
+    assert new_gdf.columns.all() == df.columns.all()
+    assert new_gdf.shape[0] &lt; df.shape[0], "null values do not exist"
+
+    &#47&#47 again testing filtering by returning a series rather than a df
+    filter_op = ops.Filter(f=lambda df: df.x.isnull())
+    new_gdf<a id="change"> = filter_op.apply_op(</a>df, <a id="change">columns_ctx</a>, <a id="change">"all"</a><a id="change">, target_cols=columns)</a>
+    assert new_gdf.columns.all() == df.columns.all()
+    assert new_gdf.shape[0] &lt; df.shape[0], "null values do not exist"
+
+    &#47&#47 if the filter returns an invalid type we should get an exception immediately</code></pre><h3>After Change</h3><pre><code class='java'>
+@pytest.mark.parametrize("engine", ["parquet"])
+def test_filter(tmpdir, df, dataset, gpu_memory_frac, engine):
+    cont_names = ["x", "y"]
+    filtered<a id="change"> = </a>cont_names<a id="change"> &gt;&gt; </a>ops.Filter(f=lambda df: df[df["y"] &gt; 0.5])
+    processor = <a id="change">nvtabular.Workflow(</a>filtered<a id="change">)</a>
+    processor.fit(dataset)
+    new_gdf = processor.transform(dataset).to_ddf().compute().reset_index()
+    filter_df = df[df["y"] &gt; 0.5].reset_index()
+    for col in cont_names:
+        assert np.all((new_gdf[col] - filter_df[col]).abs().values &lt;= 1e-2)
+
+    &#47&#47 return isnull() rows
+    for col in cont_names:
+        idx = np.random.choice(df.shape[0] - 1, int(df.shape[0] * 0.2))
+        df[col].iloc[idx] = None
+
+    <a id="change">dataset</a> = <a id="change">nvt.Dataset(</a>df<a id="change">)</a>
+    filtered = cont_names &gt;&gt; ops.Filter(f=lambda df: df[df.x.isnull()])
+    processor = nvtabular.Workflow(filtered)
+    <a id="change">processor.fit(dataset</a><a id="change">)</a>
+    new_gdf = <a id="change">processor.transform(dataset).to_ddf().compute()</a>
+    assert new_gdf.shape[0] &lt; df.shape[0], "null values do not exist"
+
+    &#47&#47 again testing filtering by returning a series rather than a df
+    filtered = cont_names &gt;&gt; ops.Filter(f=lambda df: df.x.isnull())</code></pre>

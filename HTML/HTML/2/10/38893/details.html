@@ -1,0 +1,92 @@
+<html><h3>Pattern ID :38893
+</h3><img src='110961983.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 fc_out = self.fc(gru_output.flatten())
+        &#47&#47
+        &#47&#47 return output_seq, gru_output.squeeze(0), fc_out
+        return output_seq<a id="change">, gru_output</a>
+
+    def name(self):
+        return "RhythmNet"
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    def forward(self, st_maps, target):
+        batched_output_per_clip = []
+        <a id="change">hr_per_clip</a><a id="change"> = []</a>
+
+        &#47&#47 Need to have so as to reflect a batch_size = 1 // if batched then comment out
+        st_maps = st_maps.unsqueeze(0)
+        for t in range(st_maps.size(1)):
+            &#47&#47 with torch.no_grad():
+            x = self.resnet18(st_maps[:, t, :, :, :])
+            &#47&#47 collapse dimensions to BSx512 (resnet o/p)
+            x = x.view(x.size(0), -1)
+            &#47&#47 Unsqueeze for sequence length
+            &#47&#47 if t == 0:
+            &#47&#47     gru_output, h_n = self.rnn(x.unsqueeze(1))
+            &#47&#47 else:
+            &#47&#47     gru_output, h_n = self.rnn(x.unsqueeze(1), h_n)
+            &#47&#47 output dim: BSx1 and Squeeze sequence length after completing GRU step
+            &#47&#47 x = self.fc_resnet(gru_output.squeeze(1))
+            &#47&#47 normalize by frame-rate: 25.0 for VIPL
+            &#47&#47 x = x*25.0
+            batched_output_per_clip.append(x.squeeze(0))
+            &#47&#47 input should be (seq_len, batch, input_size)
+
+        &#47&#47 the features extracted from the backbone CNN are fed to a one-layer GRU structure.
+        output_seq = torch.stack(batched_output_per_clip, dim=0)
+        gru_output, h_n = self.rnn(output_seq.unsqueeze(1))
+        gru_output<a id="change"> = </a>gru_output.squeeze(1)
+        <a id="change">for i</a> in range(gru_output.size(0))<a id="change">:
+            </a>hr = self.fc_resnet(gru_output[i, :])
+            &#47&#47 hr = hr * 25.0
+            <a id="change">hr_per_clip.append(</a>hr<a id="change">)</a>
+
+        output_seq<a id="change"> = </a><a id="change">torch.stack(hr_per_clip</a><a id="change">, dim=0)</a>.permute(1,0)
+        &#47&#47 return output_seq, gru_output.squeeze(0), fc_out
+        return output_seq, output_seq.squeeze(0)[:6]
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 8</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/anweshcr7/rhythmnet/commit/deed748087f19356d297fe57e439b967a6a3e617#diff-3fc5bf831ef8bd1cc5d50189ec691215fb3d3ae0cbb974e736200edc7f8c65cdL33' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 110961983</div><div id='project'> Project Name: anweshcr7/rhythmnet</div><div id='commit'> Commit Name: deed748087f19356d297fe57e439b967a6a3e617</div><div id='time'> Time: 2021-03-11</div><div id='author'> Author: anwesh.marwade@beyondsports.nl</div><div id='file'> File Name: src/models/rhythmNet.py</div><div id='m_class'> M Class Name: RhythmNet</div><div id='n_method'> N Class Name: RhythmNet</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: src/models/rhythmNet.py</div><div id='n_file'> N File Name: src/models/rhythmNet.py</div><div id='m_start'> M Start Line: 33</div><div id='m_end'> M End Line: 55</div><div id='n_start'> N Start Line: 33</div><div id='n_end'> N End Line: 66</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    j = torch.arange(heatmaps.shape[1]).reshape(1, -1, 1, 1)
+    k = locs[:, :, None, 1, None].type(torch.int64)  &#47&#47 y first
+    l = locs[:, :, 0, None, None].type(torch.int64)  &#47&#47 x second
+    vals = heatmaps[i<a id="change">, j, k, l</a>].squeeze(-1).squeeze(-1)  &#47&#47 get rid of singleton dims
+    return vals
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    k = locs[:, :, None, 1, None].type(torch.int64)
+    l = locs[:, :, 0, None, None].type(torch.int64)
+    pix_to_consider = int(np.ceil(sigma * 2.0)) &#47&#47get all pixels within two stds.
+    offsets<a id="change"> = </a>list(np.arange(-pix_to_consider, pix_to_consider+1))
+    <a id="change">vals_all</a><a id="change"> = []</a>
+    for offset in offsets:
+        k_offset = k + offset
+        k_offset = torch.clamp(k_offset, min=0, max=heatmaps.shape[2]-1)
+        <a id="change">for offset_2</a> in offsets<a id="change">:
+            </a>l_offset = l + offset_2
+            l_offset = torch.clamp(l_offset, min=0, max=heatmaps.shape[2]-1)
+            vals = heatmaps[i, j, k_offset, l_offset].squeeze(-1).squeeze(-1)  &#47&#47 get rid of singleton dims
+            <a id="change">vals_all.append(</a>vals<a id="change">)</a>
+    vals<a id="change"> = </a><a id="change">torch.stack(</a>vals_all, 0<a id="change">)</a>.sum(0)
+    return vals</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/danbider/lightning-pose/commit/c2ea4f5fc3841def2213fb073698b9178edea896#diff-9dd67cdb80bc17d35d73536f0d0097629a0d6213a72e69af6280e984b273233fL288' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 110961994</div><div id='project'> Project Name: danbider/lightning-pose</div><div id='commit'> Commit Name: c2ea4f5fc3841def2213fb073698b9178edea896</div><div id='time'> Time: 2022-07-22</div><div id='author'> Author: colehurwitz@gmail.com</div><div id='file'> File Name: lightning_pose/data/utils.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: evaluate_heatmaps_at_location(3)</div><div id='n_method'> N Method Name: evaluate_heatmaps_at_location(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: lightning_pose/data/utils.py</div><div id='n_file'> N File Name: lightning_pose/data/utils.py</div><div id='m_start'> M Start Line: 293</div><div id='m_end'> M End Line: 297</div><div id='n_start'> N Start Line: 304</div><div id='n_end'> N End Line: 322</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    j = torch.arange(heatmaps.shape[1]).reshape(1, -1, 1, 1)
+    k = locs[:, :, None, 1, None].type(torch.int64)  &#47&#47 y first
+    l = locs[:, :, 0, None, None].type(torch.int64)  &#47&#47 x second
+    vals = heatmaps[i<a id="change">, j, k, l</a>].squeeze(-1).squeeze(-1)  &#47&#47 get rid of singleton dims
+    return vals
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    k = locs[:, :, None, 1, None].type(torch.int64)
+    l = locs[:, :, 0, None, None].type(torch.int64)
+    pix_to_consider = int(np.ceil(sigma * 2.0)) &#47&#47get all pixels within two stds.
+    offsets<a id="change"> = </a>list(np.arange(-pix_to_consider, pix_to_consider+1))
+    <a id="change">vals_all</a><a id="change"> = []</a>
+    <a id="change">for offset</a> in offsets<a id="change">:
+        </a>k_offset = k + offset
+        k_offset = torch.clamp(k_offset, min=0, max=heatmaps.shape[2]-1)
+        for offset_2 in offsets:
+            l_offset = l + offset_2
+            l_offset = torch.clamp(l_offset, min=0, max=heatmaps.shape[2]-1)
+            vals = heatmaps[i, j, k_offset, l_offset].squeeze(-1).squeeze(-1)  &#47&#47 get rid of singleton dims
+            <a id="change">vals_all.append(</a>vals<a id="change">)</a>
+    vals<a id="change"> = </a><a id="change">torch.stack(</a>vals_all, 0<a id="change">)</a>.sum(0)
+    return vals</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/danbider/lightning-pose/commit/09f58d3175233d5d57b8369d64c9a58e5704bcec#diff-9dd67cdb80bc17d35d73536f0d0097629a0d6213a72e69af6280e984b273233fL288' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 110961978</div><div id='project'> Project Name: danbider/lightning-pose</div><div id='commit'> Commit Name: 09f58d3175233d5d57b8369d64c9a58e5704bcec</div><div id='time'> Time: 2022-07-22</div><div id='author'> Author: colehurwitz@gmail.com</div><div id='file'> File Name: lightning_pose/data/utils.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: evaluate_heatmaps_at_location(3)</div><div id='n_method'> N Method Name: evaluate_heatmaps_at_location(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: lightning_pose/data/utils.py</div><div id='n_file'> N File Name: lightning_pose/data/utils.py</div><div id='m_start'> M Start Line: 293</div><div id='m_end'> M End Line: 297</div><div id='n_start'> N Start Line: 304</div><div id='n_end'> N End Line: 322</div><BR>

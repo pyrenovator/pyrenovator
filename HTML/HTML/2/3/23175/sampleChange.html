@@ -1,0 +1,19 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            xmean = jt.mean(x, dims=[0,2,3], keepdims=1)
+            x2mean = jt.mean(x*x, dims=[0,2,3], keepdims=1)
+            if self.sync and jt.compile_extern.mpi_ops is not None:
+                xmean =  <a id="change">jt.compile_extern.mpi_ops.mpi_all_reduce(</a>xmean<a id="change">)</a>/jt.compile_extern.mpi.world_size()
+                x2mean =  jt.compile_extern.mpi_ops.mpi_all_reduce(x2mean)/jt.compile_extern.mpi.world_size()
+
+            xvar = x2mean-xmean*xmean</code></pre><h3>After Change</h3><pre><code class='java'>
+            xmean = jt.mean(x, dims=[0,2,3], keepdims=1)
+            x2mean = jt.mean(x*x, dims=[0,2,3], keepdims=1)
+            if self.sync and jt.mpi:
+                xmean = <a id="change">xmean.mpi_all_reduce("mean"</a><a id="change">)</a>
+                x2mean = x2mean.mpi_all_reduce("mean")
+
+            xvar = x2mean-xmean*xmean
+            norm_x = (x-xmean)/jt.sqrt(xvar+self.eps)</code></pre>

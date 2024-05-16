@@ -1,0 +1,29 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        x = self.dropout(x)
+
+        &#47&#47 Batch first = True in decoder
+        <a id="change">for </a>i in range(self.num_layers)<a id="change">:
+            </a>x<a id="change"> = </a>self.dec_layers[i](
+                tgt=x, memory=enc_output, tgt_mask=look_ahead_mask, memory_mask=padding_mask
+            )
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        pos_enc_tgt = self.positional_encoding(tgt)
+        output = pos_enc_tgt
+
+        <a id="change">for </a>i in range(self.num_layers)<a id="change">:
+            </a>normed_output = self.layer_norm(output)
+            output = output + self.dropout(
+                self.attention[i](normed_output, normed_output, normed_output, target_mask)
+            )
+            normed_output = self.layer_norm(output)
+            output<a id="change"> = </a>output + self.dropout(
+                <a id="change">self.source_attention[i](</a>normed_output, memory, memory, source_mask<a id="change">)</a>
+            )
+            normed_output<a id="change"> = </a>self.layer_norm(output)
+            output<a id="change"> = </a>output + <a id="change">self.dropout(</a>self.position_feed_forward[i](normed_output)<a id="change">)</a>
+
+        <a id="change">return </a>self.layer_norm(output)
+</code></pre>

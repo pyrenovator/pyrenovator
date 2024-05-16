@@ -1,0 +1,20 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    &#47&#47 p4 ─&gt; p4p5 ─&gt; pan_out1
+    &#47&#47         ↓         ↑
+    &#47&#47 p3 ─&gt; pan_out2 ───┘
+    csp_depth = <a id="change">max(</a>round(depth_mul * 2), 1<a id="change">)</a>
+    p3, p4, p5 = features  &#47&#47 p3: [64, 64, 256], p4: [32, 32, 512], p5: [16, 16, 512]
+    p3 = conv_dw_pw_block(p3, p3.shape[-1] // 2, kernel_size=1, activation=activation, name=name + "p3_down_")  &#47&#47 [64, 64, 128]
+    p4 = conv_dw_pw_block(p4, p4.shape[-1] // 2, kernel_size=1, activation=activation, name=name + "p4_down_")  &#47&#47 [32, 32, 256]
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    upsamples = [features[-1]]
+    p_name = "p{}_".format(len(features) + 2)
+    &#47&#47 upsamples: [p5], features[:-1][::-1]: [p4, p3] -&gt; [p5, p4p5, p3p4p5]
+    <a id="change">for </a>id, ii in <a id="change">enumerate(</a>features[:-1][::-1]<a id="change">):
+        </a>cur_p_name = "p{}".format(len(features) + 1 - id)
+        nn = conv_dw_pw_block(ii, ii.shape[-1] // 2, kernel_size=1, activation=activation, name=name + cur_p_name + "_down_")
+        p_name = cur_p_name + p_name
+        nn = upsample_merge([nn, upsamples[-1]], fpn_depth, use_depthwise_conv=use_depthwise_conv, activation=activation, name=name + p_name)</code></pre>

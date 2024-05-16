@@ -1,0 +1,86 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+    video_f.release(st_video=True)
+
+    <a id="change">pass</a>
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    N_step = st_utils.number_input(&quotN_step&quot, cfg.N_step, sidebar=True)
+
+    show_depth = st_utils.checkbox(&quotshow_depth&quot, True)
+    <a id="change">show_weights_sum = </a><a id="change">st_utils.checkbox(&quotshow_weights_sum&quot</a>, True<a id="change">)</a>
+
+    seed = st_utils.get_seed(seeds=cfg.seeds)
+
+    if not global_cfg.tl_debug:
+      if not st.sidebar.button("run_web"):
+        return
+
+    if saved_suffix_state is not None:
+      saved_suffix_state.saved_suffix = saved_suffix_state.saved_suffix + 1
+
+    device = &quotcuda&quot
+    torch_utils.init_seeds(seed=seed)
+
+    G_kwargs = cfg.G_kwargs.clone()
+    G_kwargs[&quotnerf_kwargs&quot][&quoth_stddev&quot] = 0.
+    G_kwargs[&quotnerf_kwargs&quot][&quotv_stddev&quot] = 0.
+    G_kwargs[&quotnerf_kwargs&quot][&quotN_samples&quot] = nerf_N_samples
+    G_kwargs[&quotnerf_kwargs&quot][&quotN_importance&quot] = nerf_N_importance
+
+    if use_network_pkl_model:
+      G = torch.load(network_pkl_model).cuda()
+    else:
+      load_G_cfg = TLCfgNode.load_yaml_file(cfg_filename=f"{os.path.dirname(network_pkl)}/config_command.yaml")
+      load_G_cfg = list(load_G_cfg.values())[0]
+      G = build_model(load_G_cfg.G_cfg).cuda()
+      Checkpointer(G).load_state_dict_from_file(network_pkl)
+      cfg = load_G_cfg
+
+    H = W = img_size
+    cam_cfg = cfg.get(&quotcam_cfg&quot, {})
+    cam_param = cam_params.CamParams.from_config(H0=H, W0=W, **cam_cfg).cuda()
+    intr = cam_param(mode=&quotget_intrinsic&quot)
+
+
+    st_image = st.empty()
+    video_f = cv2_utils.ImageioVideoWriter(f"{outdir}/video.mp4", fps=fps, hd_video=True)
+
+    G.eval()
+    zs = G.get_zs(bs)
+
+    yaw_list = np.linspace(yaw_min, yaw_max, N_step)
+    for idx, yaw_ in enumerate(yaw_list):
+      rays_o, rays_d, select_inds = cam_param.get_rays_random_pose(
+        device=device, bs=bs, intr=intr,
+        **{**G_kwargs.nerf_kwargs,
+           &quoth_mean&quot: yaw_,
+           &quoth_stddev&quot: 0,
+           &quotv_stddev&quot: 0})
+
+      with torch.set_grad_enabled(False):
+        imgs, ret_imgs = G(zs=zs,
+                           rays_o=rays_o,
+                           rays_d=rays_d,
+                           forward_points=forward_points ** 2,  &#47&#47 disable gradients
+                           return_aux_img=True,
+                           **{**G_kwargs,
+                              &quotpsi&quot: psi})
+        g_imgs_aux = ret_imgs[&quotaux_img&quot]
+
+        imgs = norm_ip(imgs, -1, 1)
+        g_imgs_aux = norm_ip(g_imgs_aux, -1, 1)
+        img_list = [imgs, g_imgs_aux]
+
+        if show_depth:
+          depth_img = ret_imgs[&quotdepth&quot][:, None].expand(-1, 3, -1, -1)
+          depth_img = norm_ip(depth_img, 0, 1.5)
+          img_list.append(depth_img)
+        <a id="change">if show_weights_sum</a>:
+          weights_sum = ret_imgs[&quotweights_sum&quot][:, None].expand(-1, 3, -1, -1)
+          weights_sum<a id="change"> = </a>norm_ip(weights_sum, 0, 1)
+          img_list.append(weights_sum)
+
+        gen_imgs = torch.cat(img_list, dim=0)</code></pre>

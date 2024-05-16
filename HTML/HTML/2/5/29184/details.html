@@ -1,0 +1,47 @@
+<html><h3>Pattern ID :29184
+</h3><img src='85897466.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    def backward(self, ctx, grad_output):
+        (input_,) = ctx.saved_tensors
+        grad_input = grad_output.clone()
+        <a id="change">input_[input_ &gt; 0]</a> = grad_input / input_
+        input_[input_ &lt;= 0] = (torch.rand(input_.size()) - 0.5) * self.var
+        grad = input_.clone()
+        return grad</code></pre><h3>After Change</h3><pre><code class='java'>
+        grad_input = grad_output.clone()
+        grad = (grad_input * out) / (input_ + threshold) + (
+            grad_input * (~out.bool()).float()
+        )<a id="change"> * </a>((<a id="change">torch.rand_like(</a>input_<a id="change">) - 0.5</a>) * variance)
+        &#47&#47 grad += ((torch.rand(input_.size()) - 0.5) * variance) * (~grad.bool()).float()
+
+        return grad</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/jeshraghian/snntorch/commit/d39bb2d641f1b85c282e12e1e2ad52c2804858d5#diff-e670f044c2d81ff4ae8eab7797692b0c8f129331f421978ce6af9ebcb4ced619L198' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 85897466</div><div id='project'> Project Name: jeshraghian/snntorch</div><div id='commit'> Commit Name: d39bb2d641f1b85c282e12e1e2ad52c2804858d5</div><div id='time'> Time: 2021-05-10</div><div id='author'> Author: 40262130+jeshraghian@users.noreply.github.com</div><div id='file'> File Name: snntorch/surrogate.py</div><div id='m_class'> M Class Name: StochasticSpikeOperator</div><div id='n_method'> N Class Name: StochasticSpikeOperator</div><div id='m_method'> M Method Name: backward(2)</div><div id='n_method'> N Method Name: backward(3)</div><div id='m_parent_class'> M Parent Class: torch.autograd.Function</div><div id='n_parent_class'> N Parent Class: torch.autograd.Function</div><div id='m_file'> M File Name: snntorch/surrogate.py</div><div id='n_file'> N File Name: snntorch/surrogate.py</div><div id='m_start'> M Start Line: 201</div><div id='m_end'> M End Line: 206</div><div id='n_start'> N Start Line: 198</div><div id='n_end'> N End Line: 204</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                        if pad_n != 0:
+                            pts = torch.cat([pts, torch.zeros(pad_n, 3)], dim=0)
+                        density = self.density(pts.to(tmp_grid.device), bound)[:n].reshape(lx, ly, lz).detach()
+                        <a id="change">tmp_grid[xi * 128: xi * 128 + lx, yi * 128: yi * 128 + ly, zi * 128: zi * 128 + lz]</a> = density
+        
+        &#47&#47 smooth by maxpooling
+        &#47&#47 TODO: very naive...</code></pre><h3>After Change</h3><pre><code class='java'>
+                        xx, yy, zz = torch.meshgrid(xs, ys, zs, indexing=&quotij&quot)
+                        pts = torch.cat([xx.reshape(-1, 1), yy.reshape(-1, 1), zz.reshape(-1, 1)], dim=-1) &#47&#47 [N, 3]
+                        &#47&#47 add noise in [-hgs, hgs]
+                        pts += (<a id="change">torch.rand_like(pts) * 2 - 1</a>)<a id="change"> * </a>half_grid_size
+                        &#47&#47 manual padding for ffmlp
+                        n = pts.shape[0]
+                        pad_n = 128 - (n % 128)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/ashawkey/torch-ngp/commit/7357d93951f0caa2453b257aa8530b2f623e4fe3#diff-96330057ed34864879e5c07ca3b71aa0415cc9281c388c0ec9d3d6892d48343aL298' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 85897465</div><div id='project'> Project Name: ashawkey/torch-ngp</div><div id='commit'> Commit Name: 7357d93951f0caa2453b257aa8530b2f623e4fe3</div><div id='time'> Time: 2022-02-28</div><div id='author'> Author: ashawkey1999@gmail.com</div><div id='file'> File Name: nerf/renderer.py</div><div id='m_class'> M Class Name: NeRFRenderer</div><div id='n_method'> N Class Name: NeRFRenderer</div><div id='m_method'> M Method Name: update_extra_state(3)</div><div id='n_method'> N Method Name: update_extra_state(3)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: nerf/renderer.py</div><div id='n_file'> N File Name: nerf/renderer.py</div><div id='m_start'> M Start Line: 307</div><div id='m_end'> M End Line: 330</div><div id='n_start'> N Start Line: 305</div><div id='n_end'> N End Line: 323</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    def backward(self, ctx, grad_output):
+        (input_,) = ctx.saved_tensors
+        grad_input = grad_output.clone()
+        <a id="change">input_[input_ &gt; 0]</a> = grad_input
+        input_[input_ &lt;= 0] = (torch.rand(input_.size()) - 0.5) * self.var
+        grad = input_.clone()
+        return grad</code></pre><h3>After Change</h3><pre><code class='java'>
+        variance = ctx.variance
+        grad_input = grad_output.clone()
+        grad = grad_input * out + (grad_input * (~out.bool()).float()) * (
+            (<a id="change">torch.rand_like(</a>input_<a id="change">) - 0.5</a>)<a id="change"> * </a>variance
+        )
+        return grad
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/jeshraghian/snntorch/commit/d39bb2d641f1b85c282e12e1e2ad52c2804858d5#diff-e670f044c2d81ff4ae8eab7797692b0c8f129331f421978ce6af9ebcb4ced619L242' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 85897456</div><div id='project'> Project Name: jeshraghian/snntorch</div><div id='commit'> Commit Name: d39bb2d641f1b85c282e12e1e2ad52c2804858d5</div><div id='time'> Time: 2021-05-10</div><div id='author'> Author: 40262130+jeshraghian@users.noreply.github.com</div><div id='file'> File Name: snntorch/surrogate.py</div><div id='m_class'> M Class Name: LocalStochasticSpikeOperator</div><div id='n_method'> N Class Name: LocalStochasticSpikeOperator</div><div id='m_method'> M Method Name: backward(2)</div><div id='n_method'> N Method Name: backward(3)</div><div id='m_parent_class'> M Parent Class: torch.autograd.Function</div><div id='n_parent_class'> N Parent Class: torch.autograd.Function</div><div id='m_file'> M File Name: snntorch/surrogate.py</div><div id='n_file'> N File Name: snntorch/surrogate.py</div><div id='m_start'> M Start Line: 242</div><div id='m_end'> M End Line: 247</div><div id='n_start'> N Start Line: 239</div><div id='n_end'> N End Line: 244</div><BR>

@@ -1,0 +1,63 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                factor = abs(outlier_block.mean() - self.ref_stats_df.loc["max", col])
+                outlier_block += impact * factor * abs(outlier_block)
+
+        return <a id="change">pd.DataFrame(
+            </a><a id="change">self.scaler.inverse_transform(</a>target_df<a id="change">),
+            index=target_df.index,
+            columns=target_df.columns,
+        )</a>
+
+    def _inject_collective_anomalies(
+        self, target_df: pd.DataFrame, cols: Sequence[str], impact=0.8
+    ) -&gt; pd.DataFrame:</code></pre><h3>After Change</h3><pre><code class='java'>
+        self, target_df: pd.DataFrame, cols: Sequence[str], impact=1
+    ) -&gt; pd.DataFrame:
+        target_df = self._init_target_df(target_df, cols)
+        <a id="change">anomaly_df = pd</a><a id="change">.DataFrame(index=target_df.index)</a>
+        <a id="change">anomaly_df["is_anomaly"] = 0</a>
+
+        for col in self.__injected_cols:
+            tseries = target_df[col]
+            sample = tseries[: -self.block_size].sample(1)
+            idx_start = sample.index
+            idx_end = idx_start + (self.block_size * self.freq)
+            outlier_block = tseries[idx_start.values[0] : idx_end.values[0]]
+
+            &#47&#47 Add gaussian noise to the data
+            <a id="change">noise</a><a id="change"> = </a><a id="change">np.random.normal(</a>self.mu, self.sigma, outlier_block.shape<a id="change">)</a>
+
+            dist_from_min = np.linalg.norm(
+                outlier_block.to_numpy() - self.ref_stats_df.loc["min", col]
+            )
+            dist_from_max = np.linalg.norm(
+                outlier_block.to_numpy() - self.ref_stats_df.loc["max", col]
+            )
+
+            if dist_from_min &gt; dist_from_max:
+                factor = abs(self.ref_stats_df.loc["min", col] - outlier_block.mean())
+                outlier_block -= (
+                    <a id="change">noise</a><a id="change"> + impact * factor * abs(outlier_block) * self.add_impact_sign()</a>
+                )
+            else:
+                factor = abs(outlier_block.mean() - self.ref_stats_df.loc["max", col])
+                outlier_block += (
+                    <a id="change">noise</a><a id="change"> + impact * factor * abs(outlier_block) * self</a><a id="change">.add_impact_sign()</a>
+                )
+
+            <a id="change">anomaly_col = anomaly_df["is_anomaly"]</a>
+            anomaly_block<a id="change"> = anomaly_col[idx_start.values[0] : idx_end.values[0]]</a>
+            anomaly_block<a id="change"> += self.add_impact_sign()</a>
+
+        return <a id="change">pd.DataFrame(
+            self.scaler.inverse_transform(target_df.to_numpy()),
+            index=target_df.index,
+            columns=target_df.columns,
+        ).merge(anomaly_df</a><a id="change">, left_index=True, right_index=True)</a>
+
+    def _inject_collective_anomalies(
+        self, target_df: pd.DataFrame, cols: Sequence[str], impact=0.8
+    ) -&gt; pd.DataFrame:</code></pre>

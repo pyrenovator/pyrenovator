@@ -1,0 +1,25 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 only support fused BN
+        assert bn_op.type in [&quotFusedBatchNormV3&quot, &quotFusedBatchNorm&quot, &quotMul&quot]
+        moving_var_read_tensor = BNUtils.get_moving_variance_as_read_op(bn_op).outputs[0]
+        <a id="change">assert </a>moving_var_read_tensor is not None
+
+        if moving_var_read_tensor.op.type == &quotConst&quot:
+            logger.debug("BN op has const type op for moving variance")</code></pre><h3>After Change</h3><pre><code class='java'>
+        :param bn_op: FusedBatchNorm as tf.Operation
+        :return: tensor associated with bn op moving variance readVariableOp type, as tf.Tensor
+        
+        <a id="change">try:
+            &#47&#47 try name based tensor look up for Keras layers
+            </a>moving_var_read_tensor<a id="change"> = BNUtils._get_bn_param_tensor_using_name(</a>graph, bn_op,
+                                                                             constants.BNOpParamType.moving_variance<a id="change">)</a>
+        <a id="change">except </a>KeyError:
+            &#47&#47 if we can&quott find the tensor name, use structure match
+            &#47&#47 to figure out the read tensor for param
+            moving_var_read_tensor<a id="change"> = </a>BNUtils._get_moving_variance_read_var_op_tensor_using_structure(bn_op)
+
+        return moving_var_read_tensor
+</code></pre>

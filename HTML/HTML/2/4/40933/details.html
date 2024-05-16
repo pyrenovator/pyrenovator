@@ -1,0 +1,75 @@
+<html><h3>Pattern ID :40933
+</h3><img src='115374880.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+    if buckets != n:
+        context = F.pad(context, (0, 0, 0, 0, 1, 0), value=0.)
+        context = context[:, <a id="change">:-1</a>]
+
+    attn_einsum_eq = &quotbhund,bhude-&gt;bhune&quot if not one_kv_head else &quotbhund,bude-&gt;bhune&quot
+    attn = torch.einsum(attn_einsum_eq, b_q, context)</code></pre><h3>After Change</h3><pre><code class='java'>
+    b_q, b_k, b_v = map(bucket_fn, (q, k, v))
+
+    b_k_sum = b_k.sum(dim=-2)
+    b_k_cumsum = <a id="change">b_k_sum.cumsum(dim=-2).type(</a>dtype<a id="change">)</a>
+
+    context_einsum_eq = &quotbhund,bhune-&gt;bhude&quot if not one_kv_head else &quotbund,bune-&gt;bude&quot
+    context = torch.einsum(context_einsum_eq, b_k, b_v)
+    context_cumsum = context.cumsum(dim=-3).type(dtype)
+
+    context = safe_div(context_cumsum, b_k_cumsum.unsqueeze(-1))
+
+    if bucket_size != 1:
+        context = F.pad(context, (0, 0, 0, 0, 1, 0), value=0.)
+        seq_dim = 1 if one_kv_head else 2
+        context<a id="change">, _ = </a>split_at_index(seq_dim, -1, context)
+
+    attn_einsum_eq = &quotbhund,bhude-&gt;bhune&quot if not one_kv_head else &quotbhund,bude-&gt;bhune&quot
+    attn = torch.einsum(attn_einsum_eq, b_q, context)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/lucidrains/linear-attention-transformer/commit/44961eaab5473b3335bce02441bfd50d076d7af0#diff-eee6cf669463e9683bcf9643c4b19a493056f98ded32854287144d47f02a7032L157' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 115374880</div><div id='project'> Project Name: lucidrains/linear-attention-transformer</div><div id='commit'> Commit Name: 44961eaab5473b3335bce02441bfd50d076d7af0</div><div id='time'> Time: 2020-06-05</div><div id='author'> Author: lucidrains@gmail.com</div><div id='file'> File Name: linear_attention_transformer/linear_attention_transformer.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: causal_linear_attn(6)</div><div id='n_method'> N Method Name: causal_linear_attn(6)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: linear_attention_transformer/linear_attention_transformer.py</div><div id='n_file'> N File Name: linear_attention_transformer/linear_attention_transformer.py</div><div id='m_start'> M Start Line: 157</div><div id='m_end'> M End Line: 177</div><div id='n_start'> N Start Line: 187</div><div id='n_end'> N End Line: 208</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 calculate targets
+        mixup = targets.shape[2] &gt; 5
+        if mixup:
+            label_cut = targets[..., <a id="change">:5</a>]
+        else:
+            label_cut = targets
+        nlabel = (label_cut.sum(dim=2) &gt; 0).sum(dim=1)  &#47&#47 number of objects</code></pre><h3>After Change</h3><pre><code class='java'>
+        if self.use_l1:
+            l1_targets = torch.cat(l1_targets, 0)
+        if self.reid_dim &gt; 0:
+            reid_targets = <a id="change">torch.cat(reid_targets, 0).type(</a>torch.int64<a id="change">)</a>
+
+        num_fg = max(num_fg, 1)
+        loss_iou = (self.iou_loss(bbox_preds.view(-1, 4)[fg_masks], reg_targets)).sum() / num_fg
+        loss_obj = (self.bcewithlog_loss(obj_preds.view(-1, 1), obj_targets)).sum() / num_fg
+        loss_cls = (self.bcewithlog_loss(cls_preds.view(-1, self.num_classes)[fg_masks], cls_targets)).sum() / num_fg
+        loss_l1 = (self.l1_loss(origin_preds.view(-1, 4)[fg_masks], l1_targets)).sum() / num_fg if self.use_l1 else 0.
+
+        reid_loss = 0.
+        if self.reid_dim &gt; 0:
+            reid_feat = reid_preds.view(-1, self.reid_dim)[fg_masks]
+            cls_label_targets = cls_targets.max(1)[1]
+            for cls in range(self.num_classes):
+                inds = torch.where(cls == cls_label_targets)
+                if inds[0].shape[0] == 0:
+                    continue
+                this_cls_tracking_id<a id="change"> = </a>reid_targets[inds]
+                this_cls_reid_feat = self.emb_scales[cls] * F.normalize(reid_feat[inds])
+
+                reid_output = self.classifiers[cls](this_cls_reid_feat)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/zhangming8/yolox-pytorch/commit/e162fc0465b1f5d8b3211cdc81fd8eabb6dd55c7#diff-180d1e08e835c9b52081c2fe023d6b978026584c661357da6f5f7bcab9805901L85' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 115374872</div><div id='project'> Project Name: zhangming8/yolox-pytorch</div><div id='commit'> Commit Name: e162fc0465b1f5d8b3211cdc81fd8eabb6dd55c7</div><div id='time'> Time: 2021-07-26</div><div id='author'> Author: zhangming8@github.com</div><div id='file'> File Name: models/losses/yolox_loss.py</div><div id='m_class'> M Class Name: YOLOXLoss</div><div id='n_method'> N Class Name: YOLOXLoss</div><div id='m_method'> M Method Name: get_losses(9)</div><div id='n_method'> N Method Name: get_losses(9)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: models/losses/yolox_loss.py</div><div id='n_file'> N File Name: models/losses/yolox_loss.py</div><div id='m_start'> M Start Line: 94</div><div id='m_end'> M End Line: 206</div><div id='n_start'> N Start Line: 105</div><div id='n_end'> N End Line: 224</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    &#47&#47 Create a cross_mask using the binary label scheme of weights and targets
+    for schema in label_schema:
+        cur_schema = torch.tensor(int_to_binary_label_list(int(schema), num_classes)[<a id="change">::-1</a>], dtype=torch.int8)
+        cand_idx = weight == float(schema)
+        if use_vfl:
+            cand_idx = cand_idx.nonzero(as_tuple=True)[0]</code></pre><h3>After Change</h3><pre><code class='java'>
+    if valid_label_mask is not None:
+        neg_mask = targets.sum(axis=1) == 0 if use_vfl else targets == num_classes
+        neg_idx = neg_mask.nonzero(as_tuple=True)[0]
+        cross_mask[neg_idx]<a id="change"> = </a><a id="change">valid_label_mask[neg_idx].type(</a>torch.int8<a id="change">)</a>
+
+    if use_vfl:
+        loss = varifocal_loss(inputs, targets,
+                              weight=weight,</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/openvinotoolkit/model_preparation_algorithm/commit/422e1c4fb8c3e8efc7f584902a0cdbbb895387cd#diff-102419dd4e63e58d66e469df486b84b2bd5b676350136bce74ee0d644b5565eaL17' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 115374878</div><div id='project'> Project Name: openvinotoolkit/model_preparation_algorithm</div><div id='commit'> Commit Name: 422e1c4fb8c3e8efc7f584902a0cdbbb895387cd</div><div id='time'> Time: 2022-06-15</div><div id='author'> Author: harim.kang@intel.com</div><div id='file'> File Name: mpa/modules/models/losses/cross_focal_loss.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: cross_sigmoid_focal_loss(10)</div><div id='n_method'> N Method Name: cross_sigmoid_focal_loss(10)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: mpa/modules/models/losses/cross_focal_loss.py</div><div id='n_file'> N File Name: mpa/modules/models/losses/cross_focal_loss.py</div><div id='m_start'> M Start Line: 38</div><div id='m_end'> M End Line: 64</div><div id='n_start'> N Start Line: 33</div><div id='n_end'> N End Line: 39</div><BR>

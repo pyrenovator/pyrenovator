@@ -1,0 +1,89 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    &#47&#47     profile(x, [m1, m2], n=100)  &#47&#47 profile speed over 100 iterations
+
+    device = device or torch.device(&quotcuda:0&quot if torch.cuda.is_available() else &quotcpu&quot)
+    x<a id="change"> = </a>x.to(device)
+    x.requires_grad = True
+    print(torch.__version__, device.type, torch.cuda.get_device_properties(0) if device.type == &quotcuda&quot else &quot&quot)
+    print(f"\n{&quotParams&quot:&gt;12s}{&quotGFLOPs&quot:&gt;12s}{&quotforward (ms)&quot:&gt;16s}{&quotbackward (ms)&quot:&gt;16s}{&quotinput&quot:&gt;24s}{&quotoutput&quot:&gt;24s}")
+    <a id="change">for </a>m in ops if isinstance(ops, list) else [ops]<a id="change">:
+        </a>m = m.to(device) if hasattr(m, &quotto&quot) else m  &#47&#47 device
+        m = m.half() if hasattr(m, &quothalf&quot) and isinstance(x, torch.Tensor) and x.dtype is torch.float16 else m  &#47&#47 type
+        dtf, dtb, t = 0., 0., [0., 0., 0.]  &#47&#47 dt forward, backward
+        try:
+            flops = thop.profile(m, inputs=(x,), verbose=False)[0] / 1E9 * 2  &#47&#47 GFLOPs
+        except:
+            flops = 0
+
+        <a id="change">for </a>_ in range(n)<a id="change">:
+            </a>t[0] = time_synchronized()
+            y = m(x)
+            t[1] = time_synchronized()
+            try:
+                _ = <a id="change">y.sum().backward()</a>
+                t[2] = time_synchronized()
+            <a id="change">except</a>:  &#47&#47 no backward method
+                t[2]<a id="change"> = </a>float(&quotnan&quot)
+            dtf += (t[1] - t[0]) * 1000 / n  &#47&#47 ms per op forward
+            dtb += (t[2] - t[1]) * 1000 / n  &#47&#47 ms per op backward
+
+        s_in = tuple(x.shape) if isinstance(x, torch.Tensor) else &quotlist&quot
+        s_out = tuple(y.shape) if isinstance(y, torch.Tensor) else &quotlist&quot
+        p = sum(list(x.numel() for x in m.parameters())) if isinstance(m, nn.Module) else 0  &#47&#47 parameters
+        <a id="change">print(f&quot{p:12}{flops:12.4g}{dtf:16.4g}{dtb:16.4g}{str(s_in):&gt;24s}{str(s_out):&gt;24s}&quot</a><a id="change">)</a>
+
+
+def is_parallel(model):
+    &#47&#47 Returns True if model is of type DP or DDP</code></pre><h3>After Change</h3><pre><code class='java'>
+    &#47&#47     m2 = nn.SiLU()
+    &#47&#47     profile(input, [m1, m2], n=100)  &#47&#47 profile over 100 iterations
+
+    <a id="change">results</a> = <a id="change">[]</a>
+    logging.basicConfig(format="%(message)s", level=logging.INFO)
+    device = device or select_device()
+    print(f"{&quotParams&quot:&gt;12s}{&quotGFLOPs&quot:&gt;12s}{&quotGPU_mem (GB)&quot:&gt;14s}{&quotforward (ms)&quot:&gt;14s}{&quotbackward (ms)&quot:&gt;14s}"
+          f"{&quotinput&quot:&gt;24s}{&quotoutput&quot:&gt;24s}")
+
+    <a id="change">for </a><a id="change">x</a> in input<a id="change"> if </a><a id="change">isinstance(input</a>, <a id="change">list</a><a id="change">) else </a><a id="change">[input</a>]<a id="change">:
+        </a>x<a id="change"> = </a>x.to(device)
+        x.requires_grad = True
+        <a id="change">for </a>m in ops if isinstance(ops, list) else [ops]<a id="change">:
+            </a>m = m.to(device) if hasattr(m, &quotto&quot) else m  &#47&#47 device
+            m = m.half() if hasattr(m, &quothalf&quot) and isinstance(x, torch.Tensor) and x.dtype is torch.float16 else m
+            tf, tb, t = 0., 0., [0., 0., 0.]  &#47&#47 dt forward, backward
+            try:
+                flops = thop.profile(m, inputs=(x,), verbose=False)[0] / 1E9 * 2  &#47&#47 GFLOPs
+            except:
+                flops = 0
+
+            <a id="change">try:
+                for </a>_ in range(n)<a id="change">:
+                    </a>t[0] = time_sync()
+                    y = m(x)
+                    t[1] = time_sync()
+                    try:
+                        _ = <a id="change">(sum([yi.sum() for yi in y]) if isinstance(y, list) else y).sum().backward()</a>
+                        t[2] = time_sync()
+                    <a id="change">except </a>Exception as e:  &#47&#47 no backward method
+                        <a id="change">print(</a>e<a id="change">)</a>
+                        t[2]<a id="change"> = </a>float(&quotnan&quot)
+                    tf += (t[1] - t[0]) * 1000 / n  &#47&#47 ms per op forward
+                    tb += (t[2] - t[1]) * 1000 / n  &#47&#47 ms per op backward
+                mem = torch.cuda.memory_reserved()<a id="change"> / 1E9</a> if torch.cuda.is_available() else 0  &#47&#47 (GB)
+                s_in = tuple(x.shape) if isinstance(x, torch.Tensor) else &quotlist&quot
+                s_out = tuple(y.shape) if isinstance(y, torch.Tensor) else &quotlist&quot
+                p = sum(list(x.numel() for x in m.parameters())) if isinstance(m, nn.Module) else 0  &#47&#47 parameters
+                <a id="change">print(f&quot{p:12}{flops:12.4g}{mem:&gt;14.3f}{tf:14.4g}{tb:14.4g}{str(s_in):&gt;24s}{str(s_out):&gt;24s}&quot</a><a id="change">)</a>
+                <a id="change">results.append(</a><a id="change">[</a>p, flops, mem, tf, tb, s_in, s_out<a id="change"></a>]<a id="change">)</a>
+            <a id="change">except </a>Exception as e:
+                <a id="change">print(</a>e<a id="change">)</a>
+                <a id="change">results.append(</a>None<a id="change">)</a>
+            <a id="change">torch.cuda.empty_cache()</a>
+    <a id="change">return results</a>
+
+
+def is_parallel(model):
+    &#47&#47 Returns True if model is of type DP or DDP</code></pre>

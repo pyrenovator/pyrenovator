@@ -1,0 +1,69 @@
+<html><h3>Pattern ID :6565
+</h3><img src='22849629.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        tail_weights += torch.where(l_mask, left_weight, zero).sum(-1)
+
+        &#47&#47 a size (B,) mask that removes non-firing position
+        <a id="change">if </a>keep_all_tails:
+            extend_mask<a id="change"> = </a><a id="change">feat_lengths.new_ones(</a>(B,)<a id="change">)</a>
+        else:
+            extend_mask = tail_weights &gt;= (beta / 2)
+
+        &#47&#47 &#47&#47 extend 1 fire and upscale the weights</code></pre><h3>After Change</h3><pre><code class='java'>
+        tail_weights += torch.where(l_mask, left_weight, zero).sum(-1)
+
+        &#47&#47 a size (B,) mask that extends position that passed threshold.
+        extend_mask = <a id="change">tail_weights &gt;= tail_thres</a>
+
+        &#47&#47 extend 1 fire and upscale the weights
+        <a id="change">if </a>extend_mask.any():
+            &#47&#47 (B, T, C), may have infs so need the mask
+            upscale = (
+                torch.ones_like(output)
+                .scatter(
+                    1,
+                    feat_lengths.view(B, 1, 1).expand(-1, -1, C),
+                    beta / tail_weights.view(B, 1, 1).expand(-1, -1, C),
+                )
+            )
+            output[extend_mask]<a id="change"> *= </a>upscale[extend_mask]
+            feat_lengths += extend_mask.long()
+            T = feat_lengths.max()
+        output = output[:, :T, :]</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 6</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/george0828zhang/torch_cif/commit/68e2689c475308cd5043cf1d25c49891b23e946a#diff-32b811c4bee1b0d13968dded1dd3f2123be4bbc3124e6e5811c83d4fab99a456L27' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 22849629</div><div id='project'> Project Name: george0828zhang/torch_cif</div><div id='commit'> Commit Name: 68e2689c475308cd5043cf1d25c49891b23e946a</div><div id='time'> Time: 2022-02-23</div><div id='author'> Author: cc.chang0828@gmail.com</div><div id='file'> File Name: cif.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: cif_function(7)</div><div id='n_method'> N Method Name: cif_function(9)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: cif.py</div><div id='n_file'> N File Name: cif.py</div><div id='m_start'> M Start Line: 29</div><div id='m_end'> M End Line: 216</div><div id='n_start'> N Start Line: 27</div><div id='n_end'> N End Line: 197</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        outputs = []
+        last_output = torch.zeros((batch_size, self.d_output), device=device)
+
+        <a id="change">if </a>timespans is None:
+            timespans<a id="change"> = </a><a id="change">x.new_ones(</a>x.shape[:-1]+(1,)<a id="change">)</a> / x.shape[1]
+
+        for t in range(seq_len):
+            inputs = x[:, t]</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47     breakpoint()
+        &#47&#47
+        L = u.size(-1)
+        <a id="change">if lengths is not None</a>:
+            assert isinstance(lengths, torch.Tensor) and lengths.ndim == 1 and lengths.size(0) in [1, u.size(0)]
+            mask<a id="change"> = </a>torch.where(torch.arange(L, device=lengths.device) &lt; lengths[:, None, None], 1., 0.)
+            u = u * mask
+
+        device = u.device</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/raminmh/liquid-s4/commit/52f2ec0442e4b1472915480269dff07788ed7f97#diff-ab2372bdc1906ad2a23c39f4d39f3f048c08b9f7b91891862db640d26d4916afL83' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 22849630</div><div id='project'> Project Name: raminmh/liquid-s4</div><div id='commit'> Commit Name: 52f2ec0442e4b1472915480269dff07788ed7f97</div><div id='time'> Time: 2022-08-30</div><div id='author'> Author: mlech26l@gmail.com</div><div id='file'> File Name: src/models/sequence/mm.py</div><div id='m_class'> M Class Name: mmRNN</div><div id='n_method'> N Class Name: mmRNN</div><div id='m_method'> M Method Name: forward(5)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: src/models/sequence/mm.py</div><div id='n_file'> N File Name: src/models/sequence/mm.py</div><div id='m_start'> M Start Line: 83</div><div id='m_end'> M End Line: 108</div><div id='n_start'> N Start Line: 89</div><div id='n_end'> N End Line: 123</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 mlen = mems[0].size(0) if mems is not None else 0
+
+        klen = mlen + qlen
+        <a id="change">if </a>self.same_length: &#47&#47DONT THINK WE WANT SAME LENGTH (I think this just makes each token have same attention span)
+            all_ones<a id="change"> = </a><a id="change">obs_emb.new_ones(</a>qlen, klen<a id="change">)</a>
+            mask_len = klen - self.mem_len
+            if mask_len &gt; 0:
+                mask_shift_len = qlen - mask_len
+            else:</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 TODO: Possibly make this more efficient (check how much things slow down)
+        &#47&#47 This part only runs when calling model in "learn" since in "act" we will
+        &#47&#47 never need padding
+        <a id="change">if </a>not <a id="change">(padding_mask is None)</a>:
+            dec_attn_mask.repeat(1,1,bsz)
+            dec_attn_mask<a id="change"> = </a>dec_attn_mask | padding_mask
+            &#47&#47print(&quotATTN SHAPE: &quot, dec_attn_mask.shape)
+
+        hids = []</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/jerrodparker20/adaptive-transformers-in-rl/commit/b5e76b7bc25d417e67143386f818caf8bb0b1d13#diff-fa6bc1f27fcb2650947162d654bbfa0b14260f02704743b3aad6d8b62878e3d4L432' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 22849623</div><div id='project'> Project Name: jerrodparker20/adaptive-transformers-in-rl</div><div id='commit'> Commit Name: b5e76b7bc25d417e67143386f818caf8bb0b1d13</div><div id='time'> Time: 2020-03-21</div><div id='author'> Author: jerrodparker20@gmail.com</div><div id='file'> File Name: StableTransformersReplication/transformer_xl.py</div><div id='m_class'> M Class Name: MemTransformerLM</div><div id='n_method'> N Class Name: MemTransformerLM</div><div id='m_method'> M Method Name: _forward(4)</div><div id='n_method'> N Method Name: _forward(3)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: StableTransformersReplication/transformer_xl.py</div><div id='n_file'> N File Name: StableTransformersReplication/transformer_xl.py</div><div id='m_start'> M Start Line: 449</div><div id='m_end'> M End Line: 465</div><div id='n_start'> N Start Line: 435</div><div id='n_end'> N End Line: 459</div><BR>

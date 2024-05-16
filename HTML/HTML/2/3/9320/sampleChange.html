@@ -1,0 +1,20 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        hidden_size = backend.module.hidden_size
+        cache_descriptor = TensorDescriptor(size=(1, MAX_LENGTH, hidden_size), dtype=torch.float32)
+        async with backend.memory_cache.allocate_cache(cache_descriptor) as handle:
+            <a id="change">inputs.insert(0</a>, torch.tensor([handle], dtype=torch.int64)<a id="change">)</a>
+            outputs = await self._process_inputs(inputs, backend.inference_pool, backend.outputs_schema)
+
+        yield runtime_pb2.ExpertResponse(tensors=outputs)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+                inputs = [cache_metadata, *(deserialize_torch_tensor(tensor) for tensor in request.tensors)]
+                print("INPUTS:", inputs)
+                assert len(inputs) == 2 and inputs[1].ndim == 3, "send only hidden states for now"
+                cache_metadata[0, 0], cache_metadata[0, 1] = cache_handle<a id="change">, current_sequence_length</a>
+                outputs = await self._process_inputs(inputs, backend.inference_pool, backend.outputs_schema)
+                yield runtime_pb2.ExpertResponse(tensors=outputs)
+
+                current_sequence_length += inputs[1].shape[1]</code></pre>

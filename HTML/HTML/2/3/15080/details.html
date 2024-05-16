@@ -1,0 +1,67 @@
+<html><h3>Pattern ID :15080
+</h3><img src='50876763.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            y = y.to(self.device).int()
+            pred = self.model(X)
+            auc = self.metric_fn(pred, y)
+        auc = <a id="change">self.metric_fn.compute().item()</a>
+        result = {"auc": auc}
+        self.metric_fn.reset()
+        return result
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            y = y.to(self.device).int()
+            pred = self.model(X)
+            [fn(pred, y) for fn in self.metric_fns]
+        result = <a id="change">{type(fn).__name__: fn.compute().item() for fn in self.metric_fns}</a>
+        [fn.reset() for fn in self.metric_fns]
+        return result
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/ryantd/veloce/commit/ebf960b42f1119be6721e2c8ff49f856c0994ebc#diff-10a63a56f6f260c3a8cc88a30331e16de36e33f42ccd316cb27d96f83f790d53L125' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 50876763</div><div id='project'> Project Name: ryantd/veloce</div><div id='commit'> Commit Name: ebf960b42f1119be6721e2c8ff49f856c0994ebc</div><div id='time'> Time: 2022-01-04</div><div id='author'> Author: xiaoyu.zhai@hotmail.com</div><div id='file'> File Name: phetware/epochvisor.py</div><div id='m_class'> M Class Name: Epochvisor</div><div id='n_method'> N Class Name: Epochvisor</div><div id='m_method'> M Method Name: test_epoch(2)</div><div id='n_method'> N Method Name: test_epoch(2)</div><div id='m_parent_class'> M Parent Class: object</div><div id='n_parent_class'> N Parent Class: object</div><div id='m_file'> M File Name: phetware/epochvisor.py</div><div id='n_file'> N File Name: phetware/epochvisor.py</div><div id='m_start'> M Start Line: 125</div><div id='m_end'> M End Line: 130</div><div id='n_start'> N Start Line: 128</div><div id='n_end'> N End Line: 132</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            predictions = pred_model.pred_n(input, pred_length=video_pred_length)
+            if concat_input_for_loss:
+                predictions = torch.cat([input, predictions], dim=1)
+            val_total_loss.append(<a id="change">loss_fn(predictions, targets).item()</a>)
+    pred_model.train()
+
+    mean_loss = sum(val_total_loss) / len(val_total_loss)</code></pre><h3>After Change</h3><pre><code class='java'>
+    pred_model.eval()
+    with torch.no_grad():
+        loop = tqdm(loader)
+        total_losses = <a id="change">{key: [] for key in losses.keys()}</a>
+        for batch_idx, data in enumerate(loop):
+
+            &#47&#47 fwd
+            data = data.to(device)  &#47&#47 [b, T, h, w], with T = video_tot_length</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/ais-bonn/vp-suite/commit/7b2115f43c7b9b0ecf644451be9befcb6de23f7b#diff-09d0cbaf891d623ac245ccf84485a687b554217349ca55557c60b33234b969aeL229' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 50876764</div><div id='project'> Project Name: ais-bonn/vp-suite</div><div id='commit'> Commit Name: 7b2115f43c7b9b0ecf644451be9befcb6de23f7b</div><div id='time'> Time: 2021-07-21</div><div id='author'> Author: boltres@ais.uni-bonn.de</div><div id='file'> File Name: utils.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: validate_video_model(6)</div><div id='n_method'> N Method Name: validate_video_model(7)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: utils.py</div><div id='n_file'> N File Name: utils.py</div><div id='m_start'> M Start Line: 229</div><div id='m_end'> M End Line: 246</div><div id='n_start'> N Start Line: 211</div><div id='n_end'> N End Line: 234</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 avg_loss among all data
+        loss_dict = {
+            f&quotval/{k}&quot:
+            <a id="change">torch.stack([output[k] for output in outputs]).mean().item()</a>
+            for k in outputs[0].keys()
+        }
+        self.log_dict(loss_dict, sync_dist=True)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            f&quotval/{k}&quot: torch.stack([output[k] for output in outputs])
+            for k in outputs[0].keys()
+        }  &#47&#47 each is [num_batches], stacked avg loss in each batch
+        avg_loss = <a id="change">{
+            k: (v * batch_sizes).sum() / batch_sizes.sum()
+            for k, v in losses.items()
+        }</a>
+        self.log_dict(avg_loss, sync_dist=True)
+
+    def test_step(self, data_dict, batch_idx):
+        loss_dict = self.forward_pass(data_dict, mode=&quottest&quot)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/wuziyi616/multi_part_assembly/commit/0148c98759e6c3ff6b944136ebc93aeb67f0d421#diff-a3ad4747602b92d4c95922c1168436b29f062f2b231f1c5c31a818c978e6bc4dL118' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 50876767</div><div id='project'> Project Name: wuziyi616/multi_part_assembly</div><div id='commit'> Commit Name: 0148c98759e6c3ff6b944136ebc93aeb67f0d421</div><div id='time'> Time: 2022-03-08</div><div id='author'> Author: dazitu616@gmail.com</div><div id='file'> File Name: multi_part_assembly/models/pn_transformer/network.py</div><div id='m_class'> M Class Name: PNTransformer</div><div id='n_method'> N Class Name: PNTransformer</div><div id='m_method'> M Method Name: validation_epoch_end(2)</div><div id='n_method'> N Method Name: validation_epoch_end(2)</div><div id='m_parent_class'> M Parent Class: pl.LightningModule</div><div id='n_parent_class'> N Parent Class: pl.LightningModule</div><div id='m_file'> M File Name: multi_part_assembly/models/pn_transformer/network.py</div><div id='n_file'> N File Name: multi_part_assembly/models/pn_transformer/network.py</div><div id='m_start'> M Start Line: 120</div><div id='m_end'> M End Line: 125</div><div id='n_start'> N Start Line: 122</div><div id='n_end'> N End Line: 133</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+					for k, v in outputs.items():
+						_, preds = torch.max(v, -1)
+						accs.extend(torch.eq(preds, classes[k]).float().cpu().numpy())
+		return <a id="change">np.mean(np.asarray(accs)).item()</a>
+</code></pre><h3>After Change</h3><pre><code class='java'>
+			)
+
+		if isinstance(y_true, dict):
+			return <a id="change">{k: accuracy_score(y_true[k], y_pred[k]) for k in y_true}</a>
+		return accuracy_score(y_true, y_pred)
+
+	@staticmethod
+	def precision(</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/neurotorch/neurotorch/commit/a12e85b06c8ee517b890c900e3f1a1e7d1caa94c#diff-cbf72c0bab1db629bb51744bddad5311e30ddab49ba2c780e98325e7423a26f1L21' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 50876768</div><div id='project'> Project Name: neurotorch/neurotorch</div><div id='commit'> Commit Name: a12e85b06c8ee517b890c900e3f1a1e7d1caa94c</div><div id='time'> Time: 2022-06-10</div><div id='author'> Author: 50332514+JeremieGince@users.noreply.github.com</div><div id='file'> File Name: src/neurotorch/metrics/classification.py</div><div id='m_class'> M Class Name: ClassificationMetrics</div><div id='n_method'> N Class Name: ClassificationMetrics</div><div id='m_method'> M Method Name: accuracy(8)</div><div id='n_method'> N Method Name: accuracy(6)</div><div id='m_parent_class'> M Parent Class: BaseMetrics</div><div id='n_parent_class'> N Parent Class: BaseMetrics</div><div id='m_file'> M File Name: src/neurotorch/metrics/classification.py</div><div id='n_file'> N File Name: src/neurotorch/metrics/classification.py</div><div id='m_start'> M Start Line: 22</div><div id='m_end'> M End Line: 48</div><div id='n_start'> N Start Line: 68</div><div id='n_end'> N End Line: 89</div><BR>

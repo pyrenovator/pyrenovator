@@ -1,0 +1,106 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    assert torch.allclose(target, output, atol=5e-3)
+
+    &#47&#47 Continuation is not exact due to zero paddings (even for boring video)
+    output_next_frame = <a id="change">comodel.forward(input[:, :, -1]</a><a id="change">)</a>
+
+    &#47&#47 assert torch.allclose(target, output_next_frame, atol=5e-4)
+
+    next_frame_top10 = torch.topk(output_next_frame, k=10)[1][0].tolist()</code></pre><h3>After Change</h3><pre><code class='java'>
+def test_CoX3D():
+    weights_path = download_weights()  &#47&#47 s
+    frames_per_clip = 13
+    <a id="change">sample</a> = boring_video(image_size=160, frames_per_clip=frames_per_clip)
+
+    &#47&#47 Regular model
+    model = X3D(
+        dim_in=3,
+        image_size=160,
+        frames_per_clip=frames_per_clip,
+        num_classes=400,
+        x3d_conv1_dim=12,
+        x3d_conv5_dim=2048,
+        x3d_num_groups=1,
+        x3d_width_per_group=64,
+        x3d_width_factor=2.0,
+        x3d_depth_factor=2.2,
+        x3d_bottleneck_factor=2.25,
+        x3d_use_channelwise_3x3x3=1,
+        x3d_dropout_rate=0.5,
+        x3d_head_activation="softmax",
+        x3d_head_batchnorm=0,
+        x3d_fc_std_init=0.01,
+        x3d_final_batchnorm_zero_init=1,
+    )
+
+    &#47&#47 Continual model
+    comodel = CoX3D(
+        dim_in=3,
+        image_size=160,
+        frames_per_clip=frames_per_clip,
+        num_classes=400,
+        x3d_conv1_dim=12,
+        x3d_conv5_dim=2048,
+        x3d_num_groups=1,
+        x3d_width_per_group=64,
+        x3d_width_factor=2.0,
+        x3d_depth_factor=2.2,
+        x3d_bottleneck_factor=2.25,
+        x3d_use_channelwise_3x3x3=1,
+        x3d_dropout_rate=0.5,
+        x3d_head_activation="softmax",
+        x3d_head_batchnorm=0,
+        x3d_fc_std_init=0.01,
+        x3d_final_batchnorm_zero_init=1,
+        temporal_fill="zeros",
+        se_scope="clip",
+    )
+    assert comodel.delay == 220
+
+    &#47&#47 Load weights
+    model_state = torch.load(weights_path, map_location="cpu")["model_state"]
+    model.load_state_dict(model_state)
+    comodel.load_state_dict(model_state, flatten=True)
+
+    &#47&#47 Training mode has large effect on BatchNorm result - test will fail otherwise
+    model.eval()
+    comodel.eval()
+
+    target<a id="change"> = </a><a id="change">model.forward(sample</a><a id="change">)</a>
+
+    &#47&#47 forward
+    output = comodel.forward(sample)
+    assert torch.allclose(target, output)
+
+    &#47&#47 forward_steps
+    output = comodel.forward_steps(sample, pad_end=True)
+    assert torch.allclose(target, output)
+
+    &#47&#47 forward
+    comodel.clean_state()
+    &#47&#47 init
+    for i in range(frames_per_clip):
+        comodel.forward_step(sample[:, :, i])
+
+    &#47&#47 zero-pad end manually
+    zeros = <a id="change">torch.zeros_like(sample[:, :, 0]</a><a id="change">)</a>
+    for _ in range(comodel.delay - frames_per_clip):
+        comodel.forward_step(zeros)
+
+    &#47&#47 final result
+    output = comodel.forward_step(zeros)
+    torch.allclose(output, target, atol=5e-3)
+
+    target_top10 = torch.topk(target, k=10)[1][0].tolist()
+    output_top10 = torch.topk(output, k=10)[1][0].tolist()
+
+    assert len(set(target_top10) - set(output_top10)) &lt;= 3
+
+    &#47&#47 Another step - now out of comparable operation
+    output<a id="change"> = </a>comodel.forward_step(zeros)
+    output_top10 = torch.topk(output, k=10)[1][0].tolist()
+    assert len(set(target_top10) - set(output_top10)) &lt;= 3
+</code></pre>

@@ -1,0 +1,153 @@
+<html><h3>Pattern ID :2493
+</h3><img src='10475599.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    def search(self, conf_search:Config, model_desc_builder:ModelDescBuilder,
+                 trainer_class:TArchTrainer, finalizers:Finalizers)-&gt;SearchResult:
+        &#47&#47 the pool of ray job ids
+        future_ids<a id="change"> = </a><a id="change">[]</a>
+
+        &#47&#47 attempt to restore parent pool
+        parent_pool_restored = self._restore_parent_pool()
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 seed the pool with many different seed models of different
+        &#47&#47 macro parameters like number of cells, reductions etc if parent pool
+        &#47&#47 could not be restored and/or this is the first time this job has been run.
+        <a id="change">future_ids</a> = [] if parent_pool_restored else  self._create_seed_jobs()
+
+        while not self._should_terminate_search():
+            logger.info(f&quotnum jobs currently in pool (waiting or being processed) {len(future_ids)}&quot)
+
+            if future_ids:
+                job_id_done, future_ids = ray.wait(future_ids)
+                job_stage, *job_return = ray.get(job_id_done[0])
+
+                logger.info(f&quot"{job_stage}" completed&quot)
+
+                if job_stage==JobStage.SEED:
+                    model_desc, train_metrics = job_return
+
+                    &#47&#47 add it to the parent models pool
+                    self._convex_hull_points.append((model_desc, train_metrics))
+
+                    &#47&#47 save to disk for restoring
+                    filename = os.path.join(self._checkpoints_foldername, f&quotparent_desc_{len(self._convex_hull_points)}.yaml&quot)
+                    model_desc.save(filename, save_trainables=True)
+                    self._record_checkpoint(filename, metrics_stats)
+                    logger.info(f&quotappended to parent a model with MAdd {metrics_stats.model_stats.MAdd}, num cells {len(job_result.model_desc.cell_descs())}, num nodes in cell {len(job_result.model_desc.cell_descs()[0].nodes())}&quot)
+
+                    &#47&#47 sample a model from parent pool
+                    model_desc, _ = self._sample_model_from_parent_pool()
+                    job_result = JobResult(model_desc, True)
+                    this_search_id = search_desc.remote(job_result, self.model_desc_builder, self.trainer_class, self.finalizers, self.conf_train, self.conf_loader, common.get_state())
+                    future_ids.append(this_search_id)
+                    logger.info(&quotjust added a new model to processing pool&quot)
+                elif job_stage==JobStage.SEARCH:
+                    &#47&#47 unpack job result
+                    model_desc, search_metrics = job_return
+
+                    &#47&#47 create the job to train the searched model
+                    this_child_id = self.train_model_desc_dist.remote(JobStage.TRAIN, self.conf_postsearch_train,
+                                                                      model_desc, common.get_state())
+                    future_ids.append(this_child_id)
+                elif <a id="change">job_stage==JobStage.TRAIN</a>:
+                    <a id="change">pass</a> &#47&#47 no more processing for this job
+                else:
+                    raise RuntimeError(f&quotJob stage "{job_stage}" is not recognized&quot)
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 5</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/microsoft/archai/commit/b2552313737c80f592e3937bd0d822d36868d312#diff-908cc686aedfbea3c61190bcea3654138771c3b2b3139a999d585ada28a2febeL281' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 10475599</div><div id='project'> Project Name: microsoft/archai</div><div id='commit'> Commit Name: b2552313737c80f592e3937bd0d822d36868d312</div><div id='time'> Time: 2022-12-16</div><div id='author'> Author: shitals@microsoft.com</div><div id='file'> File Name: archai/nas/search_distributed.py</div><div id='m_class'> M Class Name: SearchDistributed</div><div id='n_method'> N Class Name: SearchDistributed</div><div id='m_method'> M Method Name: search(5)</div><div id='n_method'> N Method Name: search(5)</div><div id='m_parent_class'> M Parent Class: Search</div><div id='n_parent_class'> N Parent Class: Search</div><div id='m_file'> M File Name: archai/nas/search_distributed.py</div><div id='n_file'> N File Name: archai/nas/search_distributed.py</div><div id='m_start'> M Start Line: 281</div><div id='m_end'> M End Line: 341</div><div id='n_start'> N Start Line: 326</div><div id='n_end'> N End Line: 375</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        
+        
+    def train(self, loss_verbose = False, use_sam = False):
+        train_loss_list<a id="change"> = </a><a id="change">[]</a>
+        val_accuracy_list = [-1]
+
+        best_model = self.model
+        for epoch in range(self.n_epochs):</code></pre><h3>After Change</h3><pre><code class='java'>
+        best_model = self.model
+        best_acc = -1
+        &#47&#47 scheduler = self.schedule_lr(self.optimizer)
+        for <a id="change">epoch</a> in range(self.n_epochs):
+            for idx, (image, y_train) in tqdm(enumerate(self.train_loader)):
+                image = image.to(self.device)
+                y_train=y_train.to(self.device)
+                y_pred = self.model(image)
+
+                if use_sam:
+                    loss = self.loss_function(y_pred, y_train)
+                    loss.backward()
+                    self.optimizer.first_step(zero_grad=True)
+                    self.loss_function(self.model(image), y_train).backward()  &#47&#47 make sure to do a full forward pass
+                    self.optimizer.second_step(zero_grad=True)                    
+                else:
+                    loss = self.loss_function(y_pred, y_train)
+                    self.optimizer.zero_grad()
+                    loss.backward()
+                    self.optimizer.step()
+                    &#47&#47 scheduler.step()
+                if loss_verbose:
+                    print("iter ", idx, "Train loss: ", loss.item())
+
+            acc = []
+            for idx, (image, y_val) in enumerate(self.val_loader):
+                acc.append(self.val(image, y_val))
+            val_accuracy = sum(acc)/len(acc)
+            &#47&#47 val_accuracy_list.append(sum(acc)/len(acc))
+            <a id="change">if val_accuracy&gt;=best_acc</a>:
+                best_model = self.model
+                best_acc = val_accuracy
+            else:
+                <a id="change">pass</a>
+            print("Epoch ", epoch," | Current val accuracy: ", val_accuracy.item(), " | Best model&quots accuracy: ", best_acc.item())
+                
+        return best_model
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/tungedng2710/improved-arcface/commit/583725035bb9e45a6ae4a84161f4a2778ca04a6e#diff-9f1d8e92cd6ea2024cda543185e6c91bbc5cd7377d0eb7d5b071abee5e466410L31' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 10475605</div><div id='project'> Project Name: tungedng2710/improved-arcface</div><div id='commit'> Commit Name: 583725035bb9e45a6ae4a84161f4a2778ca04a6e</div><div id='time'> Time: 2021-11-29</div><div id='author'> Author: tungnguyen99.tn@gmail.com</div><div id='file'> File Name: trainer.py</div><div id='m_class'> M Class Name: Trainer</div><div id='n_method'> N Class Name: Trainer</div><div id='m_method'> M Method Name: train(3)</div><div id='n_method'> N Method Name: train(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: trainer.py</div><div id='n_file'> N File Name: trainer.py</div><div id='m_start'> M Start Line: 32</div><div id='m_end'> M End Line: 65</div><div id='n_start'> N Start Line: 36</div><div id='n_end'> N End Line: 70</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+
+def get_requirements_from_file(filepath):
+    requires<a id="change"> = </a><a id="change">[]</a>
+    with open(filepath, &quotr&quot) as f:
+        requires.append(f.readline())
+    return requires
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    requirements = []
+    with open(python_requirements_file) as requirements_file:
+        <a id="change">requirement</a> = requirements_file.readline()
+        while requirement:
+            if requirement.strip().startswith("&#47&#47"):
+                pass
+            elif <a id="change">requirement.strip() == ""</a>:
+                <a id="change">pass</a>
+            else:
+                requirements.append(requirement.strip())
+            requirement = requirements_file.readline()
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/zumolabs/zpy/commit/f480be593d4716e224cf5d8b7701a05300fac3ba#diff-60f61ab7a8d1910d86d9fda2261620314edcae5894d5aaa236b821c7256badd7L8' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 10475604</div><div id='project'> Project Name: zumolabs/zpy</div><div id='commit'> Commit Name: f480be593d4716e224cf5d8b7701a05300fac3ba</div><div id='time'> Time: 2021-03-17</div><div id='author'> Author: nponte@baymax.local</div><div id='file'> File Name: setup.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: get_requirements_from_file(1)</div><div id='n_method'> N Method Name: get_requirements_from_file(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: setup.py</div><div id='n_file'> N File Name: setup.py</div><div id='m_start'> M Start Line: 9</div><div id='m_end'> M End Line: 12</div><div id='n_start'> N Start Line: 20</div><div id='n_end'> N End Line: 32</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+            &#47&#47 Add guidance according to discrepancy
+            all_is_pos = {}
+            all_is_other = <a id="change">{}</a>
+            for key_label in d["label_names"].keys():
+                &#47&#47 Add guidance based on discrepancy
+                self.add_guidance(self.tmp_guidance[key_label][0], discrepancy[key_label], d["label_names"], d["label"])
+                all_is_pos[key_label] = self.is_pos
+                all_is_other[key_label] = self.is_other
+                self.is_pos = False
+                self.is_other = False
+
+            d["is_pos"] = all_is_pos
+            d["is_neg"]<a id="change"> = </a>all_is_other
+
+            &#47&#47 Convert tmp_guidance back to json
+            for key_label in d["label_names"].keys():</code></pre><h3>After Change</h3><pre><code class='java'>
+            logger.info(f"Number of simulated clicks: {num_clicks}")
+            counter = 0
+            keep_guidance = []
+            while <a id="change">True</a>:
+                aux_label = random.choice(list(d["label_names"].keys()))
+                <a id="change">if aux_label in keep_guidance</a>:
+                    <a id="change">pass</a>
+                else:
+                    keep_guidance.append(aux_label)
+                    counter = counter + len(self.tmp_guidance[aux_label][0])
+                    &#47&#47 If collected clicks is bigger than max clicks, discard the others</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/project-monai/monailabel/commit/805b59e23d7280827fb83a33492490b68ec91b0c#diff-ed3b5072b42bd705c8ea626ad811a82b2a44dc745e40038ead07bd4d32e4f64bL611' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 10475601</div><div id='project'> Project Name: project-monai/monailabel</div><div id='commit'> Commit Name: 805b59e23d7280827fb83a33492490b68ec91b0c</div><div id='time'> Time: 2021-11-18</div><div id='author'> Author: diazandr3s@gmail.com</div><div id='file'> File Name: monailabel/deepedit/multilabel/transforms.py</div><div id='m_class'> M Class Name: PosNegClickProbAddRandomGuidanceCustomd</div><div id='n_method'> N Class Name: PosNegClickProbAddRandomGuidanceCustomd</div><div id='m_method'> M Method Name: __call__(2)</div><div id='n_method'> N Method Name: __call__(2)</div><div id='m_parent_class'> M Parent Class: MapTransform,Randomizable</div><div id='n_parent_class'> N Parent Class: MapTransform,Randomizable</div><div id='m_file'> M File Name: monailabel/deepedit/multilabel/transforms.py</div><div id='n_file'> N File Name: monailabel/deepedit/multilabel/transforms.py</div><div id='m_start'> M Start Line: 612</div><div id='m_end'> M End Line: 637</div><div id='n_start'> N Start Line: 611</div><div id='n_end'> N End Line: 649</div><BR>

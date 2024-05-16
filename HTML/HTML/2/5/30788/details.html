@@ -1,0 +1,83 @@
+<html><h3>Pattern ID :30788
+</h3><img src='90710408.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    weight_shape = [ctx.dims.spatial_mixing_kernel] * 2
+    max_dims = math.floor(math.log(ctx.dims.sequence, ctx.dims.spatial_mixing_kernel))
+    mask = jnp.triu(jnp.ones(weight_shape, dtype=ctx.model.computation_dtype)) if ctx.model.autoregressive else 1
+    weights = <a id="change">[get_param(ctx, f"mix_{i}", weight_shape, std=1, scale=ctx.dims.spatial_mixing_kernel ** -0.5)
+               for i in range(max_dims)]</a>
+
+    if ctx.is_initializing:
+        return inp
+
+    inp = inp.reshape(ctx.dims.batch, -1, *[ctx.dims.spatial_mixing_kernel] * max_dims, ctx.dims.features)
+    original_dims = &quot&quot.join(chr(ord(&quota&quot) + i) for i in range(inp.ndim))
+    for i, wgt in enumerate(weights):
+        new_dims<a id="change"> = </a>original_dims[:i + 2] + "z" + original_dims[i + 3:]
+        reduced_dim = original_dims[i + 2]
+        if i &gt; 0:
+            inp = activate(inp)</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    original_shape = inp.shape
+    max_dims = math.floor(math.log(ctx.dims.sequence, ctx.dims.spatial_mixing_kernel))
+    batch = <a id="change">lax.max(</a>ctx.dims.sequence // ctx.dims.spatial_mixing_kernel ** (depth % max_dims + 1), 1<a id="change">)</a>
+
+    mask = jnp.logical_not(jnp.tri(ctx.dims.spatial_mixing_kernel, k=-1)) if ctx.model.autoregressive else 1
+    out = inp.reshape(ctx.dims.batch * batch, ctx.dims.spatial_mixing_kernel, -1, ctx.dims.features)
+    out = jnp.einsum("bkrf,kg,kg-&gt;bgrf", out, wgt0, mask)
+    out<a id="change"> = </a>activate(ctx, out)
+    out = jnp.einsum("bkrf,kg,kg-&gt;bgrf", out, wgt1, mask)
+    return out.reshape(original_shape)
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 5</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/homebrewnlp/homebrewnlp-jax/commit/acfb8d5fbb1ba8f6b7830832f913663e426b9d09#diff-efcd90cee8fb4dad861da47df28097bc6935541500854b8e2d68e0970e05f748L13' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 90710408</div><div id='project'> Project Name: homebrewnlp/homebrewnlp-jax</div><div id='commit'> Commit Name: acfb8d5fbb1ba8f6b7830832f913663e426b9d09</div><div id='time'> Time: 2022-09-01</div><div id='author'> Author: 39779310+ClashLuke@users.noreply.github.com</div><div id='file'> File Name: src/model/mixer.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: mix(3)</div><div id='n_method'> N Method Name: mix(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/model/mixer.py</div><div id='n_file'> N File Name: src/model/mixer.py</div><div id='m_start'> M Start Line: 14</div><div id='m_end'> M End Line: 32</div><div id='n_start'> N Start Line: 13</div><div id='n_end'> N End Line: 29</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        torch.empty(*shape, dtype=torch.float32, requires_grad=False)
+        for _ in range(5)
+    ]
+    dace_inputs = <a id="change">[
+        torch.empty(*shape, dtype=torch.float32, requires_grad=False)
+        for _ in range(5)
+    ]</a>
+
+    pytorch_outputs = []
+    for inp, inp_src in zip(pytorch_inputs, input_values):
+        inp.copy_(inp_src)
+        inp.requires_grad = True
+        s = module(inp).sum()
+        s.backward()
+        pytorch_outputs.append(inp.grad)
+        print(pytorch_outputs[-1])
+
+    dace_module = DaceModule(module, backward=True)
+
+    dace_outputs = []
+    for inp, inp_src in zip(dace_inputs, input_values):
+        inp.copy_(inp_src)
+        inp.requires_grad<a id="change"> = </a>True
+        s = dace_module(inp).sum()
+        s.backward()
+        dace_outputs.append(inp.grad.clone().detach())</code></pre><h3>After Change</h3><pre><code class='java'>
+    dace_input.requires_grad = True
+
+    if use_max:
+        s<a id="change"> = </a><a id="change">module(pytorch_input).max()</a>
+    else:
+        s = module(pytorch_input).sum()
+    s.backward()
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/spcl/daceml/commit/682aea4a22edc4a5268188596bcf443bd041a0a7#diff-6b594ac1652083c98f3550d2f555bfc8748a335580d09701a127b3502938fb38L10' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 90710414</div><div id='project'> Project Name: spcl/daceml</div><div id='commit'> Commit Name: 682aea4a22edc4a5268188596bcf443bd041a0a7</div><div id='time'> Time: 2021-03-01</div><div id='author'> Author: oliverrausch99@gmail.com</div><div id='file'> File Name: tests/autodiff/pytorch/test_pytorch.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: run_pytorch_module(3)</div><div id='n_method'> N Method Name: run_pytorch_module(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: tests/autodiff/pytorch/test_pytorch.py</div><div id='n_file'> N File Name: tests/autodiff/pytorch/test_pytorch.py</div><div id='m_start'> M Start Line: 13</div><div id='m_end'> M End Line: 45</div><div id='n_start'> N Start Line: 10</div><div id='n_end'> N End Line: 44</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        )
+
+        &#47&#47 Pad examples to have same length.
+        max_length = max(<a id="change">[len(t) for t in asr_tokens]</a>)
+        if max_length == 0:
+            max_length<a id="change"> = </a>1  &#47&#47 The ASR may output empty transcripts.
+        for t in asr_tokens:
+            t += [0] * (max_length - len(t))
+        asr_tokens = torch.tensor([t for t in asr_tokens])</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 Pad examples to have same length.
+        &#47&#47 Manage length of predicted tokens
+        asr_tokens_lens = torch.tensor([max(len(t), 1) for t in asr_tokens])
+        max_length<a id="change"> = </a><a id="change">asr_tokens_lens.max()</a>.item()
+        for t in asr_tokens:
+            t += [0] * (max_length - len(t))
+        asr_tokens = torch.tensor([t for t in asr_tokens])</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/speechbrain/speechbrain/commit/31429ba76a94ea5481408307f5272c6b15034fc4#diff-5c7610ad02d63a9849f99e4a8bcd20ace1e0a732a0c0e6c37171f3fa0d4e0766L31' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 90710418</div><div id='project'> Project Name: speechbrain/speechbrain</div><div id='commit'> Commit Name: 31429ba76a94ea5481408307f5272c6b15034fc4</div><div id='time'> Time: 2021-01-18</div><div id='author'> Author: loren.lugosch@gmail.com</div><div id='file'> File Name: recipes/timers-and-such/multistage/train/train.py</div><div id='m_class'> M Class Name: SLU</div><div id='n_method'> N Class Name: SLU</div><div id='m_method'> M Method Name: compute_forward(3)</div><div id='n_method'> N Method Name: compute_forward(3)</div><div id='m_parent_class'> M Parent Class: sb.Brain</div><div id='n_parent_class'> N Parent Class: sb.Brain</div><div id='m_file'> M File Name: recipes/timers-and-such/multistage/train/train.py</div><div id='n_file'> N File Name: recipes/timers-and-such/multistage/train/train.py</div><div id='m_start'> M Start Line: 54</div><div id='m_end'> M End Line: 64</div><div id='n_start'> N Start Line: 55</div><div id='n_end'> N End Line: 61</div><BR>

@@ -1,0 +1,103 @@
+<html><h3>Pattern ID :3696
+</h3><img src='13922935.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                                    step=4, allow_overlap=VID_DATA_ALLOW_OVERLAP)
+    test_loader = DataLoader(test_data, batch_size=1, shuffle=True, num_workers=4)
+
+    i<a id="change"> = </a>0
+    loop = tqdm(test_loader)
+    for batch_idx, frames in enumerate(loop):
+
+        if i &gt;= 10: <a id="change">break</a>
+
+        frames = frames.to(DEVICE)  &#47&#47 [1, T, 3, h, w]
+        frames_vis = postprocess_img(frames.squeeze(dim=0))  &#47&#47 [T, 3, h, w]
+        input = frames[:, :VIDEO_IN_LENGTH]  &#47&#47 [1, t, 3, h, w]</code></pre><h3>After Change</h3><pre><code class='java'>
+            pred_rgb = pred_rgb.argmax(dim=2).squeeze()  &#47&#47 [T, h, w]
+            pred_then_colorized_vis = colorize_semseg(postprocess_mask(pred_rgb), num_classes=SYNPICK_CLASSES).transpose(0, 3, 1, 2) &#47&#47 [T, 3, h, w]
+
+            frames_seg = <a id="change">torch.stack([seg_model(frames[:, i]) for i in range(frames.shape[1])], dim=1).argmax(dim=2)</a>  &#47&#47 [1, T, 1, h, w]
+            frames_seg_in = torch.stack([(frames_seg == i) for i in range(SYNPICK_CLASSES)], dim=2).float()  &#47&#47 [1, T, c, h, w] one-hot float
+            input_seg = frames_seg_in[:, :VIDEO_IN_LENGTH]  &#47&#47 [1, t, c, h, w]
+            pred_mask = pred_mask_model.pred_n(input_seg, pred_length=VIDEO_PRED_LENGTH).argmax(dim=2)  &#47&#47 [1, n, 1, h, w]
+            pred_mask = torch.cat([input_seg.argmax(dim=2), pred_mask], dim=1).squeeze()  &#47&#47 [T, h, w]
+            pred_mask_vis = colorize_semseg(postprocess_mask(pred_mask), num_classes=SYNPICK_CLASSES).transpose(0, 3, 1, 2)  &#47&#47 [T, 3, h, w]
+
+            frames_colorized = colorize_semseg(postprocess_mask(frames_seg.squeeze()), num_classes=SYNPICK_CLASSES)
+            frames_colorized_vis<a id="change"> = </a>frames_colorized.transpose(0, 3, 1, 2)  &#47&#47 [T, 3, h, w]
+
+            input_colorized = preprocess_img(frames_colorized[:VIDEO_IN_LENGTH]).to(DEVICE).unsqueeze(dim=0)  &#47&#47 [b, t, 3, h, w]
+            colorized_then_pred = pred_colorized_mask_model.pred_n(input_colorized, pred_length=VIDEO_PRED_LENGTH)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/ais-bonn/vp-suite/commit/13016d4ab8ba4f8e7ee087155a6c5171f4d00ba3#diff-e07d70acfca9139cbf2c37b7a0074bdfbb966d41dc6c7edcc2cef05e78c00af0L16' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 13922935</div><div id='project'> Project Name: ais-bonn/vp-suite</div><div id='commit'> Commit Name: 13016d4ab8ba4f8e7ee087155a6c5171f4d00ba3</div><div id='time'> Time: 2021-08-02</div><div id='author'> Author: boltres@ais.uni-bonn.de</div><div id='file'> File Name: scripts/visualize_4_way.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: visualize_4_way(1)</div><div id='n_method'> N Method Name: visualize_4_way(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: scripts/visualize_4_way.py</div><div id='n_file'> N File Name: scripts/visualize_4_way.py</div><div id='m_start'> M Start Line: 16</div><div id='m_end'> M End Line: 73</div><div id='n_start'> N Start Line: 17</div><div id='n_end'> N End Line: 74</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    for base in base_list:
+        batch_size = base
+        for hcn in HCN_LIST:
+            new_batch_size<a id="change"> = </a>base * hcn
+            if new_batch_size &gt; max_acceptable_batch_size:
+                <a id="change">break</a>
+            batch_size = new_batch_size
+        candidate_batch_size.append(batch_size)
+    return list(set(candidate_batch_size))
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            candidate_batch_size.append(base)
+        else:
+            value = max_acceptable_batch_size // base
+            index<a id="change"> = </a><a id="change">np.argmax(</a>np.asarray(HCN_LIST) &gt; value<a id="change">)</a>
+            candidate_batch_size.append(HCN_LIST[index - 1] * base)
+    candidate_batch_size = list(set(candidate_batch_size))
+    logger.info(f"Candidate batch size: {candidate_batch_size}")
+    return candidate_batch_size</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/microsoft/deepspeed/commit/e2b39ded9f3e0316ef57632497568acefcb6231b#diff-b943325e9b40863253337e9cb486a51faa35b1594699b2b1dff1177b0d13a93bL63' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 13922944</div><div id='project'> Project Name: microsoft/deepspeed</div><div id='commit'> Commit Name: e2b39ded9f3e0316ef57632497568acefcb6231b</div><div id='time'> Time: 2021-11-22</div><div id='author'> Author: chunyang.wen@gmail.com</div><div id='file'> File Name: deepspeed/elasticity/elasticity.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: get_candidate_batch_sizes(2)</div><div id='n_method'> N Method Name: get_candidate_batch_sizes(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: deepspeed/elasticity/elasticity.py</div><div id='n_file'> N File Name: deepspeed/elasticity/elasticity.py</div><div id='m_start'> M Start Line: 67</div><div id='m_end'> M End Line: 75</div><div id='n_start'> N Start Line: 64</div><div id='n_end'> N End Line: 74</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+  assert all(image_pred[non_zero_ind,0] &gt; 0)
+  image_pred_ = np.reshape(image_pred[np.squeeze(non_zero_ind),:], (-1, 7))
+  try:
+    image_pred_<a id="change"> = </a>np.reshape(image_pred[np.squeeze(non_zero_ind),:], (-1, 7))
+  except:
+    print("No detections found!")
+    return 0
+
+  if image_pred_.shape[0] == 0:
+    print("No detections found!")
+    return 0
+
+  def unique(tensor):
+    tensor_np = tensor
+    unique_np = np.unique(tensor_np)
+    return unique_np
+
+  img_classes = unique(image_pred_[:, -1])
+
+  for cls in img_classes:
+    &#47&#47 perform NMS, get the detections with one particular class
+    cls_mask = image_pred_*np.expand_dims(image_pred_[:, -1] == cls, axis=1)
+    class_mask_ind = np.squeeze(np.nonzero(cls_mask[:,-2]))
+    &#47&#47 class_mask_ind = np.nonzero()
+    image_pred_class = np.reshape(image_pred_[class_mask_ind], (-1, 7))
+
+    &#47&#47 sort the detections such that the entry with the maximum objectness
+    &#47&#47 confidence is at the top
+    conf_sort_index = np.argsort(image_pred_class[:,4])
+    image_pred_class = image_pred_class[conf_sort_index]
+    idx = image_pred_class.shape[0]   &#47&#47Number of detections
+
+    for i in range(idx):
+      &#47&#47 Get the IOUs of all boxes that come after the one we are looking at in the loop
+      try:
+        ious = bbox_iou(np.expand_dims(image_pred_class[i], axis=0), image_pred_class[i+1:])
+      except ValueError:
+        break
+
+      except IndexError:
+        <a id="change">break</a>
+
+      &#47&#47 Zero out all the detections that have IoU &gt; threshold
+      iou_mask = np.expand_dims((ious &lt; nms_conf), axis=1)
+      image_pred_class[i+1:] *= iou_mask</code></pre><h3>After Change</h3><pre><code class='java'>
+  &#47&#47 Process img
+  img_pred = prediction[0]
+  max_conf = np.amax(img_pred[:,5:5+num_classes], axis=1)
+  max_conf_score<a id="change"> = </a><a id="change">np.argmax(</a>img_pred[:,5:5+num_classes]<a id="change">, axis=1)</a>
+  max_conf_score = np.expand_dims(max_conf_score, axis=1)
+  max_conf = np.expand_dims(max_conf, axis=1)
+  seq = (img_pred[:,:5], max_conf, max_conf_score)
+  image_pred = np.concatenate(seq, axis=1)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/geohot/tinygrad/commit/0f58c4c64869d44a74a08a6d5d1362d509740d1a#diff-fa4f93fe1b23b0a55fc6356e6ac5579192c42d3caddfc245ed43ef93b86f14e2L121' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 13922945</div><div id='project'> Project Name: geohot/tinygrad</div><div id='commit'> Commit Name: 0f58c4c64869d44a74a08a6d5d1362d509740d1a</div><div id='time'> Time: 2023-02-26</div><div id='author'> Author: 39754370+jla524@users.noreply.github.com</div><div id='file'> File Name: examples/yolov3.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: process_results(4)</div><div id='n_method'> N Method Name: process_results(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples/yolov3.py</div><div id='n_file'> N File Name: examples/yolov3.py</div><div id='m_start'> M Start Line: 133</div><div id='m_end'> M End Line: 215</div><div id='n_start'> N Start Line: 96</div><div id='n_end'> N End Line: 140</div><BR>

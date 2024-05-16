@@ -1,0 +1,43 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        starting_point=model_continuous.numpy(),
+        population_init_strategy=Distribution.NORMAL,
+    )
+    <a id="change">np.testing.assert_allclose(</a>np.std(updater.population, axis=0), np.ones(2)<a id="change">, rtol=0.1)</a>
+    np.testing.assert_allclose(
+        np.mean(updater.population, axis=0), np.array([10, 10]), rtol=0.1
+    )
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        space=env_continuous.single_action_space, state=np.array([10, 10])
+    )
+    critic = DummyCritic(space=env_continuous.single_action_space)
+    <a id="change">model_continuous = </a><a id="change">ActorCritic(
+        actor=actor_continuous,
+        critic=critic,
+        population_settings=PopulationSettings(actor_population_size=POPULATION_SIZE),
+    )</a>
+
+    &#47&#47 Assert population stats
+    updater<a id="change"> = </a>GeneticUpdater(model_continuous)
+    np.testing.assert_allclose(
+        np.mean(<a id="change">model_continuous.numpy_actors()</a>, axis=0), np.array([10, 10]), rtol=0.1
+    )
+
+    &#47&#47 Test call
+    old_model<a id="change"> = </a><a id="change">copy.deepcopy(model_continuous</a><a id="change">)</a>
+    old_population<a id="change"> = model_continuous</a><a id="change">.numpy_actors()</a>
+    action = model_continuous(np.zeros(POPULATION_SIZE))
+    _, rewards, _, _ = env_continuous.step(action)
+    log = updater(
+        rewards=rewards,
+        selection_operator=selection_operators.roulette_selection,
+        crossover_operator=crossover_operators.crossover_one_point,
+        mutation_operator=mutation_operators.uniform_mutation,
+    )
+    new_population<a id="change"> = model_continuous</a><a id="change">.numpy_actors()</a>
+    assert log.divergence &gt; 0
+    assert model_continuous != old_model
+    assert np.not_equal(old_population, new_population).any()
+    np.testing.assert_array_less(np.min(new_population, axis=0), np.array([10, 10]))</code></pre>

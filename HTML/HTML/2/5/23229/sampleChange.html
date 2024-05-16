@@ -1,0 +1,24 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            feats = feats.unsqueeze(0)
+            preds = self.model(feats)[0]  &#47&#47 extracting the activations by passing the feature through the NN
+            preds = self.model.final_pred(preds)
+            preds = <a id="change">preds.detach().numpy()</a>
+            preds = np.transpose(preds[:2, :])
+
+            if self.inference_model == "PF":   &#47&#47 Online _ causal
+                data = self.estimator.process(preds)</code></pre><h3>After Change</h3><pre><code class='java'>
+
+
+    def process(self, audio_path, inference_model, plot = False):
+        <a id="change">if inference_model == "PF"</a>:                 &#47&#47 instantiating a Particle Filter decoder - Is Chosen for online inference
+            self.estimator = particle_filter_cascade(beats_per_bar=[], fps=50, plot=plot)
+        elif inference_model == "DBN":                &#47&#47 instantiating an HMM decoder - Is chosen for offline inference
+            self.estimator = DBNDownBeatTrackingProcessor(beats_per_bar=[2, 3, 4], fps=50)
+        else:
+            <a id="change">raise </a>RuntimeError(&quotinference_model can be either "PF" or "DBN"&quot)
+        preds = self.activation_extractor(audio_path)
+        if inference_model == "PF":   &#47&#47 Online _ causal
+            data = self.estimator.process(preds)</code></pre>

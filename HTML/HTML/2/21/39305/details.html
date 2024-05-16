@@ -1,0 +1,262 @@
+<html><h3>Pattern ID :39305
+</h3><img src='111532709.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    &#47&#47 Forward through models
+    target = trans(example_clip)
+
+    <a id="change">outputs</a> = <a id="change">[]</a>
+    &#47&#47 Manual zero pad (due to padding=1 in trans.b Conv3d)
+    zeros = torch.zeros_like(example_clip[:, :, 0])
+    outputs.append(cotrans.forward(zeros))
+    <a id="change">for </a><a id="change">i</a> in <a id="change">range(example_clip.shape[2]</a><a id="change">):
+        outputs</a><a id="change">.append(cotrans.forward(</a><a id="change">example_clip[:, :, i])</a><a id="change">)</a>
+    outputs.append(cotrans.forward(zeros))
+    outputs.append(cotrans.forward(zeros))
+    <a id="change">outputs.append(</a>cotrans.forward(zeros)<a id="change">)</a>
+
+    &#47&#47 For debugging:
+    &#47&#47 close = []
+    &#47&#47 for t in range(target.shape[2]):
+    &#47&#47     for i in range(len(outputs)):
+    &#47&#47         if torch.allclose(target[:, :, t], outputs[i], atol=5e-2):
+    &#47&#47             close.append(f"t = {t}, o = {i}")
+
+    shift = example_clip.shape[2]<a id="change"> - 1</a>  &#47&#47 From SE
+
+    &#47&#47 Not very precise because SE block still initializes
+    for t in range(1, target.shape[2]):
+        assert torch.allclose(target[:, :, t], outputs[t + shift], atol=5e-2)
+
+    &#47&#47 After temporal_window_size inputs it also produces precise computation
+    <a id="change">torch.allclose(target[:, :, 3]</a>, <a id="change">outputs[3 + shift]</a><a id="change">, atol=1e-9)</a>
+
+    &#47&#47 forward_steps also works as expected
+    outputs2 = cotrans.forward_steps(example_clip)
+    assert torch.allclose(target, outputs2)</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    &#47&#47 Broken up
+    cotrans.clean_state()
+    nothing = cotrans.forward_steps(<a id="change">sample[:, :, :-1]</a>, pad_end=False)  &#47&#47 init
+    assert isinstance(nothing, TensorPlaceholder)
+
+    lasts = cotrans.forward_steps(sample[:, :, -1:], pad_end=True)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 18</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/lukashedegaard/co3d/commit/5e3890a961bad2dbe506263081d7c222a8c1ac9b#diff-81ebfd3b7da0e2057c99c1622bd2ed14cb38bdb040741812bc0eb3de8e60005eL238' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 111532709</div><div id='project'> Project Name: lukashedegaard/co3d</div><div id='commit'> Commit Name: 5e3890a961bad2dbe506263081d7c222a8c1ac9b</div><div id='time'> Time: 2021-09-10</div><div id='author'> Author: lh@eng.au.dk</div><div id='file'> File Name: tests/cox3d/test_x3d.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: test_ResBlock(0)</div><div id='n_method'> N Method Name: test_ResBlock(0)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: tests/cox3d/test_x3d.py</div><div id='n_file'> N File Name: tests/cox3d/test_x3d.py</div><div id='m_start'> M Start Line: 536</div><div id='m_end'> M End Line: 592</div><div id='n_start'> N Start Line: 238</div><div id='n_end'> N End Line: 298</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        block_idx=0,
+    )
+    trans.eval()  &#47&#47 This has a major effect on BatchNorm result
+    <a id="change">target</a> = trans(example_clip)
+
+    &#47&#47 Recurrent block
+    cotrans = CoX3DTransform(
+        dim_in=2,
+        dim_out=2,
+        temp_kernel_size=3,
+        stride=2,
+        dim_inner=5,
+        num_groups=5,
+        stride_1x1=False,
+        inplace_relu=True,
+        eps=1e-5,
+        bn_mmt=0.1,
+        dilation=1,
+        norm_module=torch.nn.BatchNorm3d,
+        se_ratio=0.1,
+        swish_inner=True,
+        block_idx=0,
+        temporal_window_size=example_clip.shape[2],
+        temporal_fill="zeros",
+    )
+    cotrans.load_state_dict(trans.state_dict())
+    cotrans.eval()  &#47&#47 This has a major effect on BatchNorm result
+
+    &#47&#47 Forward 3D works like the original
+    output3d = cotrans.forward_regular(example_clip)
+    assert torch.allclose(target, output3d)
+
+    <a id="change">o</a> = <a id="change">[]</a>
+    &#47&#47 Manual zero pad (due to padding=1 in Conv3d)
+    zeros = torch.zeros_like(example_clip[:, :, 0])
+    o.append(cotrans.forward(zeros))
+    <a id="change">for </a><a id="change">i</a> in <a id="change">range(example_clip.shape[2]</a><a id="change">):
+        </a><a id="change">o.append(cotrans.forward(</a><a id="change">example_clip[:, :, i])</a><a id="change">)</a>
+    <a id="change">o.append(</a>cotrans.forward(zeros)<a id="change">)</a>
+
+    &#47&#47 For debugging:
+    &#47&#47 close = []
+    &#47&#47 equal = []
+    &#47&#47 for t in range(target.shape[2]):
+    &#47&#47     for i in range(len(o)):
+    &#47&#47         if torch.allclose(target[:, :, t], o[i], atol=5e-3):
+    &#47&#47             close.append(f"t = {t}, o = {i}")
+    &#47&#47         if torch.equal(target[:, :, t], o[i]):
+    &#47&#47             equal.append(f"t = {t}, o = {i}")
+
+    shift = <a id="change">3</a><a id="change"> - </a>1  &#47&#47 From Conv3d
+    &#47&#47 Not very precise because SE block still initializes
+    for t in range(target.shape[2]):
+        assert torch.allclose(target[:, :, t], o[t + shift], atol=5e-3)
+
+    &#47&#47 After temporal_window_size inputs it also produces precise computation
+    <a id="change">torch.allclose(target[:, :, 3]</a>, <a id="change">o[3 + shift]</a><a id="change">, atol=1e-9)</a>
+
+    &#47&#47 Forward 3D works like the original
+    output3d = cotrans.forward_regular(example_clip)
+    assert torch.allclose(target, output3d)</code></pre><h3>After Change</h3><pre><code class='java'>
+    nothing = cotrans.forward_steps(example_clip[:, :, :-1], pad_end=False)  &#47&#47 init
+    assert isinstance(nothing, TensorPlaceholder)
+
+    lasts = cotrans.forward_steps(<a id="change">example_clip[:, :, -1:]</a>, pad_end=True)
+    assert torch.allclose(lasts, target)
+
+    &#47&#47 forward_step</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lukashedegaard/co3d/commit/3a1ca5de4898fd89bc774492cf0eeaed905baba1#diff-81ebfd3b7da0e2057c99c1622bd2ed14cb38bdb040741812bc0eb3de8e60005eL581' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 111532708</div><div id='project'> Project Name: lukashedegaard/co3d</div><div id='commit'> Commit Name: 3a1ca5de4898fd89bc774492cf0eeaed905baba1</div><div id='time'> Time: 2021-09-10</div><div id='author'> Author: lh@eng.au.dk</div><div id='file'> File Name: tests/cox3d/test_x3d.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: test_CoX3DTransform(0)</div><div id='n_method'> N Method Name: test_CoX3DTransform(0)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: tests/cox3d/test_x3d.py</div><div id='n_file'> N File Name: tests/cox3d/test_x3d.py</div><div id='m_start'> M Start Line: 601</div><div id='m_end'> M End Line: 657</div><div id='n_start'> N Start Line: 598</div><div id='n_end'> N End Line: 672</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    cotrans.eval()
+
+    &#47&#47 Forward through models
+    <a id="change">target</a> = trans(example_clip)
+
+    <a id="change">outputs</a> = <a id="change">[]</a>
+    &#47&#47 Manual zero pad (due to padding=1 in trans.b Conv3d)
+    zeros = torch.zeros_like(example_clip[:, :, 0])
+    outputs.append(cotrans.forward(zeros))
+    <a id="change">for </a><a id="change">i</a> in <a id="change">range(example_clip.shape[2]</a><a id="change">):
+        </a><a id="change">outputs.append(cotrans.forward(</a><a id="change">example_clip[:, :, i])</a><a id="change">)</a>
+    <a id="change">outputs.append(</a>cotrans.forward(zeros)<a id="change">)</a>
+    outputs.append(cotrans.forward(zeros))
+    outputs.append(cotrans.forward(zeros))
+
+    &#47&#47 For debugging:
+    &#47&#47 close = []
+    &#47&#47 for t in range(target.shape[2]):
+    &#47&#47     for i in range(len(outputs)):
+    &#47&#47         if torch.allclose(target[:, :, t], outputs[i], atol=5e-2):
+    &#47&#47             close.append(f"t = {t}, o = {i}")
+
+    shift = example_clip.shape[2]<a id="change"> - 1</a>  &#47&#47 From SE
+
+    &#47&#47 Not very precise because SE block still initializes
+    for t in range(1, target.shape[2]):
+        assert torch.allclose(target[:, :, t], outputs[t + shift], atol=5e-2)
+
+    &#47&#47 After temporal_window_size inputs it also produces precise computation
+    <a id="change">torch.allclose(target[:, :, 3]</a>, <a id="change">outputs[3 + shift]</a><a id="change">, atol=1e-9)</a>
+
+    &#47&#47 forward_steps also works as expected
+    outputs2 = cotrans.forward_steps(example_clip)
+    assert torch.allclose(target, outputs2)</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    &#47&#47 Broken up
+    cotrans.clean_state()
+    nothing = cotrans.forward_steps(<a id="change">sample[:, :, :-1]</a>, pad_end=False)  &#47&#47 init
+    assert isinstance(nothing, TensorPlaceholder)
+
+    lasts = cotrans.forward_steps(sample[:, :, -1:], pad_end=True)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lukashedegaard/co3d/commit/5e3890a961bad2dbe506263081d7c222a8c1ac9b#diff-81ebfd3b7da0e2057c99c1622bd2ed14cb38bdb040741812bc0eb3de8e60005eL515' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 111532711</div><div id='project'> Project Name: lukashedegaard/co3d</div><div id='commit'> Commit Name: 5e3890a961bad2dbe506263081d7c222a8c1ac9b</div><div id='time'> Time: 2021-09-10</div><div id='author'> Author: lh@eng.au.dk</div><div id='file'> File Name: tests/cox3d/test_x3d.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: test_ResBlock(0)</div><div id='n_method'> N Method Name: test_ResBlock(0)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: tests/cox3d/test_x3d.py</div><div id='n_file'> N File Name: tests/cox3d/test_x3d.py</div><div id='m_start'> M Start Line: 536</div><div id='m_end'> M End Line: 592</div><div id='n_start'> N Start Line: 238</div><div id='n_end'> N End Line: 298</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    cotrans.eval()
+
+    &#47&#47 Forward through models
+    <a id="change">target</a> = trans(example_clip)
+
+    <a id="change">outputs</a> = <a id="change">[]</a>
+    &#47&#47 Manual zero pad (due to padding=1 in trans.b Conv3d)
+    zeros = torch.zeros_like(example_clip[:, :, 0])
+    outputs.append(cotrans.forward(zeros))
+    <a id="change">for </a><a id="change">i</a> in <a id="change">range(example_clip.shape[2]</a><a id="change">):
+        </a><a id="change">outputs.append(cotrans.forward(</a><a id="change">example_clip[:, :, i])</a><a id="change">)</a>
+    outputs.append(cotrans.forward(zeros))
+    outputs.append(cotrans.forward(zeros))
+    <a id="change">outputs.append(</a>cotrans.forward(zeros)<a id="change">)</a>
+
+    &#47&#47 For debugging:
+    &#47&#47 close = []
+    &#47&#47 for t in range(target.shape[2]):
+    &#47&#47     for i in range(len(outputs)):
+    &#47&#47         if torch.allclose(target[:, :, t], outputs[i], atol=5e-2):
+    &#47&#47             close.append(f"t = {t}, o = {i}")
+
+    shift = example_clip.shape[2]<a id="change"> - 1</a>  &#47&#47 From SE
+
+    &#47&#47 Not very precise because SE block still initializes
+    for t in range(1, target.shape[2]):
+        assert torch.allclose(target[:, :, t], outputs[t + shift], atol=5e-2)
+
+    &#47&#47 After temporal_window_size inputs it also produces precise computation
+    <a id="change">torch.allclose(target[:, :, 3]</a>, <a id="change">outputs[3 + shift]</a><a id="change">, atol=1e-9)</a>
+
+    &#47&#47 forward_steps also works as expected
+    outputs2 = cotrans.forward_steps(example_clip)
+    assert torch.allclose(target, outputs2)</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    &#47&#47 Broken up
+    cotrans.clean_state()
+    nothing = cotrans.forward_steps(<a id="change">sample[:, :, :-1]</a>, pad_end=False)  &#47&#47 init
+    assert isinstance(nothing, TensorPlaceholder)
+
+    lasts = cotrans.forward_steps(sample[:, :, -1:], pad_end=True)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lukashedegaard/co3d/commit/1abbee21eddb2c0c9bcfd0ef06b47aabd9ea7144#diff-81ebfd3b7da0e2057c99c1622bd2ed14cb38bdb040741812bc0eb3de8e60005eL515' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 111532717</div><div id='project'> Project Name: lukashedegaard/co3d</div><div id='commit'> Commit Name: 1abbee21eddb2c0c9bcfd0ef06b47aabd9ea7144</div><div id='time'> Time: 2021-08-26</div><div id='author'> Author: lh@eng.au.dk</div><div id='file'> File Name: tests/cox3d/test_x3d.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: test_ResBlock(0)</div><div id='n_method'> N Method Name: test_ResBlock(0)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: tests/cox3d/test_x3d.py</div><div id='n_file'> N File Name: tests/cox3d/test_x3d.py</div><div id='m_start'> M Start Line: 536</div><div id='m_end'> M End Line: 592</div><div id='n_start'> N Start Line: 238</div><div id='n_end'> N End Line: 298</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        block_idx=0,
+    )
+    trans.eval()  &#47&#47 This has a major effect on BatchNorm result
+    <a id="change">target</a> = trans(example_clip)
+
+    &#47&#47 Recurrent block
+    cotrans = CoX3DTransform(
+        dim_in=2,
+        dim_out=2,
+        temp_kernel_size=3,
+        stride=2,
+        dim_inner=5,
+        num_groups=5,
+        stride_1x1=False,
+        inplace_relu=True,
+        eps=1e-5,
+        bn_mmt=0.1,
+        dilation=1,
+        norm_module=torch.nn.BatchNorm3d,
+        se_ratio=0.1,
+        swish_inner=True,
+        block_idx=0,
+        temporal_window_size=example_clip.shape[2],
+        temporal_fill="zeros",
+    )
+    cotrans.load_state_dict(trans.state_dict())
+    cotrans.eval()  &#47&#47 This has a major effect on BatchNorm result
+
+    &#47&#47 Forward 3D works like the original
+    output3d = cotrans.forward_regular(example_clip)
+    assert torch.allclose(target, output3d)
+
+    <a id="change">o</a> = <a id="change">[]</a>
+    &#47&#47 Manual zero pad (due to padding=1 in Conv3d)
+    zeros = torch.zeros_like(example_clip[:, :, 0])
+    o.append(cotrans.forward(zeros))
+    <a id="change">for </a><a id="change">i</a> in <a id="change">range(example_clip.shape[2]</a><a id="change">):
+        </a><a id="change">o.append(cotrans.forward(</a><a id="change">example_clip[:, :, i])</a><a id="change">)</a>
+    <a id="change">o.append(</a>cotrans.forward(zeros)<a id="change">)</a>
+
+    &#47&#47 For debugging:
+    &#47&#47 close = []
+    &#47&#47 equal = []
+    &#47&#47 for t in range(target.shape[2]):
+    &#47&#47     for i in range(len(o)):
+    &#47&#47         if torch.allclose(target[:, :, t], o[i], atol=5e-3):
+    &#47&#47             close.append(f"t = {t}, o = {i}")
+    &#47&#47         if torch.equal(target[:, :, t], o[i]):
+    &#47&#47             equal.append(f"t = {t}, o = {i}")
+
+    shift = 3<a id="change"> - 1</a>  &#47&#47 From Conv3d
+    &#47&#47 Not very precise because SE block still initializes
+    for t in range(target.shape[2]):
+        assert torch.allclose(target[:, :, t], o[t + shift], atol=5e-3)
+
+    &#47&#47 After temporal_window_size inputs it also produces precise computation
+    <a id="change">torch.allclose(target[:, :, 3]</a>, <a id="change">o[3 + shift]</a><a id="change">, atol=1e-9)</a>
+
+    &#47&#47 Forward 3D works like the original
+    output3d = cotrans.forward_regular(example_clip)
+    assert torch.allclose(target, output3d)</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    &#47&#47 forward_steps - broken up
+    cotrans.clean_state()
+    nothing = cotrans.forward_steps(<a id="change">example_clip[:, :, :-1]</a>, pad_end=False)  &#47&#47 init
+    assert isinstance(nothing, TensorPlaceholder)
+
+    lasts = cotrans.forward_steps(example_clip[:, :, -1:], pad_end=True)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lukashedegaard/co3d/commit/85d83724404879a086f4b9ef26aee5f4398830ac#diff-81ebfd3b7da0e2057c99c1622bd2ed14cb38bdb040741812bc0eb3de8e60005eL581' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 111532719</div><div id='project'> Project Name: lukashedegaard/co3d</div><div id='commit'> Commit Name: 85d83724404879a086f4b9ef26aee5f4398830ac</div><div id='time'> Time: 2021-08-25</div><div id='author'> Author: lh@eng.au.dk</div><div id='file'> File Name: tests/cox3d/test_x3d.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: test_CoX3DTransform(0)</div><div id='n_method'> N Method Name: test_CoX3DTransform(0)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: tests/cox3d/test_x3d.py</div><div id='n_file'> N File Name: tests/cox3d/test_x3d.py</div><div id='m_start'> M Start Line: 601</div><div id='m_end'> M End Line: 657</div><div id='n_start'> N Start Line: 598</div><div id='n_end'> N End Line: 672</div><BR>

@@ -1,0 +1,73 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    &#47&#47 making sure they get into new_graph
+    env = {}
+    node_processed: bool = False
+    <a id="change">for </a>node in graph.nodes<a id="change">:
+        </a>node_processed = False
+        if node.op == &quotcall_function&quot and node.target == torch.einsum:
+            &#47&#47 Get shapes:
+            try:
+                shapes = [a.shape for a in node.args[1:]]
+            except AttributeError:
+                warnings.warn(
+                    f"einsum {repr(node)} lacked shape information; "
+                    "not optimizing. "
+                    "Did you forget to run ShapeProp on this graph?",
+                    RuntimeWarning
+                )
+            else:
+                &#47&#47 We have shapes, so:
+                &#47&#47 Determine the optimal contraction
+                path, path_info = opt_einsum.contract_path(
+                    node.args[0],  &#47&#47 the einstr
+                    *shapes,
+                    shapes=True
+                )
+                &#47&#47 By wrapping the arguments with proxies,
+                &#47&#47 we can dispatch to opt_einsum and implicitly
+                &#47&#47 add it to the Graph by symbolically tracing it.
+                proxy_args = [
+                    fx.Proxy(env[x.name]) if isinstance(x, fx.Node) else x
+                    for x in node.args
+                ]
+                &#47&#47 Use _core_contract to avoid `len()` calls that
+                &#47&#47 fx can&quott deal with
+                output_proxy = _core_contract(
+                    proxy_args[1:],
+                    path_info.contraction_list,
+                    backend=&quottorch&quot,
+                    evaluate_constants=False
+                )
+
+                &#47&#47 Operations on `Proxy` always yield new `Proxy`s, and the
+                &#47&#47 return value of our decomposition rule is no exception.
+                &#47&#47 We need to extract the underlying `Node` from the `Proxy`
+                &#47&#47 to use it in subsequent iterations of this transform.
+                new_node = output_proxy.node
+                env[node.name] = new_node
+                node_processed = True
+
+        if not node_processed:
+            &#47&#47 Default case: just copy the node over into the new graph.
+            new_node = new_graph.node_copy(node, lambda x: env[x.name])
+            env[node.name]<a id="change"> = </a>new_node
+
+    new_graph.lint()
+    return new_graph</code></pre><h3>After Change</h3><pre><code class='java'>
+    if isinstance(model, fx.GraphModule):
+        graph: fx.Graph = model.graph
+    else:
+        tracer<a id="change">: fx.Tracer = </a>tracer_class()
+        graph: fx.Graph = tracer.trace(model)
+        model = tracer.root
+    out_mod = fx.GraphModule(model, graph)
+    &#47&#47 shapeprop
+    sp = ShapeProp(out_mod)
+    <a id="change">sp.run(</a>*<a id="change">example_inputs)</a>
+    out_mod.graph = optimize_einsums_graph(out_mod.graph)
+    out_mod.recompile()
+    return out_mod
+</code></pre>

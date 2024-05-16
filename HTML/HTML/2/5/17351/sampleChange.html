@@ -1,0 +1,20 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    &gt;&gt;&gt; plt.imshow(np.hstack(aa))
+    
+    &#47&#47 Get a sample from the Beta distribution
+    batch_size = <a id="change">tf.shape(images)[0]</a>
+    _, hh, ww, _ = images.shape
+    mix_weight = sample_beta_distribution(1, alpha, alpha)[0]  &#47&#47 same value in batch
+    if mix_weight &lt; min_mix_weight or 1 - mix_weight &lt; min_mix_weight:
+        &#47&#47 For input_shape=224, min_mix_weight=0.01, min_height = 224 * 0.1 = 22.4</code></pre><h3>After Change</h3><pre><code class='java'>
+    mix_weight = sample_beta_distribution((), alpha, alpha)
+
+    offset_height, offset_width, target_height, target_width = get_box(mix_weight, hh, ww)
+    mix_weight = 1.0 - tf.cast(target_height * target_width, "float32") / <a id="change">tf.cast(</a>hh<a id="change"> * </a>ww, "float32"<a id="change">)</a>
+    crops = tf.image.crop_to_bounding_box(images, offset_height, offset_width, target_height, target_width)
+    pad_crops = tf.image.pad_to_bounding_box(crops, offset_height, offset_width, hh, ww)
+
+    images = images - pad_crops + pad_crops[::-1]</code></pre>

@@ -1,0 +1,44 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            char_lens = torch.cat([char_lens, char_lens], dim=0)
+        loss = params.ctc_cost(pout, chars, pout_lens, char_lens)
+
+        stats<a id="change"> = </a><a id="change">{}</a>
+        <a id="change">if stage != "train"</a>:
+            <a id="change">ind2lab = params.train_loader.label_dict["char"]["index2lab"]</a>
+            sequence = ctc_greedy_decode(pout, pout_lens, blank_id=-1)
+            char_seq<a id="change"> = </a><a id="change">convert_index_to_lab(</a>sequence, <a id="change">ind2lab</a><a id="change">)</a>
+            word_seq = merge_char(char_seq)
+            chars<a id="change"> = </a><a id="change">undo_padding(</a>chars, char_lens<a id="change">)</a>
+            chars<a id="change"> = </a><a id="change">convert_index_to_lab(</a>chars, <a id="change">ind2lab</a><a id="change">)</a>
+            words = merge_char(chars)
+            cer_stats = edit_distance.wer_details_for_batch(
+                ids, chars, char_seq, compute_alignments=True
+            )
+            wer_stats<a id="change"> = </a><a id="change">edit_distance.wer_details_for_batch(
+                </a>ids, words, word_seq<a id="change">, compute_alignments=True
+            )</a>
+            stats["CER"] = cer_stats
+            stats["WER"]<a id="change"> = </a>wer_stats
+        <a id="change">return </a>loss<a id="change">, stats</a>
+
+    def fit_batch(self, batch):
+        inputs, targets = batch
+        predictions = self.compute_forward(inputs)</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        loss = self.ctc_cost(pout, chars, pout_lens, char_lens)
+
+        <a id="change">if stage != sb.Stage.TRAIN</a>:
+            sequence = ctc_greedy_decode(pout, pout_lens, blank_id=-1)
+            self.cer_metric.append(
+                ids, sequence, chars, char_lens, self.ind2lab
+            )
+            <a id="change">self.wer_metric.append(
+                </a>ids, sequence, chars, char_lens, self.ind2lab<a id="change">
+            )</a>
+
+        return loss
+
+    def on_stage_start(self, stage, epoch=None):</code></pre>

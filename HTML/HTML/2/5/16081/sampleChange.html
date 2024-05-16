@@ -1,0 +1,39 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    &#47&#47 initialise prior distribution with a special case of Dirichlet distribution
+    &#47&#47 this helps with the case where only foreground scribbles are given,
+    &#47&#47 and vice versa for background scribbles
+    prior_values = <a id="change">[i / bins for i in range(bins)]</a>
+
+    &#47&#47 collect background voxels
+    values = np.concatenate([image[scrib == scribbles_bg_label], prior_values], axis=0)
+    &#47&#47 generate histogram for background</code></pre><h3>After Change</h3><pre><code class='java'>
+    &#47&#47 a conjugate prior which enables us to make histograms work in case where
+    &#47&#47 only foreground or only background scribbles are provided
+    if not isinstance(alpha, list):
+        alpha<a id="change"> = </a>[alpha] * bins
+    elif len(alpha) != bins:
+        raise ValueError("pseudo-count size does not match number of bins in histogram, received: {} | num_bins {}".format(len(alpha), bins))
+    alpha = <a id="change">np.array(</a>alpha<a id="change">)</a>
+
+    &#47&#47 collect background voxels
+    values = image[scrib == scribbles_bg_label]
+    &#47&#47 generate histogram for background
+    bg_hist, _ = np.histogram(values, bins=bins, range=(0, 1), density=False)
+
+    &#47&#47 collect foreground voxels
+    values = image[scrib == scribbles_fg_label]
+    &#47&#47 generate histrogram for foreground
+    fg_hist, fg_bin_edges = np.histogram(values, bins=bins, range=(0, 1), density=False)
+
+    &#47&#47 add Dirichlet distribution as conjugate prior for our histogram distributions
+    bg_hist = bg_hist + alpha
+    fg_hist = fg_hist + alpha
+    &#47&#47 normalise histograms
+    bg_hist = bg_hist/np.sum(bg_hist)
+    fg_hist<a id="change"> = </a>fg_hist/np.sum(fg_hist)
+
+    &#47&#47 normalise histograms and return
+    &#47&#47 return (bg_hist * scale).astype(np.float32), (fg_hist * scale).astype(np.float32), fg_bin_edges</code></pre>

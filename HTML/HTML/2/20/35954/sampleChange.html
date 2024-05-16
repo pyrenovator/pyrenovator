@@ -1,0 +1,35 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            loss = sum(
+                [
+                    loss_bbox * self._train_config[&quotloss_coefs&quot][&quotbbox_loss_coef&quot],
+                    loss_giou * <a id="change">self._train_config[&quotloss_coefs&quot][&quotgiou_loss_coef&quot]</a>,
+                    loss_cls * self._train_config[&quotloss_coefs&quot][&quotcls_loss_coef&quot],
+                ]
+            )</code></pre><h3>After Change</h3><pre><code class='java'>
+
+            &#47&#47 Create absolute loss and mult with loss coefficient
+            loss_abs = 0
+            <a id="change">for </a>loss_key, <a id="change">loss_val</a> in <a id="change">loss_dict.items():
+                </a>loss_abs<a id="change"> += loss_val</a><a id="change"> * </a><a id="change">self._loss_coefs[loss_key.split(&quot_&quot)[0]]</a>
+
+            self._optimizer.zero_grad()
+            loss_abs.backward()
+
+            &#47&#47 Clip grads to counter exploding grads
+            max_norm = self._train_config[&quotclip_max_norm&quot]
+            if max_norm &gt; 0:
+                torch.nn.utils.clip_grad_norm_(self._model.parameters(), max_norm)
+
+            self._optimizer.step()
+
+            loss_agg += loss_abs.item()
+            loss_bbox_agg += <a id="change">loss_dict[&quotbbox&quot].item()</a>
+            loss_giou_agg += loss_dict[&quotgiou&quot].item()
+            loss_cls_agg<a id="change"> += loss_dict[&quotcls&quot]</a><a id="change">.item()</a>
+
+        loss = loss_agg / len(self._train_loader)
+        loss_bbox = loss_bbox_agg / len(self._train_loader)
+        loss_giou = loss_giou_agg / len(self._train_loader)</code></pre>

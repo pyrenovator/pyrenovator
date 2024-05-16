@@ -1,0 +1,53 @@
+<html><h3>Pattern ID :21482
+</h3><img src='68804537.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            embed_sum = flatten.t() @ embed_onehot
+            self.all_reduce_fn(embed_sum)
+
+            embed_normalized = <a id="change">(embed_sum / bins.unsqueeze(0)).t()</a>
+            embed_normalized = l2norm(embed_normalized)
+            embed_normalized = torch.where(zero_mask[..., None], embed,
+                                           embed_normalized)
+            ema_inplace(self.embed, embed_normalized, self.decay)</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        shape, dtype = x.shape, x.dtype
+
+        flatten = <a id="change">rearrange(</a>x, <a id="change">&quoth ... d -&gt; h (...) d&quot</a><a id="change">)</a>
+        flatten = l2norm(flatten)
+
+        self.init_embed_(flatten)
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 2</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/lucidrains/vector-quantize-pytorch/commit/8716f68d5549f5252d81e45651271f466d639356#diff-8bcd9c958b614ce130dc4091c094d4cfcc2023716823c181e3a9edaddbcd433dL330' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 68804537</div><div id='project'> Project Name: lucidrains/vector-quantize-pytorch</div><div id='commit'> Commit Name: 8716f68d5549f5252d81e45651271f466d639356</div><div id='time'> Time: 2022-07-30</div><div id='author'> Author: lucidrains@gmail.com</div><div id='file'> File Name: vector_quantize_pytorch/vector_quantize_pytorch.py</div><div id='m_class'> M Class Name: CosineSimCodebook</div><div id='n_method'> N Class Name: CosineSimCodebook</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: vector_quantize_pytorch/vector_quantize_pytorch.py</div><div id='n_file'> N File Name: vector_quantize_pytorch/vector_quantize_pytorch.py</div><div id='m_start'> M Start Line: 330</div><div id='m_end'> M End Line: 359</div><div id='n_start'> N Start Line: 397</div><div id='n_end'> N End Line: 448</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        self.init_embed_(flatten)
+
+        embed = self.embed if not self.learnable_codebook else self.embed.detach()
+        embed = <a id="change">self.embed.t()</a>
+
+        dist = -(
+            flatten.pow(2).sum(1, keepdim=True)
+            - 2 * flatten @ embed</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        embed = self.embed if not self.learnable_codebook else self.embed.detach()
+
+        embed = <a id="change">rearrange(</a>embed, <a id="change">&quot... n d -&gt; ... d n&quot</a><a id="change">)</a>
+
+        dist = -(
+            (flatten ** 2).sum(dim = -1, keepdim=True)
+            - 2 * flatten @ embed</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lucidrains/vector-quantize-pytorch/commit/8716f68d5549f5252d81e45651271f466d639356#diff-8bcd9c958b614ce130dc4091c094d4cfcc2023716823c181e3a9edaddbcd433dL219' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 68804536</div><div id='project'> Project Name: lucidrains/vector-quantize-pytorch</div><div id='commit'> Commit Name: 8716f68d5549f5252d81e45651271f466d639356</div><div id='time'> Time: 2022-07-30</div><div id='author'> Author: lucidrains@gmail.com</div><div id='file'> File Name: vector_quantize_pytorch/vector_quantize_pytorch.py</div><div id='m_class'> M Class Name: EuclideanCodebook</div><div id='n_method'> N Class Name: EuclideanCodebook</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: vector_quantize_pytorch/vector_quantize_pytorch.py</div><div id='n_file'> N File Name: vector_quantize_pytorch/vector_quantize_pytorch.py</div><div id='m_start'> M Start Line: 223</div><div id='m_end'> M End Line: 252</div><div id='n_start'> N Start Line: 264</div><div id='n_end'> N End Line: 310</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    for _ in range(num_iters):
+        if use_cosine_sim:
+            dists = samples @ <a id="change">means.t()</a>
+        else:
+            diffs = rearrange(samples, &quotn d -&gt; n () d&quot) \
+                    - rearrange(means, &quotc d -&gt; () c d&quot)
+            dists = -(diffs ** 2).sum(dim = -1)</code></pre><h3>After Change</h3><pre><code class='java'>
+        new_means = buckets.new_zeros(num_codebooks, num_clusters, dim, dtype = dtype)
+
+        new_means.scatter_add_(1, repeat(buckets, &quoth n -&gt; h n d&quot, d = dim), samples)
+        new_means = new_means / <a id="change">rearrange(</a>bins_min_clamped, <a id="change">&quot... -&gt; ... 1&quot</a><a id="change">)</a>
+        all_reduce_fn(new_means)
+
+        if use_cosine_sim:
+            new_means = l2norm(new_means)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lucidrains/vector-quantize-pytorch/commit/8716f68d5549f5252d81e45651271f466d639356#diff-8bcd9c958b614ce130dc4091c094d4cfcc2023716823c181e3a9edaddbcd433dL110' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 68804541</div><div id='project'> Project Name: lucidrains/vector-quantize-pytorch</div><div id='commit'> Commit Name: 8716f68d5549f5252d81e45651271f466d639356</div><div id='time'> Time: 2022-07-30</div><div id='author'> Author: lucidrains@gmail.com</div><div id='file'> File Name: vector_quantize_pytorch/vector_quantize_pytorch.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: kmeans(6)</div><div id='n_method'> N Method Name: kmeans(6)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: vector_quantize_pytorch/vector_quantize_pytorch.py</div><div id='n_file'> N File Name: vector_quantize_pytorch/vector_quantize_pytorch.py</div><div id='m_start'> M Start Line: 113</div><div id='m_end'> M End Line: 138</div><div id='n_start'> N Start Line: 127</div><div id='n_end'> N End Line: 156</div><BR>

@@ -1,0 +1,75 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            for p in group[&quotparams&quot]:
+                if p.grad is None:
+                    continue
+                grad<a id="change"> = </a>p.grad
+                if grad.is_sparse:
+                    raise RuntimeError(&quotAdamax does not support sparse gradients&quot)
+                state = self.state[p]
+
+                &#47&#47 State initialization
+                if len(state) == 0:
+                    state[&quotstep&quot] = 0
+                    state[&quotexp_avg&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+                    state[&quotexp_inf&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+
+                exp_avg, exp_inf = state[&quotexp_avg&quot], state[&quotexp_inf&quot]
+                beta1, beta2 = group[&quotbetas&quot]
+                eps = group[&quoteps&quot]
+
+                state[&quotstep&quot] += 1
+
+                if <a id="change">group[&quotweight_decay&quot] != 0</a>:
+                    grad<a id="change"> = </a><a id="change">grad.add(</a>p<a id="change">, alpha=group[&quotweight_decay&quot])</a>
+
+                &#47&#47 Update biased first moment estimate.
+                <a id="change">exp_avg.mul_(beta1).add_(</a>grad<a id="change">, alpha=1 - beta1)</a>
+                &#47&#47 Update the exponentially weighted infinity norm.
+                norm_buf = torch.cat([
+                    <a id="change">exp_inf.mul_(</a>beta2<a id="change">)</a>.unsqueeze(0),
+                    grad.abs().add_(eps).unsqueeze_(0)
+                ], 0)
+                torch.amax(norm_buf, 0, keepdim=False, out=exp_inf)</code></pre><h3>After Change</h3><pre><code class='java'>
+            with torch.enable_grad():
+                loss = closure()
+
+        for <a id="change">group</a> in self.param_groups:
+            params_with_grad = []
+            grads<a id="change"> = </a><a id="change">[]</a>
+            exp_avgs<a id="change"> = </a><a id="change">[]</a>
+            exp_infs<a id="change"> = </a><a id="change">[]</a>
+            state_steps<a id="change"> = </a><a id="change">[]</a>
+
+            beta1, beta2 = group[&quotbetas&quot]
+            eps = group[&quoteps&quot]
+            lr = group[&quotlr&quot]
+            weight_decay = <a id="change">group[&quotweight_decay&quot]</a>
+
+            for p in group[&quotparams&quot]:
+                if p.grad is None:
+                    continue
+                params_with_grad.append(p)
+                if p.grad.is_sparse:
+                    raise RuntimeError(&quotAdamax does not support sparse gradients&quot)
+                <a id="change">grads.append(</a>p.grad<a id="change">)</a>
+
+                state = self.state[p]
+
+                &#47&#47 State initialization
+                if len(state) == 0:
+                    state[&quotstep&quot] = 0
+                    state[&quotexp_avg&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+                    state[&quotexp_inf&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+
+                <a id="change">exp_avgs.append(</a>state[&quotexp_avg&quot]<a id="change">)</a>
+                <a id="change">exp_infs.append(</a>state[&quotexp_inf&quot]<a id="change">)</a>
+
+                state[&quotstep&quot] += 1
+                <a id="change">state_steps.append(</a>state[&quotstep&quot]<a id="change">)</a>
+
+            F.adamax(params_with_grad,
+                     grads,
+                     exp_avgs,</code></pre>

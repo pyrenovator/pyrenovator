@@ -1,0 +1,25 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+def binary_op(op, x, y):
+  ret = GPUBuffer(x.shape)
+  <a id="change">if op == BinaryOps.ADD</a>: code<a id="change"> = </a>"a+b"
+  elif op == BinaryOps.SUB: code = "a-b"
+  elif <a id="change">op == BinaryOps.MUL</a>: code<a id="change"> = </a>"a*b"
+  elif <a id="change">op == BinaryOps.DIV</a>: code = "b/a"
+  elif op == BinaryOps.POW: code<a id="change"> = </a>"pow(a,b)"
+  elif <a id="change">op == BinaryOps.CMPEQ</a>: code<a id="change"> = </a>"(float4)(1.0f*(a.x==b.x), 1.0f*(a.y==b.y), 1.0f*(a.z==b.z), 1.0f*(a.w==b.w))"
+  else: <a id="change">raise </a><a id="change">Exception(f"{op} isn&quott supported"</a><a id="change">)</a>
+  assert x.shape == ret.shape and y.shape == ret.shape
+  binop = clbuild("binop", 
+  __kernel void binop(__global const float4 *a_g, __global const float4 *b_g, __global float4 *res_g) {
+    int gid = get_global_id(0);</code></pre><h3>After Change</h3><pre><code class='java'>
+    int gid = get_global_id(0);
+    float4 A = a_g[gid];
+    float4 B = b_g[gid];
+    res_g[gid] = convert_float4(+<a id="change">code_for_op[op]</a>+);
+  })
+  binop([roundup(prod(ret.shape))//4], None, x.cl, y.cl, ret.cl)
+  return ret</code></pre>

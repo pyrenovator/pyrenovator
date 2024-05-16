@@ -1,0 +1,398 @@
+<html><h3>Pattern ID :21036
+</h3><img src='67681289.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        torch.tensor: values of the harmonics at the sampling points
+    
+
+    if <a id="change">derivative == 0</a>:
+        <a id="change">return </a>fast_power(xyz, k, mask0, mask2).prod(-1)
+
+    elif <a id="change">derivative == 1</a>:
+
+        km1 = k-1
+        km1[km1 &lt; 0] = 0
+
+        xyz_km1 = fast_power(xyz, km1)
+        xyz_k = fast_power(xyz, k,  mask0, mask2)
+
+        kx<a id="change">, ky, kz = </a>k.transpose(0, 1)
+        dx = kx * xyz_km1[..., 0] * xyz_k[..., 1] * xyz_k[..., 2]
+        dy = ky * xyz_k[..., 0] * xyz_km1[..., 1] * xyz_k[..., 2]
+        dz = kz * xyz_k[..., 0] * xyz_k[..., 1] * xyz_km1[..., 2]
+
+        <a id="change">if </a>jacobian:
+            return dx + dy + dz
+        else:
+            return torch.stack((dx, dy, dz), dim=-1)
+
+    elif derivative == 2:
+
+        &#47&#47 prepare the exponets
+        km2 = k - 2
+        km2[km2 &lt; 0] = 0
+
+        xyz_km2<a id="change"> = </a>fast_power(xyz, km2)
+        xyz_k = <a id="change">fast_power(</a>xyz, k, mask0, mask2<a id="change">)</a>
+
+        kx<a id="change">, ky, kz = </a>k.transpose(0, 1)
+
+        d2x<a id="change"> = </a>kx*(kx-1) * xyz_km2[..., 0] * \
+            xyz_k[..., 1] * xyz_k[..., 2]
+        d2y = ky*(ky-1) * xyz_k[..., 0] * \
+            xyz_km2[..., 1] * xyz_k[..., 2]</code></pre><h3>After Change</h3><pre><code class='java'>
+        torch.tensor: values of the harmonics at the sampling points
+    
+
+    if <a id="change">not isinstance(derivative, list)</a>:
+        derivative = <a id="change">[derivative</a>]
+
+    def _kernel():
+        return xyz_k.prod(-1)
+
+    def _first_derivative_kernel():
+        km1 = k-1
+        km1[km1 &lt; 0] = 0
+
+        xyz_km1 = fast_power(xyz, km1)
+
+        kx, ky, kz = k.transpose(0, 1)
+        dx = kx * xyz_km1[..., 0] * xyz_k[..., 1] * xyz_k[..., 2]
+        dy = ky * xyz_k[..., 0] * xyz_km1[..., 1] * xyz_k[..., 2]
+        dz = kz * xyz_k[..., 0] * xyz_k[..., 1] * xyz_km1[..., 2]
+
+        if jacobian:
+            return dx + dy + dz
+        else:
+            return torch.stack((dx, dy, dz), dim=-1)
+
+    def _second_derivative_kernel():
+        &#47&#47 prepare the exponets
+        km2 = k - 2
+        km2[km2 &lt; 0] = 0
+
+        xyz_km2 = fast_power(xyz, km2)
+
+        kx, ky, kz = k.transpose(0, 1)
+
+        d2x = kx*(kx-1) * xyz_km2[..., 0] * \
+            xyz_k[..., 1] * xyz_k[..., 2]
+        d2y = ky*(ky-1) * xyz_k[..., 0] * \
+            xyz_km2[..., 1] * xyz_k[..., 2]
+        d2z = kz*(kz-1) * xyz_k[..., 0] * \
+            xyz_k[..., 1] * xyz_km2[..., 2]
+
+        return d2x + d2y + d2z
+
+    &#47&#47 computes the power of the xyz
+    xyz_k = fast_power(xyz, k,  mask0, mask2)
+
+    &#47&#47 compute the outputs
+    fns<a id="change"> = </a><a id="change">[</a>_kernel,
+           _first_derivative_kernel,
+           _second_derivative_kernel<a id="change"></a>]
+    <a id="change">output = </a><a id="change">[]</a>
+    <a id="change">for d</a> in derivative<a id="change">:
+        output.append(</a><a id="change">fns[d]())</a>
+
+    <a id="change">if len(derivative) == 1</a>:
+        return <a id="change">output[0]</a>
+    else:
+        <a id="change">return output</a>
+
+
+def SphericalHarmonics(xyz, l, m, derivative=0, jacobian=True):
+    rCompute the Real Spherical Harmonics of the AO.</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 25</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/nlesc-jcer/qmctorch/commit/d244fdd3192ef812f2eb5120e38efe9614cabd82#diff-73a4afb62f9fc7226545c1c21f9fa7be86ea2a57ed97dc13d6c63df2a4f93a39L110' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 67681289</div><div id='project'> Project Name: nlesc-jcer/qmctorch</div><div id='commit'> Commit Name: d244fdd3192ef812f2eb5120e38efe9614cabd82</div><div id='time'> Time: 2020-06-04</div><div id='author'> Author: nicolas.gm.renaud@gmail.com</div><div id='file'> File Name: qmctorch/wavefunction/spherical_harmonics.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: CartesianHarmonics(6)</div><div id='n_method'> N Method Name: CartesianHarmonics(6)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: qmctorch/wavefunction/spherical_harmonics.py</div><div id='n_file'> N File Name: qmctorch/wavefunction/spherical_harmonics.py</div><div id='m_start'> M Start Line: 110</div><div id='m_end'> M End Line: 149</div><div id='n_start'> N Start Line: 110</div><div id='n_end'> N End Line: 166</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        torch.tensor: values of the harmonics at the sampling points
+    
+
+    if <a id="change">derivative == 0</a>:
+        <a id="change">return </a>fast_power(xyz, k, mask0, mask2).prod(-1)
+
+    elif <a id="change">derivative == 1</a>:
+
+        km1 = k-1
+        km1[km1 &lt; 0] = 0
+
+        xyz_km1 = fast_power(xyz, km1)
+        xyz_k = fast_power(xyz, k,  mask0, mask2)
+
+        kx, ky, kz = k.transpose(0, 1)
+        dx<a id="change"> = </a>kx * xyz_km1[..., 0] * xyz_k[..., 1] * xyz_k[..., 2]
+        dy = ky * xyz_k[..., 0] * xyz_km1[..., 1] * xyz_k[..., 2]
+        dz<a id="change"> = </a>kz * xyz_k[..., 0] * xyz_k[..., 1] * xyz_km1[..., 2]
+
+        <a id="change">if </a>jacobian:
+            return dx + dy + dz
+        else:
+            return torch.stack((dx, dy, dz), dim=-1)
+
+    elif derivative == 2:
+
+        &#47&#47 prepare the exponets
+        km2<a id="change"> = </a>k - 2
+        km2[km2 &lt; 0] = 0
+
+        xyz_km2 = fast_power(xyz, km2)
+        xyz_k = <a id="change">fast_power(</a>xyz, k, mask0, mask2<a id="change">)</a>
+
+        kx, ky, kz = k.transpose(0, 1)
+
+        d2x = kx*(kx-1) * xyz_km2[..., 0] * \
+            xyz_k[..., 1] * xyz_k[..., 2]
+        d2y = ky*(ky-1) * xyz_k[..., 0] * \
+            xyz_km2[..., 1] * xyz_k[..., 2]
+        d2z<a id="change"> = </a>kz*(kz-1) * xyz_k[..., 0] * \
+            xyz_k[..., 1] * xyz_km2[..., 2]
+
+        return d2x + d2y + d2z</code></pre><h3>After Change</h3><pre><code class='java'>
+        torch.tensor: values of the harmonics at the sampling points
+    
+
+    if <a id="change">not isinstance(derivative, list)</a>:
+        derivative = <a id="change">[</a>derivative<a id="change"></a>]
+
+    def _kernel():
+        return xyz_k.prod(-1)
+
+    def _first_derivative_kernel():
+        km1 = k-1
+        km1[km1 &lt; 0] = 0
+
+        xyz_km1 = fast_power(xyz, km1)
+
+        kx, ky, kz = k.transpose(0, 1)
+        dx = kx * xyz_km1[..., 0] * xyz_k[..., 1] * xyz_k[..., 2]
+        dy = ky * xyz_k[..., 0] * xyz_km1[..., 1] * xyz_k[..., 2]
+        dz = kz * xyz_k[..., 0] * xyz_k[..., 1] * xyz_km1[..., 2]
+
+        if jacobian:
+            return dx + dy + dz
+        else:
+            return torch.stack((dx, dy, dz), dim=-1)
+
+    def _second_derivative_kernel():
+        &#47&#47 prepare the exponets
+        km2 = k - 2
+        km2[km2 &lt; 0] = 0
+
+        xyz_km2 = fast_power(xyz, km2)
+
+        kx, ky, kz = k.transpose(0, 1)
+
+        d2x = kx*(kx-1) * xyz_km2[..., 0] * \
+            xyz_k[..., 1] * xyz_k[..., 2]
+        d2y = ky*(ky-1) * xyz_k[..., 0] * \
+            xyz_km2[..., 1] * xyz_k[..., 2]
+        d2z = kz*(kz-1) * xyz_k[..., 0] * \
+            xyz_k[..., 1] * xyz_km2[..., 2]
+
+        return d2x + d2y + d2z
+
+    &#47&#47 computes the power of the xyz
+    xyz_k = fast_power(xyz, k,  mask0, mask2)
+
+    &#47&#47 compute the outputs
+    fns<a id="change"> = </a><a id="change">[</a>_kernel,
+           _first_derivative_kernel,
+           _second_derivative_kernel<a id="change"></a>]
+    <a id="change">output = </a><a id="change">[]</a>
+    <a id="change">for d</a> in derivative<a id="change">:
+        output.append(</a><a id="change">fns[d]())</a>
+
+    <a id="change">if len(derivative) == 1</a>:
+        return <a id="change">output[0]</a>
+    else:
+        <a id="change">return </a>output
+
+
+def SphericalHarmonics(xyz, l, m, derivative=0, jacobian=True):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/nlesc-jcer/qmctorch/commit/d244fdd3192ef812f2eb5120e38efe9614cabd82#diff-73a4afb62f9fc7226545c1c21f9fa7be86ea2a57ed97dc13d6c63df2a4f93a39L91' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 67681291</div><div id='project'> Project Name: nlesc-jcer/qmctorch</div><div id='commit'> Commit Name: d244fdd3192ef812f2eb5120e38efe9614cabd82</div><div id='time'> Time: 2020-06-04</div><div id='author'> Author: nicolas.gm.renaud@gmail.com</div><div id='file'> File Name: qmctorch/wavefunction/spherical_harmonics.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: CartesianHarmonics(6)</div><div id='n_method'> N Method Name: CartesianHarmonics(6)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: qmctorch/wavefunction/spherical_harmonics.py</div><div id='n_file'> N File Name: qmctorch/wavefunction/spherical_harmonics.py</div><div id='m_start'> M Start Line: 110</div><div id='m_end'> M End Line: 149</div><div id='n_start'> N Start Line: 110</div><div id='n_end'> N End Line: 166</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        torch.tensor: values of each orbital radial part at each position
+    
+
+    if <a id="change">derivative == 0</a>:
+
+        rn = fast_power(R, bas_n)
+        expr = torch.exp(-bas_exp * R)
+
+        <a id="change">return </a>rn * expr
+
+    elif <a id="change">derivative &gt; 0</a>:
+
+        rn<a id="change"> = </a><a id="change">fast_power(</a>R, bas_n<a id="change">)</a>
+        nabla_rn = (bas_n * R**(bas_n - 2)).unsqueeze(-1) * xyz
+
+        er = torch.exp(-bas_exp * R)
+        nabla_er = -(bas_exp * er).unsqueeze(-1) * \
+            xyz / R.unsqueeze(-1)
+
+        if derivative == 1:
+
+            <a id="change">if </a>jacobian:
+                nabla_rn = nabla_rn.sum(3)
+                nabla_er = nabla_er.sum(3)
+                return nabla_rn * er + rn * nabla_er
+            else:
+                return nabla_rn * \
+                    er.unsqueeze(-1) + rn.unsqueeze(-1) * nabla_er
+
+        elif derivative == 2:
+
+            sum_xyz2 = (xyz*xyz).sum(3)
+
+            R2<a id="change"> = </a>R*R
+            R3<a id="change"> = </a>R2*R
+
+            lap_rn<a id="change"> = </a>bas_n * (3 * R**(bas_n - 2) +
+                              sum_xyz2 * (bas_n - 2) * R**(bas_n - 4))
+
+            lap_er = bas_exp**2 * er * sum_xyz2 / R2 \</code></pre><h3>After Change</h3><pre><code class='java'>
+        torch.tensor: values of each orbital radial part at each position
+    
+
+    if <a id="change">not isinstance(derivative, list)</a>:
+        derivative = <a id="change">[</a>derivative<a id="change"></a>]
+
+    def _kernel():
+        return rn * er
+
+    def _first_derivative_kernel():
+        if jacobian:
+            nabla_rn = nabla_rn.sum(3)
+            nabla_er = nabla_er.sum(3)
+            return nabla_rn * er + rn * nabla_er
+        else:
+            return nabla_rn * \
+                er.unsqueeze(-1) + rn.unsqueeze(-1) * nabla_er
+
+    def _second_derivative_kernel():
+        sum_xyz2 = (xyz*xyz).sum(3)
+
+        R2 = R*R
+        R3 = R2*R
+
+        lap_rn = bas_n * (3 * R**(bas_n - 2) +
+                          sum_xyz2 * (bas_n - 2) * R**(bas_n - 4))
+
+        lap_er = bas_exp**2 * er * sum_xyz2 / R2 \
+            - 2 * bas_exp * er * sum_xyz2 / R3
+
+        return lap_rn * er + 2 * \
+            (nabla_rn * nabla_er).sum(3) + rn * lap_er
+
+    &#47&#47 computes the basic quantities
+    rn = fast_power(R, bas_n)
+    er = torch.exp(-bas_exp * R)
+
+    &#47&#47 computes the grad
+    if any(x in derivative for x in [1, 2]):
+        nabla_rn = (bas_n * R**(bas_n - 2)).unsqueeze(-1) * xyz
+        nabla_er = -(bas_exp * er).unsqueeze(-1) * \
+            xyz / R.unsqueeze(-1)
+
+    &#47&#47 prepare the output/kernel
+    <a id="change">output = </a><a id="change">[]</a>
+    fns<a id="change"> = </a><a id="change">[</a>_kernel,
+           _first_derivative_kernel,
+           _second_derivative_kernel<a id="change"></a>]
+
+    &#47&#47 compute the requested functions
+    <a id="change">for d</a> in derivative<a id="change">:
+        output.append(</a><a id="change">fns[d]())</a>
+
+    <a id="change">if len(derivative) == 1</a>:
+        return <a id="change">output[0]</a>
+    else:
+        <a id="change">return </a>output
+
+
+def radial_gaussian(R, bas_n, bas_exp, xyz=None, derivative=[0], jacobian=True):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/nlesc-jcer/qmctorch/commit/d244fdd3192ef812f2eb5120e38efe9614cabd82#diff-7c68bbc4a72022dd07a59e38192efc681494aa9930b391d0963e76dfcd867e3fL8' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 67681457</div><div id='project'> Project Name: nlesc-jcer/qmctorch</div><div id='commit'> Commit Name: d244fdd3192ef812f2eb5120e38efe9614cabd82</div><div id='time'> Time: 2020-06-04</div><div id='author'> Author: nicolas.gm.renaud@gmail.com</div><div id='file'> File Name: qmctorch/wavefunction/radial_functions.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: radial_slater(6)</div><div id='n_method'> N Method Name: radial_slater(6)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: qmctorch/wavefunction/radial_functions.py</div><div id='n_file'> N File Name: qmctorch/wavefunction/radial_functions.py</div><div id='m_start'> M Start Line: 27</div><div id='m_end'> M End Line: 69</div><div id='n_start'> N Start Line: 27</div><div id='n_end'> N End Line: 82</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        torch.tensor: values of each orbital radial part at each position
+    
+
+    if <a id="change">derivative == 0</a>:
+
+        rn = fast_power(R, bas_n)
+        expr = torch.exp(-bas_exp * R*R)
+
+        <a id="change">return </a>rn * expr
+
+    elif <a id="change">derivative &gt; 0</a>:
+
+        rn<a id="change"> = </a><a id="change">fast_power(</a>R, bas_n<a id="change">)</a>
+        nabla_rn = (bas_n * R**(bas_n - 2)).unsqueeze(-1) * xyz
+
+        er<a id="change"> = </a>torch.exp(-bas_exp * R**2)
+        nabla_er = -2 * (bas_exp * er).unsqueeze(-1) * xyz
+
+        if derivative == 1:
+            <a id="change">if </a>jacobian:
+                nabla_rn = nabla_rn.sum(3)
+                nabla_er = nabla_er.sum(3)
+                return nabla_rn * er + rn * nabla_er
+            else:
+                return nabla_rn * \
+                    er.unsqueeze(-1) + rn.unsqueeze(-1) * nabla_er
+
+        elif derivative == 2:
+
+            lap_rn<a id="change"> = </a>bas_n * (3 * R**(bas_n - 2)
+                              + (xyz**2).sum(3) * (bas_n - 2) * R**(bas_n - 4))
+
+            lap_er<a id="change"> = </a>4 * bas_exp**2 * (xyz**2).sum(3) * er \
+                - 6 * bas_exp * er
+
+            return lap_rn * er + 2 * \</code></pre><h3>After Change</h3><pre><code class='java'>
+        torch.tensor: values of each orbital radial part at each position
+    
+
+    if <a id="change">not isinstance(derivative, list)</a>:
+        derivative = <a id="change">[</a>derivative<a id="change"></a>]
+
+    def _kernel():
+        return rn * er
+
+    def _first_derivative_kernel():
+        if jacobian:
+            nabla_rn_sum = nabla_rn.sum(3)
+            nabla_er_sum = nabla_er.sum(3)
+            return nabla_rn_sum * er + rn * nabla_er_sum
+        else:
+            return nabla_rn * \
+                er.unsqueeze(-1) + rn.unsqueeze(-1) * nabla_er
+
+    def _second_derivative_kernel():
+        lap_rn = bas_n * (3 * R**(bas_n - 2)
+                          + (xyz**2).sum(3) * (bas_n - 2) * R**(bas_n - 4))
+
+        lap_er = 4 * bas_exp**2 * (xyz**2).sum(3) * er \
+            - 6 * bas_exp * er
+
+        return lap_rn * er + 2 * \
+            (nabla_rn * nabla_er).sum(3) + rn * lap_er
+
+    &#47&#47 computes the basic  quantities
+    rn = fast_power(R, bas_n)
+    er = torch.exp(-bas_exp * R*R)
+
+    &#47&#47 computes the grads
+    if any(x in derivative for x in [1, 2]):
+        nabla_rn = (bas_n * R**(bas_n - 2)).unsqueeze(-1) * xyz
+        nabla_er = -2 * (bas_exp * er).unsqueeze(-1) * xyz
+
+    &#47&#47 prepare the output/function calls
+    <a id="change">output = </a><a id="change">[]</a>
+    fns<a id="change"> = </a><a id="change">[</a>_kernel,
+           _first_derivative_kernel,
+           _second_derivative_kernel<a id="change"></a>]
+
+    &#47&#47 compute the requested derivatives
+    <a id="change">for d</a> in derivative<a id="change">:
+        output.append(</a><a id="change">fns[d]())</a>
+
+    <a id="change">if len(derivative) == 1</a>:
+        return <a id="change">output[0]</a>
+    else:
+        <a id="change">return </a>output
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/nlesc-jcer/qmctorch/commit/d244fdd3192ef812f2eb5120e38efe9614cabd82#diff-7c68bbc4a72022dd07a59e38192efc681494aa9930b391d0963e76dfcd867e3fL70' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 67681635</div><div id='project'> Project Name: nlesc-jcer/qmctorch</div><div id='commit'> Commit Name: d244fdd3192ef812f2eb5120e38efe9614cabd82</div><div id='time'> Time: 2020-06-04</div><div id='author'> Author: nicolas.gm.renaud@gmail.com</div><div id='file'> File Name: qmctorch/wavefunction/radial_functions.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: radial_gaussian(6)</div><div id='n_method'> N Method Name: radial_gaussian(6)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: qmctorch/wavefunction/radial_functions.py</div><div id='n_file'> N File Name: qmctorch/wavefunction/radial_functions.py</div><div id='m_start'> M Start Line: 89</div><div id='m_end'> M End Line: 123</div><div id='n_start'> N Start Line: 102</div><div id='n_end'> N End Line: 149</div><BR>

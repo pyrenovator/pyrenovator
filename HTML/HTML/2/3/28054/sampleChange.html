@@ -1,0 +1,18 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        zvals, _ = torch.sort(zvals, dim = -1)
+        sample_pnum = f_zvals.shape[1] + c_zvals.shape[1]
+        &#47&#47 Use sort depth to calculate sampled points
+        raw_pts = <a id="change">rays.repeat(repeats = (1, 1, sample_pnum))</a>.view(rays.shape[0], sample_pnum, -1)
+        &#47&#47 depth * ray_direction + origin (this should be further tested)
+        raw_pts[:, :, :3] += zvals[:, :, None] * raw_pts[:, :, 3:]
+        return raw_pts, zvals          &#47&#47 output is (ray_num, coarse_pts num + fine pts num, 6)</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 Use sort depth to calculate sampled points
+        pts = rays[...,None,:3] + rays[...,None,3:] * zvals[...,:,None] 
+        &#47&#47 depth * ray_direction + origin (this should be further tested)
+        return torch.cat((pts, rays[:, <a id="change">3</a>:].unsqueeze(-2).repeat(1, sample_pnum, 1)), dim = -1), zvals          &#47&#47 output is (ray_num, coarse_pts num + fine pts num, 6)
+
+    
+        This function is important for inverse transform sampling, since for every ray</code></pre>

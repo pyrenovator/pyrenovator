@@ -1,0 +1,53 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+
+def test_evolutionary_updater_continuous():
+    <a id="change">np.random.seed(0</a><a id="change">)</a>
+
+    &#47&#47 Assert population stats
+    updater = NoisyGradientAscent(env_continuous, model_continuous)
+    updater.initialize_population(starting_point=model_continuous.numpy())</code></pre><h3>After Change</h3><pre><code class='java'>
+        space=env_continuous.single_action_space, state=np.array([10, 10])
+    )
+    critic = DummyCritic(space=env_continuous.single_action_space)
+    <a id="change">model_continuous = </a><a id="change">ActorCritic(
+        actor=actor_continuous,
+        critic=critic,
+        population_settings=PopulationSettings(actor_population_size=POPULATION_SIZE),
+    )</a>
+
+    &#47&#47 ASSERT POPULATION STATS
+    updater<a id="change"> = </a>NoisyGradientAscent(model_continuous)
+    &#47&#47 make sure starting population mean is correct
+    np.testing.assert_allclose(
+        np.mean(model_continuous.numpy_actors(), axis=0), np.array([10, 10]), rtol=0.1
+    )
+
+    &#47&#47 TEST CALL
+    old_model<a id="change"> = </a><a id="change">copy.deepcopy(model_continuous</a><a id="change">)</a>
+    old_population<a id="change"> = model_continuous</a><a id="change">.numpy_actors()</a>
+    action = model_continuous(np.zeros(POPULATION_SIZE))
+    _, rewards, _, _ = env_continuous.step(action)
+    scaled_rewards = (rewards - np.mean(rewards)) / np.std(rewards)
+    optimization_direction = np.dot(updater.normal_dist.T, scaled_rewards)
+    log = updater(learning_rate=0.01, optimization_direction=optimization_direction)
+    new_population<a id="change"> = model_continuous</a><a id="change">.numpy_actors()</a>
+    assert log.divergence &gt; 0
+    &#47&#47 make sure the nerual network has been updated by the updater
+    assert model_continuous != old_model
+    assert np.not_equal(old_population, new_population).any()
+    &#47&#47 make sure the network mean has been updated by the updater
+    np.testing.assert_array_equal(model_continuous.mean_actor, updater.mean)
+    &#47&#47 make sure the new popualtion has the correct std
+    np.testing.assert_allclose(
+        np.std(model_continuous.numpy_actors(), axis=0), np.ones(2), rtol=0.1
+    )
+    &#47&#47 make sure the update direction is correct
+    np.testing.assert_array_less(
+        np.mean(<a id="change">model_continuous.numpy_actors()</a>, axis=0), np.array([10, 10])
+    )
+
+</code></pre>

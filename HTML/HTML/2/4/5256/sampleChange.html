@@ -1,0 +1,40 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    if pool is not None:
+        proposal.evaluate_likelihoods.assert_called_once()
+    else:
+        <a id="change">proposal.evaluate_likelihoods.assert_not_called()</a>
+
+    np.testing.assert_array_equal(proposal.samples[&quotlogP&quot], log_p)
+    assert sorted(proposal.indices) == list(range(N))
+    assert proposal.populated is True</code></pre><h3>After Change</h3><pre><code class='java'>
+    else:
+        samples = numpy_array_to_live_points(np.arange(N)[:, np.newaxis], &quotx&quot)
+        log_p = np.arange(N, 2 * N)
+    log_l = <a id="change">np.random.rand(</a>samples.size<a id="change">)</a>
+    proposal.poolsize = poolsize
+    proposal.model = Mock()
+    proposal.model.new_point = Mock(return_value=samples)
+    proposal.model.log_prior = Mock(return_value=log_p)
+    proposal.model.batch_evaluate_log_likelihood = \
+        MagicMock(return_value=log_l)
+    AnalyticProposal.populate(proposal, N=N)
+
+    if N is None:
+        N = poolsize
+    proposal.model.new_point.assert_called_once_with(N=N)
+    proposal.model.log_prior.assert_called_once_with(samples)
+    proposal.model.batch_evaluate_log_likelihood.assert_called_once_with(
+        proposal.samples
+    )
+
+    np.testing.assert_array_equal(proposal.samples[&quotlogP&quot], log_p)
+    assert sorted(proposal.indices) == list(range(N))
+    assert proposal.populated is True
+    <a id="change">np.testing.assert_array_equal(</a><a id="change">proposal.samples[&quotlogL&quot]</a>, log_l<a id="change">)</a>
+
+
+@pytest.mark.parametrize(&quotpopulated&quot, [True, False])
+def test_draw(proposal, populated):</code></pre>

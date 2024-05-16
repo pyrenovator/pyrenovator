@@ -1,0 +1,51 @@
+<html><h3>Pattern ID :30628
+</h3><img src='90475025.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 attention is batch x time x heads x time_to_attend
+        &#47&#47 average over batches, heads + only keep prediction attention and attention on observed timesteps
+        if attention_prediction_horizon is None:  &#47&#47 average over all horizons
+            attention = out["attention"][:, self.hparams.encode_length :, :, <a id="change">:</a> self.hparams.encode_length].mean(
+                dim=average_dims + [2]
+            )
+            attention = attention / attention.sum(-1).unsqueeze(-1)  &#47&#47 renormalize</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 attention is batch x time x heads x time_to_attend
+        &#47&#47 average over batches, heads + only keep prediction attention and attention on observed timesteps
+        if attention_prediction_horizon is None:  &#47&#47 average over all horizons
+            attention = <a id="change">out</a>["attention"][..., <a id="change">:</a> self.hparams.encode_length].mean(
+                dim=average_dims + [2]
+            )  &#47&#47 todo: how to handle zero attention due to shorter encode length?
+            attention = attention / attention.sum(-1).unsqueeze(-1)  &#47&#47 renormalize</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/jdb78/pytorch-forecasting/commit/46bc0297382772fd6a81d5657451c523925371be#diff-326fa71fa47eb2d5a00ea5fa14cac5f65c967b6856192e5c0e687cbce8b581e3L443' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 90475025</div><div id='project'> Project Name: jdb78/pytorch-forecasting</div><div id='commit'> Commit Name: 46bc0297382772fd6a81d5657451c523925371be</div><div id='time'> Time: 2020-06-21</div><div id='author'> Author: beitner.jan@bcg.com</div><div id='file'> File Name: temporal_fusion_transformer_pytorch/model/__init__.py</div><div id='m_class'> M Class Name: TemporalFusionTransformer</div><div id='n_method'> N Class Name: TemporalFusionTransformer</div><div id='m_method'> M Method Name: interpret_output(4)</div><div id='n_method'> N Method Name: interpret_output(4)</div><div id='m_parent_class'> M Parent Class: pl.LightningModule</div><div id='n_parent_class'> N Parent Class: pl.LightningModule</div><div id='m_file'> M File Name: temporal_fusion_transformer_pytorch/model/__init__.py</div><div id='n_file'> N File Name: temporal_fusion_transformer_pytorch/model/__init__.py</div><div id='m_start'> M Start Line: 443</div><div id='m_end'> M End Line: 466</div><div id='n_start'> N Start Line: 479</div><div id='n_end'> N End Line: 519</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            [embedding_vectors[i] for i in self.hparams.time_varying_categoricals_encoder]
+            + [continuous_vectors[i] for i in self.hparams.time_varying_reals_encoder],
+            dim=2,
+        ).transpose(0, 1)[<a id="change">: self.hparams.encode_length</a>]
+        embeddings_varying_decoder = torch.cat(
+            [embedding_vectors[i] for i in self.hparams.time_varying_categoricals_decoder]
+            + [continuous_vectors[i] for i in self.hparams.time_varying_reals_decoder],</code></pre><h3>After Change</h3><pre><code class='java'>
+            self.static_context_variable_selection(static_embedding), timesteps
+        )
+
+        embeddings_varying_encoder = <a id="change">torch</a>.cat(
+            [embedding_vectors[i] for i in self.hparams.time_varying_categoricals_encoder]
+            + [continuous_vectors[i] for i in self.hparams.time_varying_reals_encoder],
+            dim=2,
+        )[:, <a id="change">:</a> self.hparams.encode_length]
+        embeddings_varying_decoder = torch.cat(
+            [embedding_vectors[i] for i in self.hparams.time_varying_categoricals_decoder]
+            + [continuous_vectors[i] for i in self.hparams.time_varying_reals_decoder],</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/jdb78/pytorch-forecasting/commit/46bc0297382772fd6a81d5657451c523925371be#diff-326fa71fa47eb2d5a00ea5fa14cac5f65c967b6856192e5c0e687cbce8b581e3L278' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 90475026</div><div id='project'> Project Name: jdb78/pytorch-forecasting</div><div id='commit'> Commit Name: 46bc0297382772fd6a81d5657451c523925371be</div><div id='time'> Time: 2020-06-21</div><div id='author'> Author: beitner.jan@bcg.com</div><div id='file'> File Name: temporal_fusion_transformer_pytorch/model/__init__.py</div><div id='m_class'> M Class Name: TemporalFusionTransformer</div><div id='n_method'> N Class Name: TemporalFusionTransformer</div><div id='m_method'> M Method Name: forward(5)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: pl.LightningModule</div><div id='n_parent_class'> N Parent Class: pl.LightningModule</div><div id='m_file'> M File Name: temporal_fusion_transformer_pytorch/model/__init__.py</div><div id='n_file'> N File Name: temporal_fusion_transformer_pytorch/model/__init__.py</div><div id='m_start'> M Start Line: 291</div><div id='m_end'> M End Line: 357</div><div id='n_start'> N Start Line: 294</div><div id='n_end'> N End Line: 382</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+        &#47&#47 skip connection over temporal fusion decoder (not LSTM decoder despite the LSTM output contains
+        &#47&#47 a skip from the variable selection network)
+        output = self.pre_output_gate_norm(output, lstm_output[<a id="change">self.hparams.encode_length :</a>])
+        output = self.output_layer(output.transpose(0, 1))
+
+        return output</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        &#47&#47 skip connection over temporal fusion decoder (not LSTM decoder despite the LSTM output contains
+        &#47&#47 a skip from the variable selection network)
+        output = self.pre_output_gate_norm(output, <a id="change">lstm_output</a>[:, <a id="change">self.hparams.encode_length</a> :])
+        output = self.output_layer(output)
+
+        return dict(</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/jdb78/pytorch-forecasting/commit/fdefe02de3daa73328b8472d3d5a6a3d2ad83bde#diff-326fa71fa47eb2d5a00ea5fa14cac5f65c967b6856192e5c0e687cbce8b581e3L228' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 90475021</div><div id='project'> Project Name: jdb78/pytorch-forecasting</div><div id='commit'> Commit Name: fdefe02de3daa73328b8472d3d5a6a3d2ad83bde</div><div id='time'> Time: 2020-06-19</div><div id='author'> Author: beitner.jan@bcg.com</div><div id='file'> File Name: temporal_fusion_transformer_pytorch/model/__init__.py</div><div id='m_class'> M Class Name: TemporalFusionTransformer</div><div id='n_method'> N Class Name: TemporalFusionTransformer</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: pl.LightningModule</div><div id='n_parent_class'> N Parent Class: pl.LightningModule</div><div id='m_file'> M File Name: temporal_fusion_transformer_pytorch/model/__init__.py</div><div id='n_file'> N File Name: temporal_fusion_transformer_pytorch/model/__init__.py</div><div id='m_start'> M Start Line: 228</div><div id='m_end'> M End Line: 311</div><div id='n_start'> N Start Line: 276</div><div id='n_end'> N End Line: 368</div><BR>

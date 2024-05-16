@@ -1,0 +1,67 @@
+<html><h3>Pattern ID :13020
+</h3><img src='44018847.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        sim_matrix = torch.einsum(&quotilk,juk-&gt;ijlu&quot, z1, z2)  &#47&#47 [batch_size, batch_size, num_conformers]
+
+        if self.norm:
+            z1_abs<a id="change"> = </a>z1.norm(dim=2)
+            z2_abs = z2.norm(dim=2)
+            sim_matrix<a id="change"> = </a>sim_matrix / <a id="change">torch.einsum(&quotil,ju-&gt;ijlu&quot</a>, z1_abs, z2_abs<a id="change">)</a>
+
+        sim_matrix = torch.amax(sim_matrix, dim=(2, 3))  &#47&#47 [batch_size, batch_size]
+        sim_matrix<a id="change"> = </a>torch.exp(sim_matrix / self.tau)  &#47&#47 [batch_size, batch_size, num_conformers, num_conformers]
+        pos_sim<a id="change"> = </a>torch.diagonal(sim_matrix)  &#47&#47 [batch_size]
+
+        loss = pos_sim / (sim_matrix.sum(dim=1) - pos_sim)
+        loss = - torch.log(loss).mean()</code></pre><h3>After Change</h3><pre><code class='java'>
+        z1 = z1.view(batch_size, -1, metric_dim)  &#47&#47 [batch_size, num_conformers, metric_dim]
+        z2 = z2.view(batch_size, -1, metric_dim)  &#47&#47 [batch_size, num_conformers, metric_dim]
+
+        z1 = <a id="change">z1[:,:,None,:]</a>  &#47&#47 [batch_size, num_conformers, num_conformers, metric_dim]
+        z2 = z2[:,None,:,:]  &#47&#47 [batch_size, num_conformers, num_conformers, metric_dim]
+        loss = F.mse_loss(z1,z2)
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 6</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/hannesstark/3dinfomax/commit/075313255ed2d1cdb5b286ee8f8dade5b9d42c2a#diff-55a3bd64c39f25290e7e11ba397c450880c4aab081e0c8ab2bcfecd724bbab0aL776' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 44018847</div><div id='project'> Project Name: hannesstark/3dinfomax</div><div id='commit'> Commit Name: 075313255ed2d1cdb5b286ee8f8dade5b9d42c2a</div><div id='time'> Time: 2021-07-30</div><div id='author'> Author: hannes.staerk@gmail.com</div><div id='file'> File Name: commons/losses.py</div><div id='m_class'> M Class Name: NTXentMaximumSimilarity</div><div id='n_method'> N Class Name: NTXentMaximumSimilarity</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: _Loss</div><div id='n_parent_class'> N Parent Class: _Loss</div><div id='m_file'> M File Name: commons/losses.py</div><div id='n_file'> N File Name: commons/losses.py</div><div id='m_start'> M Start Line: 776</div><div id='m_end'> M End Line: 791</div><div id='n_start'> N Start Line: 776</div><div id='n_end'> N End Line: 781</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        return inp
+
+    inp = inp.reshape(ctx.dims.batch, -1, ctx.dims.spatial_mixing_kernel, ctx.dims.features)
+    inp<a id="change"> = </a>inp.transpose(0, 3, 1, 2)
+    shape = inp.shape
+    transposed_shape = list(shape)
+    transposed_shape[3], transposed_shape[2] = transposed_shape[2], transposed_shape[3]
+    inp<a id="change"> = </a><a id="change">jnp.einsum("bfrs,sz,sz-&gt;bfrz"</a>, inp, weights[0], mask<a id="change">)</a>
+    for wgt in weights[1:]:
+        inp = activate(ctx, inp)
+        inp = inp.reshape(*transposed_shape)
+        inp = jnp.einsum("bfsr,sz,sz-&gt;bfrz", inp, wgt, mask)
+    for _ in range(len(weights) - 1):
+        inp<a id="change"> = </a>inp.transpose(0, 1, 3, 2)
+        inp<a id="change"> = </a>inp.reshape(*shape)
+    return inp.transpose(0, 2, 3, 1).reshape(original_shape)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    original_dims = &quot&quot.join(chr(ord(&quota&quot) + i) for i in range(len(inp.ndim)))
+    for i, wgt in enumerate(weights):
+        new_dims = original_dims[:i + 2] + "z" + original_dims[i + 3:]
+        reduced_dim = <a id="change">original_dims[i + 2]</a>
+        if i &gt; 0:
+            inp = activate(inp)
+        inp = jnp.einsum(f"{original_dims},{reduced_dim}z,{reduced_dim}z-&gt;{new_dims}", inp, wgt, mask)
+    return inp.reshape(original_shape)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/homebrewnlp/homebrewnlp-jax/commit/e3894fce349563809e673ef1a497a476f9bd8d34#diff-efcd90cee8fb4dad861da47df28097bc6935541500854b8e2d68e0970e05f748L11' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 44018876</div><div id='project'> Project Name: homebrewnlp/homebrewnlp-jax</div><div id='commit'> Commit Name: e3894fce349563809e673ef1a497a476f9bd8d34</div><div id='time'> Time: 2022-09-01</div><div id='author'> Author: 39779310+ClashLuke@users.noreply.github.com</div><div id='file'> File Name: src/model/mixer.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: mix(2)</div><div id='n_method'> N Method Name: mix(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/model/mixer.py</div><div id='n_file'> N File Name: src/model/mixer.py</div><div id='m_start'> M Start Line: 12</div><div id='m_end'> M End Line: 34</div><div id='n_start'> N Start Line: 14</div><div id='n_end'> N End Line: 32</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+        &#47&#47 --- draw H_wisdom from H_desc with attention --- &#47&#47
+        H_cls = H_all[:, 0]  &#47&#47 (N, L, H) -&gt; (N, H)
+        H_desc<a id="change"> = </a>self.H_desc(H_all)  &#47&#47 (N, L, H) -&gt; (N, K, H)
+        sims<a id="change"> = </a><a id="change">torch.einsum("nh,nkh-&gt;nk"</a>, H_cls, H_desc<a id="change">)</a>  &#47&#47 (N, H) * (N, K, H) -&gt; (N, K)  (reduce over H)
+        attentions<a id="change"> = </a>torch.softmax(sims, dim=1)  &#47&#47 (N, K) - normalise -&gt; (N, K)
+        H_wisdom<a id="change"> = </a>torch.einsum("nk,nkh-&gt;nh", attentions, H_desc)  &#47&#47 (N, K) * (N, K, H) -&gt; (N, H) (reduce over K)
+
+        &#47&#47 --- now compare H_wisdom with all the wisdoms --- &#47&#47
+        S_wisdom_figurative = torch.einsum("nh,wh-&gt;nw", H_wisdom, wisdom_embeddings)  &#47&#47 (N, H) * (W, H) -&gt; (N, W)</code></pre><h3>After Change</h3><pre><code class='java'>
+        wisdom_embeddings = wisdom_embeddings_.squeeze()  &#47&#47 (W, H)
+
+        &#47&#47 --- draw H_wisdom from H_desc with attention --- &#47&#47
+        H_wisdom = self.H_wisdom(H_all, <a id="change">self.hparams[&quotmode&quot]</a>)
+        &#47&#47 --- now compare H_wisdom with all the wisdoms --- &#47&#47
+        S_wisdom_figurative = torch.einsum("nh,wh-&gt;nw", H_wisdom, wisdom_embeddings)  &#47&#47 (N, H) * (W, H) -&gt; (N, W)
+        return S_wisdom_figurative</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/eubinecto/wisdomify/commit/e56cae77ec735117b792feb54efaad63d77231cd#diff-5f23a84aa818c6cbad34ed97adf37af0767442ed5f4a4082158ba950c800d8a4L320' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 44018834</div><div id='project'> Project Name: eubinecto/wisdomify</div><div id='commit'> Commit Name: e56cae77ec735117b792feb54efaad63d77231cd</div><div id='time'> Time: 2021-11-20</div><div id='author'> Author: eubinecto</div><div id='file'> File Name: wisdomify/models.py</div><div id='m_class'> M Class Name: RDGamma</div><div id='n_method'> N Class Name: RDGamma</div><div id='m_method'> M Method Name: S_wisdom_figurative(2)</div><div id='n_method'> N Method Name: S_wisdom_figurative(2)</div><div id='m_parent_class'> M Parent Class: RD</div><div id='n_parent_class'> N Parent Class: RD</div><div id='m_file'> M File Name: wisdomify/models.py</div><div id='n_file'> N File Name: wisdomify/models.py</div><div id='m_start'> M Start Line: 330</div><div id='m_end'> M End Line: 334</div><div id='n_start'> N Start Line: 346</div><div id='n_end'> N End Line: 346</div><BR>

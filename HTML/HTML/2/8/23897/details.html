@@ -1,0 +1,79 @@
+<html><h3>Pattern ID :23897
+</h3><img src='74415615.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+    def complete_tokens(self, prompt: np.array, temperature: np.array, top_k: np.array, top_p: np.array,
+                        start_pos: np.array, stop_pos: np.array) -&gt; np.array:
+        return <a id="change">self.step(</a>self.parameters, prompt, temperature, top_k, top_p, start_pos, stop_pos<a id="change">)</a>
+
+    def complete(self, text: str, temperature: float = 0.5, top_k: int = 32, top_p: float = 0.9, length: int = 128):
+        tokens = jnp.asarray(np.frombuffer(text.encode(), np.uint8)).astype(jnp.int32).reshape(1, -1)
+        tokens = jnp.pad(tokens, ((0, 0), (0, self.ctx.dims.sizes.sequence - len(text))))</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    def complete_tokens(self, prompt: jnp.ndarray, temperature: float, top_k: int, top_p: float, length: int
+                        ) -&gt; jnp.ndarray:
+        tokens<a id="change"> = </a>jnp.pad(prompt, ((0<a id="change">, 0</a>), (0, self.ctx.dims.sizes.sequence<a id="change"> - </a>prompt.shape[-1])))
+        base = <a id="change">jnp.zeros(()</a><a id="change">)</a>
+        start<a id="change"> = </a>base + prompt.shape[1]
+        <a id="change">return </a>self.complete_jax(tokens, temperature, base + top_k, base + top_p, start, start + length)
+
+    def complete(self, text: str, temperature: float = 0.5, top_k: int = 32, top_p: float = 0.9, length: int = 128):
+        tokens = jnp.asarray(np.frombuffer(text.encode(), np.uint8)).astype(jnp.int32).reshape(1, -1)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 8</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/homebrewnlp/homebrewnlp-jax/commit/b7ced2e7e2781c199b37aeb1b3e92e3b15f1772e#diff-6bb87854f62182076b9d47e5a3fa17d5fb46826b979e3292b7ae7bef07022cf4L86' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 74415615</div><div id='project'> Project Name: homebrewnlp/homebrewnlp-jax</div><div id='commit'> Commit Name: b7ced2e7e2781c199b37aeb1b3e92e3b15f1772e</div><div id='time'> Time: 2022-05-08</div><div id='author'> Author: 39779310+ClashLuke@users.noreply.github.com</div><div id='file'> File Name: inference.py</div><div id='m_class'> M Class Name: Inference</div><div id='n_method'> N Class Name: Inference</div><div id='m_method'> M Method Name: complete_tokens(6)</div><div id='n_method'> N Method Name: complete_tokens(7)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: inference.py</div><div id='n_file'> N File Name: inference.py</div><div id='m_start'> M Start Line: 86</div><div id='m_end'> M End Line: 87</div><div id='n_start'> N Start Line: 95</div><div id='n_end'> N End Line: 98</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    def forward(self, g_s, f_s, g_t, f_t):
+        trans_loss_s, domain_acc_s = self._single_domain_forward(g_s, f_s, domain=1)
+        trans_loss_t, domain_acc_t = self._single_domain_forward(g_t, f_t, domain=0)
+        <a id="change">self.grl.step()</a>
+        self.domain_discriminator_accuracy = 0.5 * (domain_acc_s + domain_acc_t)
+        return 0.5 * (trans_loss_s + trans_loss_t)
+
+    def _single_domain_forward(self, logits, features, domain=1):</code></pre><h3>After Change</h3><pre><code class='java'>
+        self.domain_discriminator_accuracy = None
+
+    def forward(self, g_s, f_s, g_t, f_t):
+        f = torch.cat((f_s<a id="change">, f_t</a>), dim=0)
+        g = torch.cat((g_s, g_t), dim=0)
+        g = F.softmax(g,dim=1).detach()
+        h = self.grl(self.map(f, g))
+        d = self.domain_discriminator(h)
+        d_label<a id="change"> = </a>torch.cat((
+            torch.ones((g_s.size(0), 1)).to(g_s.device),
+            <a id="change">torch.zeros(</a>(g_t.size(0)<a id="change">, 1</a>)<a id="change">)</a>.to(g_t.device),
+        ))
+        weight = 1.0 + torch.exp(<a id="change">-entropy(g)</a>)
+        batch_size = f.size(0)
+        weight<a id="change"> = </a>weight / torch.sum(weight) * batch_size
+        self.domain_discriminator_accuracy = binary_accuracy(d, d_label)
+        <a id="change">return </a>self.bce(d, d_label, weight.view_as(d))
+
+
+class RandomizedMultiLinearMap(nn.Module):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/thuml/transfer-learning-library/commit/8477111b23336e7dd2d349a4b35b969240ff5871#diff-921a2eeb848068663b0c58710b496c58d46246573eaab61f41628954ccf27867L85' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 74415629</div><div id='project'> Project Name: thuml/transfer-learning-library</div><div id='commit'> Commit Name: 8477111b23336e7dd2d349a4b35b969240ff5871</div><div id='time'> Time: 2020-04-12</div><div id='author'> Author: 13126830206@163.com</div><div id='file'> File Name: dalib/adaptation/cdan.py</div><div id='m_class'> M Class Name: ConditionalDomainAdversarialLoss</div><div id='n_method'> N Class Name: ConditionalDomainAdversarialLoss</div><div id='m_method'> M Method Name: forward(5)</div><div id='n_method'> N Method Name: forward(5)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: dalib/adaptation/cdan.py</div><div id='n_file'> N File Name: dalib/adaptation/cdan.py</div><div id='m_start'> M Start Line: 86</div><div id='m_end'> M End Line: 90</div><div id='n_start'> N Start Line: 87</div><div id='n_end'> N End Line: 100</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    def forward(self, g_s, f_s, g_t, f_t):
+        trans_loss_s, domain_acc_s = self._single_domain_forward(g_s, f_s, domain=1)
+        trans_loss_t, domain_acc_t = self._single_domain_forward(g_t, f_t, domain=0)
+        <a id="change">self.grl.step()</a>
+        self.domain_discriminator_accuracy = 0.5 * (domain_acc_s + domain_acc_t)
+        return 0.5 * (trans_loss_s + trans_loss_t)
+
+    def _single_domain_forward(self, logits, features, domain=1):</code></pre><h3>After Change</h3><pre><code class='java'>
+        self.domain_discriminator_accuracy = None
+
+    def forward(self, g_s, f_s, g_t, f_t):
+        f = torch.cat((f_s<a id="change">, f_t</a>), dim=0)
+        g = torch.cat((g_s, g_t), dim=0)
+        g = F.softmax(g,dim=1).detach()
+        h = self.grl(self.map(f, g))
+        d = self.domain_discriminator(h)
+        d_label<a id="change"> = </a>torch.cat((
+            torch.ones((g_s.size(0), 1)).to(g_s.device),
+            <a id="change">torch.zeros(</a>(g_t.size(0)<a id="change">, 1</a>)<a id="change">)</a>.to(g_t.device),
+        ))
+        weight = 1.0 + torch.exp(-entropy(g))
+        batch_size = f.size(0)
+        weight<a id="change"> = </a>weight<a id="change"> / </a>torch.sum(weight) * batch_size
+        self.domain_discriminator_accuracy = binary_accuracy(d, d_label)
+        <a id="change">return </a>self.bce(d, d_label, weight.view_as(d))
+
+
+class RandomizedMultiLinearMap(nn.Module):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/thuml/transfer-learning-library/commit/6dfc8e293ca2cbc4d116dc8ed0a6ef176dff0d06#diff-921a2eeb848068663b0c58710b496c58d46246573eaab61f41628954ccf27867L85' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 74415607</div><div id='project'> Project Name: thuml/transfer-learning-library</div><div id='commit'> Commit Name: 6dfc8e293ca2cbc4d116dc8ed0a6ef176dff0d06</div><div id='time'> Time: 2020-04-12</div><div id='author'> Author: 13126830206@163.com</div><div id='file'> File Name: dalib/adaptation/cdan.py</div><div id='m_class'> M Class Name: ConditionalDomainAdversarialLoss</div><div id='n_method'> N Class Name: ConditionalDomainAdversarialLoss</div><div id='m_method'> M Method Name: forward(5)</div><div id='n_method'> N Method Name: forward(5)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: dalib/adaptation/cdan.py</div><div id='n_file'> N File Name: dalib/adaptation/cdan.py</div><div id='m_start'> M Start Line: 86</div><div id='m_end'> M End Line: 90</div><div id='n_start'> N Start Line: 87</div><div id='n_end'> N End Line: 100</div><BR>

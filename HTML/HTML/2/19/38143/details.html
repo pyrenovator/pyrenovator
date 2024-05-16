@@ -1,0 +1,78 @@
+<html><h3>Pattern ID :38143
+</h3><img src='109363844.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            in_cols = F.unfold(input, ctx.kernel_size, ctx.dilation, ctx.padding, ctx.stride)
+            in_cols = in_cols.view(bs, in_ch, ctx.kernel_size[0], ctx.kernel_size[1], out_sz[0], out_sz[1])
+        if ctx.needs_input_grad[0]:
+            grad_input = <a id="change">grad_output.new()</a>
+            grad_im2col_output = grad_in_mul_k * kernel
+            grad_im2col_output = grad_im2col_output.view(bs, -1, out_sz[0] * out_sz[1])
+            <a id="change">ctx._backend.Im2Col_updateGradInput(</a>ctx._backend.library_state,
+                                                grad_im2col_output,
+                                                grad_input,
+                                                <a id="change">ctx.input_size[0]</a>, ctx.input_size[1],
+                                                <a id="change">ctx.kernel_size[0]</a>, <a id="change">ctx.kernel_size[1]</a>,
+                                                <a id="change">ctx.dilation[0]</a>, <a id="change">ctx.dilation[1]</a>,
+                                                ctx.padding[0], <a id="change">ctx.padding[1]</a>,
+                                                <a id="change">ctx.stride[0]</a>, <a id="change">ctx.stride[1]</a><a id="change">)</a>
+        if ctx.needs_input_grad[1]:
+            grad_kernel = in_cols * grad_in_mul_k
+            grad_kernel = grad_kernel.sum(dim=1, keepdim=True)</code></pre><h3>After Change</h3><pre><code class='java'>
+            grad_im2col_output = grad_in_mul_k * kernel
+            grad_im2col_output = grad_im2col_output.view(bs, -1, out_sz[0] * out_sz[1])
+
+            grad_input = <a id="change">F.fold(</a>grad_im2col_output,
+                                ctx.input_size[:2], ctx.kernel_size, ctx.dilation, ctx.padding, ctx.stride<a id="change">)</a>
+        if ctx.needs_input_grad[1]:
+            grad_kernel = in_cols * grad_in_mul_k
+            grad_kernel = grad_kernel.sum(dim=1, keepdim=True)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 11</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/iceclear/mw-gan/commit/714b1b181b927331d6d13406119527627b5d9986#diff-0c5a69b83c90e2ebf73655d9f53d075d21eac35fcabc11f8af54b08aac113b8fL185' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 109363844</div><div id='project'> Project Name: iceclear/mw-gan</div><div id='commit'> Commit Name: 714b1b181b927331d6d13406119527627b5d9986</div><div id='time'> Time: 2021-06-14</div><div id='author'> Author: 1120582412@qq.com</div><div id='file'> File Name: codes/models/modules/pac.py</div><div id='m_class'> M Class Name: PacConv2dFn</div><div id='n_method'> N Class Name: PacConv2dFn</div><div id='m_method'> M Method Name: backward(2)</div><div id='n_method'> N Method Name: backward(2)</div><div id='m_parent_class'> M Parent Class: Function</div><div id='n_parent_class'> N Parent Class: Function</div><div id='m_file'> M File Name: codes/models/modules/pac.py</div><div id='n_file'> N File Name: codes/models/modules/pac.py</div><div id='m_start'> M Start Line: 193</div><div id='m_end'> M End Line: 203</div><div id='n_start'> N Start Line: 185</div><div id='n_end'> N End Line: 188</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        grad_diff = grad.expand_as(cols) * (2 * diff)
+        grad_diff[:, :, center_y:center_y + 1, center_x:center_x + 1, :, :] -= \
+            grad_diff.sum(dim=2, keepdim=True).sum(dim=3, keepdim=True)
+        grad_input = <a id="change">grad_output.new()</a>
+        <a id="change">ctx._backend.Im2Col_updateGradInput(</a>ctx._backend.library_state,
+                                            grad_diff.view(bs, ch * ctx.kernel_size[0] * ctx.kernel_size[1], -1),
+                                            grad_input,
+                                            in_h, in_w,
+                                            <a id="change">ctx.kernel_size[0]</a>, <a id="change">ctx.kernel_size[1]</a>,
+                                            <a id="change">ctx.dilation[0]</a>, <a id="change">ctx.dilation[1]</a>,
+                                            <a id="change">ctx.padding[0]</a>, <a id="change">ctx.padding[1]</a>,
+                                            <a id="change">ctx.stride[0]</a>, <a id="change">ctx.stride[1]</a><a id="change">)</a>
+
+        return grad_input, None, None, None, None, None
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        grad_diff[:, :, center_y:center_y + 1, center_x:center_x + 1, :, :] -= \
+            grad_diff.sum(dim=2, keepdim=True).sum(dim=3, keepdim=True)
+
+        grad_input = <a id="change">F.fold(</a>grad_diff.view(bs, ch * ctx.kernel_size[0] * ctx.kernel_size[1], -1),
+                            (in_h, in_w), ctx.kernel_size, ctx.dilation, ctx.padding, ctx.stride<a id="change">)</a>
+
+        return grad_input, None, None, None, None, None
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/iceclear/mw-gan/commit/714b1b181b927331d6d13406119527627b5d9986#diff-0c5a69b83c90e2ebf73655d9f53d075d21eac35fcabc11f8af54b08aac113b8fL116' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 109363845</div><div id='project'> Project Name: iceclear/mw-gan</div><div id='commit'> Commit Name: 714b1b181b927331d6d13406119527627b5d9986</div><div id='time'> Time: 2021-06-14</div><div id='author'> Author: 1120582412@qq.com</div><div id='file'> File Name: codes/models/modules/pac.py</div><div id='m_class'> M Class Name: GaussKernel2dFn</div><div id='n_method'> N Class Name: GaussKernel2dFn</div><div id='m_method'> M Method Name: backward(2)</div><div id='n_method'> N Method Name: backward(2)</div><div id='m_parent_class'> M Parent Class: Function</div><div id='n_parent_class'> N Parent Class: Function</div><div id='m_file'> M File Name: codes/models/modules/pac.py</div><div id='n_file'> N File Name: codes/models/modules/pac.py</div><div id='m_start'> M Start Line: 129</div><div id='m_end'> M End Line: 137</div><div id='n_start'> N Start Line: 128</div><div id='n_end'> N End Line: 129</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        grad_input = grad_kernel = None
+        (bs, ch), out_sz = grad_output.shape[:2], grad_output.shape[2:]
+        if ctx.needs_input_grad[0]:
+            grad_input = <a id="change">grad_output.new()</a>
+            grad_im2col_output = torch.einsum(&quotijmn,izklmn-&gt;ijklmn&quot, (grad_output, kernel))
+            grad_im2col_output = grad_im2col_output.view(bs, -1, out_sz[0] * out_sz[1])
+            <a id="change">ctx._backend.Im2Col_updateGradInput(</a>ctx._backend.library_state,
+                                                grad_im2col_output,
+                                                grad_input,
+                                                <a id="change">ctx.input_size[0]</a>, ctx.input_size[1],
+                                                <a id="change">ctx.kernel_size[0]</a>, <a id="change">ctx.kernel_size[1]</a>,
+                                                <a id="change">ctx.dilation[0]</a>, <a id="change">ctx.dilation[1]</a>,
+                                                <a id="change">ctx.padding[0]</a>, <a id="change">ctx.padding[1]</a>,
+                                                <a id="change">ctx.stride[0]</a>, ctx.stride[1]<a id="change">)</a>
+        if ctx.needs_input_grad[1]:
+            cols = F.unfold(input, ctx.kernel_size, ctx.dilation, ctx.padding, ctx.stride)
+            cols = cols.view(bs, ch, ctx.kernel_size[0], ctx.kernel_size[1], out_sz[0], out_sz[1])</code></pre><h3>After Change</h3><pre><code class='java'>
+            grad_im2col_output = torch.einsum(&quotijmn,izklmn-&gt;ijklmn&quot, (grad_output, kernel))
+            grad_im2col_output = grad_im2col_output.view(bs, -1, out_sz[0] * out_sz[1])
+
+            grad_input = <a id="change">F.fold(</a>grad_im2col_output,
+                                ctx.input_size[:2], ctx.kernel_size, ctx.dilation, ctx.padding, ctx.stride<a id="change">)</a>
+        if ctx.needs_input_grad[1]:
+            cols = F.unfold(input, ctx.kernel_size, ctx.dilation, ctx.padding, ctx.stride)
+            cols = cols.view(bs, ch, ctx.kernel_size[0], ctx.kernel_size[1], out_sz[0], out_sz[1])</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/iceclear/mw-gan/commit/714b1b181b927331d6d13406119527627b5d9986#diff-0c5a69b83c90e2ebf73655d9f53d075d21eac35fcabc11f8af54b08aac113b8fL335' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 109363846</div><div id='project'> Project Name: iceclear/mw-gan</div><div id='commit'> Commit Name: 714b1b181b927331d6d13406119527627b5d9986</div><div id='time'> Time: 2021-06-14</div><div id='author'> Author: 1120582412@qq.com</div><div id='file'> File Name: codes/models/modules/pac.py</div><div id='m_class'> M Class Name: PacPool2dFn</div><div id='n_method'> N Class Name: PacPool2dFn</div><div id='m_method'> M Method Name: backward(2)</div><div id='n_method'> N Method Name: backward(2)</div><div id='m_parent_class'> M Parent Class: Function</div><div id='n_parent_class'> N Parent Class: Function</div><div id='m_file'> M File Name: codes/models/modules/pac.py</div><div id='n_file'> N File Name: codes/models/modules/pac.py</div><div id='m_start'> M Start Line: 340</div><div id='m_end'> M End Line: 350</div><div id='n_start'> N Start Line: 318</div><div id='n_end'> N End Line: 321</div><BR>

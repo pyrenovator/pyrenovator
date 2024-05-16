@@ -1,0 +1,101 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    cudnn.benchmark = True
+
+    &#47&#47 Data loading code
+    <a id="change">normalize</a> = <a id="change">T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])</a>
+    train_transform = <a id="change">T.Compose(</a><a id="change">[
+        T.RandomResizedCrop(224</a><a id="change">, scale=(0.7, 1.0))</a>,
+        <a id="change">T.RandomHorizontalFlip()</a>,
+        <a id="change">T.ColorJitter(0.3</a>, <a id="change">0.3</a>, <a id="change">0.3</a>, <a id="change">0.3</a><a id="change">)</a>,
+        <a id="change">T.RandomGrayscale()</a>,
+        <a id="change">T.ToTensor()</a>,
+        <a id="change">normalize</a>
+    ]<a id="change">)</a>
+    val_transform<a id="change"> = T</a><a id="change">.Compose(</a><a id="change">[
+        ResizeImage(224</a><a id="change">)</a>,
+        <a id="change">T.ToTensor()</a>,
+        <a id="change">normalize</a>
+    ]<a id="change">)</a>
+
+    train_dataset, num_classes = get_dataset(dataset_name=args.data, root=args.root, task_list=args.sources,
+                                             split=&quottrain&quot, download=True, transform=train_transform,
+                                             seed=args.seed)</code></pre><h3>After Change</h3><pre><code class='java'>
+    cudnn.benchmark = True
+
+    &#47&#47 Data loading code
+    train_transform = <a id="change">utils.get_train_transform(</a>args.train_resizing<a id="change">, random_horizontal_flip=True,
+                                                random_color_jitter=True, random_gray_scale=True)</a>
+    val_transform = <a id="change">utils.get_val_transform(</a>args.val_resizing<a id="change">)</a>
+    <a id="change">print("train_transform: "</a>, train_transform<a id="change">)</a>
+    <a id="change">print("val_transform: "</a>, val_transform<a id="change">)</a>
+
+    train_dataset, num_classes = utils.get_dataset(dataset_name=args.data, root=args.root, task_list=args.sources,
+                                                   split=&quottrain&quot, download=True, transform=train_transform,
+                                                   seed=args.seed)
+    sampler = RandomDomainSampler(train_dataset, args.batch_size, num_select_domains=2)
+    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, num_workers=args.workers,
+                              sampler=sampler, drop_last=True)
+    val_dataset, _ = utils.get_dataset(dataset_name=args.data, root=args.root, task_list=args.sources, split=&quotval&quot,
+                                       download=True, transform=val_transform, seed=args.seed)
+    val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
+    test_dataset, _ = utils.get_dataset(dataset_name=args.data, root=args.root, task_list=args.targets, split=&quotall&quot,
+                                        download=True, transform=val_transform, seed=args.seed)
+    test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
+
+    print("Source Train:", len(train_dataset))
+    print(&quotSource Val:&quot, len(val_dataset))
+    print("Target:", len(test_dataset))
+    train_iter = ForeverDataIterator(train_loader)
+
+    &#47&#47 create model
+    print("=&gt; using pre-trained model &quot{}&quot".format(args.arch))
+    backbone = models.__dict__[args.arch](mix_layers=args.mix_layers, mix_p=args.mix_p, mix_alpha=args.mix_alpha,
+                                          pretrained=True)
+    pool_layer = nn.Identity() if args.no_pool else None
+    classifier = Classifier(backbone, num_classes, freeze_bn=args.freeze_bn, dropout_p=args.dropout_p,
+                            finetune=args.finetune, pool_layer=pool_layer).to(device)
+
+    &#47&#47 define optimizer and lr scheduler
+    optimizer = SGD(classifier.get_parameters(base_lr=args.lr), args.lr, momentum=args.momentum, weight_decay=args.wd,
+                    nesterov=True)
+    lr_scheduler = CosineAnnealingLR(optimizer, args.epochs * args.iters_per_epoch)
+
+    if args.phase == &quottest&quot:
+        checkpoint = torch.load(logger.get_checkpoint_path(&quotbest&quot), map_location=&quotcpu&quot)
+        classifier.load_state_dict(checkpoint)
+        acc1 = utils.validate(test_loader, classifier, args, device)
+        print(acc1)
+        return
+
+    &#47&#47 start training
+    best_val_acc1 = 0.
+    best_test_acc1 = 0.
+    for epoch in range(args.epochs):
+        print(lr_scheduler.get_lr())
+        &#47&#47 train for one epoch
+        train(train_iter, classifier, optimizer, lr_scheduler, epoch, args)
+
+        &#47&#47 evaluate on validation set
+        print("Validation on source domain...")
+        acc1 = utils.validate(val_loader, classifier, args, device)
+
+        &#47&#47 remember best acc@1 and save checkpoint
+        torch.save(classifier.state_dict(), logger.get_checkpoint_path(&quotlatest&quot))
+        if acc1 &gt; best_val_acc1:
+            shutil.copy(logger.get_checkpoint_path(&quotlatest&quot), logger.get_checkpoint_path(&quotbest&quot))
+        best_val_acc1 = max(acc1, best_val_acc1)
+
+        &#47&#47 evaluate on test set
+        print("Test on target domain...")
+        best_test_acc1 = max(best_test_acc1, utils.validate(test_loader, classifier, args, device))
+
+    &#47&#47 evaluate on test set
+    classifier.load_state_dict(torch.load(logger.get_checkpoint_path(&quotbest&quot)))
+    acc1<a id="change"> = utils</a><a id="change">.validate(</a>test_loader, classifier, args, device<a id="change">)</a>
+    print("test acc on target = {}".format(acc1))
+    print("oracle acc on target = {}".format(best_test_acc1))
+    logger.close()
+</code></pre>

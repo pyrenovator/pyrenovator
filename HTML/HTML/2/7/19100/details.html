@@ -1,0 +1,88 @@
+<html><h3>Pattern ID :19100
+</h3><img src='62215413.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        image_embed_dim = self.image_embed_dim
+
+        text_cond = self.get_text_cond(text)
+        <a id="change">return </a>self.p_sample_loop((batch_size, image_embed_dim), text_cond = text_cond)
+
+    def q_sample(self, x_start, t, noise=None):
+        noise = default(noise, lambda: torch.randn_like(x_start))</code></pre><h3>After Change</h3><pre><code class='java'>
+        text_embeds = rearrange(text_embeds, &quot(b r) d -&gt; b r d&quot, r = num_samples_per_batch)
+        image_embeds = rearrange(image_embeds, &quot(b r) d -&gt; b r d&quot, r = num_samples_per_batch)
+
+        text_image_sims<a id="change"> = </a>einsum(&quotb r d, b r d -&gt; b r&quot)
+        top_sim_indices<a id="change"> = </a>text_image_sims.topk(k = 1).indices
+
+        top_sim_indices = repeat(top_sim_indices, &quotb 1 -&gt; b d&quot, d = image_embed_dim)
+
+        top_image_embeds<a id="change"> = </a><a id="change">image_embeds.gather(1</a>, top_sim_indices<a id="change">)</a>
+        <a id="change">return </a>top_image_embeds
+
+    def q_sample(self, x_start, t, noise=None):
+        noise = default(noise, lambda: torch.randn_like(x_start))</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 6</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/lucidrains/dalle2-pytorch/commit/d3cded3c6cd76eca7135f669a96658a244d0f49f#diff-038ecede954c29266888cb88e37cc06f61ba2433f8b5142c7b2b2cefde5ed0edL408' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 62215413</div><div id='project'> Project Name: lucidrains/dalle2-pytorch</div><div id='commit'> Commit Name: d3cded3c6cd76eca7135f669a96658a244d0f49f</div><div id='time'> Time: 2022-04-13</div><div id='author'> Author: lucidrains@gmail.com</div><div id='file'> File Name: dalle2_pytorch/dalle2_pytorch.py</div><div id='m_class'> M Class Name: DiffusionPrior</div><div id='n_method'> N Class Name: DiffusionPrior</div><div id='m_method'> M Method Name: sample(3)</div><div id='n_method'> N Method Name: sample(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: dalle2_pytorch/dalle2_pytorch.py</div><div id='n_file'> N File Name: dalle2_pytorch/dalle2_pytorch.py</div><div id='m_start'> M Start Line: 413</div><div id='m_end'> M End Line: 413</div><div id='n_start'> N Start Line: 408</div><div id='n_end'> N End Line: 430</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            else:
+                true_scores = torch.cat(
+                    (true_scores, score[i][loc_len[i] - 1].reshape(1, -1)), 0)
+        <a id="change">return </a>true_scores
+
+    def predict(self, batch):
+        return self.forward(batch)</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 batch_size * state_len * 2 x input_size
+        out = torch.cat((hidden_state, context), 2)
+        &#47&#47 因为是补齐了的，所以需要找到真正的 out
+        origin_len<a id="change"> = </a>batch.get_origin_len(&quotcurrent_loc&quot)
+        final_out_index = torch.tensor(origin_len) - 1
+        final_out_index = final_out_index.reshape(final_out_index.shape[0], 1, -1)
+        final_out_index<a id="change"> = </a>final_out_index.repeat(1, 1, 2*self.hidden_size).to(self.device)
+        out<a id="change"> = </a><a id="change">torch.gather(</a>out, <a id="change">1</a>, final_out_index<a id="change">)</a>.squeeze(1)  &#47&#47 batch_size * (2*hidden_size)
+        out = self.dropout(out)
+
+        y = self.fc_final(out)  &#47&#47 batch_size * loc_size
+        score = F.log_softmax(y, dim=1)
+        <a id="change">return </a>score
+
+    def predict(self, batch):
+        return self.forward(batch)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/libcity/bigscity-libcity/commit/ec61c9cd984d1c86ee715380ed3b65b4222c8d1f#diff-e952722699ca3186325fca5947706a0f1eb9b447d1d51063beaddb3480efa998L117' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 62215444</div><div id='project'> Project Name: libcity/bigscity-libcity</div><div id='commit'> Commit Name: ec61c9cd984d1c86ee715380ed3b65b4222c8d1f</div><div id='time'> Time: 2021-05-06</div><div id='author'> Author: 33283819+WenMellors@users.noreply.github.com</div><div id='file'> File Name: trafficdl/model/trajectory_loc_prediction/DeepMove.py</div><div id='m_class'> M Class Name: DeepMove</div><div id='n_method'> N Class Name: DeepMove</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: AbstractModel</div><div id='n_parent_class'> N Parent Class: AbstractModel</div><div id='m_file'> M File Name: trafficdl/model/trajectory_loc_prediction/DeepMove.py</div><div id='n_file'> N File Name: trafficdl/model/trajectory_loc_prediction/DeepMove.py</div><div id='m_start'> M Start Line: 122</div><div id='m_end'> M End Line: 175</div><div id='n_start'> N Start Line: 152</div><div id='n_end'> N End Line: 163</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        _, memory_indices, _ = self.vq(x)
+
+        memories = self.values[memory_indices]
+        <a id="change">return </a>memories
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        if memory_indices.ndim == 2:
+            memory_indices = rearrange(memory_indices, &quot... -&gt; ... 1&quot)
+
+        memory_indices<a id="change"> = </a>rearrange(memory_indices, &quotb n h -&gt; b h n&quot)
+
+        values = repeat(self.values, &quoth n d -&gt; b h n d&quot, b = memory_indices.shape[0])
+        memory_indices<a id="change"> = </a>repeat(memory_indices, &quotb h n -&gt; b h n d&quot, d = values.shape[-1])
+
+        memories<a id="change"> = </a><a id="change">values.gather(2</a>, memory_indices<a id="change">)</a>
+
+        <a id="change">return </a>rearrange(memories, &quotb h n d -&gt; b n (h d)&quot)
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lucidrains/discrete-key-value-bottleneck-pytorch/commit/1c08320164b3db790044a9da02a075e659d1a306#diff-c9aa93d319704ee2b4e3f80ff931aeb3abe77c0197b30202ac8a6654a728bf07L39' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 62215415</div><div id='project'> Project Name: lucidrains/discrete-key-value-bottleneck-pytorch</div><div id='commit'> Commit Name: 1c08320164b3db790044a9da02a075e659d1a306</div><div id='time'> Time: 2022-07-25</div><div id='author'> Author: lucidrains@gmail.com</div><div id='file'> File Name: discrete_key_value_bottleneck_pytorch/discrete_key_value_bottleneck.py</div><div id='m_class'> M Class Name: DiscreteKeyValueBottleneck</div><div id='n_method'> N Class Name: DiscreteKeyValueBottleneck</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: discrete_key_value_bottleneck_pytorch/discrete_key_value_bottleneck.py</div><div id='n_file'> N File Name: discrete_key_value_bottleneck_pytorch/discrete_key_value_bottleneck.py</div><div id='m_start'> M Start Line: 49</div><div id='m_end'> M End Line: 50</div><div id='n_start'> N Start Line: 52</div><div id='n_end'> N End Line: 62</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            else:
+                true_scores = torch.cat(
+                    (true_scores, score[i][loc_len[i] - 1].reshape(1, -1)), 0)
+        <a id="change">return </a>true_scores
+
+    def predict(self, batch):
+        return self.forward(batch)</code></pre><h3>After Change</h3><pre><code class='java'>
+        out, out_len = pad_packed_sequence(out, batch_first=True)
+        &#47&#47 out = out.permute(1, 0, 2)
+        origin_len = batch.get_origin_len(&quotcurrent_loc&quot)
+        final_out_index<a id="change"> = </a>torch.tensor(origin_len) - 1
+        final_out_index<a id="change"> = </a>final_out_index.reshape(final_out_index.shape[0], 1, -1)
+        final_out_index = final_out_index.repeat(1, 1, self.hidden_size).to(self.device)
+        out = <a id="change">torch.gather(</a>out, <a id="change">1</a>, final_out_index<a id="change">)</a>.squeeze(1)  &#47&#47 batch_size * hidden_size
+        out = F.selu(out)
+        out = self.dropout(out)
+
+        y = self.fc(out)
+        score<a id="change"> = </a>F.log_softmax(y, dim=1)  &#47&#47 calculate loss by NLLoss
+        <a id="change">return </a>score
+
+    def predict(self, batch):
+        return self.forward(batch)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/libcity/bigscity-libcity/commit/ec61c9cd984d1c86ee715380ed3b65b4222c8d1f#diff-f7e6a5cf5965e29788168874ecb4a6a81ecf849824f4f08f81428bfb514f6906L60' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 62215420</div><div id='project'> Project Name: libcity/bigscity-libcity</div><div id='commit'> Commit Name: ec61c9cd984d1c86ee715380ed3b65b4222c8d1f</div><div id='time'> Time: 2021-05-06</div><div id='author'> Author: 33283819+WenMellors@users.noreply.github.com</div><div id='file'> File Name: trafficdl/model/trajectory_loc_prediction/RNN.py</div><div id='m_class'> M Class Name: RNN</div><div id='n_method'> N Class Name: RNN</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: AbstractModel</div><div id='n_parent_class'> N Parent Class: AbstractModel</div><div id='m_file'> M File Name: trafficdl/model/trajectory_loc_prediction/RNN.py</div><div id='n_file'> N File Name: trafficdl/model/trajectory_loc_prediction/RNN.py</div><div id='m_start'> M Start Line: 87</div><div id='m_end'> M End Line: 97</div><div id='n_start'> N Start Line: 84</div><div id='n_end'> N End Line: 94</div><BR>

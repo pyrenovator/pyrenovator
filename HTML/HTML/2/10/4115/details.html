@@ -1,0 +1,100 @@
+<html><h3>Pattern ID :4115
+</h3><img src='15272329.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    train_dataset = torch.utils.data.TensorDataset(x_seq, target_seq)
+
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle)
+    criterion<a id="change"> = </a><a id="change">torch.nn.MSELoss().to(</a>device<a id="change">)</a>
+    for batch_data in train_loader:
+        encoder_inputs, labels = batch_data
+        outputs = model(encoder_inputs, edge_index)
+    assert outputs.shape == (batch_size, node_count, num_for_predict)</code></pre><h3>After Change</h3><pre><code class='java'>
+    T = len_input
+    x_seq = torch.zeros([batch_size,node_count, node_features,T]).to(device)
+    target_seq = torch.zeros([batch_size,node_count,T]).to(device)
+    edge_index_seq<a id="change"> = </a><a id="change">[]</a>
+    for b in range(batch_size):
+        for t in range(T):
+            x, edge_index = create_mock_data(node_count, edge_per_node, node_features)
+            x_seq[b,:,:,t] = x
+            <a id="change">if b == 0</a>:
+                <a id="change">edge_index_seq.append(</a>edge_index<a id="change">)</a>
+            target = create_mock_target(node_count, num_classes)
+            target_seq[b,:,t] = target
+    shuffle = True
+    train_dataset = torch.utils.data.TensorDataset(x_seq, target_seq)
+
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle)
+    for batch_data in train_loader:
+        encoder_inputs, _ = batch_data
+        outputs1<a id="change"> = </a>model(encoder_inputs, edge_index_seq)
+        outputs2 = model(encoder_inputs, <a id="change">edge_index_seq[0]</a>)
+    assert outputs1.shape == (batch_size, node_count, num_for_predict)
+    assert outputs2.shape == (batch_size, node_count, num_for_predict)
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 9</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/benedekrozemberczki/pytorch_geometric_temporal/commit/8efa512ff3ac06546a082de036a85428720abd7a#diff-592bffdec032ab970088ee321003f32504e7af07175645e811641e910aca3e35L236' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 15272329</div><div id='project'> Project Name: benedekrozemberczki/pytorch_geometric_temporal</div><div id='commit'> Commit Name: 8efa512ff3ac06546a082de036a85428720abd7a</div><div id='time'> Time: 2021-03-20</div><div id='author'> Author: He_YX@outlook.com</div><div id='file'> File Name: test/convolutional_test.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: test_astgcn(0)</div><div id='n_method'> N Method Name: test_astgcn(0)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: test/convolutional_test.py</div><div id='n_file'> N File Name: test/convolutional_test.py</div><div id='m_start'> M Start Line: 248</div><div id='m_end'> M End Line: 285</div><div id='n_start'> N Start Line: 236</div><div id='n_end'> N End Line: 266</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    def forward(self, interaction):
+        item_seq = interaction[self.ITEM_ID_LIST]
+        feature_seq = <a id="change">self.item_feat[self.FEATURE_FIELD][item_seq].to(</a>item_seq.device<a id="change">)</a>
+
+        &#47&#47 1. shape [B Len num] means the item has multi-feature, i.e. one movie may be classified
+        &#47&#47 into multi-class. We would use sum of the features as the input.
+
+        &#47&#47 2. shape [B Len] means the item has single-feature, i.e. one store could only in one city.
+
+        item_emb = self.item_embedding(item_seq)
+        feature_emb<a id="change"> = </a>self.feature_embedding(feature_seq)
+
+        if feature_seq.dim() == 3: &#47&#47 pos_features [B Len Num]
+            feature_mask = (feature_seq != 0).float()</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        sparse_embedding, dense_embedding = self.embed_input_fields(item_seq)
+        &#47&#47 concat the sparse embedding and float embedding
+        feature_table<a id="change"> = </a><a id="change">[]</a>
+        <a id="change">if sparse_embedding is not None</a>:
+            <a id="change">feature_table.append(</a>sparse_embedding<a id="change">)</a>
+        if dense_embedding is not None:
+            feature_table.append(dense_embedding)
+
+        feature_table = torch.cat(feature_table, dim=1)
+        &#47&#47 [batch len num_features hidden_size]
+        table_shape = feature_table.shape
+
+        feat_num, embedding_size = table_shape[-2], <a id="change">table_shape[-1]</a>
+        feature_emb<a id="change"> = </a>feature_table.view(table_shape[:-2] + (feat_num * embedding_size,))
+        feature_gru_output, _ = self.feature_gru_layers(feature_emb) &#47&#47 [B Len H]
+
+        output_concat = torch.cat((item_gru_output, feature_gru_output), -1)  &#47&#47 [B Len 2*H]</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/rucaibox/recbole/commit/566d8d4555427201b4d3ec3f12d0b943a2e20d83#diff-e16a62f3f143ee9b15142b28970d9d3325554080019f65d007faa043a4beff5fL98' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 15272360</div><div id='project'> Project Name: rucaibox/recbole</div><div id='commit'> Commit Name: 566d8d4555427201b4d3ec3f12d0b943a2e20d83</div><div id='time'> Time: 2020-10-11</div><div id='author'> Author: 838803621@qq.com</div><div id='file'> File Name: recbox/model/sequential_recommender/gru4recf.py</div><div id='m_class'> M Class Name: GRU4RecF</div><div id='n_method'> N Class Name: GRU4RecF</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: SequentialRecommender</div><div id='n_parent_class'> N Parent Class: SequentialRecommender</div><div id='m_file'> M File Name: recbox/model/sequential_recommender/gru4recf.py</div><div id='n_file'> N File Name: recbox/model/sequential_recommender/gru4recf.py</div><div id='m_start'> M Start Line: 99</div><div id='m_end'> M End Line: 118</div><div id='n_start'> N Start Line: 301</div><div id='n_end'> N End Line: 319</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    train_dataset = torch.utils.data.TensorDataset(x_seq, target_seq)
+
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle)
+    criterion<a id="change"> = </a><a id="change">torch.nn.MSELoss().to(</a>device<a id="change">)</a>
+    for batch_data in train_loader:
+        encoder_inputs, labels = batch_data
+        outputs = model(encoder_inputs, edge_index)
+    assert outputs.shape == (batch_size, node_count, num_for_predict)</code></pre><h3>After Change</h3><pre><code class='java'>
+    T = len_input
+    x_seq = torch.zeros([batch_size,node_count, node_features,T]).to(device)
+    target_seq = torch.zeros([batch_size,node_count,T]).to(device)
+    edge_index_seq<a id="change"> = </a><a id="change">[]</a>
+    for b in range(batch_size):
+        for t in range(T):
+            x, edge_index = create_mock_data(node_count, edge_per_node, node_features)
+            x_seq[b,:,:,t] = x
+            <a id="change">if b == 0</a>:
+                <a id="change">edge_index_seq.append(</a>edge_index<a id="change">)</a>
+            target = create_mock_target(node_count, num_classes)
+            target_seq[b,:,t] = target
+    shuffle = True
+    train_dataset = torch.utils.data.TensorDataset(x_seq, target_seq)
+
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle)
+    for batch_data in train_loader:
+        encoder_inputs, _ = batch_data
+        outputs1 = model(encoder_inputs, edge_index_seq)
+        outputs2<a id="change"> = </a>model(encoder_inputs, <a id="change">edge_index_seq[0]</a>)
+    assert outputs1.shape == (batch_size, node_count, num_for_predict)
+    assert outputs2.shape == (batch_size, node_count, num_for_predict)
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/benedekrozemberczki/pytorch_geometric_temporal/commit/8efa512ff3ac06546a082de036a85428720abd7a#diff-592bffdec032ab970088ee321003f32504e7af07175645e811641e910aca3e35L287' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 15272328</div><div id='project'> Project Name: benedekrozemberczki/pytorch_geometric_temporal</div><div id='commit'> Commit Name: 8efa512ff3ac06546a082de036a85428720abd7a</div><div id='time'> Time: 2021-03-20</div><div id='author'> Author: He_YX@outlook.com</div><div id='file'> File Name: test/convolutional_test.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: test_mstgcn(0)</div><div id='n_method'> N Method Name: test_mstgcn(0)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: test/convolutional_test.py</div><div id='n_file'> N File Name: test/convolutional_test.py</div><div id='m_start'> M Start Line: 291</div><div id='m_end'> M End Line: 328</div><div id='n_start'> N Start Line: 293</div><div id='n_end'> N End Line: 311</div><BR>

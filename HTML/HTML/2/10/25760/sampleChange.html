@@ -1,0 +1,33 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            Tuple[PoolingType, DataType], List[EmbeddingBagConfig]
+        ] = defaultdict(list)
+        self._length_per_key: List[int] = []
+        self._emb_modules: nn.ModuleList = <a id="change">nn.ModuleList()</a>
+        self._output_dtype = output_dtype
+
+        table_names = set()
+        for table in self._embedding_bag_configs:</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 We map over the parameters from FBGEMM backed kernels to the canonical nn.EmbeddingBag
+        &#47&#47 representation. This provides consistency between this class and the EmbeddingBagCollection
+        &#47&#47 nn.Module API calls (state_dict, named_modules, etc)
+        <a id="change">self.embedding_bags: nn.ModuleDict = </a><a id="change">nn.ModuleDict()</a>
+        for (_key, tables), emb_module in zip(
+            self._key_to_tables.items(), self._emb_modules
+        ):
+            for embedding_config, (weight, _) in zip(
+                tables, emb_module.split_embedding_weights(split_scale_shifts=False)
+            ):
+                <a id="change">self.embedding_bags[embedding_config.name] = </a><a id="change">torch.nn.Module()</a>
+                &#47&#47 register as a buffer so it&quots exposed in state_dict.
+                &#47&#47 however, since this is only needed for inference, we do not need to expose it as part of parameters.
+                &#47&#47 Additionally, we cannot expose uint8 weights as parameters due to autograd restrictions.
+                <a id="change">self.embedding_bags[embedding_config.name].register_buffer(
+                    "weight"</a>, weight<a id="change">
+                )</a>
+
+    def forward(
+        self,
+        features: KeyedJaggedTensor,</code></pre>

@@ -1,0 +1,25 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            out = torch.sigmoid(self.lr1 @ self.lr2 + self.init_bias)
+            &#47&#47 TODO: this could be more efficient
+            mask = torch.zeros_like(out)
+            <a id="change">for </a>i, (r, c) in <a id="change">enumerate(</a>self.full_idx<a id="change">):
+                </a>mask[..., r, c] = 1.
+            out = out * mask
+        else:
+            raise RuntimeError</code></pre><h3>After Change</h3><pre><code class='java'>
+            &#47&#47 so we want to instead constrain lr1 and lr2 themselves
+            &#47&#47 lr1: each row needs to sum to 0&lt;=sum(row)&lt;=1. softmax is traditionally overparameterized b/c sums to 1,
+            &#47&#47      but here it is not overparameterized b/c sums to &lt;=1 (`* torch.sigmoid(l1.sum)` part)
+            lr1<a id="change"> = </a><a id="change">torch.zeros(</a>(self.state_rank, self.lr1.shape[-1])<a id="change">, dtype=self.lr1.dtype, device=self.lr1.device)</a>
+            lr1[self.full_states] = sm(self.lr1) * torch.sigmoid(self.lr1.sum(-1, keepdim=True) + self.init_bias / 2)
+            &#47&#47 lr2: each element is 0&lt;=el&lt;=1
+            lr2 = torch.sigmoid(self.lr2 + self.init_bias / 2)
+            &#47&#47 currently not outputting lr1,lr2 separately, as overhead of of extra matmul calls is worse than reduced
+            &#47&#47 theoretical number of ops. but may re-examine in the future.
+            <a id="change">return </a>lr1 @ lr2
+        else:
+            raise RuntimeError
+</code></pre>

@@ -1,0 +1,25 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+        &#47&#47 Self-attention
+        attn_mask = 1 - valid_his.unsqueeze(1).repeat(1, seq_len, 1)
+        <a id="change">for i</a> in range(self.num_layers)<a id="change">:
+            </a>residual = his_vectors
+            &#47&#47 self-attention
+            query, key, value = self.Q(his_vectors), self.K(his_vectors), self.V(his_vectors)
+            scale = self.emb_size ** -0.5
+            his_vectors<a id="change"> = </a>components.scaled_dot_product_attention(
+                query, key, value, scale=scale, attn_mask=attn_mask)
+            &#47&#47 mlp forward
+            his_vectors = self.W1(his_vectors).relu()</code></pre><h3>After Change</h3><pre><code class='java'>
+        causality_mask = np.tril(np.ones((1, 1, seq_len, seq_len), dtype=np.int))
+        attn_mask = torch.from_numpy(causality_mask).to(self.device)
+        &#47&#47 attn_mask = valid_his.view(batch_size, 1, 1, seq_len)
+        <a id="change">for block</a> in self.transformer_block<a id="change">:
+            </a>his_vectors<a id="change"> = </a><a id="change">block(</a>his_vectors, attn_mask<a id="change">)</a>
+        his_vectors = his_vectors * valid_his[:, :, None].float()
+
+        his_vector = (his_vectors * (position == 1).float()[:, :, None]).sum(1)
+        &#47&#47 his_vector = his_vectors.sum(1) / lengths[:, None].float()</code></pre>

@@ -1,0 +1,112 @@
+<html><h3>Pattern ID :17726
+</h3><img src='58391273.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    n_chan_out = min(n_chan_ref, n_chan_est)
+
+    if n_chan_ref &gt; n_chan_est:
+        SDR<a id="change"> = </a><a id="change">SDR.transpose(-2</a>, <a id="change">-1</a><a id="change">)</a>
+        SIR = SIR.transpose(-2, -1)
+        SAR = SAR.transpose(-2, -1)
+
+    SIR_npy = SIR.cpu().detach().numpy()
+
+    SDR_out = SDR.new_zeros(b_shape<a id="change"> + </a>(n_chan_out,))
+    SIR_out = SIR.new_zeros(b_shape + (n_chan_out,))
+    SAR_out = SAR.new_zeros(b_shape + (n_chan_out,))
+
+    p_opts = np.zeros(b_shape + (n_chan_out,), dtype=np.int64)
+    for m in np.ndindex(b_shape):
+        dum, p_opt = _linear_sum_assignment_with_inf(-SIR_npy[m])
+        SDR_out[m]<a id="change"> = </a>SDR[m + (dum, p_opt)]
+        SIR_out[m] = SIR[m + (dum, p_opt)]
+        SAR_out[m] = SAR[m + (dum, p_opt)]
+        p_opts[m] = p_opt
+
+    p_opts<a id="change"> = </a>pt.from_numpy(p_opts).to(SDR_out.device)
+    <a id="change">return </a>SDR_out, SIR_out, SAR_out, p_opts
+
+
+def _linear_sum_assignment_with_inf(</code></pre><h3>After Change</h3><pre><code class='java'>
+        dum, p_opt = _linear_sum_assignment_with_inf(loss_mat_npy[m])
+        loss_out[m] = loss_mat[m + (dum, p_opt)]
+        for i, arg in enumerate(args):
+            <a id="change">args_out[i]</a>[m] = arg[m + (dum, p_opt)]
+        p_opts[m] = p_opt
+
+    if return_perm:</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 7</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/fakufaku/torchiva/commit/d2b2bceef6944715a6274920e6ec7b0374367ccd#diff-197c29dbd626b108268ccbbec7fc6fb34484f6a7171f68f333aea506de020431L150' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 58391273</div><div id='project'> Project Name: fakufaku/torchiva</div><div id='commit'> Commit Name: d2b2bceef6944715a6274920e6ec7b0374367ccd</div><div id='time'> Time: 2022-01-31</div><div id='author'> Author: robin.scheibler@linecorp.com</div><div id='file'> File Name: torchiva/metrics.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: _solve_permutation(1)</div><div id='n_method'> N Method Name: _solve_permutation(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: torchiva/metrics.py</div><div id='n_file'> N File Name: torchiva/metrics.py</div><div id='m_start'> M Start Line: 204</div><div id='m_end'> M End Line: 234</div><div id='n_start'> N Start Line: 150</div><div id='n_end'> N End Line: 182</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+        &#47&#47 b(hc)1q -&gt; bqhc
+        &#47&#47 print(keys.shape, "keys", values.shape, "values", queries.shape, "queries")
+        keys<a id="change"> = </a><a id="change">keys.transpose(1</a>, <a id="change">3</a><a id="change">)</a>
+        keys<a id="change"> = </a>keys.reshape(keys.shape[:2] + (self.head_count, -1))
+
+        &#47&#47 b(hc)1q -&gt; bchq
+        shape = (batch_count, self.head_count, self.head_dim, -1)
+        values = values.reshape(shape)
+        values = values.transpose(1, 2)
+        queries = queries.reshape(shape)
+        queries = queries.transpose(1, 2)
+
+        &#47&#47 print(keys.shape, "keys", values.shape, "values", queries.shape, "queries")
+
+        attention_bias = torch.where(
+            attention_mask,
+            torch.zeros([1, 1]),
+            torch.ones([1, 1]) * (-torch.inf),
+        )
+        attention_weights: FloatTensor = torch.einsum(
+            &quotbchq,bkhc-&gt;bkhq&quot,
+            queries / self.head_dim<a id="change"> ** </a>0.5, 
+            keys
+        )
+        attention_weights += attention_bias[:, :, None, None]
+        attention_weights = torch.softmax(attention_weights, 1)
+        &#47&#47 print(attention_weights.shape, "attention_weights")
+        hidden_state: FloatTensor = torch.einsum(
+            "bkhq,bchk-&gt;bchq",
+            attention_weights, 
+            values
+        )
+        &#47&#47 bchq -&gt; b(hc)1q
+        &#47&#47 print(hidden_state.shape, "hidden_state")
+        hidden_state<a id="change"> = </a>hidden_state.transpose(1, 2)
+        hidden_state = hidden_state.reshape(batch_count, self.embed_count, 1, -1)
+        hidden_state = self.out_proj.forward(hidden_state)
+        &#47&#47 print(hidden_state.shape, "hidden_state")
+        <a id="change">return </a>hidden_state
+
+
+class EncoderSelfAttentionTorch(AttentionTorch):</code></pre><h3>After Change</h3><pre><code class='java'>
+            attention_weights, 
+            values
+        )
+        shape = <a id="change">attention_output.shape[:2]</a> + (self.embed_count,)
+        attention_output = attention_output.reshape(shape)
+        attention_output = self.out_proj.forward(attention_output)
+        return attention_output</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/kuprel/min-dalle/commit/c936d261021f0f38d064e146a2167cf3daeeb0db#diff-722632c2506383b8dc00c81914b9d7066a94dfb2b6295335e1218166a6c05cfcL36' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 58391263</div><div id='project'> Project Name: kuprel/min-dalle</div><div id='commit'> Commit Name: c936d261021f0f38d064e146a2167cf3daeeb0db</div><div id='time'> Time: 2022-06-27</div><div id='author'> Author: brkuprel@gmail.com</div><div id='file'> File Name: min_dalle/models/dalle_bart_encoder_torch.py</div><div id='m_class'> M Class Name: AttentionTorch</div><div id='n_method'> N Class Name: AttentionTorch</div><div id='m_method'> M Method Name: forward(5)</div><div id='n_method'> N Method Name: forward(5)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: min_dalle/models/dalle_bart_encoder_torch.py</div><div id='n_file'> N File Name: min_dalle/models/dalle_bart_encoder_torch.py</div><div id='m_start'> M Start Line: 42</div><div id='m_end'> M End Line: 82</div><div id='n_start'> N Start Line: 43</div><div id='n_end'> N End Line: 61</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        batch_size = target.size(0)
+
+        _, pred = output.topk(topk, 1, True, True)
+        pred<a id="change"> = </a><a id="change">pred.transpose(0</a>, <a id="change">1</a><a id="change">)</a>
+        correct = pred.eq(target.view(1, -1).expand_as(pred))
+
+        &#47&#47 TODO: support tuple topk
+        &#47&#47 res = []
+        &#47&#47 for k in topk:
+        &#47&#47     correct_k = correct[:k].reshape(-1).float().sum(0, keepdim=True)
+        &#47&#47     res.append(correct_k.mul_(100.0 / batch_size))
+        correct_k<a id="change"> = </a>correct[:topk].reshape(-1).float().sum(0, keepdim=True)
+        res<a id="change"> = </a>correct_k.mul_(100.0<a id="change"> / </a>batch_size).item()
+        <a id="change">return </a>res
+
+
+class ClsEvaluator(DatasetEvaluator):</code></pre><h3>After Change</h3><pre><code class='java'>
+
+
+def accuracy(output, target, topk=(1,)):
+    maxk = min(max(topk), <a id="change">output.size()[1]</a>)
+    batch_size = target.size(0)
+    _, pred = output.topk(maxk, 1, True, True)
+    pred = pred.t()</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/oneflow-inc/libai/commit/371360b9b903675607d2f92544962eb8b2330a17#diff-97abbafe7759c5aefa52f03808bfda50cfe14f401be4ede27bce57a8eef0f929L29' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 58391261</div><div id='project'> Project Name: oneflow-inc/libai</div><div id='commit'> Commit Name: 371360b9b903675607d2f92544962eb8b2330a17</div><div id='time'> Time: 2022-02-13</div><div id='author'> Author: 48727989+rentainhe@users.noreply.github.com</div><div id='file'> File Name: libai/evaluation/cls_evaluator.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: accuracy(3)</div><div id='n_method'> N Method Name: accuracy(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: libai/evaluation/cls_evaluator.py</div><div id='n_file'> N File Name: libai/evaluation/cls_evaluator.py</div><div id='m_start'> M Start Line: 31</div><div id='m_end'> M End Line: 49</div><div id='n_start'> N Start Line: 28</div><div id='n_end'> N End Line: 36</div><BR>

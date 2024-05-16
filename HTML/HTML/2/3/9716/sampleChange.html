@@ -1,0 +1,18 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        batch_size, _, F_bin, T_bin = input.size()
+        
+        log_amplitude = torch.log(input + eps)
+        x<a id="change"> = </a><a id="change">self.lstm(</a>log_amplitude<a id="change">)</a> &#47&#47 -&gt; (batch_size, T_bin, F_bin)
+        x = self.fc(x) &#47&#47 -&gt; (batch_size, T_bin, embed_dim*F_bin)
+        x = x.view(batch_size, T_bin, embed_dim, F_bin)
+        x = x.permute(0,2,3,1).contiguous()  &#47&#47 -&gt; (batch_size, embed_dim, F_bin, T_bin)</code></pre><h3>After Change</h3><pre><code class='java'>
+        
+        log_amplitude = torch.log(input + eps)
+        x = log_amplitude.squeeze(dim=1).permute(0, 2, 1).contiguous() &#47&#47 -&gt; (batch_size, n_frames, n_bins)
+        x, (_<a id="change">, _</a>) = self.rnn(x) &#47&#47 -&gt; (batch_size, n_frames, n_bins)
+        x = self.fc(x) &#47&#47 -&gt; (batch_size, n_frames, embed_dim*n_bins)
+        x = x.view(batch_size, n_frames, embed_dim, n_bins)
+        x = x.permute(0, 2, 3, 1).contiguous()  &#47&#47 -&gt; (batch_size, embed_dim, n_bins, n_frames)</code></pre>

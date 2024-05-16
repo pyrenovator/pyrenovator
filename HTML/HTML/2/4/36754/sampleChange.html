@@ -1,0 +1,54 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+    b = BuildsF(**specified_via_init)
+    assert b.x == user_value_x
+    <a id="change">assert </a>b.y == user_value_y
+    assert b.z == user_value_z
+    assert b.has_default == 101
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    num_positional: int,
+    data: st.DataObject,
+):
+    specified_as_positional = <a id="change">set(["x", "y", "z"][:num_positional]</a><a id="change">)</a>
+
+    if num_positional &lt; 3:
+        specified_as_default = data.draw(
+            st.lists(st.sampled_from(["x", "y", "z"][num_positional:]), unique=True),
+            label="specified_as_default",
+        )
+    else:
+        specified_as_default = data.draw(st.just([]), label="specified_as_default")
+
+    &#47&#47 We will specify an arbitrary selection of x, y, z via `builds`, and then specify the
+    &#47&#47 remaining parameters via initializing the resulting dataclass. This ensures that we can
+    &#47&#47 accommodate arbitrary "signature shuffling", i.e. that parameters with defaults specified
+    &#47&#47 are shuffled just to the right of those without defaults.
+    &#47&#47
+    &#47&#47 E.g.
+    &#47&#47  - `builds(f, populate_full_signature=True)`.__init__ -&gt; (x, y, z, has_default=default_value)
+    &#47&#47  - `builds(f, x=1, populate_full_signature=True)`.__init__ -&gt; (y, z, x=1, has_default=default_value)
+    &#47&#47  - `builds(f, y=2, z=-1, populate_full_signature=True)`.__init__ -&gt; (x, y=2, z=-1, has_default=default_value)
+    &#47&#47  - `builds(f, 1, 2, populate_full_signature=True)`.__init__ -&gt; (z=-1, has_default=default_value)
+
+    defaults = dict(x=user_value_x, y=user_value_y, z=user_value_z)
+
+    default_override = {k: defaults[k] for k in specified_as_default}
+    positional = [defaults[k] for k in sorted(specified_as_positional)]
+
+    specified_via_init = {
+        k: defaults[k]
+        for k in set(defaults) - set(specified_as_default) - specified_as_positional
+    }
+
+    BuildsF = builds(f2, *positional, **default_override, populate_full_signature=True)
+    sig_param_names = [p.name for p in inspect.signature(BuildsF).parameters.values()]
+    expected_param_ordering = (
+        sorted(specified_via_init) + sorted(specified_as_default) + ["has_default"]
+    )
+    expected_param_ordering<a id="change"> = </a>[
+        p for p in expected_param_ordering if p not in specified_as_positional
+    ]
+</code></pre>

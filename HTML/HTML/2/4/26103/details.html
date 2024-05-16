@@ -1,0 +1,73 @@
+<html><h3>Pattern ID :26103
+</h3><img src='78696499.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+def mhsa_with_multi_head_relative_position_embedding(
+    inputs, num_heads=4, key_dim=0, global_query=None, out_shape=None, out_weight=True, qkv_bias=False, out_bias=False, attn_dropout=0, name=None
+):
+    channel_axis = -1<a id="change"> if </a>image_data_format() == "channels_last"<a id="change"> else </a>1
+    input_channel = inputs.shape[channel_axis]
+    height, width = inputs.shape[1:-1] if image_data_format() == "channels_last" else inputs.shape[2:]
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    blocks = height * width
+
+    &#47&#47 Permute for conv if given data_format not matching actual image_data_format
+    <a id="change">if </a>image_data_format() == "channels_last" and data_format == "channels_first":
+        inputs<a id="change"> = </a><a id="change">layers.Permute([2, 3, 1])(</a>inputs<a id="change">)</a>
+    elif image_data_format() == "channels_first" and data_format == "channels_last":
+        inputs = layers.Permute([3, 1, 2])(inputs)
+    conv_channel_axis = -1 if image_data_format() == "channels_last" else 1
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/leondgarse/keras_cv_attention_models/commit/2ba27b0132168f3590dd4b3bead9edc15a70ba7d#diff-93ecfaca577d52a2659237cd2194089f24ed46627c659ab6c323a696749405deL25' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 78696499</div><div id='project'> Project Name: leondgarse/keras_cv_attention_models</div><div id='commit'> Commit Name: 2ba27b0132168f3590dd4b3bead9edc15a70ba7d</div><div id='time'> Time: 2023-02-11</div><div id='author'> Author: leondgarse@gmail.com</div><div id='file'> File Name: keras_cv_attention_models/coatnet/coatnet.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: mhsa_with_multi_head_relative_position_embedding(11)</div><div id='n_method'> N Method Name: mhsa_with_multi_head_relative_position_embedding(10)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: keras_cv_attention_models/coatnet/coatnet.py</div><div id='n_file'> N File Name: keras_cv_attention_models/coatnet/coatnet.py</div><div id='m_start'> M Start Line: 25</div><div id='m_end'> M End Line: 57</div><div id='n_start'> N Start Line: 32</div><div id='n_end'> N End Line: 74</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 some of the encoder model doesnt output the pooler output. It has to be made from hidden state
+        &#47&#47ouputs in those cases
+        sequenceOutput = outputs[0]
+        pooledOutput = outputs[1]<a id="change"> if </a>len(outputs) &gt;1<a id="change"> else </a>self.make_pooler_output(sequenceOutput)
+
+        taskType = self.taskParams.taskTypeMap[self.taskParams.taskIdNameMap[taskId]]
+        if taskType == TaskType.Span:</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 some of the encoder model doesnt output the pooler output. It has to be made from hidden state
+        &#47&#47ouputs in those cases
+        sequenceOutput = outputs[0]
+        <a id="change">if </a>len(outputs) &gt; 1:
+            pooledOutput = outputs[1]
+        else:
+            pooledOutput<a id="change"> = </a><a id="change">nn.ReLU()(</a>self.poolerLayer(sequenceOutput[:, 0])<a id="change">)</a>
+
+        &#47&#47pooledOutput = outputs[1] if len(outputs) &gt;1 else self.make_pooler_output(sequenceOutput)
+
+        taskType = self.taskParams.taskTypeMap[self.taskParams.taskIdNameMap[taskId]]</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/hellohaptik/multi-task-nlp/commit/434af597e1f2dd437d60e963d98b9db78222fcdf#diff-806f82422552da4fd8e7f277c42d565823581d20382c946937ce3f69879bca96L89' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 78696500</div><div id='project'> Project Name: hellohaptik/multi-task-nlp</div><div id='commit'> Commit Name: 434af597e1f2dd437d60e963d98b9db78222fcdf</div><div id='time'> Time: 2020-04-20</div><div id='author'> Author: mehtasaransh614@gmail.com</div><div id='file'> File Name: models/model.py</div><div id='m_class'> M Class Name: multiTaskNetwork</div><div id='n_method'> N Class Name: multiTaskNetwork</div><div id='m_method'> M Method Name: forward(5)</div><div id='n_method'> N Method Name: forward(5)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: models/model.py</div><div id='n_file'> N File Name: models/model.py</div><div id='m_start'> M Start Line: 107</div><div id='m_end'> M End Line: 108</div><div id='n_start'> N Start Line: 100</div><div id='n_end'> N End Line: 108</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    inputs, num_heads=8, key_dim=0, block_size=4, halo_size=1, strides=1, out_shape=None, out_weight=True, out_bias=False, attn_dropout=0, name=None
+):
+    _, hh, ww, cc = inputs.shape
+    key_dim = key_dim<a id="change"> if </a>key_dim &gt; 0<a id="change"> else </a>cc // num_heads
+    qk_scale = 1.0 / tf.math.sqrt(tf.cast(key_dim, inputs.dtype))
+    out_shape = cc if out_shape is None else out_shape
+    emb_dim = num_heads * key_dim</code></pre><h3>After Change</h3><pre><code class='java'>
+    attention_output = tf.reshape(attention_output, [-1, hh_aa * query_block, ww_aa * query_block, heads * cc_aa])
+    &#47&#47 print(f"&gt;&gt;&gt;&gt; {attention_output.shape = }, {attention_scores.shape = }")
+
+    <a id="change">if </a>avg_pool_down:
+        attention_output<a id="change"> = </a><a id="change">keras.layers.AvgPool2D(2, strides=2, name=name and name + "avg_pool")(</a>attention_output<a id="change">)</a>
+    if out_weight:
+        &#47&#47 [batch, hh, ww, num_heads * out_dim] * [out, out] --&gt; [batch, hh, ww, out]
+        attention_output = keras.layers.Dense(out_shape, use_bias=out_bias, name=name and name + "output")(attention_output)
+    return attention_output</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/leondgarse/keras_cv_attention_models/commit/b2f98d2080335a72694923a6a2ac0cbea346c788#diff-5a0036f02e35afe08c2170dc9b0e1131865080e554a879c04557e7a873330e74L16' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 78696501</div><div id='project'> Project Name: leondgarse/keras_cv_attention_models</div><div id='commit'> Commit Name: b2f98d2080335a72694923a6a2ac0cbea346c788</div><div id='time'> Time: 2021-10-22</div><div id='author'> Author: leondgarse@gmail.com</div><div id='file'> File Name: keras_cv_attention_models/halonet/halonet.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: halo_attention(11)</div><div id='n_method'> N Method Name: halo_attention(11)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: keras_cv_attention_models/halonet/halonet.py</div><div id='n_file'> N File Name: keras_cv_attention_models/halonet/halonet.py</div><div id='m_start'> M Start Line: 20</div><div id='m_end'> M End Line: 25</div><div id='n_start'> N Start Line: 21</div><div id='n_end'> N End Line: 94</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        waveform, sample_rate = torchaudio.load(self.wavs[idx])
+        if self.transforms:
+            waveform = self.transforms(waveform)
+        return (waveform, sample_rate)<a id="change"> if </a>self.with_sample_rate<a id="change"> else </a>waveform
+
+    def __len__(self) -&gt; int:
+        return len(self.wavs)</code></pre><h3>After Change</h3><pre><code class='java'>
+        if self.transforms:
+            waveform = self.transforms(waveform)
+
+        <a id="change">if </a>self.sample_rate and sample_rate != self.sample_rate:
+            waveform<a id="change"> = </a><a id="change">torchaudio.transforms.Resample(
+                orig_freq=sample_rate, new_freq=self.sample_rate
+            )(</a>waveform<a id="change">)</a>
+
+        return waveform
+
+    def __len__(self) -&gt; int:</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/archinetai/audio-data-pytorch/commit/fbe09328921a6eb23886535defa33ca79a590b8f#diff-5d0719cf851ab7b19534841d09fe005d6cf8e1c8ebbbe82819e9aec3c1d567baL32' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 78696504</div><div id='project'> Project Name: archinetai/audio-data-pytorch</div><div id='commit'> Commit Name: fbe09328921a6eb23886535defa33ca79a590b8f</div><div id='time'> Time: 2022-09-04</div><div id='author'> Author: flavio.schneider.97@gmail.com</div><div id='file'> File Name: audio_data_pytorch/datasets/wav_dataset.py</div><div id='m_class'> M Class Name: WAVDataset</div><div id='n_method'> N Class Name: WAVDataset</div><div id='m_method'> M Method Name: __getitem__(2)</div><div id='n_method'> N Method Name: __getitem__(2)</div><div id='m_parent_class'> M Parent Class: Dataset</div><div id='n_parent_class'> N Parent Class: Dataset</div><div id='m_file'> M File Name: audio_data_pytorch/datasets/wav_dataset.py</div><div id='n_file'> N File Name: audio_data_pytorch/datasets/wav_dataset.py</div><div id='m_start'> M Start Line: 39</div><div id='m_end'> M End Line: 39</div><div id='n_start'> N Start Line: 42</div><div id='n_end'> N End Line: 47</div><BR>

@@ -1,0 +1,132 @@
+<html><h3>Pattern ID :15079
+</h3><img src='50876713.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        checkpoint = torch.load(logger.get_checkpoint_path(&quotbest&quot), map_location=&quotcpu&quot)
+        classifier.load_state_dict(checkpoint)
+
+    <a id="change">if </a>args.phase == &quottest&quot:
+        acc1 = validate(test_loader, classifier, args)
+        print(acc1)
+        return
+
+
+    &#47&#47 compute relationship
+
+    relationship_path = args.relationship
+    if not os.path.exists(relationship_path):
+        r = Relationship(determin_train_loader, val_loader, classifier)
+        relationship = r.get_relationship(direct=args.direct)
+        np.save(relationship_path, relationship)
+    else:
+        relationship = np.load(relationship_path)
+
+    &#47&#47 start training
+    best_acc1 = 0.0
+
+    for epoch in range(args.epochs):
+        &#47&#47 train for one epoch
+        train(train_iter, classifier, optimizer,
+              epoch, relationship, args)
+        lr_scheduler.step()
+        &#47&#47 evaluate on validation set
+        acc1 = validate(val_loader, classifier, args)
+
+        &#47&#47 remember best acc@1 and save checkpoint
+        torch.save(classifier.state_dict(), logger.get_checkpoint_path(&quotlatest&quot))
+        if acc1 &gt; best_acc1:
+            shutil.copy(logger.get_checkpoint_path(&quotlatest&quot), logger.get_checkpoint_path(&quotbest&quot))
+        best_acc1 = max(acc1, best_acc1)
+
+    print("best_acc1 = {:3.1f}".format(best_acc1))
+
+    &#47&#47 evaluate on test set
+    <a id="change">classifier.load_state_dict(torch.load(</a>logger.get_checkpoint_path(&quotbest&quot)<a id="change">)</a><a id="change">)</a>
+    acc1 = validate(test_loader, classifier, args)
+    <a id="change">print("test_acc1 = {:3.1f}".format(</a>acc1<a id="change">)</a><a id="change">)</a>
+
+    logger.close()
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    print("=&gt; using pre-trained model &quot{}&quot".format(args.arch))
+    backbone = models.__dict__[args.arch](pretrained=True)
+    num_classes = train_dataset.num_classes
+    classifier = <a id="change">Classifier(backbone, num_classes, head_source=backbone.copy_head()).to(</a>device<a id="change">)</a>
+
+    &#47&#47 define optimizer and lr scheduler
+    optimizer = SGD(classifier.get_parameters(args.lr), momentum=args.momentum, weight_decay=args.wd, nesterov=True)
+    lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, args.lr_decay_epochs, gamma=args.lr_gamma)
+
+    &#47&#47 resume from the best checkpoint
+    if args.phase == &quottest&quot:
+        checkpoint = torch.load(logger.get_checkpoint_path(&quotbest&quot), map_location=&quotcpu&quot)
+        classifier.load_state_dict(checkpoint)
+        acc1 = validate(val_loader, classifier, args)
+        print(acc1)
+        return
+
+    &#47&#47 build relationship between source classes and target classes
+    relationship<a id="change"> = </a>Relationship(determin_train_loader, classifier, device, os.path.join(logger.root, args.relationship))
+    co_tuning_loss = CoTuningLoss()
+
+    &#47&#47 start training</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 8</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/thuml/transfer-learning-library/commit/d2d33527cdc174b9ef6dd2644337e3e3e50028ac#diff-46e5f7f40f62982cd2fed0316172ea915e81cf8a967098e824cd534cc2215dc0L30' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 50876713</div><div id='project'> Project Name: thuml/transfer-learning-library</div><div id='commit'> Commit Name: d2d33527cdc174b9ef6dd2644337e3e3e50028ac</div><div id='time'> Time: 2021-03-10</div><div id='author'> Author: 13126830206@163.com</div><div id='file'> File Name: examples-ft/classification/co_tuning.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(1)</div><div id='n_method'> N Method Name: main(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples-ft/classification/co_tuning.py</div><div id='n_file'> N File Name: examples-ft/classification/co_tuning.py</div><div id='m_start'> M Start Line: 33</div><div id='m_end'> M End Line: 132</div><div id='n_start'> N Start Line: 30</div><div id='n_end'> N End Line: 100</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    print("=&gt; using pre-trained model &quot{}&quot".format(args.arch))
+    num_classes = train_dataset.num_classes
+    backbone_q = models.__dict__[args.arch](pretrained=True)
+    <a id="change">if </a>args.pretrained:
+        <a id="change">print("=&gt; loading pre-trained backbone from &quot{}&quot".format(</a>args.pretrained<a id="change">)</a><a id="change">)</a>
+        pretrained_dict = <a id="change">torch.load(</a>args.pretrained<a id="change">)</a>
+        <a id="change">backbone_q.load_state_dict(</a>pretrained_dict<a id="change">, strict=False)</a>
+    classifier_q = Classifier(backbone_q, num_classes, projection_dim=args.projection_dim)
+    if args.pretrained_fc:
+        print("=&gt; loading pre-trained fc from &quot{}&quot".format(args.pretrained_fc))
+        pretrained_fc_dict = torch.load(args.pretrained_fc)</code></pre><h3>After Change</h3><pre><code class='java'>
+        classifier_q.projector.load_state_dict(pretrained_fc_dict, strict=False)
+    classifier_q = classifier_q.to(device)
+    backbone_k = utils.get_model(args.arch)
+    classifier_k<a id="change"> = Classifier(</a><a id="change">backbone_k, num_classes, pool_layer=pool_layer).to(</a>device<a id="change">)</a>
+
+    bituning = Bituning(classifier_q, classifier_k, num_classes, K=args.K, m=args.m, T=args.T)
+
+    &#47&#47 define optimizer and lr scheduler</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/thuml/transfer-learning-library/commit/052625393790ff6b5ffcffb9f29a68670054ea93#diff-8c5c5b3600e42580065fc93ec76aaca26a3f9349717e61f761d9ebfd327cfb9bL28' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 50876715</div><div id='project'> Project Name: thuml/transfer-learning-library</div><div id='commit'> Commit Name: 052625393790ff6b5ffcffb9f29a68670054ea93</div><div id='time'> Time: 2021-08-01</div><div id='author'> Author: 13126830206@163.com</div><div id='file'> File Name: examples/finetune/image_classification/bi_tuning.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(1)</div><div id='n_method'> N Method Name: main(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples/finetune/image_classification/bi_tuning.py</div><div id='n_file'> N File Name: examples/finetune/image_classification/bi_tuning.py</div><div id='m_start'> M Start Line: 45</div><div id='m_end'> M End Line: 84</div><div id='n_start'> N Start Line: 45</div><div id='n_end'> N End Line: 95</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    &#47&#47 create model
+    print("=&gt; using pre-trained model &quot{}&quot".format(args.arch))
+    backbone = models.__dict__[args.arch](pretrained=True)
+    <a id="change">if </a>args.pretrained:
+        <a id="change">print("=&gt; loading pre-trained model from &quot{}&quot".format(</a>args.pretrained<a id="change">)</a><a id="change">)</a>
+        pretrained_dict = <a id="change">torch.load(</a>args.pretrained<a id="change">)</a>
+        <a id="change">backbone.load_state_dict(</a>pretrained_dict<a id="change">, strict=False)</a>
+    num_classes = train_dataset.num_classes
+    classifier = Classifier(backbone, num_classes).to(device)
+    bss_module = BatchSpectralShrinkage(k=args.k)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    print("=&gt; using pre-trained model &quot{}&quot".format(args.arch))
+    backbone = utils.get_model(args.arch, args.pretrained)
+    pool_layer = nn.Identity() if args.no_pool else None
+    classifier = <a id="change">Classifier(backbone, num_classes, pool_layer=pool_layer, finetune=args.finetune).to(</a>device<a id="change">)</a>
+    bss_module = BatchSpectralShrinkage(k=args.k)
+
+    &#47&#47 define optimizer and lr scheduler
+    optimizer = SGD(classifier.get_parameters(args.lr), momentum=args.momentum, weight_decay=args.wd, nesterov=True)
+    lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, args.lr_decay_epochs, gamma=args.lr_gamma)
+
+    &#47&#47 resume from the best checkpoint
+    if args.phase == &quottest&quot:
+        checkpoint = torch.load(logger.get_checkpoint_path(&quotbest&quot), map_location=&quotcpu&quot)
+        classifier.load_state_dict(checkpoint)
+        acc1 = utils.validate(val_loader, classifier, args, device)
+        print(acc1)
+        return
+
+    &#47&#47 start training
+    best_acc1 = 0.0
+    for epoch in range(args.epochs):
+        print(lr_scheduler.get_lr())
+        &#47&#47 train for one epoch
+        train(train_iter, classifier, bss_module, optimizer, epoch, args)
+        lr_scheduler.step()
+        &#47&#47 evaluate on validation set
+        acc1<a id="change"> = </a>utils.validate(val_loader, classifier, args, device)
+
+        &#47&#47 remember best acc@1 and save checkpoint
+        torch.save(classifier.state_dict(), logger.get_checkpoint_path(&quotlatest&quot))</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/thuml/transfer-learning-library/commit/052625393790ff6b5ffcffb9f29a68670054ea93#diff-28b7d12f40c0e0363e65e17af84a0ae6b4ad95f260156802c18714e0289e34d0L29' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 50876716</div><div id='project'> Project Name: thuml/transfer-learning-library</div><div id='commit'> Commit Name: 052625393790ff6b5ffcffb9f29a68670054ea93</div><div id='time'> Time: 2021-08-01</div><div id='author'> Author: 13126830206@163.com</div><div id='file'> File Name: examples/finetune/image_classification/bss.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(1)</div><div id='n_method'> N Method Name: main(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples/finetune/image_classification/bss.py</div><div id='n_file'> N File Name: examples/finetune/image_classification/bss.py</div><div id='m_start'> M Start Line: 46</div><div id='m_end'> M End Line: 100</div><div id='n_start'> N Start Line: 46</div><div id='n_end'> N End Line: 86</div><BR>

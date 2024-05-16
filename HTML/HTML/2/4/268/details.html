@@ -1,0 +1,174 @@
+<html><h3>Pattern ID :268
+</h3><img src='2093291.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+    &#47&#47 run adaptation episodes
+    for curri_iter in range(len(config[&quotdata&quot][&quottarget&quot][&quotname&quot])):
+        <a id="change">print(</a>&quotStarting the adaptation...&quot<a id="change">)</a>
+        &#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47 Step 1: train one adaptation episod on combined target domains &#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47
+        target_train_datasets = preprocess.ConcatDataset(dsets[&quottarget_train&quot].values())
+        dset_loaders[&quottarget_train&quot] = DataLoader(dataset=target_train_datasets,
+                                                  batch_size=config[&quotdata&quot][&quottarget&quot][&quotbatch_size&quot],</code></pre><h3>After Change</h3><pre><code class='java'>
+        base_network, classifier_gnn = trainer.adapt_target_cgct(config, base_network, classifier_gnn,
+                                                                 dset_loaders, random_layer, adv_net)
+
+        log_str<a id="change"> = </a>&quot==&gt; Finishing {} adaptation episode!\n&quot.format(curri_iter)
+        <a id="change">utils.write_logs(</a>config, log_str<a id="change">)</a>
+
+        &#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47 Step 2: obtain the target pseudo labels and upgrade target domains &#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47
+        trainer.upgrade_target_domains(config, dsets, dset_loaders, base_network, classifier_gnn, curri_iter)
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/evgeneus/graph-domain-adaptaion/commit/23eecc1d442dbc615eb94473f8de279bd1e31688#diff-5d6cc0ca9b3ff9b2bba25db3286c1ae1f1ba059b8c0ee10a7bf209a071efd22aL61' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 2093291</div><div id='project'> Project Name: evgeneus/graph-domain-adaptaion</div><div id='commit'> Commit Name: 23eecc1d442dbc615eb94473f8de279bd1e31688</div><div id='time'> Time: 2021-06-03</div><div id='author'> Author: e.krivoshe@gmail.com</div><div id='file'> File Name: src/main_cgct.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(1)</div><div id='n_method'> N Method Name: main(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/main_cgct.py</div><div id='n_file'> N File Name: src/main_cgct.py</div><div id='m_start'> M Start Line: 91</div><div id='m_end'> M End Line: 108</div><div id='n_start'> N Start Line: 61</div><div id='n_end'> N End Line: 123</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    random_layer = networks.RandomLayer([base_network.output_num(), class_num], config[&quotrandom_dim&quot], DEVICE)
+    print(random_layer)
+    adv_net = networks.AdversarialNetwork(config[&quotrandom_dim&quot], config[&quotrandom_dim&quot], config[&quotndomains&quot])
+    <a id="change">print(</a>adv_net<a id="change">)</a>
+    random_layer.to(DEVICE)
+    adv_net = adv_net.to(DEVICE)
+
+    &#47&#47 configure optimizer</code></pre><h3>After Change</h3><pre><code class='java'>
+    classifier_gnn.train()
+    adv_net.train()
+    random_layer.train()
+    for <a id="change">i</a> in range(config[&quotadapt_iters&quot]):
+        optimizer = utils.inv_lr_scheduler(optimizer, i, **schedule_param)
+        optimizer.zero_grad()
+        &#47&#47 get input data
+        if i % len_train_source == 0:
+            iter_source = iter(dset_loaders[&quotsource&quot])
+        if i % len_train_target == 0:
+            iter_target = iter(dset_loaders[&quottarget_train&quot][max_inherit_domain])
+        batch_source = iter_source.next()
+        batch_target = iter_target.next()
+        inputs_source, inputs_target = batch_source[&quotimg&quot].to(DEVICE), batch_target[&quotimg&quot].to(DEVICE)
+        labels_source = batch_source[&quottarget&quot].to(DEVICE)
+        domain_source, domain_target = batch_source[&quotdomain&quot].to(DEVICE), batch_target[&quotdomain&quot].to(DEVICE)
+        domain_input = torch.cat([domain_source, domain_target], dim=0)
+
+        &#47&#47 make forward pass for encoder and mlp head
+        features_source, logits_mlp_source = base_network(inputs_source)
+        features_target, logits_mlp_target = base_network(inputs_target)
+        features = torch.cat((features_source, features_target), dim=0)
+        logits_mlp = torch.cat((logits_mlp_source, logits_mlp_target), dim=0)
+        softmax_mlp = nn.Softmax(dim=1)(logits_mlp)
+        mlp_loss = ce_criterion(logits_mlp_source, labels_source)
+
+        &#47&#47 *** GNN at work ***
+        &#47&#47 make forward pass for gnn head
+        logits_gnn, edge_sim = classifier_gnn(features)
+        gnn_loss = ce_criterion(logits_gnn[:labels_source.size(0)], labels_source)
+        &#47&#47 compute pseudo-labels for affinity matrix by mlp classifier
+        out_target_class = torch.softmax(logits_mlp_target, dim=1)
+        target_score, target_pseudo_labels = out_target_class.max(1, keepdim=True)
+        idx_pseudo = target_score &gt; config[&quotthreshold&quot]
+        target_pseudo_labels[~idx_pseudo] = classifier_gnn.mask_val
+        &#47&#47 combine source labels and target pseudo labels for edge_net
+        node_labels = torch.cat((labels_source, target_pseudo_labels.squeeze(dim=1)), dim=0).unsqueeze(dim=0)
+        &#47&#47 compute source-target mask and ground truth for edge_net
+        edge_gt, edge_mask = classifier_gnn.label2edge(node_labels)
+        &#47&#47 compute edge loss
+        edge_loss = criterion_gedge(edge_sim.masked_select(edge_mask), edge_gt.masked_select(edge_mask))
+
+        &#47&#47 *** Adversarial net at work ***
+        if config[&quotmethod&quot] == &quotCDAN+E&quot:
+            entropy = transfer_loss.Entropy(softmax_mlp)
+            trans_loss = transfer_loss.CDAN(config[&quotndomains&quot], [features, softmax_mlp], adv_net,
+                                            entropy, networks.calc_coeff(i), random_layer, domain_input)
+        elif config[&quotmethod&quot] == &quotCDAN&quot:
+            trans_loss = transfer_loss.CDAN(config[&quotndomains&quot], [features, softmax_mlp],
+                                            adv_net, None, None, random_layer, domain_input)
+        else:
+            raise ValueError(&quotMethod cannot be recognized.&quot)
+
+        &#47&#47 total loss and backpropagation
+        loss = config[&quotlambda_adv&quot] * trans_loss + mlp_loss +\
+               config[&quotlambda_node&quot] * gnn_loss + config[&quotlambda_edge&quot] * edge_loss
+        loss.backward()
+        optimizer.step()
+        &#47&#47 printout train loss
+        if i % 20 == 0 or i == config[&quotadapt_iters&quot] - 1:
+            log_str<a id="change"> = </a>&quotIters:(%4d/%d)\tMLP loss: %.4f\t GNN Loss: %.4f\t Edge Loss: %.4f\t Transfer loss:%.4f&quot % (
+                i, config["adapt_iters"], mlp_loss.item(), config[&quotlambda_node&quot] * gnn_loss.item(),
+                config[&quotlambda_edge&quot] * edge_loss.item(), config[&quotlambda_adv&quot] * trans_loss.item()
+            )
+            <a id="change">utils.write_logs(</a>config, log_str<a id="change">)</a>
+        &#47&#47 evaluate network every test_interval
+        if i % config[&quottest_interval&quot] == config[&quottest_interval&quot] - 1:
+            evaluate(i, config, base_network, classifier_gnn, dset_loaders[&quottarget_test&quot])
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/evgeneus/graph-domain-adaptaion/commit/01c1dadb800008a82057d4949f73f180cba568a8#diff-f35b28b9f6895b9c921db43067ad54df4790e799e8e495ed306932eac31a3354L175' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 2093290</div><div id='project'> Project Name: evgeneus/graph-domain-adaptaion</div><div id='commit'> Commit Name: 01c1dadb800008a82057d4949f73f180cba568a8</div><div id='time'> Time: 2021-04-13</div><div id='author'> Author: subhankar.roy@unitn.it</div><div id='file'> File Name: src/trainer.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: adapt_target(5)</div><div id='n_method'> N Method Name: adapt_target(5)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/trainer.py</div><div id='n_file'> N File Name: src/trainer.py</div><div id='m_start'> M Start Line: 181</div><div id='m_end'> M End Line: 266</div><div id='n_start'> N Start Line: 210</div><div id='n_end'> N End Line: 271</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+        &#47&#47 printout train loss
+        if i % 20 == 0:
+            <a id="change">print(</a>&quotIters:(%4d/%d)\tMLP loss:%.4f\tGNN loss:%.4f\tEdge loss:%.4f&quot % (i,
+                  config[&quotsource_iters&quot], mlp_loss.item(), gnn_loss.item(), edge_loss.item())<a id="change">)</a>
+        &#47&#47 evaluate network every test_interval
+        if i % config[&quottest_interval&quot] == config[&quottest_interval&quot] - 1:
+            evaluate(i, config, base_network, classifier_gnn, dset_loaders[&quottarget_test&quot])
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    base_network.train()
+    classifier_gnn.train()
+    len_train_source = len(dset_loaders["source"])
+    for <a id="change">i</a> in range(config[&quotsource_iters&quot]):
+        optimizer = utils.inv_lr_scheduler(optimizer, i, **schedule_param)
+        optimizer.zero_grad()
+
+        &#47&#47 get input data
+        if i % len_train_source == 0:
+            iter_source = iter(dset_loaders["source"])
+        batch_source = iter_source.next()
+        inputs_source, labels_source = batch_source[&quotimg&quot].to(DEVICE), batch_source[&quottarget&quot].to(DEVICE)
+
+        &#47&#47 make forward pass for encoder and mlp head
+        features_source, logits_mlp = base_network(inputs_source)
+        mlp_loss = ce_criterion(logits_mlp, labels_source)
+
+        &#47&#47 make forward pass for gnn head
+        logits_gnn, edge_sim = classifier_gnn(features_source)
+        gnn_loss = ce_criterion(logits_gnn, labels_source)
+        &#47&#47 compute edge loss
+        edge_gt, edge_mask = classifier_gnn.label2edge(labels_source.unsqueeze(dim=0))
+        edge_loss = criterion_gedge(edge_sim.masked_select(edge_mask), edge_gt.masked_select(edge_mask))
+
+        &#47&#47 total loss and backpropagation
+        loss = mlp_loss + config[&quotlambda_node&quot] * gnn_loss + config[&quotlambda_edge&quot] * edge_loss
+        loss.backward()
+        optimizer.step()
+
+        &#47&#47 printout train loss
+        if i % 20 == 0 or i == config[&quotsource_iters&quot] - 1:
+            log_str<a id="change"> = </a>&quotIters:(%4d/%d)\tMLP loss:%.4f\tGNN loss:%.4f\tEdge loss:%.4f&quot % (i,
+                  config[&quotsource_iters&quot], mlp_loss.item(), gnn_loss.item(), edge_loss.item())
+            <a id="change">utils.write_logs(</a>config, log_str<a id="change">)</a>
+        &#47&#47 evaluate network every test_interval
+        if i % config[&quottest_interval&quot] == config[&quottest_interval&quot] - 1:
+            evaluate(i, config, base_network, classifier_gnn, dset_loaders[&quottarget_test&quot])
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/evgeneus/graph-domain-adaptaion/commit/01c1dadb800008a82057d4949f73f180cba568a8#diff-f35b28b9f6895b9c921db43067ad54df4790e799e8e495ed306932eac31a3354L117' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 2093287</div><div id='project'> Project Name: evgeneus/graph-domain-adaptaion</div><div id='commit'> Commit Name: 01c1dadb800008a82057d4949f73f180cba568a8</div><div id='time'> Time: 2021-04-13</div><div id='author'> Author: subhankar.roy@unitn.it</div><div id='file'> File Name: src/trainer.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train_source(4)</div><div id='n_method'> N Method Name: train_source(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/trainer.py</div><div id='n_file'> N File Name: src/trainer.py</div><div id='m_start'> M Start Line: 165</div><div id='m_end'> M End Line: 167</div><div id='n_start'> N Start Line: 140</div><div id='n_end'> N End Line: 170</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    &#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47 Step 3: fine-tuning stage &#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47
+    config[&quotsource_iters&quot] = config[&quotfinetune_iters&quot]
+    base_network, classifier_gnn = trainer.train_source(config, base_network, classifier_gnn, dset_loaders)
+    <a id="change">print(</a>&quotFinished training and evaluation!&quot<a id="change">)</a>
+
+    &#47&#47 save models
+    if args.save_models:
+        torch.save(base_network.cpu().state_dict(), os.path.join(config[&quotoutput_path&quot], &quotbase_network.pth.tar&quot))</code></pre><h3>After Change</h3><pre><code class='java'>
+    &#47&#47 run adaptation episodes
+    log_str = &quot==&gt; Starting the adaptation&quot
+    utils.write_logs(config, log_str)
+    for <a id="change">curri_iter</a> in range(len(config[&quotdata&quot][&quottarget&quot][&quotname&quot])):
+        &#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47 Step 1: train one adaptation episod on combined target domains &#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47
+        target_train_datasets = preprocess.ConcatDataset(dsets[&quottarget_train&quot].values())
+        dset_loaders[&quottarget_train&quot] = DataLoader(dataset=target_train_datasets,
+                                                  batch_size=config[&quotdata&quot][&quottarget&quot][&quotbatch_size&quot],
+                                                  shuffle=True, num_workers=config[&quotnum_workers&quot],
+                                                  drop_last=True)
+
+        base_network, classifier_gnn = trainer.adapt_target_cgct(config, base_network, classifier_gnn,
+                                                                 dset_loaders, random_layer, adv_net)
+
+        log_str<a id="change"> = </a>&quot==&gt; Finishing {} adaptation episode!\n&quot.format(curri_iter)
+        <a id="change">utils.write_logs(</a>config, log_str<a id="change">)</a>
+
+        &#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47 Step 2: obtain the target pseudo labels and upgrade target domains &#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47
+        trainer.upgrade_target_domains(config, dsets, dset_loaders, base_network, classifier_gnn, curri_iter)
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/evgeneus/graph-domain-adaptaion/commit/23eecc1d442dbc615eb94473f8de279bd1e31688#diff-5d6cc0ca9b3ff9b2bba25db3286c1ae1f1ba059b8c0ee10a7bf209a071efd22aL49' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 2093286</div><div id='project'> Project Name: evgeneus/graph-domain-adaptaion</div><div id='commit'> Commit Name: 23eecc1d442dbc615eb94473f8de279bd1e31688</div><div id='time'> Time: 2021-06-03</div><div id='author'> Author: e.krivoshe@gmail.com</div><div id='file'> File Name: src/main_cgct.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(1)</div><div id='n_method'> N Method Name: main(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/main_cgct.py</div><div id='n_file'> N File Name: src/main_cgct.py</div><div id='m_start'> M Start Line: 91</div><div id='m_end'> M End Line: 108</div><div id='n_start'> N Start Line: 61</div><div id='n_end'> N End Line: 123</div><BR>

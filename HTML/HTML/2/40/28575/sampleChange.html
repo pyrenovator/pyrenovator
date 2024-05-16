@@ -1,0 +1,54 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    dtype=st.sampled_from(ivy_np.valid_dtypes),
+)
+def test_to_scalar(object_in, dtype, device, call, fw):
+    <a id="change">if fw == "torch" and (dtype in ["uint16", "uint32", "uint64"])</a>:
+        &#47&#47 torch does not support those dtypes
+        <a id="change">return</a>
+    <a id="change">if call in [helpers.mx_call] and dtype == "int16"</a>:
+        &#47&#47 mxnet does not support int16
+        <a id="change">return</a>
+    <a id="change">if call in [helpers.tf_graph_call]</a>:
+        &#47&#47 to_scalar() requires eager execution
+        <a id="change">return</a>
+    &#47&#47 smoke test
+    ret = ivy.to_scalar(ivy.array(object_in, dtype=dtype, device=device))
+    true_val = ivy.to_numpy(ivy.array(object_in, dtype=dtype)).item()
+    &#47&#47 type test
+    assert isinstance(ret, type(true_val))
+    &#47&#47 value test
+    assert ivy.to_scalar(ivy.array(object_in, dtype=dtype, device=device)) == true_val
+    &#47&#47 compilation test
+    <a id="change">if call in [helpers.torch_call]</a>:
+        &#47&#47 pytorch scripting does not support scalar conversion
+        <a id="change">return</a>
+
+
+&#47&#47 to_list
+@given(x0_n_x1_n_res=helpers.dtype_and_values(available_dtypes=ivy_np.valid_dtypes))</code></pre><h3>After Change</h3><pre><code class='java'>
+    dtype=st.sampled_from(ivy_np.valid_dtypes),
+)
+def test_to_scalar(object_in, dtype, device, call, fw):
+    <a id="change">assume(not (fw == "torch" and (dtype in ["uint16", "uint32", "uint64"]))</a><a id="change">)</a>
+    &#47&#47 torch does not support those dtypes
+    <a id="change">assume(</a><a id="change">not (fw == "mxnet" and dtype == "int16"))</a>
+    &#47&#47 mxnet does not support int16
+    <a id="change">assume(</a><a id="change">not (fw == "tensorflow"))</a>
+    &#47&#47 to_scalar() requires eager execution
+    &#47&#47 smoke test
+    ret = ivy.to_scalar(ivy.array(object_in, dtype=dtype, device=device))
+    true_val = ivy.to_numpy(ivy.array(object_in, dtype=dtype)).item()
+    &#47&#47 type test
+    assert isinstance(ret, type(true_val))
+    &#47&#47 value test
+    assert ivy.to_scalar(ivy.array(object_in, dtype=dtype, device=device)) == true_val
+    &#47&#47 compilation test
+    &#47&#47 pytorch scripting does not support scalar conversion
+    <a id="change">assume(</a><a id="change">not (fw == "torch"))</a>
+
+
+&#47&#47 to_list
+@given(x0_n_x1_n_res=helpers.dtype_and_values(available_dtypes=ivy_np.valid_dtypes))</code></pre>

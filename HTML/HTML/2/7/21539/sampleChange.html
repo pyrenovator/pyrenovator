@@ -1,0 +1,44 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        embed = st[&quotstate_dict&quot][&quotembed&quot]
+        del st[&quotstate_dict&quot][&quotembed&quot]
+
+    compressed_st = <a id="change">{</a>&quotstate_dict&quot: {}<a id="change">}</a>
+
+    layers = list(st[&quotstate_dict&quot].keys())
+    print("getting compression")
+
+    for name in layers:
+        &#47&#47 print(each)
+        W = st[&quotstate_dict&quot][name].to(device)
+        Wpretrain = pretrained_st[name].clone().to(device)
+        deltaW = W-Wpretrain
+
+        u, s, vt = torch.linalg.svd(deltaW.clone())
+
+        explain = 0 
+        all_ = (s).sum()
+        for i, t in enumerate(s):
+            explain += t/(all_)
+            if explain &gt; compression_ratio:
+                break
+        
+        compressed_st[&quotstate_dict&quot][f&quot{name}&quot] = {}
+        compressed_st[&quotstate_dict&quot][f&quot{name}&quot][&quotu&quot] = (u[:, :i]@torch.diag(s)[:i, :i]).clone()
+        compressed_st[&quotstate_dict&quot][f&quot{name}&quot][&quotv&quot] = vt[:i].clone()
+
+    <a id="change">if embed is not None</a>:
+        <a id="change">compressed_st[&quotstate_dict&quot][&quotembed&quot] = </a>embed.clone()
+
+    name = delta_ckpt.replace(&quotdelta&quot, &quotcompressed_delta&quot)
+    torch.save(compressed_st, f&quot{name}&quot)</code></pre><h3>After Change</h3><pre><code class='java'>
+        compressed_key = &quotunet&quot
+        compressed_st = {compressed_key: {}}
+        pretrained_st = StableDiffusionPipeline.from_pretrained(ckpt, torch_dtype=torch.float16).to("cuda")
+        pretrained_st = <a id="change">pretrained_st.unet.state_dict()</a>
+        if &quotmodifier_token&quot in st:
+            compressed_st[&quotmodifier_token&quot] = st[&quotmodifier_token&quot]
+        st = st[&quotunet&quot]
+</code></pre>

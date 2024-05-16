@@ -1,0 +1,18 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+      kernel_name = "elementwise"
+      conv_src = ""
+
+    elementwise_prefix = &quot\n&quot.join([<a id="change">buf.contiguous_view(</a>name<a id="change">)</a> for name, buf in ewbufs])+ \
+      "\n\ninline float _ewop("+&quot,&quot.join(["int gid", "float acc"]+[f"__global const float *{name}_g" for name, _ in ewbufs])+") {\n"+ \
+      &quot\n&quot.join([f"float {name} = get_{name}({name}_g, gid);" for name, _ in ewbufs])+ \
+      f"\nreturn {code}; }}"</code></pre><h3>After Change</h3><pre><code class='java'>
+      conv_src = ""
+
+    views = {name:buf.contiguous_view_constant_fold(name) for name, buf in ewbufs}
+    elementwise_prefix = &quot\n&quot.join([<a id="change">x[0]</a> for x in views.values()])+ \
+      "\n\ninline float _ewop("+&quot,&quot.join(["int gid", "float acc"]+[f"__global const float *{name}_g" for name, _ in ewbufs if views[name][1]])+") {\n"+ \
+      &quot\n&quot.join([f"float {name} = get_{name}({name}_g, gid);" if views[name][1] else f"float {name} = get_{name}(gid);" for name, _ in ewbufs])+ \
+      f"\nreturn {code}; }}"</code></pre>

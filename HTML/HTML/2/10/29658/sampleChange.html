@@ -1,0 +1,25 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 sample clients
+        selected_clients = self.sample()
+        &#47&#47 training
+        <a id="change">for </a>cid in selected_clients<a id="change">:
+            </a>w, loss = self.communicate(cid)
+            <a id="change">ws.append(w</a><a id="change">)</a>
+            <a id="change">losses.append(</a>loss<a id="change">)</a>
+            &#47&#47 plug in the weight updates into the gradient
+            grad = <a id="change">fmodule.modeldict_scale(fmodule.modeldict_sub(</a>self.model.state_dict(), w<a id="change">)</a>, 1.0 / self.learning_rate<a id="change">)</a>
+            delta = fmodule.modeldict_scale(grad, np.float_power(loss + 1e-10, self.q))
+            <a id="change">Deltas.append(</a>delta<a id="change">)</a>
+            &#47&#47 estimation of the local Lipchitz constant
+            hs.append(self.q * np.float_power(loss + 1e-10, (self.q - 1)) * (
+                    fmodule.modeldict_norm(grad) ** 2) + self.L * np.float_power(loss + 1e-10, self.q))</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 training
+        ws, losses = self.communicate(selected_clients)
+        &#47&#47 plug in the weight updates into the gradient
+        grads = [<a id="change">fmodule.modeldict_scale(fmodule.modeldict_sub(</a>self.model.state_dict(), w<a id="change">)</a>, 1.0 / self.learning_rate<a id="change">)</a> for w in ws]
+        Deltas = [fmodule.modeldict_scale(gi, np.float_power(li + 1e-10, self.q)) for gi,li in zip(grads,losses)]
+        &#47&#47 estimation of the local Lipchitz constant
+        hs = [self.q * np.float_power(li + 1e-10, (self.q - 1)) * (fmodule.modeldict_norm(gi) ** 2) + self.L * np.float_power(li + 1e-10, self.q) for gi,li in zip(grads,losses)]</code></pre>

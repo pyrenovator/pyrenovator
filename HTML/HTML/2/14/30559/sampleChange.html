@@ -1,0 +1,48 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+        self.buffer.reset()
+
+        <a id="change">return </a><a id="change">Log(
+            actor_loss=np.mean(actor_losses),
+            critic_loss=np.mean(critic_losses),
+            divergence=actor_log.divergence,
+            entropy=actor_log.entropy,
+        )</a>
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    def _fit(self, batch_size: int, actor_epochs: int = 1, critic_epochs: int = 1):
+        critic_losses = np.zeros(shape=(critic_epochs))
+        actor_losses = np.zeros(shape=(actor_epochs))
+        <a id="change">divergences = np</a><a id="change">.zeros(shape=(actor_epochs))</a>
+        <a id="change">entropies = np</a><a id="change">.zeros(shape=(actor_epochs))</a>
+
+        &#47&#47 Sample rollout and compute advantages/returns
+        trajectories = self.buffer.sample(batch_size, dtype="torch")
+        with T.no_grad():
+            old_values = self.model.forward_critic(trajectories.observations)
+            next_values = self.model.forward_critic(trajectories.next_observations)
+            advantages, returns = generalized_advantage_estimate(
+                rewards=trajectories.rewards,
+                old_values=old_values,
+                new_values=next_values,
+                dones=trajectories.dones,
+                gae_lambda=self.gae_lambda,
+                gamma=self.gae_gamma,
+            )
+
+        &#47&#47 Train actor for actor_epochs
+        for i in range(actor_epochs):
+            actor_log = self.actor_updater(
+                model=self.model,
+                observations=trajectories.observations,
+                actions=trajectories.actions,
+                advantages=advantages,
+            )
+            actor_losses[i] = actor_log.loss
+            <a id="change">divergences[i] = </a>actor_log.divergence
+            <a id="change">entropies[i] = </a>actor_log.entropy
+
+        &#47&#47 Train critic for critic_epochs
+        for i in range(critic_epochs):</code></pre>

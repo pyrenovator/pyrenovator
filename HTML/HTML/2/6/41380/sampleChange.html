@@ -1,0 +1,27 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    def inference_step(self, cache_metadata: torch.IntTensor, *inputs: torch.Tensor) -&gt; Tuple[torch.Tensor, ...]:
+        num_heads, head_dim = self.module.self_attention.num_heads, self.module.self_attention.head_dim
+        with torch.inference_mode():
+            attention_cache_handle<a id="change"> = </a>int(<a id="change">cache_metadata[0, 0].item()</a>)
+            prefix_length = int(cache_metadata[0, 1].item())
+            (hidden_states, hypo_ids) = inputs
+            assert (
+                hidden_states.ndim == 3
+            ), "expected hidden states to be 3-dimensional: [batch_size, seq_len, hid_size]"
+
+            with self.memory_cache.use_cache(attention_cache_handle) as cache:
+                batch_size = cache.shape[1]
+                max_length = cache.numel() // (2<a id="change"> * batch_size * </a>head_dim * num_heads)
+                assert isinstance(self.module, WrappedBloomBlock) and cache.shape[0] == 2 and cache.ndim == 3
+                if not is_dummy(hypo_ids):
+                    assert hypo_ids.shape[0] == cache.shape[1]</code></pre><h3>After Change</h3><pre><code class='java'>
+
+            with self.memory_cache.use_cache(cache_handle) as cache:
+                batch_size = cache.shape[2]
+                max_length = <a id="change">cache.shape[-1]</a> // (head_dim * num_heads)
+                assert isinstance(self.module, WrappedBloomBlock) and cache.shape[1] == 2 and cache.ndim == 4
+                if not is_dummy(hypo_ids):
+                    assert hypo_ids.shape[0] == batch_size</code></pre>

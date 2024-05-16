@@ -1,0 +1,44 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    config = nvt.workflow.get_new_config()
+    config["PP"]["continuous"] = [ops.MinMax()]
+
+    <a id="change">processor</a><a id="change"> = </a><a id="change">nvtabular.Workflow(
+        cat_names=cat_names, cont_names=cont_names, label_name=label_name, config=config
+    )</a>
+
+    <a id="change">processor.update_stats(</a>dataset<a id="change">)</a>
+
+    op = ops.NormalizeMinMax()
+
+    columns_ctx = {}
+    columns_ctx["continuous"] = {}
+    columns_ctx["continuous"]["base"] = cont_names
+
+    new_gdf = op.apply_op(df, columns_ctx, "continuous", stats_context=processor.stats)
+    <a id="change">df["x"] = </a>(<a id="change">df["x"]</a><a id="change"> - processor.stats["mins"]["x"]</a>)<a id="change"> / </a>(
+        processor.stats["maxs"]["x"] - <a id="change">processor.stats["mins"]</a>["x"]
+    )
+    assert new_gdf["x"].equals(df["x"])
+</code></pre><h3>After Change</h3><pre><code class='java'>
+&#47&#47 with op_columns=None
+@pytest.mark.parametrize("op_columns", [["x"], ["x", "y"]])
+def test_normalize_minmax(tmpdir, df, dataset, gpu_memory_frac, engine, op_columns):
+    cont_features = op_columns<a id="change"> &gt;&gt; </a>ops.NormalizeMinMax()
+    <a id="change">processor</a><a id="change"> = nvtabular.Workflow(</a>cont_features<a id="change">)</a>
+    <a id="change">processor.fit(dataset</a><a id="change">)</a>
+    new_gdf = <a id="change">processor.transform(dataset).to_ddf()</a>.compute()
+    <a id="change">for </a>col in op_columns<a id="change">:
+        </a>col_min = df[col].min()
+        <a id="change">assert </a>col_min == pytest.approx(processor.column_group.op.mins[col], 1e-2)
+        col_max = df[col].max()
+        <a id="change">assert </a>col_max == pytest.approx(processor.column_group.op.maxs[col], 1e-2)
+        <a id="change">df[col]</a><a id="change"> = </a>(df[col] - processor.column_group.op.mins[col])<a id="change"> / </a>(
+            processor.column_group.op.maxs[col]<a id="change"> - processor.column_group.op.mins[col]</a>
+        )
+        <a id="change">assert </a>np.all((df[col] - new_gdf[col]).abs().values &lt;= 1e-2)
+
+
+@pytest.mark.parametrize("cat_groups", ["Author", [["Author", "Engaging-User"]]])</code></pre>

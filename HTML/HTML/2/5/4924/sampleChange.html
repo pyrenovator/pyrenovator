@@ -1,0 +1,41 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        x = self.skelEmbedding(x)
+
+        &#47&#47 only for ablation / not used in the final model
+        <a id="change">if </a>self.ablation == "average_encoder":
+            &#47&#47 add positional encoding
+            x = self.sequence_pos_encoder(x)
+
+            &#47&#47 transformer layers
+            final = self.seqTransEncoder(x, src_key_padding_mask=~mask)
+            &#47&#47 get the average of the output
+            z = final.mean(axis=0)
+
+            &#47&#47 extract mu and logvar
+            mu<a id="change"> = </a>self.mu_layer(z)
+            logvar = self.sigma_layer(z)
+        else:
+            &#47&#47 adding the mu and sigma queries
+            xseq = torch.cat(
+                (self.muQuery[y][None], self.sigmaQuery[y][None], x), axis=0
+            )
+
+            &#47&#47 add positional encoding
+            xseq = self.sequence_pos_encoder(xseq)
+
+            &#47&#47 create a bigger mask, to allow attend to mu and sigma
+            muandsigmaMask<a id="change"> = </a><a id="change">torch.ones(</a>(bs, 2)<a id="change">, dtype=bool, device=x.device)</a>
+            maskseq = torch.cat((muandsigmaMask, mask), axis=1)
+
+            final = self.seqTransEncoder(xseq, src_key_padding_mask=~maskseq)
+            mu = final[0]</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 to match Actor&quots architecture
+        x = x.permute((1, 0, 2))
+        seq_len, _, input_dim = x.shape
+        <a id="change">assert </a>seq_len == self.seq_len
+        assert input_dim == self.input_dim
+
+        &#47&#47 embedding of the skeleton</code></pre>

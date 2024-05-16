@@ -1,0 +1,35 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                    sources = sources.cuda()
+                    threshold_weight = threshold_weight.cuda()
+                
+                real, imag = <a id="change">mixture[:,:,:F_bin]</a><a id="change">, mixture[:,:,F_bin:]</a>
+                mixture_amplitude = torch.sqrt(real**2+imag**2)
+                real, imag = <a id="change">sources[:,:,:F_bin]</a><a id="change">, sources[:,:,F_bin:]</a>
+                sources_amplitude = torch.sqrt(real**2+imag**2)
+                
+                output = self.model(mixture_amplitude, threshold_weight=threshold_weight, n_sources=n_sources)
+                &#47&#47 At the test phase, assignment may be unknown.
+                loss, _ = pit(self.criterion, output, sources_amplitude, batch_mean=False)
+                loss = loss.sum(dim=0)
+                valid_loss += loss.item()
+                
+                if idx &lt; 5:
+                    mixture = mixture[0].cpu() &#47&#47 -&gt; (1, 2*F_bin, T_bin)
+                    mixture_amplitude = mixture_amplitude[0].cpu() &#47&#47 -&gt; (1, F_bin, T_bin)
+                    estimated_sources_amplitude = output[0].cpu() &#47&#47 -&gt; (n_sources, F_bin, T_bin)
+                    ratio = estimated_sources_amplitude / mixture_amplitude
+                    real, imag = <a id="change">mixture[:,:F_bin]</a><a id="change">, mixture[:,F_bin:]</a>
+                    real, imag = ratio * real, ratio * imag
+                    estimated_sources = torch.cat([real, imag], dim=1) &#47&#47 -&gt; (n_sources, 2*F_bin, T_bin)
+                    estimated_sources = self.istft(estimated_sources) &#47&#47 -&gt; (n_sources, T)
+                    estimated_sources = estimated_sources.cpu().numpy()</code></pre><h3>After Change</h3><pre><code class='java'>
+                    ratio = estimated_sources_amplitude / mixture_amplitude
+                    real, imag = mixture[...,0], mixture[...,1]
+                    real, imag = ratio * real, ratio * imag
+                    estimated_sources = torch.cat(<a id="change">[</a><a id="change">real.unsqueeze(dim=3)</a>, <a id="change">imag.unsqueeze(dim=3)</a>], dim=3) &#47&#47 -&gt; (n_sources, F_bin, T_bin, 2)
+                    estimated_sources = self.istft(estimated_sources) &#47&#47 -&gt; (n_sources, T)
+                    estimated_sources = estimated_sources.cpu().numpy()
+                    </code></pre>

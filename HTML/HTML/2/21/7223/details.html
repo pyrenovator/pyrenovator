@@ -1,0 +1,198 @@
+<html><h3>Pattern ID :7223
+</h3><img src='24202288.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+        for config in self._config.global_embedding_tables:
+            key = prefix + f"{config.name}.weight"
+            <a id="change">if config in self._config.local_embedding_tables</a>:
+                config_idx<a id="change"> = </a><a id="change">self._config.local_embedding_tables.index(config</a><a id="change">)</a>
+                param<a id="change"> = </a><a id="change">self.split_embedding_weights()[config_idx]</a>
+                <a id="change">assert </a>config.local_rows == param.size(0)
+                assert config.local_cols == param.size(1)
+                <a id="change">if </a>config.local_metadata is not None:
+                    destination[key] = sharded_tensor.init_from_local_shards(
+                        <a id="change">[</a><a id="change">Shard(</a>param, config.local_metadata<a id="change">)</a>],
+                        <a id="change">[</a>config.num_embeddings, config.embedding_dim<a id="change"></a>],
+                        process_group=self._pg,
+                    )
+                else:
+                    destination[key] = param
+            else:
+                &#47&#47 just an handler for tw-related sharding on the rank that
+                &#47&#47 those tables aren&quott exist, this is to comply with SPMD
+                <a id="change">sharded_tensor.init_from_local_shards(
+                    </a><a id="change">[]</a>,
+                    <a id="change">[</a>config.num_embeddings, config.embedding_dim<a id="change"></a>]<a id="change">,
+                    process_group=self._pg,
+                )</a>
+        return destination
+
+    def split_embedding_weights(self) -&gt; List[torch.Tensor]:
+        return self.emb_module.split_embedding_weights()</code></pre><h3>After Change</h3><pre><code class='java'>
+            &#47&#47 pyre-ignore [16]
+            destination._metadata = OrderedDict()
+
+        for config, <a id="change">param</a> in <a id="change">zip(
+            </a>self._config.embedding_tables,
+            self.split_embedding_weights()<a id="change">,
+        )</a>:
+            key = prefix + f"{config.name}.weight"
+            <a id="change">assert </a>config.local_rows == param.size(0)
+            assert config.local_cols == param.size(1)
+            <a id="change">if </a>config.global_metadata is not None:
+                &#47&#47 set additional field of sharded tensor based on local tensor properties
+                config.global_metadata.tensor_properties.dtype<a id="change"> = </a>param.dtype
+                config.global_metadata.tensor_properties.requires_grad<a id="change"> = </a>(
+                    param.requires_grad
+                )
+                destination[</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 6</div><BR><div id='size'>Non-data size: 19</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/pytorch/torchrec/commit/46d56280b57f3d6b85cc1bd5a4321e608b7e1454#diff-19b6f02a42a3b6b147a160975a984ac3c98ebffdc15b720887f337ede50257b7L591' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 24202288</div><div id='project'> Project Name: pytorch/torchrec</div><div id='commit'> Commit Name: 46d56280b57f3d6b85cc1bd5a4321e608b7e1454</div><div id='time'> Time: 2021-12-02</div><div id='author'> Author: wanchaol@fb.com</div><div id='file'> File Name: torchrec/distributed/embedding_lookup.py</div><div id='m_class'> M Class Name: BaseBatchedEmbeddingBag</div><div id='n_method'> N Class Name: BaseBatchedEmbeddingBag</div><div id='m_method'> M Method Name: state_dict(4)</div><div id='n_method'> N Method Name: state_dict(4)</div><div id='m_parent_class'> M Parent Class: BaseEmbeddingBag</div><div id='n_parent_class'> N Parent Class: BaseEmbeddingBag</div><div id='m_file'> M File Name: torchrec/distributed/embedding_lookup.py</div><div id='n_file'> N File Name: torchrec/distributed/embedding_lookup.py</div><div id='m_start'> M Start Line: 593</div><div id='m_end'> M End Line: 616</div><div id='n_start'> N Start Line: 591</div><div id='n_end'> N End Line: 613</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            &#47&#47 pyre-ignore [16]
+            destination._metadata = OrderedDict()
+
+        for <a id="change">config</a> in self._config.global_embedding_tables:
+            key = prefix + f"{config.name}.weight"
+            <a id="change">if config in self._config.local_embedding_tables</a>:
+                config_idx<a id="change"> = </a><a id="change">self._config.local_embedding_tables.index(</a>config<a id="change">)</a>
+                param<a id="change"> = </a><a id="change">self.split_embedding_weights()[config_idx]</a>
+                assert config.local_rows == param.size(0)
+                <a id="change">assert </a>config.local_cols == param.size(1)
+                <a id="change">if </a>config.local_metadata is not None:
+                    destination[key] = sharded_tensor.init_from_local_shards(
+                        <a id="change">[</a><a id="change">Shard(</a>param, config.local_metadata<a id="change">)</a>],
+                        <a id="change">[</a>config.num_embeddings, config.embedding_dim<a id="change"></a>],
+                        process_group=self._pg,
+                    )
+                else:
+                    destination[key] = param
+            else:
+                &#47&#47 just an handler for tw-related sharding on the rank that
+                &#47&#47 those tables aren&quott exist, this is to comply with SPMD
+                <a id="change">sharded_tensor.init_from_local_shards(
+                    </a><a id="change">[]</a>,
+                    <a id="change">[</a>config.num_embeddings, config.embedding_dim<a id="change"></a>]<a id="change">,
+                    process_group=self._pg,
+                )</a>
+        return destination
+
+    def split_embedding_weights(self) -&gt; List[torch.Tensor]:
+        return self.emb_module.split_embedding_weights()</code></pre><h3>After Change</h3><pre><code class='java'>
+            &#47&#47 pyre-ignore [16]
+            destination._metadata = OrderedDict()
+
+        for config, <a id="change">param</a> in <a id="change">zip(
+            </a>self._config.embedding_tables,
+            self.split_embedding_weights()<a id="change">,
+        )</a>:
+            key = prefix + f"{config.name}.weight"
+            assert config.local_rows == param.size(0)
+            <a id="change">assert </a>config.local_cols == param.size(1)
+            <a id="change">if </a>config.global_metadata is not None:
+                &#47&#47 set additional field of sharded tensor based on local tensor properties
+                config.global_metadata.tensor_properties.dtype<a id="change"> = </a>param.dtype
+                config.global_metadata.tensor_properties.requires_grad<a id="change"> = </a>(
+                    param.requires_grad
+                )
+                destination[</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/pytorch/torchrec/commit/46d56280b57f3d6b85cc1bd5a4321e608b7e1454#diff-19b6f02a42a3b6b147a160975a984ac3c98ebffdc15b720887f337ede50257b7L582' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 24202290</div><div id='project'> Project Name: pytorch/torchrec</div><div id='commit'> Commit Name: 46d56280b57f3d6b85cc1bd5a4321e608b7e1454</div><div id='time'> Time: 2021-12-02</div><div id='author'> Author: wanchaol@fb.com</div><div id='file'> File Name: torchrec/distributed/embedding_lookup.py</div><div id='m_class'> M Class Name: BaseBatchedEmbeddingBag</div><div id='n_method'> N Class Name: BaseBatchedEmbeddingBag</div><div id='m_method'> M Method Name: state_dict(4)</div><div id='n_method'> N Method Name: state_dict(4)</div><div id='m_parent_class'> M Parent Class: BaseEmbeddingBag</div><div id='n_parent_class'> N Parent Class: BaseEmbeddingBag</div><div id='m_file'> M File Name: torchrec/distributed/embedding_lookup.py</div><div id='n_file'> N File Name: torchrec/distributed/embedding_lookup.py</div><div id='m_start'> M Start Line: 593</div><div id='m_end'> M End Line: 616</div><div id='n_start'> N Start Line: 591</div><div id='n_end'> N End Line: 613</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            &#47&#47 pyre-ignore [16]
+            destination._metadata = OrderedDict()
+
+        for <a id="change">config</a> in self._config.global_embedding_tables:
+            key = prefix + f"{config.name}.weight"
+            <a id="change">if config in self._config.local_embedding_tables</a>:
+                config_idx<a id="change"> = </a><a id="change">self._config.local_embedding_tables.index(</a>config<a id="change">)</a>
+                emb_module<a id="change"> = </a><a id="change">self._emb_modules[config_idx]</a>
+                param = emb_module.weight if keep_vars else emb_module.weight.data
+                <a id="change">assert </a>config.local_rows == param.size(0)
+                assert config.local_cols == param.size(1)
+                <a id="change">if </a>config.local_metadata is not None:
+                    destination[key] = sharded_tensor.init_from_local_shards(
+                        &#47&#47 pyre-ignore [6]
+                        <a id="change">[</a><a id="change">Shard(</a>param, config.local_metadata<a id="change">)</a>],
+                        <a id="change">[</a>config.num_embeddings, config.embedding_dim<a id="change"></a>],
+                        process_group=self._pg,
+                    )
+                else:
+                    destination[key] = param
+            else:
+                &#47&#47 just an handler for tw-related sharding on the rank that
+                &#47&#47 those tables aren&quott exist, this is to comply with SPMD
+                <a id="change">sharded_tensor.init_from_local_shards(
+                    </a><a id="change">[]</a>,
+                    <a id="change">[</a>config.num_embeddings, config.embedding_dim<a id="change"></a>]<a id="change">,
+                    process_group=self._pg,
+                )</a>
+        return destination
+
+    def named_parameters(
+        self, prefix: str = "", recurse: bool = True</code></pre><h3>After Change</h3><pre><code class='java'>
+            &#47&#47 pyre-ignore [16]
+            destination._metadata = OrderedDict()
+
+        for config, <a id="change">emb_module</a> in <a id="change">zip(
+            </a>self._config.embedding_tables,
+            self._emb_modules<a id="change">,
+        )</a>:
+            key = prefix + f"{config.name}.weight"
+            param = emb_module.weight if keep_vars else emb_module.weight.data
+            <a id="change">assert </a>config.local_rows == param.size(0)
+            assert config.local_cols == param.size(1)
+            <a id="change">if </a>config.global_metadata is not None:
+                &#47&#47 set additional field of sharded tensor based on local tensor properties
+                config.global_metadata.tensor_properties.dtype<a id="change"> = </a>param.dtype
+                config.global_metadata.tensor_properties.requires_grad<a id="change"> = </a>(
+                    param.requires_grad
+                )
+                destination[</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/facebookresearch/torchrec/commit/46d56280b57f3d6b85cc1bd5a4321e608b7e1454#diff-19b6f02a42a3b6b147a160975a984ac3c98ebffdc15b720887f337ede50257b7L151' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 24202229</div><div id='project'> Project Name: facebookresearch/torchrec</div><div id='commit'> Commit Name: 46d56280b57f3d6b85cc1bd5a4321e608b7e1454</div><div id='time'> Time: 2021-12-02</div><div id='author'> Author: wanchaol@fb.com</div><div id='file'> File Name: torchrec/distributed/embedding_lookup.py</div><div id='m_class'> M Class Name: GroupedEmbedding</div><div id='n_method'> N Class Name: GroupedEmbedding</div><div id='m_method'> M Method Name: state_dict(4)</div><div id='n_method'> N Method Name: state_dict(4)</div><div id='m_parent_class'> M Parent Class: BaseEmbedding</div><div id='n_parent_class'> N Parent Class: BaseEmbedding</div><div id='m_file'> M File Name: torchrec/distributed/embedding_lookup.py</div><div id='n_file'> N File Name: torchrec/distributed/embedding_lookup.py</div><div id='m_start'> M Start Line: 162</div><div id='m_end'> M End Line: 187</div><div id='n_start'> N Start Line: 162</div><div id='n_end'> N End Line: 186</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            &#47&#47 pyre-ignore [16]
+            destination._metadata = OrderedDict()
+
+        for <a id="change">config</a> in self._config.global_embedding_tables:
+            key = prefix + f"{config.name}.weight"
+            <a id="change">if config in self._config.local_embedding_tables</a>:
+                config_idx<a id="change"> = </a><a id="change">self._config.local_embedding_tables.index(</a>config<a id="change">)</a>
+                emb_module<a id="change"> = </a><a id="change">self._emb_modules[config_idx]</a>
+                param = emb_module.weight if keep_vars else emb_module.weight.data
+                assert config.local_rows == param.size(0)
+                <a id="change">assert </a>config.local_cols == param.size(1)
+                <a id="change">if </a>config.local_metadata is not None:
+                    destination[key] = sharded_tensor.init_from_local_shards(
+                        &#47&#47 pyre-ignore [6]
+                        <a id="change">[</a><a id="change">Shard(</a>param, config.local_metadata<a id="change">)</a>],
+                        <a id="change">[</a>config.num_embeddings, config.embedding_dim<a id="change"></a>],
+                        process_group=self._pg,
+                    )
+                else:
+                    destination[key] = param
+            else:
+                &#47&#47 just an handler for tw-related sharding on the rank that
+                &#47&#47 those tables aren&quott exist, this is to comply with SPMD
+                <a id="change">sharded_tensor.init_from_local_shards(
+                    </a><a id="change">[]</a>,
+                    <a id="change">[</a>config.num_embeddings, config.embedding_dim<a id="change"></a>]<a id="change">,
+                    process_group=self._pg,
+                )</a>
+        return destination
+
+    def named_parameters(
+        self, prefix: str = "", recurse: bool = True</code></pre><h3>After Change</h3><pre><code class='java'>
+            &#47&#47 pyre-ignore [16]
+            destination._metadata = OrderedDict()
+
+        for config, <a id="change">emb_module</a> in <a id="change">zip(
+            </a>self._config.embedding_tables,
+            self._emb_modules<a id="change">,
+        )</a>:
+            key = prefix + f"{config.name}.weight"
+
+            param = emb_module.weight if keep_vars else emb_module.weight.data
+            assert config.local_rows == param.size(0)
+            <a id="change">assert </a>config.local_cols == param.size(1)
+            <a id="change">if </a>config.global_metadata is not None:
+                &#47&#47 set additional field of sharded tensor based on local tensor properties
+                config.global_metadata.tensor_properties.dtype<a id="change"> = </a>param.dtype
+                config.global_metadata.tensor_properties.requires_grad<a id="change"> = </a>(
+                    param.requires_grad
+                )
+                destination[</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/pytorch/torchrec/commit/46d56280b57f3d6b85cc1bd5a4321e608b7e1454#diff-19b6f02a42a3b6b147a160975a984ac3c98ebffdc15b720887f337ede50257b7L436' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 24202293</div><div id='project'> Project Name: pytorch/torchrec</div><div id='commit'> Commit Name: 46d56280b57f3d6b85cc1bd5a4321e608b7e1454</div><div id='time'> Time: 2021-12-02</div><div id='author'> Author: wanchaol@fb.com</div><div id='file'> File Name: torchrec/distributed/embedding_lookup.py</div><div id='m_class'> M Class Name: GroupedEmbeddingBag</div><div id='n_method'> N Class Name: GroupedEmbeddingBag</div><div id='m_method'> M Method Name: state_dict(4)</div><div id='n_method'> N Method Name: state_dict(4)</div><div id='m_parent_class'> M Parent Class: BaseEmbeddingBag</div><div id='n_parent_class'> N Parent Class: BaseEmbeddingBag</div><div id='m_file'> M File Name: torchrec/distributed/embedding_lookup.py</div><div id='n_file'> N File Name: torchrec/distributed/embedding_lookup.py</div><div id='m_start'> M Start Line: 447</div><div id='m_end'> M End Line: 472</div><div id='n_start'> N Start Line: 446</div><div id='n_end'> N End Line: 470</div><BR>

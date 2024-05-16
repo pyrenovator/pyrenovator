@@ -1,0 +1,90 @@
+<html><h3>Pattern ID :20674
+</h3><img src='66524791.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+def predict(model: nn.Module, *args, **kwargs):
+    Makes predictions on a dataset using a single model. See `predict_ensemble` for `args` and `kwargs`.
+    <a id="change">return </a>predict_ensemble([model], *args, **kwargs)
+
+
+def evaluate_ensemble(models: Iterable[nn.Module],</code></pre><h3>After Change</h3><pre><code class='java'>
+        model.eval()
+
+        preds = []
+        <a id="change">for </a>i in range(0, len(smiles), batch_size)<a id="change">:
+            &#47&#47 Prepare batch
+            </a>mol_batch<a id="change"> = </a>smiles[i:i + batch_size]
+            mol_batch = mol2graph(mol_batch, three_d=three_d)
+
+            &#47&#47 Run model
+            batch_preds<a id="change"> = </a><a id="change">model(</a>mol_batch<a id="change">)</a>
+            batch_preds<a id="change"> = </a>batch_preds.data.cpu().numpy()
+            if scaler is not None:
+                batch_preds = scaler.inverse_transform(batch_preds)
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 6</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/aamini/chemprop/commit/e50c0d7ca760ff74261cbbd018bea81290599e59#diff-1ae5c6142982c466b6120408cea60c9e765c62ef258032b838fb5274077b166dL71' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 66524791</div><div id='project'> Project Name: aamini/chemprop</div><div id='commit'> Commit Name: e50c0d7ca760ff74261cbbd018bea81290599e59</div><div id='time'> Time: 2018-09-24</div><div id='author'> Author: swansonk.14@gmail.com</div><div id='file'> File Name: train_utils.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: predict(5)</div><div id='n_method'> N Method Name: predict(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: train_utils.py</div><div id='n_file'> N File Name: train_utils.py</div><div id='m_start'> M Start Line: 117</div><div id='m_end'> M End Line: 119</div><div id='n_start'> N Start Line: 71</div><div id='n_end'> N End Line: 106</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    if args.evaluate:
+        validate(test_loader, model, criterion, local_rank, args)
+        <a id="change">return</a>
+
+    for epoch in range(args.start_epoch, args.epochs):
+        train_sampler.set_epoch(epoch)
+        test_sampler.set_epoch(epoch)</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 设置 train_scheduler 来调整学习率
+        train_scheduler.step(epoch)
+
+        <a id="change">for </a><a id="change">step</a>, (images, labels) in enumerate(train_loader)<a id="change">:
+            &#47&#47 将对应进程的数据放到对应 GPU 上
+            </a>images<a id="change"> = </a>images.cuda(local_rank, non_blocking=True)
+            labels = labels.cuda(local_rank, non_blocking=True)
+
+            outputs = <a id="change">model(</a>images<a id="change">)</a>
+            loss<a id="change"> = </a>criterion(outputs, labels)
+
+            &#47&#47 torch.distributed.barrier()的作用是，阻塞进程，保证每个进程运行完这一行代码之前的所有代码，才能继续执行，这样才计算平均loss和平均acc的时候不会出现因为进程执行速度不一致的错误
+            torch.distributed.barrier()
+            reduced_loss<a id="change"> = </a>reduce_mean(loss, args.nprocs)
+
+            &#47&#47 更新优化模型权重
+            optimizer.zero_grad()</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/rentainhe/pytorch-distributed-training/commit/924a65892510a4cf1352ee408d6186344043f3a4#diff-f080c66d54726c9df3b2a7a496310425104eddad5c79eb4dc09c30d7d71f0a50L56' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 66524775</div><div id='project'> Project Name: rentainhe/pytorch-distributed-training</div><div id='commit'> Commit Name: 924a65892510a4cf1352ee408d6186344043f3a4</div><div id='time'> Time: 2021-01-05</div><div id='author'> Author: 596106517@qq.com</div><div id='file'> File Name: distributed.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main_worker(3)</div><div id='n_method'> N Method Name: main_worker(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: distributed.py</div><div id='n_file'> N File Name: distributed.py</div><div id='m_start'> M Start Line: 60</div><div id='m_end'> M End Line: 111</div><div id='n_start'> N Start Line: 41</div><div id='n_end'> N End Line: 110</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+def predict(model: nn.Module, *args, **kwargs):
+    Makes predictions on a dataset using a single model. See `predict_ensemble` for `args` and `kwargs`.
+    <a id="change">return </a>predict_ensemble([model], *args, **kwargs)
+
+
+def evaluate_ensemble(models: Iterable[nn.Module],</code></pre><h3>After Change</h3><pre><code class='java'>
+        model.eval()
+
+        preds = []
+        <a id="change">for </a><a id="change">i</a> in range(0, len(smiles), batch_size)<a id="change">:
+            &#47&#47 Prepare batch
+            </a>mol_batch = smiles[i:i + batch_size]
+            mol_batch<a id="change"> = </a>mol2graph(mol_batch, three_d=three_d)
+
+            &#47&#47 Run model
+            batch_preds<a id="change"> = </a><a id="change">model(</a>mol_batch<a id="change">)</a>
+            batch_preds<a id="change"> = </a>batch_preds.data.cpu().numpy()
+            if scaler is not None:
+                batch_preds = scaler.inverse_transform(batch_preds)
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/aamini/chemprop/commit/e50c0d7ca760ff74261cbbd018bea81290599e59#diff-1ae5c6142982c466b6120408cea60c9e765c62ef258032b838fb5274077b166dL117' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 66524790</div><div id='project'> Project Name: aamini/chemprop</div><div id='commit'> Commit Name: e50c0d7ca760ff74261cbbd018bea81290599e59</div><div id='time'> Time: 2018-09-24</div><div id='author'> Author: swansonk.14@gmail.com</div><div id='file'> File Name: train_utils.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: predict(5)</div><div id='n_method'> N Method Name: predict(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: train_utils.py</div><div id='n_file'> N File Name: train_utils.py</div><div id='m_start'> M Start Line: 117</div><div id='m_end'> M End Line: 119</div><div id='n_start'> N Start Line: 71</div><div id='n_end'> N End Line: 106</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        _, pre = torch.max(outputs.data, 1)
+        total += 1
+        correct += (pre == labels).sum()
+    <a id="change">return </a>(100 * float(correct) / total)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+def test_robustness(model, attack, dataloader, device, eps=None):
+    if isinstance(model, FGSM()):
+        <a id="change">for </a><a id="change">ep</a> in eps<a id="change">:
+            </a>for images, labels in dataloader:   
+                perturbed_images<a id="change"> = </a>attack(images, labels).to(device)
+                outputs<a id="change"> = </a><a id="change">model(</a>perturbed_images<a id="change">)</a>
+                labels = labels.to(device)
+
+                _<a id="change">, pre = </a>torch.max(outputs.data, 1)
+                total += 1
+                correct += (pre == labels).sum()
+                print(&quotEpsilon: &quot+str(ep)+&quot Accuracy: &quot+str(100 * float(correct) / total))</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/enochkan/plexiglass/commit/b3727b413819b85d905cafa4f1c28899f4716721#diff-fbf58b969401acc634475d60f2313ec9c40c6be36eb1fa9b6df131518256ede8L3' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 66524787</div><div id='project'> Project Name: enochkan/plexiglass</div><div id='commit'> Commit Name: b3727b413819b85d905cafa4f1c28899f4716721</div><div id='time'> Time: 2020-11-11</div><div id='author'> Author: kanxx030@gmail.com</div><div id='file'> File Name: plexiglass/testing.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: test_robustness(5)</div><div id='n_method'> N Method Name: test_robustness(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: plexiglass/testing.py</div><div id='n_file'> N File Name: plexiglass/testing.py</div><div id='m_start'> M Start Line: 12</div><div id='m_end'> M End Line: 12</div><div id='n_start'> N Start Line: 4</div><div id='n_end'> N End Line: 25</div><BR>

@@ -1,0 +1,20 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+    def forward(self, user, item):
+        user = torch.from_numpy(self.interaction_matrix[user.cpu()].todense()).to(self.device)
+        item = <a id="change">torch.from_numpy(self.interaction_matrix[:, item.cpu()].todense()).to(self.device).t()</a>
+        user = self.user_linear(user)
+        item = self.item_linear(item)
+
+        user = self.user_fc_layers(user)</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        user = F.normalize(user, p=2, dim=1)   &#47&#47 after normalize the vector, cosine distance reduced to dot product.
+        item = F.normalize(item, p=2, dim=1)
+        vector<a id="change"> = </a><a id="change">torch.mul(user, item).sum(dim=1)</a>
+
+        vector = torch.max(vector, self.min_y_hat)  &#47&#47 restrict the result to [0, 1].
+        return vector
+</code></pre>

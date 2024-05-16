@@ -1,0 +1,195 @@
+<html><h3>Pattern ID :38816
+</h3><img src='110861914.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+        logits = self.lm_head(encoder_outputs)
+
+        <a id="change">if use_cache</a>:
+            <a id="change">return logits</a><a id="change">, cached_kvs</a>
+        else:
+            return logits
+
+    def prepare_faster_entry(self, kwargs):</code></pre><h3>After Change</h3><pre><code class='java'>
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
+        if <a id="change">isinstance(</a>outputs, <a id="change">type(input_ids</a><a id="change">))</a>:
+            hidden_states = outputs
+        else:
+            hidden_states = outputs[0]
+
+        <a id="change">logits</a> = self.lm_head(hidden_states)
+
+        <a id="change">loss</a><a id="change"> = None</a>
+        <a id="change">if labels is not None</a>:
+            &#47&#47 Shift so that tokens &lt; n predict n
+            shift_logits = logits[:, :-1, :]
+            shift_labels = labels[:, 1:]
+            &#47&#47 Flatten the tokens
+            loss_fct<a id="change"> = </a>CrossEntropyLoss()
+            <a id="change">loss = </a><a id="change">loss_fct(</a>shift_logits.reshape((<a id="change">-1</a><a id="change">, shift_logits.shape[-1]</a>)), <a id="change">shift_labels.reshape(</a>(<a id="change">-1</a>,)<a id="change">)</a><a id="change">)</a>
+
+        &#47&#47 outputs = [output, all_hidden_states, new_caches, all_self_attentions]
+        <a id="change">if not return_dict</a>:
+            <a id="change">if isinstance(</a>outputs, <a id="change">type(input_ids</a><a id="change">))</a>:
+                return (<a id="change">loss</a><a id="change">, logits</a>)<a id="change"> if loss</a><a id="change"> is not None else </a>logits
+
+            outputs<a id="change"> = </a>(<a id="change">logits</a>,)<a id="change"> + outputs[1:]</a>
+            <a id="change">return </a>((<a id="change">loss</a>,)<a id="change"> + </a>outputs)<a id="change"> if loss</a><a id="change"> is not None else </a>outputs
+
+        <a id="change">return </a><a id="change">CausalLMOutputWithCrossAttentions(
+            loss=loss,
+            logits=logits,
+            past_key_values=outputs.past_key_values,
+            hidden_states=outputs.hidden_states,
+            attentions=outputs.attentions,
+            cross_attentions=outputs.cross_attentions,
+        )</a>
+
+    def prepare_faster_entry(self, kwargs):
+        from paddlenlp.ops import FasterGPT
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 35</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/paddlepaddle/paddlenlp/commit/db3bde142ca2da76bfc701cd4ecc17140c248060#diff-9bb9f18c3e14727084b01bf188121da9afb4893fdfb8b323f8c3fc98d0c4a22bL1036' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 110861914</div><div id='project'> Project Name: paddlepaddle/paddlenlp</div><div id='commit'> Commit Name: db3bde142ca2da76bfc701cd4ecc17140c248060</div><div id='time'> Time: 2022-12-06</div><div id='author'> Author: 40912707+Yam0214@users.noreply.github.com</div><div id='file'> File Name: paddlenlp/transformers/gpt/modeling.py</div><div id='m_class'> M Class Name: GPTLMHeadModel</div><div id='n_method'> N Class Name: GPTLMHeadModel</div><div id='m_method'> M Method Name: forward(10)</div><div id='n_method'> N Method Name: forward(6)</div><div id='m_parent_class'> M Parent Class: GPTPretrainedModel</div><div id='n_parent_class'> N Parent Class: GPTPretrainedModel</div><div id='m_file'> M File Name: paddlenlp/transformers/gpt/modeling.py</div><div id='n_file'> N File Name: paddlenlp/transformers/gpt/modeling.py</div><div id='m_start'> M Start Line: 1036</div><div id='m_end'> M End Line: 1048</div><div id='n_start'> N Start Line: 1113</div><div id='n_end'> N End Line: 1194</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+        sequence_output = outputs[0] if use_cache else outputs
+
+        <a id="change">logits</a> = self.lm_head(sequence_output, masked_positions)
+        <a id="change">if use_cache</a>:
+            cache = outputs[1]
+            <a id="change">return </a>logits<a id="change">, cache</a>
+        else:
+            return logits
+
+    def prepare_faster_entry(self, kwargs):</code></pre><h3>After Change</h3><pre><code class='java'>
+            return_dict=return_dict,
+        )
+
+        sequence_output = outputs if <a id="change">isinstance(</a>outputs,
+                                                <a id="change">type(</a>input_ids<a id="change">))</a> else outputs[0]
+
+        <a id="change">logits</a> = self.lm_head(sequence_output, masked_positions)
+
+        <a id="change">lm_loss</a><a id="change"> = </a>None
+        <a id="change">if labels is not None</a>:
+            loss_fct<a id="change"> = </a>nn.CrossEntropyLoss()
+            <a id="change">lm_loss = </a><a id="change">loss_fct(
+                </a>logits.reshape((<a id="change">-1</a><a id="change">, self.unimo.config["vocab_size"]</a>)),
+                <a id="change">labels.reshape(</a>(<a id="change">-1</a>, )<a id="change">)</a><a id="change">)</a>
+
+        <a id="change">if not return_dict</a>:
+            <a id="change">if isinstance(</a>outputs, <a id="change">type(</a>input_ids<a id="change">))</a>:
+                return (lm_loss<a id="change">, logits</a>)<a id="change"> if </a><a id="change">lm_loss is not None else </a>logits
+            else:
+                outputs<a id="change"> = </a>(logits<a id="change"></a>, )<a id="change"> + outputs[1:]</a>
+                <a id="change">return </a>((lm_loss<a id="change"></a>, )<a id="change"> +
+                        </a>outputs)<a id="change"> if </a><a id="change">lm_loss is not None else </a>outputs
+
+        <a id="change">return </a><a id="change">CausalLMOutputWithCrossAttentions(
+            loss=lm_loss,
+            logits=logits,
+            past_key_values=outputs.past_key_values,
+            hidden_states=outputs.hidden_states,
+            attentions=outputs.attentions,
+            cross_attentions=outputs.cross_attentions,
+        )</a>
+
+    def prepare_faster_entry(self, kwargs):
+        from paddlenlp.ops import FasterUNIMOText
+        use_fp16_decoding = kwargs.get(&quotuse_fp16_decoding&quot, False)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/paddlepaddle/paddlenlp/commit/6471ce331a585d53c44dfdfdf862ad9636d0a10a#diff-931c9b84d58140920bc25cc1260fa606c229d283eb5017e6283b3af6ab265950L551' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 110861930</div><div id='project'> Project Name: paddlepaddle/paddlenlp</div><div id='commit'> Commit Name: 6471ce331a585d53c44dfdfdf862ad9636d0a10a</div><div id='time'> Time: 2022-11-03</div><div id='author'> Author: 40912707+Yam0214@users.noreply.github.com</div><div id='file'> File Name: paddlenlp/transformers/unimo/modeling.py</div><div id='m_class'> M Class Name: UNIMOLMHeadModel</div><div id='n_method'> N Class Name: UNIMOLMHeadModel</div><div id='m_method'> M Method Name: forward(12)</div><div id='n_method'> N Method Name: forward(8)</div><div id='m_parent_class'> M Parent Class: UNIMOPretrainedModel</div><div id='n_parent_class'> N Parent Class: UNIMOPretrainedModel</div><div id='m_file'> M File Name: paddlenlp/transformers/unimo/modeling.py</div><div id='n_file'> N File Name: paddlenlp/transformers/unimo/modeling.py</div><div id='m_start'> M Start Line: 601</div><div id='m_end'> M End Line: 613</div><div id='n_start'> N Start Line: 577</div><div id='n_end'> N End Line: 674</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+        sequence_output = outputs[0] if use_cache else outputs
+
+        <a id="change">logits</a> = self.lm_head(sequence_output, masked_positions)
+        <a id="change">if use_cache</a>:
+            cache = outputs[1]
+            <a id="change">return </a>logits<a id="change">, cache</a>
+        else:
+            return logits
+
+    def prepare_faster_entry(self, kwargs):</code></pre><h3>After Change</h3><pre><code class='java'>
+            return_dict=return_dict,
+        )
+
+        sequence_output = outputs if <a id="change">isinstance(</a>outputs,
+                                                <a id="change">type(</a>input_ids<a id="change">))</a> else outputs[0]
+
+        <a id="change">logits</a> = self.lm_head(sequence_output, masked_positions)
+
+        <a id="change">lm_loss</a><a id="change"> = </a>None
+        <a id="change">if labels is not None</a>:
+            loss_fct<a id="change"> = </a>nn.CrossEntropyLoss()
+            <a id="change">lm_loss = </a><a id="change">loss_fct(
+                </a>logits.reshape((<a id="change">-1</a><a id="change">, self.unimo.config["vocab_size"]</a>)),
+                <a id="change">labels.reshape(</a>(<a id="change">-1</a>, )<a id="change">)</a><a id="change">)</a>
+
+        <a id="change">if not return_dict</a>:
+            <a id="change">if isinstance(</a>outputs, <a id="change">type(</a>input_ids<a id="change">))</a>:
+                return (lm_loss<a id="change">, logits</a>)<a id="change"> if </a><a id="change">lm_loss is not None else </a>logits
+            else:
+                outputs<a id="change"> = </a>(logits<a id="change"></a>, )<a id="change"> + outputs[1:]</a>
+                <a id="change">return </a>((lm_loss<a id="change"></a>, )<a id="change"> +
+                        </a>outputs)<a id="change"> if </a><a id="change">lm_loss is not None else </a>outputs
+
+        <a id="change">return </a><a id="change">CausalLMOutputWithCrossAttentions(
+            loss=lm_loss,
+            logits=logits,
+            past_key_values=outputs.past_key_values,
+            hidden_states=outputs.hidden_states,
+            attentions=outputs.attentions,
+            cross_attentions=outputs.cross_attentions,
+        )</a>
+
+    def prepare_faster_entry(self, kwargs):
+        from paddlenlp.ops import FasterUNIMOText
+        use_fp16_decoding = kwargs.get(&quotuse_fp16_decoding&quot, False)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/paddlepaddle/paddlenlp/commit/1a53c3588791e33a816c687daa4f395e73ab19dc#diff-931c9b84d58140920bc25cc1260fa606c229d283eb5017e6283b3af6ab265950L551' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 110861928</div><div id='project'> Project Name: paddlepaddle/paddlenlp</div><div id='commit'> Commit Name: 1a53c3588791e33a816c687daa4f395e73ab19dc</div><div id='time'> Time: 2022-11-04</div><div id='author'> Author: 40912707+Yam0214@users.noreply.github.com</div><div id='file'> File Name: paddlenlp/transformers/unimo/modeling.py</div><div id='m_class'> M Class Name: UNIMOLMHeadModel</div><div id='n_method'> N Class Name: UNIMOLMHeadModel</div><div id='m_method'> M Method Name: forward(12)</div><div id='n_method'> N Method Name: forward(8)</div><div id='m_parent_class'> M Parent Class: UNIMOPretrainedModel</div><div id='n_parent_class'> N Parent Class: UNIMOPretrainedModel</div><div id='m_file'> M File Name: paddlenlp/transformers/unimo/modeling.py</div><div id='n_file'> N File Name: paddlenlp/transformers/unimo/modeling.py</div><div id='m_start'> M Start Line: 601</div><div id='m_end'> M End Line: 613</div><div id='n_start'> N Start Line: 576</div><div id='n_end'> N End Line: 673</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        else:
+            encoder_outputs = outputs
+
+        <a id="change">logits</a> = self.lm_head(encoder_outputs)
+
+        <a id="change">if use_cache</a>:
+            <a id="change">return </a>logits<a id="change">, cached_kvs</a>
+        else:
+            return logits
+
+    def prepare_faster_entry(self, kwargs):</code></pre><h3>After Change</h3><pre><code class='java'>
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
+        if <a id="change">isinstance(</a>outputs, <a id="change">type(</a>input_ids<a id="change">))</a>:
+            hidden_states = outputs
+        else:
+            hidden_states = outputs[0]
+
+        <a id="change">logits</a> = self.lm_head(hidden_states)
+
+        <a id="change">loss</a><a id="change"> = </a>None
+        <a id="change">if labels is not None</a>:
+            &#47&#47 Shift so that tokens &lt; n predict n
+            shift_logits = logits[:, :-1, :]
+            shift_labels = labels[:, 1:]
+            &#47&#47 Flatten the tokens
+            loss_fct<a id="change"> = </a>CrossEntropyLoss()
+            <a id="change">loss = </a><a id="change">loss_fct(</a>shift_logits.reshape((<a id="change">-1</a><a id="change">, shift_logits.shape[-1]</a>)), <a id="change">shift_labels.reshape(</a>(<a id="change">-1</a>,)<a id="change">)</a><a id="change">)</a>
+
+        &#47&#47 outputs = [output, all_hidden_states, new_caches, all_self_attentions]
+        <a id="change">if not return_dict</a>:
+            <a id="change">if isinstance(</a>outputs, <a id="change">type(</a>input_ids<a id="change">))</a>:
+                return (loss<a id="change">, logits</a>)<a id="change"> if </a><a id="change">loss is not None else </a>logits
+
+            outputs<a id="change"> = </a>(logits<a id="change"></a>,)<a id="change"> + outputs[1:]</a>
+            <a id="change">return </a>((loss<a id="change"></a>,)<a id="change"> + </a>outputs)<a id="change"> if </a><a id="change">loss is not None else </a>outputs
+
+        <a id="change">return </a><a id="change">CausalLMOutputWithCrossAttentions(
+            loss=loss,
+            logits=logits,
+            past_key_values=outputs.past_key_values,
+            hidden_states=outputs.hidden_states,
+            attentions=outputs.attentions,
+            cross_attentions=outputs.cross_attentions,
+        )</a>
+
+    def prepare_faster_entry(self, kwargs):
+        from paddlenlp.ops import FasterGPT
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/paddlepaddle/paddlenlp/commit/db3bde142ca2da76bfc701cd4ecc17140c248060#diff-9bb9f18c3e14727084b01bf188121da9afb4893fdfb8b323f8c3fc98d0c4a22bL1010' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 110861916</div><div id='project'> Project Name: paddlepaddle/paddlenlp</div><div id='commit'> Commit Name: db3bde142ca2da76bfc701cd4ecc17140c248060</div><div id='time'> Time: 2022-12-06</div><div id='author'> Author: 40912707+Yam0214@users.noreply.github.com</div><div id='file'> File Name: paddlenlp/transformers/gpt/modeling.py</div><div id='m_class'> M Class Name: GPTLMHeadModel</div><div id='n_method'> N Class Name: GPTLMHeadModel</div><div id='m_method'> M Method Name: forward(10)</div><div id='n_method'> N Method Name: forward(6)</div><div id='m_parent_class'> M Parent Class: GPTPretrainedModel</div><div id='n_parent_class'> N Parent Class: GPTPretrainedModel</div><div id='m_file'> M File Name: paddlenlp/transformers/gpt/modeling.py</div><div id='n_file'> N File Name: paddlenlp/transformers/gpt/modeling.py</div><div id='m_start'> M Start Line: 1036</div><div id='m_end'> M End Line: 1048</div><div id='n_start'> N Start Line: 1113</div><div id='n_end'> N End Line: 1194</div><BR>

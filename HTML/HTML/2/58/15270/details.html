@@ -1,0 +1,573 @@
+<html><h3>Pattern ID :15270
+</h3><img src='51916440.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    model.train()
+
+    end = time.time()
+    <a id="change">for index</a>, (lr, hr) in <a id="change">enumerate(</a>train_dataloader<a id="change">)</a><a id="change">:
+        &#47&#47 measure data loading time
+        data_time.update(</a>time.time() - end<a id="change">)</a>
+
+        lr<a id="change"> = </a>lr.to(config.device, non_blocking=True)
+        hr<a id="change"> = </a>hr.to(config.device, non_blocking=True)
+
+        &#47&#47 Initialize the generator gradient
+        <a id="change">model.zero_grad()</a>
+
+        &#47&#47 Mixed precision training
+        <a id="change">with </a>amp<a id="change">.autocast():
+            </a>sr = model(lr)
+            loss = pixel_criterion(sr, hr)
+
+        &#47&#47 Gradient zoom + gradient clipping
+        <a id="change">scaler.scale(loss).backward()</a>
+        scaler.unscale_(optimizer)
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=config.model_clip_gradient / optimizer.param_groups[0]["lr"], norm_type=2.0)
+        &#47&#47 Update generator weight
+        <a id="change">scaler.step(</a>optimizer<a id="change">)</a>
+        <a id="change">scaler.update()</a>
+
+        &#47&#47 measure accuracy and record loss
+        psnr<a id="change"> = </a>10. * torch.log10(1. / psnr_criterion(sr, hr))
+        <a id="change">losses.update(</a>loss.item(), lr.size(0)<a id="change">)</a>
+        <a id="change">psnres.update(</a>psnr.item(), lr.size(0)<a id="change">)</a>
+
+        &#47&#47 measure elapsed time
+        <a id="change">batch_time.update(</a>time.time() - end<a id="change">)</a>
+        end<a id="change"> = </a>time.time()
+
+        &#47&#47 Writer Loss to file
+        <a id="change">writer.add_scalar(</a>"Train/Loss", loss.item(), index + epoch * batches + 1<a id="change">)</a>
+        <a id="change">if index % config.print_frequency == 0 and index != 0</a>:
+            progress.display(index)
+
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    &#47&#47 Put the generator in training mode
+    model.train()
+
+    batch_index<a id="change"> = 0</a>
+
+    &#47&#47 Calculate the time it takes to test a batch of data
+    end = time.time()
+    &#47&#47 enable preload
+    <a id="change">train_prefetcher.reset()</a>
+    <a id="change">batch_data = train_prefetcher</a><a id="change">.next()</a>
+    <a id="change">while batch_data</a><a id="change"> is not None:
+        &#47&#47 measure data loading time
+        data_time.update(</a>time.time() - end<a id="change">)</a>
+
+        lr<a id="change"> = batch_data</a><a id="change">["lr"]</a>.to(config.device, non_blocking=True)
+        hr<a id="change"> = batch_data["hr"]</a>.to(config.device, non_blocking=True)
+
+        &#47&#47 Initialize the generator gradient
+        <a id="change">model.zero_grad()</a>
+
+        &#47&#47 Mixed precision training
+        <a id="change">with </a>amp<a id="change">.autocast():
+            </a>sr = model(lr)
+            loss = pixel_criterion(sr, hr)
+
+        &#47&#47 Gradient zoom + gradient clipping
+        <a id="change">scaler.scale(loss).backward()</a>
+        scaler.unscale_(optimizer)
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=config.clip_gradient / optimizer.param_groups[0]["lr"], norm_type=2.0)
+        &#47&#47 Update generator weight
+        <a id="change">scaler.step(</a>optimizer<a id="change">)</a>
+        <a id="change">scaler.update()</a>
+
+        &#47&#47 measure accuracy and record loss
+        psnr<a id="change"> = </a>10. * torch.log10(1. / psnr_criterion(sr, hr))
+        <a id="change">losses.update(</a>loss.item(), lr.size(0)<a id="change">)</a>
+        <a id="change">psnres.update(</a>psnr.item(), lr.size(0)<a id="change">)</a>
+
+        &#47&#47 measure elapsed time
+        <a id="change">batch_time.update(</a>time.time() - end<a id="change">)</a>
+        end<a id="change"> = </a>time.time()
+
+        &#47&#47 Record training log information
+        <a id="change">if batch_index % config.print_frequency == 0</a>:
+            &#47&#47 Writer Loss to file
+            <a id="change">writer.add_scalar(</a>"Train/Loss", loss.item(), batch_index + epoch * batches + 1<a id="change">)</a>
+            progress.display(batch_index)
+
+        &#47&#47 Preload the next batch of data
+        batch_data<a id="change"> = train_prefetcher</a><a id="change">.next()</a>
+
+        &#47&#47 After a batch of data is calculated, add 1 to the number of batches
+        batch_index<a id="change"> += </a>1
+
+
+def validate(model, valid_prefetcher, psnr_criterion, epoch, writer, mode) -&gt; float:</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 5</div><BR><div id='size'>Non-data size: 49</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/lornatang/vdsr-pytorch/commit/f4a1408d6ca645166d7b38d98ce4befabba63d08#diff-ed183d67207df065a11e1289f19d34cc2abbc5448dea952683cfe9728c342b95L168' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 51916440</div><div id='project'> Project Name: lornatang/vdsr-pytorch</div><div id='commit'> Commit Name: f4a1408d6ca645166d7b38d98ce4befabba63d08</div><div id='time'> Time: 2022-02-23</div><div id='author'> Author: liuchangyu1111@gmail.com</div><div id='file'> File Name: train.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train(8)</div><div id='n_method'> N Method Name: train(8)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: train.py</div><div id='n_file'> N File Name: train.py</div><div id='m_start'> M Start Line: 168</div><div id='m_end'> M End Line: 205</div><div id='n_start'> N Start Line: 188</div><div id='n_end'> N End Line: 239</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    model.train()
+
+    end = time.time()
+    <a id="change">for index</a>, (lr, hr) in <a id="change">enumerate(</a>train_dataloader<a id="change">)</a><a id="change">:
+        &#47&#47 measure data loading time
+        data_time.update(</a>time.time() - end<a id="change">)</a>
+
+        lr<a id="change"> = </a>lr.to(config.device, non_blocking=True)
+        hr<a id="change"> = </a>hr.to(config.device, non_blocking=True)
+
+        &#47&#47 Initialize the generator gradient
+        <a id="change">model.zero_grad()</a>
+
+        &#47&#47 Mixed precision training
+        <a id="change">with </a>amp<a id="change">.autocast():
+            </a>sr = model(lr)
+            loss = pixel_criterion(sr, hr)
+
+        &#47&#47 Gradient zoom
+        <a id="change">scaler.scale(loss).backward()</a>
+        &#47&#47 Update generator weight
+        <a id="change">scaler.step(</a>optimizer<a id="change">)</a>
+        <a id="change">scaler.update()</a>
+
+        &#47&#47 measure accuracy and record loss
+        psnr<a id="change"> = </a>10. * torch.log10(1. / psnr_criterion(sr, hr))
+        <a id="change">losses.update(</a>loss.item(), lr.size(0)<a id="change">)</a>
+        <a id="change">psnres.update(</a>psnr.item(), lr.size(0)<a id="change">)</a>
+
+        &#47&#47 measure elapsed time
+        <a id="change">batch_time.update(</a>time.time() - end<a id="change">)</a>
+        end<a id="change"> = </a>time.time()
+
+        &#47&#47 Writer Loss to file
+        <a id="change">writer.add_scalar(</a>"Train/Loss", loss.item(), index + epoch * batches + 1<a id="change">)</a>
+        <a id="change">if index % config.print_frequency == 0 and index != 0</a>:
+            progress.display(index)
+
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    &#47&#47 Put the generator in training mode
+    model.train()
+
+    batch_index<a id="change"> = 0</a>
+
+    &#47&#47 Calculate the time it takes to test a batch of data
+    end = time.time()
+    &#47&#47 enable preload
+    <a id="change">train_prefetcher.reset()</a>
+    <a id="change">batch_data = </a><a id="change">train_prefetcher.next()</a>
+    <a id="change">while </a><a id="change">batch_data is not None:
+        &#47&#47 measure data loading time
+        </a><a id="change">data_time.update(</a>time.time() - end<a id="change">)</a>
+
+        lr<a id="change"> = </a><a id="change">batch_data["lr"]</a>.to(config.device, non_blocking=True)
+        hr<a id="change"> = batch_data["hr"]</a>.to(config.device, non_blocking=True)
+
+        &#47&#47 Initialize the generator gradient
+        <a id="change">model.zero_grad()</a>
+
+        &#47&#47 Mixed precision training
+        <a id="change">with </a>amp<a id="change">.autocast():
+            </a>sr = model(lr)
+            loss = pixel_criterion(sr, hr)
+
+        &#47&#47 Gradient zoom
+        <a id="change">scaler.scale(loss).backward()</a>
+        scaler.unscale_(optimizer)
+        &#47&#47 Update generator weight
+        <a id="change">scaler.step(</a>optimizer<a id="change">)</a>
+        <a id="change">scaler.update()</a>
+
+        &#47&#47 measure accuracy and record loss
+        psnr<a id="change"> = </a>10. * torch.log10(1. / psnr_criterion(sr, hr))
+        <a id="change">losses.update(</a>loss.item(), lr.size(0)<a id="change">)</a>
+        <a id="change">psnres.update(</a>psnr.item(), lr.size(0)<a id="change">)</a>
+
+        &#47&#47 measure elapsed time
+        <a id="change">batch_time.update(</a>time.time() - end<a id="change">)</a>
+        end<a id="change"> = </a>time.time()
+
+        &#47&#47 Record training log information
+        <a id="change">if batch_index % config.print_frequency == 0</a>:
+            &#47&#47 Writer Loss to file
+            <a id="change">writer.add_scalar(</a>"Train/Loss", loss.item(), batch_index + epoch * batches + 1<a id="change">)</a>
+            progress.display(batch_index)
+
+        &#47&#47 Preload the next batch of data
+        batch_data<a id="change"> = </a><a id="change">train_prefetcher.next()</a>
+
+        &#47&#47 After a batch of data is calculated, add 1 to the number of batches
+        batch_index<a id="change"> += </a>1
+
+
+def validate(model, valid_prefetcher, psnr_criterion, epoch, writer, mode) -&gt; float:</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lornatang/srgan-pytorch/commit/231bd74d21d7f532fd746f4a1cb8fb3bc008c933#diff-e654c2e7420a4ea31af0ee350621a8dabfd9ce87571c367a37e621a3f083d92fL135' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 51916424</div><div id='project'> Project Name: lornatang/srgan-pytorch</div><div id='commit'> Commit Name: 231bd74d21d7f532fd746f4a1cb8fb3bc008c933</div><div id='time'> Time: 2022-03-03</div><div id='author'> Author: liuchangyu1111@gmail.com</div><div id='file'> File Name: train_srresnet.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train(8)</div><div id='n_method'> N Method Name: train(8)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: train_srresnet.py</div><div id='n_file'> N File Name: train_srresnet.py</div><div id='m_start'> M Start Line: 149</div><div id='m_end'> M End Line: 184</div><div id='n_start'> N Start Line: 174</div><div id='n_end'> N End Line: 224</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    model.train()
+
+    end = time.time()
+    <a id="change">for index</a>, (lr, hr) in <a id="change">enumerate(</a>train_dataloader<a id="change">)</a><a id="change">:
+        &#47&#47 measure data loading time
+        data_time.update(</a>time.time() - end<a id="change">)</a>
+
+        lr<a id="change"> = </a>lr.to(config.device, non_blocking=True)
+        hr<a id="change"> = </a>hr.to(config.device, non_blocking=True)
+
+        &#47&#47 Initialize the generator gradient
+        <a id="change">model.zero_grad()</a>
+
+        &#47&#47 Mixed precision training
+        <a id="change">with </a>amp<a id="change">.autocast():
+            </a>sr = model(lr)
+            loss = pixel_criterion(sr, hr)
+
+        &#47&#47 Gradient zoom + gradient clipping
+        <a id="change">scaler.scale(loss).backward()</a>
+        scaler.unscale_(optimizer)
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=config.model_clip_gradient / optimizer.param_groups[0]["lr"], norm_type=2.0)
+        &#47&#47 Update generator weight
+        <a id="change">scaler.step(</a>optimizer<a id="change">)</a>
+        <a id="change">scaler.update()</a>
+
+        &#47&#47 measure accuracy and record loss
+        psnr<a id="change"> = </a>10. * torch.log10(1. / psnr_criterion(sr, hr))
+        <a id="change">losses.update(</a>loss.item(), lr.size(0)<a id="change">)</a>
+        <a id="change">psnres.update(</a>psnr.item(), lr.size(0)<a id="change">)</a>
+
+        &#47&#47 measure elapsed time
+        <a id="change">batch_time.update(</a>time.time() - end<a id="change">)</a>
+        end<a id="change"> = </a>time.time()
+
+        &#47&#47 Writer Loss to file
+        <a id="change">writer.add_scalar(</a>"Train/Loss", loss.item(), index + epoch * batches + 1<a id="change">)</a>
+        <a id="change">if index % config.print_frequency == 0 and index != 0</a>:
+            progress.display(index)
+
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    &#47&#47 Put the generator in training mode
+    model.train()
+
+    batch_index<a id="change"> = 0</a>
+
+    &#47&#47 Calculate the time it takes to test a batch of data
+    end = time.time()
+    &#47&#47 enable preload
+    <a id="change">train_prefetcher.reset()</a>
+    <a id="change">batch_data = </a><a id="change">train_prefetcher.next()</a>
+    <a id="change">while </a><a id="change">batch_data is not None:
+        &#47&#47 measure data loading time
+        data_time.update(</a>time.time() - end<a id="change">)</a>
+
+        lr<a id="change"> = </a><a id="change">batch_data["lr"]</a>.to(config.device, non_blocking=True)
+        hr<a id="change"> = batch_data["hr"]</a>.to(config.device, non_blocking=True)
+
+        &#47&#47 Initialize the generator gradient
+        <a id="change">model.zero_grad()</a>
+
+        &#47&#47 Mixed precision training
+        <a id="change">with </a>amp<a id="change">.autocast():
+            </a>sr = model(lr)
+            loss = pixel_criterion(sr, hr)
+
+        &#47&#47 Gradient zoom + gradient clipping
+        <a id="change">scaler.scale(loss).backward()</a>
+        scaler.unscale_(optimizer)
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=config.clip_gradient / optimizer.param_groups[0]["lr"], norm_type=2.0)
+        &#47&#47 Update generator weight
+        <a id="change">scaler.step(</a>optimizer<a id="change">)</a>
+        <a id="change">scaler.update()</a>
+
+        &#47&#47 measure accuracy and record loss
+        psnr<a id="change"> = </a>10. * torch.log10(1. / psnr_criterion(sr, hr))
+        <a id="change">losses.update(</a>loss.item(), lr.size(0)<a id="change">)</a>
+        <a id="change">psnres.update(</a>psnr.item(), lr.size(0)<a id="change">)</a>
+
+        &#47&#47 measure elapsed time
+        <a id="change">batch_time.update(</a>time.time() - end<a id="change">)</a>
+        end<a id="change"> = </a>time.time()
+
+        &#47&#47 Record training log information
+        <a id="change">if batch_index % config.print_frequency == 0</a>:
+            &#47&#47 Writer Loss to file
+            <a id="change">writer.add_scalar(</a>"Train/Loss", loss.item(), batch_index + epoch * batches + 1<a id="change">)</a>
+            progress.display(batch_index)
+
+        &#47&#47 Preload the next batch of data
+        batch_data<a id="change"> = </a><a id="change">train_prefetcher.next()</a>
+
+        &#47&#47 After a batch of data is calculated, add 1 to the number of batches
+        batch_index<a id="change"> += </a>1
+
+
+def validate(model, valid_prefetcher, psnr_criterion, epoch, writer, mode) -&gt; float:</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lornatang/vdsr-pytorch/commit/f4a1408d6ca645166d7b38d98ce4befabba63d08#diff-ed183d67207df065a11e1289f19d34cc2abbc5448dea952683cfe9728c342b95L154' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 51916441</div><div id='project'> Project Name: lornatang/vdsr-pytorch</div><div id='commit'> Commit Name: f4a1408d6ca645166d7b38d98ce4befabba63d08</div><div id='time'> Time: 2022-02-23</div><div id='author'> Author: liuchangyu1111@gmail.com</div><div id='file'> File Name: train.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train(8)</div><div id='n_method'> N Method Name: train(8)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: train.py</div><div id='n_file'> N File Name: train.py</div><div id='m_start'> M Start Line: 168</div><div id='m_end'> M End Line: 205</div><div id='n_start'> N Start Line: 188</div><div id='n_end'> N End Line: 239</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    model.train()
+
+    end = time.time()
+    <a id="change">for index</a>, (lr, hr) in <a id="change">enumerate(</a>train_dataloader<a id="change">)</a><a id="change">:
+        &#47&#47 measure data loading time
+        data_time.update(</a>time.time() - end<a id="change">)</a>
+
+        lr<a id="change"> = </a>lr.to(config.device, non_blocking=True)
+        hr<a id="change"> = </a>hr.to(config.device, non_blocking=True)
+
+        &#47&#47 Initialize the generator gradient
+        <a id="change">model.zero_grad()</a>
+
+        &#47&#47 Mixed precision training
+        <a id="change">with </a>amp<a id="change">.autocast():
+            </a>sr = model(lr)
+            loss = pixel_criterion(sr, hr)
+
+        &#47&#47 Gradient zoom
+        <a id="change">scaler.scale(loss).backward()</a>
+        &#47&#47 Update generator weight
+        <a id="change">scaler.step(</a>optimizer<a id="change">)</a>
+        <a id="change">scaler.update()</a>
+
+        &#47&#47 measure accuracy and record loss
+        psnr<a id="change"> = </a>10. * torch.log10(1. / psnr_criterion(sr, hr))
+        <a id="change">losses.update(</a>loss.item(), lr.size(0)<a id="change">)</a>
+        <a id="change">psnres.update(</a>psnr.item(), lr.size(0)<a id="change">)</a>
+
+        &#47&#47 measure elapsed time
+        <a id="change">batch_time.update(</a>time.time() - end<a id="change">)</a>
+        end<a id="change"> = </a>time.time()
+
+        &#47&#47 Writer Loss to file
+        <a id="change">writer.add_scalar(</a>"Train/Loss", loss.item(), index + epoch * batches + 1<a id="change">)</a>
+        <a id="change">if index % config.print_frequency == 0 and index != 0</a>:
+            progress.display(index)
+
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    &#47&#47 Put the generator in training mode
+    model.train()
+
+    batch_index<a id="change"> = 0</a>
+
+    &#47&#47 Calculate the time it takes to test a batch of data
+    end = time.time()
+    &#47&#47 enable preload
+    <a id="change">train_prefetcher.reset()</a>
+    <a id="change">batch_data = </a><a id="change">train_prefetcher.next()</a>
+    <a id="change">while </a><a id="change">batch_data is not None:
+        &#47&#47 measure data loading time
+        </a><a id="change">data_time.update(</a>time.time() - end<a id="change">)</a>
+
+        lr<a id="change"> = </a><a id="change">batch_data["lr"]</a>.to(config.device, non_blocking=True)
+        hr<a id="change"> = batch_data["hr"]</a>.to(config.device, non_blocking=True)
+
+        &#47&#47 Initialize the generator gradient
+        <a id="change">model.zero_grad()</a>
+
+        &#47&#47 Mixed precision training
+        <a id="change">with </a>amp<a id="change">.autocast():
+            </a>sr = model(lr)
+            loss = pixel_criterion(sr, hr)
+
+        &#47&#47 Gradient zoom
+        <a id="change">scaler.scale(loss).backward()</a>
+        &#47&#47 Update generator weight
+        <a id="change">scaler.step(</a>optimizer<a id="change">)</a>
+        <a id="change">scaler.update()</a>
+
+        &#47&#47 measure accuracy and record loss
+        psnr<a id="change"> = </a>10. * torch.log10(1. / psnr_criterion(sr, hr))
+        <a id="change">losses.update(</a>loss.item(), lr.size(0)<a id="change">)</a>
+        <a id="change">psnres.update(</a>psnr.item(), lr.size(0)<a id="change">)</a>
+
+        &#47&#47 measure elapsed time
+        <a id="change">batch_time.update(</a>time.time() - end<a id="change">)</a>
+        end<a id="change"> = </a>time.time()
+
+        &#47&#47 Record training log information
+        <a id="change">if batch_index % config.print_frequency == 0</a>:
+            &#47&#47 Writer Loss to file
+            <a id="change">writer.add_scalar(</a>"Train/Loss", loss.item(), batch_index + epoch * batches + 1<a id="change">)</a>
+            progress.display(batch_index)
+
+        &#47&#47 Preload the next batch of data
+        batch_data<a id="change"> = </a><a id="change">train_prefetcher.next()</a>
+
+        &#47&#47 After a batch of data is calculated, add 1 to the number of batches
+        batch_index<a id="change"> += </a>1
+
+
+def validate(model, valid_prefetcher, psnr_criterion, epoch, writer, mode) -&gt; float:</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lornatang/espcn-pytorch/commit/2310c937bc7d6c942e7df614a1e5947888e3cdd2#diff-ed183d67207df065a11e1289f19d34cc2abbc5448dea952683cfe9728c342b95L154' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 51916443</div><div id='project'> Project Name: lornatang/espcn-pytorch</div><div id='commit'> Commit Name: 2310c937bc7d6c942e7df614a1e5947888e3cdd2</div><div id='time'> Time: 2022-02-23</div><div id='author'> Author: liuchangyu1111@gmail.com</div><div id='file'> File Name: train.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train(8)</div><div id='n_method'> N Method Name: train(8)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: train.py</div><div id='n_file'> N File Name: train.py</div><div id='m_start'> M Start Line: 168</div><div id='m_end'> M End Line: 203</div><div id='n_start'> N Start Line: 188</div><div id='n_end'> N End Line: 237</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    model.train()
+
+    end = time.time()
+    <a id="change">for index</a>, (lr, hr) in <a id="change">enumerate(</a>train_dataloader<a id="change">)</a><a id="change">:
+        &#47&#47 measure data loading time
+        data_time.update(</a>time.time() - end<a id="change">)</a>
+
+        lr<a id="change"> = </a>lr.to(config.device, non_blocking=True)
+        hr<a id="change"> = </a>hr.to(config.device, non_blocking=True)
+
+        &#47&#47 Initialize the generator gradient
+        <a id="change">model.zero_grad()</a>
+
+        &#47&#47 Mixed precision training
+        <a id="change">with </a>amp<a id="change">.autocast():
+            </a>sr = model(lr)
+            loss = pixel_criterion(sr, hr)
+
+        &#47&#47 Gradient zoom
+        <a id="change">scaler.scale(loss).backward()</a>
+        &#47&#47 Update generator weight
+        <a id="change">scaler.step(</a>optimizer<a id="change">)</a>
+        <a id="change">scaler.update()</a>
+
+        &#47&#47 measure accuracy and record loss
+        psnr<a id="change"> = </a>10. * torch.log10(1. / psnr_criterion(sr, hr))
+        <a id="change">losses.update(</a>loss.item(), lr.size(0)<a id="change">)</a>
+        <a id="change">psnres.update(</a>psnr.item(), lr.size(0)<a id="change">)</a>
+
+        &#47&#47 measure elapsed time
+        <a id="change">batch_time.update(</a>time.time() - end<a id="change">)</a>
+        end<a id="change"> = </a>time.time()
+
+        &#47&#47 Writer Loss to file
+        <a id="change">writer.add_scalar(</a>"Train/Loss", loss.item(), index + epoch * batches + 1<a id="change">)</a>
+        <a id="change">if index % config.print_frequency == 0 and index != 0</a>:
+            progress.display(index)
+
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    &#47&#47 Put the generator in training mode
+    model.train()
+
+    batch_index<a id="change"> = 0</a>
+
+    &#47&#47 Calculate the time it takes to test a batch of data
+    end = time.time()
+    &#47&#47 enable preload
+    <a id="change">train_prefetcher.reset()</a>
+    <a id="change">batch_data = </a><a id="change">train_prefetcher.next()</a>
+    <a id="change">while </a><a id="change">batch_data is not None:
+        &#47&#47 measure data loading time
+        data_time.update(</a>time.time() - end<a id="change">)</a>
+
+        lr<a id="change"> = </a><a id="change">batch_data["lr"]</a>.to(config.device, non_blocking=True)
+        hr<a id="change"> = batch_data["hr"]</a>.to(config.device, non_blocking=True)
+
+        &#47&#47 Initialize the generator gradient
+        <a id="change">model.zero_grad()</a>
+
+        &#47&#47 Mixed precision training
+        <a id="change">with </a>amp<a id="change">.autocast():
+            </a>sr = model(lr)
+            loss = pixel_criterion(sr, hr)
+
+        &#47&#47 Gradient zoom
+        <a id="change">scaler.scale(loss).backward()</a>
+        scaler.unscale_(optimizer)
+        &#47&#47 Update generator weight
+        <a id="change">scaler.step(</a>optimizer<a id="change">)</a>
+        <a id="change">scaler.update()</a>
+
+        &#47&#47 measure accuracy and record loss
+        psnr<a id="change"> = </a>10. * torch.log10(1. / psnr_criterion(sr, hr))
+        <a id="change">losses.update(</a>loss.item(), lr.size(0)<a id="change">)</a>
+        <a id="change">psnres.update(</a>psnr.item(), lr.size(0)<a id="change">)</a>
+
+        &#47&#47 measure elapsed time
+        <a id="change">batch_time.update(</a>time.time() - end<a id="change">)</a>
+        end<a id="change"> = </a>time.time()
+
+        &#47&#47 Record training log information
+        <a id="change">if batch_index % config.print_frequency == 0</a>:
+            &#47&#47 Writer Loss to file
+            <a id="change">writer.add_scalar(</a>"Train/Loss", loss.item(), batch_index + epoch * batches + 1<a id="change">)</a>
+            progress.display(batch_index)
+
+        &#47&#47 Preload the next batch of data
+        batch_data<a id="change"> = </a><a id="change">train_prefetcher.next()</a>
+
+        &#47&#47 After a batch of data is calculated, add 1 to the number of batches
+        batch_index<a id="change"> += </a>1
+
+
+def validate(model, valid_prefetcher, psnr_criterion, epoch, writer, mode) -&gt; float:</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lornatang/esrgan-pytorch/commit/087e0c9bc621989889918b52b7c0dba9485c5fd6#diff-f4329e1175710811d12324bbaab9881a31dff8276b3c7d45269651c3f66f2b77L151' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 51916432</div><div id='project'> Project Name: lornatang/esrgan-pytorch</div><div id='commit'> Commit Name: 087e0c9bc621989889918b52b7c0dba9485c5fd6</div><div id='time'> Time: 2022-03-06</div><div id='author'> Author: liuchangyu1111@gmail.com</div><div id='file'> File Name: train_rrdbnet.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train(8)</div><div id='n_method'> N Method Name: train(8)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: train_rrdbnet.py</div><div id='n_file'> N File Name: train_rrdbnet.py</div><div id='m_start'> M Start Line: 165</div><div id='m_end'> M End Line: 200</div><div id='n_start'> N Start Line: 185</div><div id='n_end'> N End Line: 235</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    model.train()
+
+    end = time.time()
+    <a id="change">for index</a>, (lr, hr) in <a id="change">enumerate(</a>train_dataloader<a id="change">)</a><a id="change">:
+        &#47&#47 measure data loading time
+        data_time.update(</a>time.time() - end<a id="change">)</a>
+
+        lr<a id="change"> = </a>lr.to(config.device, non_blocking=True)
+        hr<a id="change"> = </a>hr.to(config.device, non_blocking=True)
+
+        &#47&#47 Initialize the generator gradient
+        <a id="change">model.zero_grad()</a>
+
+        &#47&#47 Mixed precision training
+        <a id="change">with </a>amp<a id="change">.autocast():
+            </a>sr = model(lr)
+            loss = pixel_criterion(sr, hr)
+
+        &#47&#47 Gradient zoom
+        <a id="change">scaler.scale(loss).backward()</a>
+        &#47&#47 Update generator weight
+        <a id="change">scaler.step(</a>optimizer<a id="change">)</a>
+        <a id="change">scaler.update()</a>
+
+        &#47&#47 measure accuracy and record loss
+        psnr<a id="change"> = </a>10. * torch.log10(1. / psnr_criterion(sr, hr))
+        <a id="change">losses.update(</a>loss.item(), lr.size(0)<a id="change">)</a>
+        <a id="change">psnres.update(</a>psnr.item(), lr.size(0)<a id="change">)</a>
+
+        &#47&#47 measure elapsed time
+        <a id="change">batch_time.update(</a>time.time() - end<a id="change">)</a>
+        end<a id="change"> = </a>time.time()
+
+        &#47&#47 Writer Loss to file
+        <a id="change">writer.add_scalar(</a>"Train/Loss", loss.item(), index + epoch * batches + 1<a id="change">)</a>
+        <a id="change">if index % config.print_frequency == 0 and index != 0</a>:
+            progress.display(index)
+
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    &#47&#47 Put the generator in training mode
+    model.train()
+
+    batch_index<a id="change"> = 0</a>
+
+    &#47&#47 Calculate the time it takes to test a batch of data
+    end = time.time()
+    &#47&#47 enable preload
+    <a id="change">train_prefetcher.reset()</a>
+    <a id="change">batch_data = </a><a id="change">train_prefetcher.next()</a>
+    <a id="change">while </a><a id="change">batch_data is not None:
+        &#47&#47 measure data loading time
+        data_time.update(</a>time.time() - end<a id="change">)</a>
+
+        lr<a id="change"> = </a><a id="change">batch_data["lr"]</a>.to(config.device, non_blocking=True)
+        hr<a id="change"> = batch_data["hr"]</a>.to(config.device, non_blocking=True)
+
+        &#47&#47 Initialize the generator gradient
+        <a id="change">model.zero_grad()</a>
+
+        &#47&#47 Mixed precision training
+        <a id="change">with </a>amp<a id="change">.autocast():
+            </a>sr = model(lr)
+            loss = pixel_criterion(sr, hr)
+
+        &#47&#47 Gradient zoom
+        <a id="change">scaler.scale(loss).backward()</a>
+        &#47&#47 Update generator weight
+        <a id="change">scaler.step(</a>optimizer<a id="change">)</a>
+        <a id="change">scaler.update()</a>
+
+        &#47&#47 measure accuracy and record loss
+        psnr<a id="change"> = </a>10. * torch.log10(1. / psnr_criterion(sr, hr))
+        <a id="change">losses.update(</a>loss.item(), lr.size(0)<a id="change">)</a>
+        <a id="change">psnres.update(</a>psnr.item(), lr.size(0)<a id="change">)</a>
+
+        &#47&#47 measure elapsed time
+        <a id="change">batch_time.update(</a>time.time() - end<a id="change">)</a>
+        end<a id="change"> = </a>time.time()
+
+        &#47&#47 Record training log information
+        <a id="change">if batch_index % config.print_frequency == 0</a>:
+            &#47&#47 Writer Loss to file
+            <a id="change">writer.add_scalar(</a>"Train/Loss", loss.item(), batch_index + epoch * batches + 1<a id="change">)</a>
+            progress.display(batch_index)
+
+        &#47&#47 Preload the next batch of data
+        batch_data<a id="change"> = </a><a id="change">train_prefetcher.next()</a>
+
+        &#47&#47 After a batch of data is calculated, add 1 to the number of batches
+        batch_index<a id="change"> += </a>1
+
+
+def validate(model, valid_prefetcher, psnr_criterion, epoch, writer, mode) -&gt; float:</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lornatang/fsrcnn-pytorch/commit/4def63536e213b56d88a9475fb18b8f46d425a09#diff-ed183d67207df065a11e1289f19d34cc2abbc5448dea952683cfe9728c342b95L143' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 51916433</div><div id='project'> Project Name: lornatang/fsrcnn-pytorch</div><div id='commit'> Commit Name: 4def63536e213b56d88a9475fb18b8f46d425a09</div><div id='time'> Time: 2022-02-23</div><div id='author'> Author: liuchangyu1111@gmail.com</div><div id='file'> File Name: train.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train(8)</div><div id='n_method'> N Method Name: train(8)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: train.py</div><div id='n_file'> N File Name: train.py</div><div id='m_start'> M Start Line: 157</div><div id='m_end'> M End Line: 192</div><div id='n_start'> N Start Line: 179</div><div id='n_end'> N End Line: 228</div><BR>

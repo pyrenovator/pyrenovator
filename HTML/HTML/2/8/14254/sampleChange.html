@@ -1,0 +1,52 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            inputs, input_lengths, compute_targets, compute_target_lengths
+        )
+
+        loss<a id="change"> = </a>self.cal_loss(outputs, targets, output_lengths, target_lengths)
+
+        predicts = self.forward(inputs, input_lengths)
+        predicts = [self.text_process.int2text(sent) for sent in predicts]
+        targets = [self.text_process.int2text(sent) for sent in targets]
+
+        list_wer = torch.tensor(
+            [self.cal_wer(i, j).item() for i, j in zip(predicts, targets)]
+        )
+        wer<a id="change"> = </a><a id="change">torch.mean(</a>list_wer<a id="change">)</a>
+
+        if batch_idx % 100 == 0:
+            self.log_output(predicts[0], targets[0], wer)
+
+        self.log("val_loss", loss)
+        self.log("val_batch_wer", wer)
+
+        <a id="change">return </a>loss, wer
+
+    def test_step(self, batch, batch_idx):
+        (</code></pre><h3>After Change</h3><pre><code class='java'>
+    def validation_step(self, batch: Tensor, batch_idx: int):
+        inputs, input_lengths, targets, target_lengths = batch
+
+        targets_ctc = <a id="change">targets[:, 1:-1]</a>
+
+        outputs, output_lengths = self(inputs, input_lengths)
+
+        loss = self.criterion(
+            outputs.permute(1, 0, 2), targets_ctc, output_lengths, target_lengths
+        )
+
+        self.log("test loss", loss)
+
+        if batch_idx % self.log_idx == 0:
+            label_sequences, predict_sequences, wer = self.get_wer(
+                targets_ctc, inputs, input_lengths
+            )
+            self.log_output(predict_sequences[0], label_sequences[0], wer)
+            self.log("test wer", wer)
+
+        <a id="change">return </a>loss
+
+    def test_step(self, batch: Tensor, batch_idx: int):
+        inputs, input_lengths, targets, target_lengths = batch</code></pre>

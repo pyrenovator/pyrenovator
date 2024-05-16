@@ -1,0 +1,76 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+        scores_same_A = scores_same_A.view(-1, args.num_classes)
+        pred = scores_same_A.data.max(1)[1]  &#47&#47 get the index of the max log-probability
+        correct<a id="change"> += </a><a id="change">pred.eq(targets_A.data).cpu().sum()</a>
+        scores_fake_A = scores_fake_A.view(-1, args.num_classes)
+        pred = scores_fake_A.data.max(1)[1]  &#47&#47 get the index of the max log-probability
+        correct += pred.eq(targets_B.data).cpu().sum()
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    netD_B.train()
+    netGaze.train()
+    pred_all = np.array([], dtype=&quotint64&quot)
+    target_all = <a id="change">np.array(</a>[]<a id="change">, dtype=&quotint64&quot)</a>
+    for b_idx, batch in enumerate(train_loader):
+        &#47&#47 Set model input
+        real_A = Variable(input_A.copy_(batch[&quotA&quot])) &#47&#47 (B, C, H, W)
+        real_B = Variable(input_B.copy_(batch[&quotB&quot])) &#47&#47 (B, C, H, W)
+        targets_A, targets_B = batch[&quottargets_A&quot], batch[&quottargets_B&quot]
+        if args.cuda:
+            targets_A, targets_B = targets_A.cuda(), targets_B.cuda()
+
+        &#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47 Generators A2B, B2A and GazeNet &#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47
+        optimizer_G.zero_grad()
+        optimizer_gaze.zero_grad()
+
+        &#47&#47 Identity loss
+        &#47&#47 G_A2B(B) should equal B if real B is fed
+        same_B = netG_A2B(real_B)
+        loss_identity_B = criterion_identity(same_B, real_B)*5.0
+        &#47&#47 G_B2A(A) should equal A if real A is fed
+        same_A = netG_B2A(real_A)
+        loss_identity_A = criterion_identity(same_A, real_A)*5.0
+
+        &#47&#47 GAN loss
+        fake_B = netG_A2B(real_A)
+        pred_fake = netD_B(fake_B)
+        loss_GAN_A2B = criterion_GAN(pred_fake, target_real.expand_as(pred_fake))
+
+        fake_A = netG_B2A(real_B)
+        pred_fake = netD_A(fake_A)
+        loss_GAN_B2A = criterion_GAN(pred_fake, target_real.expand_as(pred_fake))
+
+        &#47&#47 Cycle loss
+        recovered_A = netG_B2A(fake_B)
+        loss_cycle_ABA = criterion_cycle(recovered_A, real_A)*10.0
+
+        recovered_B = netG_A2B(fake_A)
+        loss_cycle_BAB = criterion_cycle(recovered_B, real_B)*10.0
+        
+        &#47&#47 Gaze consistency loss
+        real_A_gaze = gan2gaze(real_A, val_loader.dataset.mean[0:args.nc], val_loader.dataset.std[0:args.nc])
+        _, masks_real_A = netGaze(real_A_gaze.repeat(1, int(3 / args.nc), 1, 1))
+        recovered_A_gaze = gan2gaze(recovered_A, val_loader.dataset.mean[0:args.nc], val_loader.dataset.std[0:args.nc])
+        _, masks_rec_A = netGaze(recovered_A_gaze.repeat(1, int(3 / args.nc), 1, 1))
+        loss_gaze = criterion_gaze(masks_real_A, masks_rec_A)
+
+        &#47&#47 compute the train accuracy of (netB2A--&gt;netGaze) model
+        same_A_gaze = gan2gaze(same_A, val_loader.dataset.mean[0:args.nc], val_loader.dataset.std[0:args.nc])
+        scores_same_A, _ = netGaze(same_A_gaze.repeat(1, int(3 / args.nc), 1, 1))
+        fake_A_gaze = gan2gaze(fake_A, val_loader.dataset.mean[0:args.nc], val_loader.dataset.std[0:args.nc])
+        scores_fake_A, _ = netGaze(fake_A_gaze.repeat(1, int(3 / args.nc), 1, 1))
+
+        scores_same_A = scores_same_A.view(-1, args.num_classes)
+        pred = scores_same_A.data.max(1)[1]  &#47&#47 get the index of the max log-probability
+        pred_all   = np.append(pred_all, pred.cpu().numpy())
+        target_all = np.append(target_all, targets_A.cpu().numpy())
+        scores_fake_A = scores_fake_A.view(-1, args.num_classes)
+        pred = scores_fake_A.data.max(1)[1]  &#47&#47 get the index of the max log-probability
+        pred_all   = np.append(pred_all, pred.cpu().numpy())
+        target_all<a id="change"> = </a>np.append(target_all, targets_B.cpu().numpy())
+
+        &#47&#47 Total loss for Generators and GazeNet
+        loss_G = loss_identity_A + loss_identity_B + loss_GAN_A2B + loss_GAN_B2A + loss_cycle_ABA + loss_cycle_BAB + loss_gaze</code></pre>

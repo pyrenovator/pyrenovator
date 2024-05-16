@@ -1,0 +1,33 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+      _, labels = next(test_iterator)  &#47&#47 pytype: disable=attribute-error
+      logits = logits_dataset[:, (step*batch_size):((step+1)*batch_size)]
+      labels = tf.cast(tf.reshape(labels, [-1]), tf.int32)
+      negative_log_likelihood = <a id="change">um.ensemble_cross_entropy(labels</a>, <a id="change">logits</a><a id="change">)</a>
+      per_probs = tf.nn.softmax(logits)
+      probs = tf.reduce_mean(per_probs, axis=0)
+      if name == &quotclean&quot:
+        gibbs_ce = <a id="change">um.gibbs_cross_entropy(labels</a>, <a id="change">logits</a><a id="change">)</a>
+        metrics[&quottest/negative_log_likelihood&quot].update_state(
+            negative_log_likelihood)
+        metrics[&quottest/gibbs_cross_entropy&quot].update_state(gibbs_ce)
+        metrics[&quottest/accuracy&quot].update_state(labels, probs)</code></pre><h3>After Change</h3><pre><code class='java'>
+      _, labels = next(test_iterator)  &#47&#47 pytype: disable=attribute-error
+      logits = logits_dataset[:, (step*batch_size):((step+1)*batch_size)]
+      labels = tf.cast(tf.reshape(labels, [-1]), tf.int32)
+      <a id="change">negative_log_likelihood_metric</a> = <a id="change">rm.metrics.EnsembleCrossEntropy()</a>
+      <a id="change">negative_log_likelihood_metric.add_batch(logits</a><a id="change">, labels=labels)</a>
+      negative_log_likelihood<a id="change"> = </a><a id="change">list(
+          negative_log_likelihood_metric.result().values())[0]</a>
+      per_probs = tf.nn.softmax(logits)
+      probs = tf.reduce_mean(per_probs, axis=0)
+      if name == &quotclean&quot:
+        <a id="change">gibbs_ce_metric</a> = <a id="change">rm.metrics.GibbsCrossEntropy()</a>
+        <a id="change">gibbs_ce_metric.add_batch(logits</a><a id="change">, labels=labels)</a>
+        gibbs_ce<a id="change"> = </a><a id="change">list(gibbs_ce_metric.result().values())[0]</a>
+        metrics[&quottest/negative_log_likelihood&quot].update_state(
+            negative_log_likelihood)
+        metrics[&quottest/gibbs_cross_entropy&quot].update_state(gibbs_ce)
+        metrics[&quottest/accuracy&quot].update_state(labels, probs)</code></pre>

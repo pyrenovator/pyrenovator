@@ -1,0 +1,135 @@
+<html><h3>Pattern ID :3464
+</h3><img src='13380125.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+    outputDir_split = [outputDir]
+    if "," in outputDir:
+        outputDir_split = <a id="change">outputDir.split(","</a><a id="change">)</a>
+
+    averaged_probs_list = []
+    for current_outputDir in outputDir_split:
+        fold_dirs = []
+        if n_folds &gt; 1:
+            directories = sorted(os.listdir(current_outputDir))
+            for d in directories:
+                if d.isdigit():
+                    fold_dirs.append(os.path.join(current_outputDir, d, ""))
+        else:
+            fold_dirs = [current_outputDir]
+
+        &#47&#47 this is for the case where inference is happening using a single model
+        if len(fold_dirs) == 0:
+            fold_dirs = [current_outputDir]
+
+        probs_list = []
+        class_list = None
+        is_classification = parameters["problem_type"] == "classification"
+
+        &#47&#47 initialize model type for processing: if not defined, default to torch
+        if not ("type" in parameters["model"]):
+            parameters["model"]["type"] = "torch"
+
+        for fold_dir in fold_dirs:
+            parameters["current_fold_dir"] = fold_dir
+            inference_loop(
+                inferenceDataFromPickle=inferenceData_full,
+                outputDir_or_optimizedModel=fold_dir,
+                device=device,
+                parameters=parameters,
+            )
+
+            if is_classification:
+                logits_dir = os.path.join(fold_dir, "logits.csv")
+                is_logits_dir_exist = os.path.isfile(logits_dir)
+
+                if is_logits_dir_exist:
+                    &#47&#47 fold_logits = np.genfromtxt(logits_dir, delimiter=",")
+                    class_list = [str(c) for c in parameters["model"]["class_list"]]
+                    fold_logits = pd.read_csv(logits_dir)[class_list].values
+                    fold_logits = torch.from_numpy(fold_logits)
+                    fold_probs = F.softmax(fold_logits, dim=1)
+                    probs_list.append(fold_probs)
+
+        if is_classification and (n_folds &gt; 1):
+            probs_list = torch.stack(probs_list)
+            averaged_probs_list.append(torch.mean(probs_list, 0))
+
+    &#47&#47 this logic should be changed if we want to do multi-fold inference for histo images
+    if (parameters["modality"] == "rad") and averaged_probs_list and is_classification:
+        columns = ["SubjectID", "PredictedClass"] + parameters["model"]["class_list"]
+        averaged_probs_df = pd.DataFrame(columns=columns)
+        averaged_probs_df.SubjectID = dataframe[0]
+
+        averaged_probs_across_models = torch.stack(averaged_probs_list)
+        averaged_probs_across_models = torch.mean(
+            averaged_probs_across_models, 0
+        ).numpy()
+        averaged_probs_df[class_list] = averaged_probs_across_models
+        averaged_probs_df.PredictedClass = [
+            class_list[a] for a in averaged_probs_across_models.argmax(1)
+        ]
+        filepath_to_save = os.path.join(
+            outputDir_split[0], "final_preds_and_avg_probs.csv"
+        )
+        if os.path.isfile(filepath_to_save):
+            filepath_to_save = os.path.join(
+                <a id="change">outputDir_split[0]</a>,
+                "final_preds_and_avg_probs" + get_unique_timestamp() + ".csv",
+            )
+        averaged_probs_df.to_csv(filepath_to_save, index=False)</code></pre><h3>After Change</h3><pre><code class='java'>
+    inferenceData_full = dataframe
+
+    &#47&#47 if outputDir is not provided, create a new directory with a unique timestamp
+    <a id="change">if outputDir is None</a>:
+        outputDir = os.path.join(modelDir, get_unique_timestamp())
+        <a id="change">print(
+            "Output directory not provided, creating a new directory with a unique timestamp: "</a>,
+            outputDir<a id="change">,
+        )</a>
+    Path.mkdir(outputDir, parents=True, exist_ok=True)
+
+    &#47&#47 &#47&#47 initialize parameters for inference
+    if not ("weights" in parameters):</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 5</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/cbica/gandlf/commit/cad321e8b4d3e8f6c848e5ee5849991ea11bb09e#diff-b0fc28d50800ef1e9adcef4146932f3972698974428c3e9d118e2bd6e9fa59c8L11' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 13380125</div><div id='project'> Project Name: cbica/gandlf</div><div id='commit'> Commit Name: cad321e8b4d3e8f6c848e5ee5849991ea11bb09e</div><div id='time'> Time: 2023-02-08</div><div id='author'> Author: sarthak.pati@hotmail.com</div><div id='file'> File Name: GANDLF/inference_manager.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: InferenceManager(5)</div><div id='n_method'> N Method Name: InferenceManager(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: GANDLF/inference_manager.py</div><div id='n_file'> N File Name: GANDLF/inference_manager.py</div><div id='m_start'> M Start Line: 25</div><div id='m_end'> M End Line: 96</div><div id='n_start'> N Start Line: 11</div><div id='n_end'> N End Line: 115</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            &#47&#47 sample.filepath
+            path = sample.filepath
+            im = cv2.imread(path)
+            tag = <a id="change">path.split(os.path.sep)[-1].split(".")[
+                0
+            ]</a>  &#47&#47 i.e.: /path/to/some.jpg --&gt; some.jpg --&gt; some
+            &#47&#47 print(tag)
+            &#47&#47 VCM working-group scaling with ffmpeg?
+            bpp, im = enc_dec.BGR(im, tag=tag)</code></pre><h3>After Change</h3><pre><code class='java'>
+            bpp, im = enc_dec.BGR(im, tag=tag)
+
+            if p.checkmode: &#47&#47 just report which bitstreams exist in the cache
+                <a id="change">if bpp == 0</a>:
+                    pass
+                else:
+                    check_c += 1
+                    <a id="change">print(</a>check_c, <a id="change">"/"</a>, sample.id, "/", sample.open_images_id, "/", path<a id="change">)</a>
+                continue
+
+            if p.progress &gt; 0 and ((cc % p.progress) == 0):
+                print("sample: ", cc, "/", len(dataset), "tag:", tag)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/interdigitalinc/compressai-vision/commit/e5209f0dfc95dc6e10ac2382b432fa8047eba21c#diff-6652b141c04ca3246c74bc33f5598a2506696abed1c30dc5b1d112b5f5b6140eL35' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 13380127</div><div id='project'> Project Name: interdigitalinc/compressai-vision</div><div id='commit'> Commit Name: e5209f0dfc95dc6e10ac2382b432fa8047eba21c</div><div id='time'> Time: 2022-09-15</div><div id='author'> Author: sampsa.riikonen@iki.fi</div><div id='file'> File Name: compressai_vision/cli/vtm.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(1)</div><div id='n_method'> N Method Name: main(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: compressai_vision/cli/vtm.py</div><div id='n_file'> N File Name: compressai_vision/cli/vtm.py</div><div id='m_start'> M Start Line: 163</div><div id='m_end'> M End Line: 167</div><div id='n_start'> N Start Line: 121</div><div id='n_end'> N End Line: 198</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 sample.filepath
+        path = sample.filepath
+        im = cv2.imread(path)
+        tag = <a id="change">path.split(os.path.sep)[-1].split(".")[
+            0
+        ]</a>  &#47&#47 i.e.: /path/to/some.jpg --&gt; some.jpg --&gt; some
+        &#47&#47 print(tag)
+        if encoder_decoder is not None:
+            &#47&#47 before using detector, crunch through</code></pre><h3>After Change</h3><pre><code class='java'>
+            bpp, im = encoder_decoder.BGR(
+                im, tag=tag
+            )  &#47&#47 include a tag for cases where EncoderDecoder uses caching
+            <a id="change">if bpp &lt; 0</a>:
+                &#47&#47 there&quots something wrong with the encoder/decoder process
+                &#47&#47 say, corrupt data from the VTMEncode bitstream etc.
+                <a id="change">print("EncoderDecoder returned error: will abort"</a><a id="change">)</a>
+                return -1
+            bpp_sum += bpp
+        res = predictor(im)
+        predictions = detectron251(</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/interdigitalinc/compressai-vision/commit/faddf7c84fed3094f05adec6084d4fccc131da55#diff-92593d520c1939b458b97b1f9668718fcea216c504ab742964ab19ce16470977L43' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 13380132</div><div id='project'> Project Name: interdigitalinc/compressai-vision</div><div id='commit'> Commit Name: faddf7c84fed3094f05adec6084d4fccc131da55</div><div id='time'> Time: 2022-09-16</div><div id='author'> Author: sampsa.riikonen@iki.fi</div><div id='file'> File Name: compressai_vision/evaluation/fo/predict.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: annexPredictions(7)</div><div id='n_method'> N Method Name: annexPredictions(7)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: compressai_vision/evaluation/fo/predict.py</div><div id='n_file'> N File Name: compressai_vision/evaluation/fo/predict.py</div><div id='m_start'> M Start Line: 97</div><div id='m_end'> M End Line: 101</div><div id='n_start'> N Start Line: 94</div><div id='n_end'> N End Line: 120</div><BR>

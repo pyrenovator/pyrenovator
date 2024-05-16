@@ -1,0 +1,57 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        td_error = td_target - q_pred
+        critic_loss += td_error ** 2
+    critic_loss *= (
+        0.5 * backup_weights * replay_dict["imp_weights"] * (<a id="change">1.0</a><a id="change"> / </a><a id="change">len(</a>agent.critics<a id="change">)</a>)
+    )
+    critic_loss = critic_loss.mean()
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    logs = {}
+
+    critic_loss = 0.0
+    <a id="change">for </a>i in range(agent.ensemble_size)<a id="change">:
+        </a>replay_dict = lu.sample_move_and_augment(
+            buffer,
+            batch_size,
+            augmenter,
+            aug_mix,
+            per=per,
+        )
+
+        td_target = lu.compute_td_targets(
+            logs=logs,
+            replay_dict=replay_dict,
+            agent=agent,
+            target_agent=target_agent,
+            log_alphas=log_alphas,
+            ensemble_idx=i,
+            ensemble_n=target_critic_ensemble_n,
+            pop=pop,
+            gamma=gamma,
+            discrete=discrete,
+        )
+
+        backup_weights = lu.compute_backup_weights(
+            logs=logs,
+            replay_dict=replay_dict,
+            agent=agent,
+            target_agent=target_agent,
+            weight_type=weight_type,
+            weight_temp=weighted_bellman_temp,
+            batch_size=batch_size,
+            discrete=discrete,
+        )
+
+        o, a, *_ = replay_dict["primary_batch"]
+        s_rep = agent.encoder(o)
+        if discrete:
+            q_preds<a id="change"> = </a><a id="change">agent.critics[i](</a>s_rep<a id="change">, subset=None, return_min=False)</a>
+        else:
+            q_preds = <a id="change">agent.critics[i](</a>s_rep, a<a id="change">, subset=None, return_min=False)</a>
+        for q_pred in q_preds:
+            if discrete:
+                q_pred = q_pred(s_rep).gather(1, a.long())
+            if agent.popart[i] and pop:</code></pre>

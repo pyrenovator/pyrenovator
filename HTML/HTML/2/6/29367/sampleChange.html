@@ -1,0 +1,43 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    output_folder = os.path.join(dataset_cfg[&quotOUT_PATH&quot], &quotmodels&quot)
+    os.makedirs(output_folder, exist_ok=True)
+
+    train_dataloader, val_dataloader, node_feat, labels = <a id="change">get_dataloader(</a>dataset_cfg, graph_data<a id="change">)</a>
+    num_train_optimization_steps = (int(len(train_dataloader) + dataset_cfg[&quotGRADIENT_ACCUMULATION_STEPS&quot] - 1)
+                                    / dataset_cfg[&quotGRADIENT_ACCUMULATION_STEPS&quot]) * dataset_cfg[&quotEPOCHS&quot]
+
+    model = init_model(model_cfg, device)</code></pre><h3>After Change</h3><pre><code class='java'>
+    graph, labels, train_nid, val_nid, test_nid, node_feats = graph_data
+    graph = dgl.remove_self_loop(graph)
+
+    val_dataloader<a id="change"> = </a><a id="change">get_dataloader(dataset_cfg</a>, graph, val_nid<a id="change">, drop=False)</a>
+
+    train_num = math.ceil(len(train_nid) / dataset_cfg[&quotBATCH_SIZE&quot])
+    num_train_optimization_steps = (int(train_num + dataset_cfg[&quotGRADIENT_ACCUMULATION_STEPS&quot] - 1)
+                                    / dataset_cfg[&quotGRADIENT_ACCUMULATION_STEPS&quot]) * dataset_cfg[&quotEPOCHS&quot]
+
+    model = init_model(model_cfg, device)
+    logging.info(&quotModel = %s&quot, str(model))
+    logging.info(&quotModel config = %s&quot, str(dict(model_cfg)))
+    logging.info(&quotDataset config = %s&quot, str(dict(dataset_cfg)))
+    logging.info(&quotOptimizer config = %s&quot, str(dict(optimizer_cfg)))
+    logging.info(&quotCriterion config = %s&quot, str(dict(criterion_cfg)))
+    logging.info(&quotTraining parameters = %d&quot, sum(p.numel() for p in model.parameters() if p.requires_grad))
+    logging.info(&quotModel parameters = %d&quot, sum(p.numel() for p in model.parameters()))
+    logging.info(&quotNum steps = %d&quot, num_train_optimization_steps * dataset_cfg[&quotGRADIENT_ACCUMULATION_STEPS&quot])
+
+    optimizer = prep_optimizer(optimizer_cfg, model, num_train_optimization_steps)
+    criterion = prep_criterion(criterion_cfg, device)
+
+    global_step = 0
+    best_record = {&quotepoch&quot: -1, &quottrain loss&quot: -1, &quottrain acc&quot: 0.0, &quotval loss&quot: -1, &quotval acc&quot: 0.0}
+    
+    for epoch in range(dataset_cfg[&quotEPOCHS&quot]):
+        train_dataloader<a id="change"> = </a><a id="change">get_dataloader(dataset_cfg</a>, graph, train_nid<a id="change">, drop=True)</a>
+
+        tr_loss, tr_acc, global_step = train_epoch(epoch, model, train_dataloader, dataset_cfg, node_feats, labels,
+                                                   optimizer, criterion, device, global_step)
+        logging.info(&quotTrain Epoch %d/%s Finished | Train Loss: %f | Train Acc: %f&quot, epoch + 1,</code></pre>

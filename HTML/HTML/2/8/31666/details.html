@@ -1,0 +1,82 @@
+<html><h3>Pattern ID :31666
+</h3><img src='92386689.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        :param bn_op: Batchnorm op to search for corresponding assign_moving_avg_1 op
+        :return: assign_moving_avg_1 corresponding with the bn op, or None if it does not exist.
+        
+        <a id="change">assert </a>bn_op.type in [&quotFusedBatchNormV3&quot, &quotFusedBatchNorm&quot, &quotIdentity&quot]
+        assert len(bn_op.outputs) == 6 or len(bn_op.outputs) == 5 or len(bn_op.outputs) == 1
+        assign_moving_avg_op = None
+        if bn_op.type in &quotIdentity&quot:</code></pre><h3>After Change</h3><pre><code class='java'>
+               or (bn_op.type == &quotIdentity&quot and len(bn_op.outputs) == 1)
+
+        assign_moving_avg_op = None
+        <a id="change">if </a>bn_op.type in &quotIdentity&quot:
+            if_op = bn_op.inputs[0].op
+            <a id="change">assert </a>if_op.type == &quotIf&quot
+            identity_2_op = if_op.outputs[2].consumers()[0]
+            <a id="change">assert </a>identity_2_op.type == &quotIdentity&quot
+            sub_op<a id="change"> = </a><a id="change">identity_2_op.outputs[0].consumers()</a>[0]
+            assert sub_op.type == &quotSub&quot
+            mul_op = sub_op.outputs[0].consumers()[0]
+            <a id="change">assert </a>mul_op.type == &quotMul&quot
+            assign_moving_avg_op<a id="change"> = </a>mul_op.outputs[0].consumers()[0]
+            assert assign_moving_avg_op.type in [&quotAssignSub&quot, &quotAssignSubVariableOp&quot]
+        elif bn_op.outputs[2].consumers():
+            child_op = bn_op.outputs[2].consumers()[0]</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 8</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/quic/aimet/commit/191496aa99204d35e2982ce18f41c67c4adaa29b#diff-4d4c6b2b283172f6b18adb34c493d4a8c54e3dd52877eabf1542f231dd4f0518L763' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 92386689</div><div id='project'> Project Name: quic/aimet</div><div id='commit'> Commit Name: 191496aa99204d35e2982ce18f41c67c4adaa29b</div><div id='time'> Time: 2022-10-25</div><div id='author'> Author: quic_kyuykim@quicinc.com</div><div id='file'> File Name: TrainingExtensions/tensorflow/src/python/aimet_tensorflow/utils/op/fusedbatchnorm.py</div><div id='m_class'> M Class Name: BNUtils</div><div id='n_method'> N Class Name: BNUtils</div><div id='m_method'> M Method Name: get_assign_moving_avg_1_op(1)</div><div id='n_method'> N Method Name: get_assign_moving_avg_1_op(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: TrainingExtensions/tensorflow/src/python/aimet_tensorflow/utils/op/fusedbatchnorm.py</div><div id='n_file'> N File Name: TrainingExtensions/tensorflow/src/python/aimet_tensorflow/utils/op/fusedbatchnorm.py</div><div id='m_start'> M Start Line: 763</div><div id='m_end'> M End Line: 780</div><div id='n_start'> N Start Line: 780</div><div id='n_end'> N End Line: 802</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+        beta_read = bn_op.inputs[constants.BN_OP_PARAM_INDICES[&quotbeta&quot]].op
+
+        <a id="change">assert </a>beta_read.type == &quotReadVariableOp&quot
+        return beta_read
+
+    @staticmethod</code></pre><h3>After Change</h3><pre><code class='java'>
+         (is mul_1 op inside BN scope)
+        :return: beta read op
+        
+        <a id="change">if </a>bn_op.type in [&quotMul&quot]:
+            &#47&#47 For regular BN
+            &#47&#47 mul_1 -&gt; add_1 &lt;-- sub &lt;-- beta_read
+            <a id="change">assert </a>len(bn_op.outputs) &gt;= 1, _BN_STRUCTURE_ERROR_MSG
+            add_1<a id="change"> = </a><a id="change">bn_op.outputs[0].consumers()</a>[0]
+            <a id="change">assert </a>len(add_1.inputs) &gt;= 2, _BN_STRUCTURE_ERROR_MSG
+            sub = add_1.inputs[1].op
+            assert len(sub.inputs) &gt;= 1, _BN_STRUCTURE_ERROR_MSG
+            beta_read<a id="change"> = </a>sub.inputs[0].op
+        elif bn_op.type in [&quotFusedBatchNormV3&quot]:
+            assert len(bn_op.inputs) == 5
+            beta_read = bn_op.inputs[constants.BN_OP_PARAM_INDICES[&quotbeta&quot]].op
+            if beta_read.type == &quotSwitch&quot:      &#47&#47 tf slim bn using training tensor form
+                beta_read = beta_read.inputs[0].op
+                assert &quotread&quot in beta_read.name
+        else:
+            logger.error("Error, unknown BN op")
+            <a id="change">assert </a>False
+
+        assert beta_read.type in [&quotReadVariableOp&quot, &quotIdentity&quot]      &#47&#47 Will be identity for tf slim BNs
+        return beta_read</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/quic/aimet/commit/04a3d26199c86efdb24da756ab9210e050855d14#diff-4d4c6b2b283172f6b18adb34c493d4a8c54e3dd52877eabf1542f231dd4f0518L104' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 92385665</div><div id='project'> Project Name: quic/aimet</div><div id='commit'> Commit Name: 04a3d26199c86efdb24da756ab9210e050855d14</div><div id='time'> Time: 2020-05-21</div><div id='author'> Author: quic_klhsieh@quicinc.com</div><div id='file'> File Name: TrainingExtensions/tensorflow/src/python/aimet_tensorflow/utils/op/fusedbatchnorm.py</div><div id='m_class'> M Class Name: BNUtils</div><div id='n_method'> N Class Name: BNUtils</div><div id='m_method'> M Method Name: get_beta_read_op(1)</div><div id='n_method'> N Method Name: get_beta_read_op(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: TrainingExtensions/tensorflow/src/python/aimet_tensorflow/utils/op/fusedbatchnorm.py</div><div id='n_file'> N File Name: TrainingExtensions/tensorflow/src/python/aimet_tensorflow/utils/op/fusedbatchnorm.py</div><div id='m_start'> M Start Line: 112</div><div id='m_end'> M End Line: 117</div><div id='n_start'> N Start Line: 112</div><div id='n_end'> N End Line: 131</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        :param bn_op: Batchnorm op to search for corresponding assign_moving_avg op
+        :return: assign_moving_op corresponding with the bn op, or None if it does not exist.
+        
+        <a id="change">assert </a>bn_op.type in [&quotFusedBatchNormV3&quot, &quotFusedBatchNorm&quot, &quotIdentity&quot]
+        assert len(bn_op.outputs) == 6 or len(bn_op.outputs) == 5 or len(bn_op.outputs) == 1
+        assign_moving_avg_op = None
+        if bn_op.type in &quotIdentity&quot:</code></pre><h3>After Change</h3><pre><code class='java'>
+               or (bn_op.type == &quotIdentity&quot and len(bn_op.outputs) == 1)
+
+        assign_moving_avg_op = None
+        <a id="change">if </a>bn_op.type in &quotIdentity&quot:
+            if_op = bn_op.inputs[0].op
+            <a id="change">assert </a>if_op.type == &quotIf&quot
+            identity_1_op = if_op.outputs[1].consumers()[0]
+            <a id="change">assert </a>identity_1_op.type == &quotIdentity&quot
+            sub_op = identity_1_op.outputs[0].consumers()[0]
+            <a id="change">assert </a>sub_op.type == &quotSub&quot
+            mul_op<a id="change"> = </a><a id="change">sub_op.outputs[0].consumers()</a>[0]
+            assert mul_op.type == &quotMul&quot
+            assign_moving_avg_op<a id="change"> = </a>mul_op.outputs[0].consumers()[0]
+            assert assign_moving_avg_op.type in [&quotAssignSub&quot, &quotAssignSubVariableOp&quot]
+        elif bn_op.outputs[1].consumers():
+            child_op = bn_op.outputs[1].consumers()[0]</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/quic/aimet/commit/191496aa99204d35e2982ce18f41c67c4adaa29b#diff-4d4c6b2b283172f6b18adb34c493d4a8c54e3dd52877eabf1542f231dd4f0518L729' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 92386611</div><div id='project'> Project Name: quic/aimet</div><div id='commit'> Commit Name: 191496aa99204d35e2982ce18f41c67c4adaa29b</div><div id='time'> Time: 2022-10-25</div><div id='author'> Author: quic_kyuykim@quicinc.com</div><div id='file'> File Name: TrainingExtensions/tensorflow/src/python/aimet_tensorflow/utils/op/fusedbatchnorm.py</div><div id='m_class'> M Class Name: BNUtils</div><div id='n_method'> N Class Name: BNUtils</div><div id='m_method'> M Method Name: get_assign_moving_avg_op(1)</div><div id='n_method'> N Method Name: get_assign_moving_avg_op(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: TrainingExtensions/tensorflow/src/python/aimet_tensorflow/utils/op/fusedbatchnorm.py</div><div id='n_file'> N File Name: TrainingExtensions/tensorflow/src/python/aimet_tensorflow/utils/op/fusedbatchnorm.py</div><div id='m_start'> M Start Line: 736</div><div id='m_end'> M End Line: 753</div><div id='n_start'> N Start Line: 744</div><div id='n_end'> N End Line: 766</div><BR>

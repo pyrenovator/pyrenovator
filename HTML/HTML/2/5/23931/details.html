@@ -1,0 +1,175 @@
+<html><h3>Pattern ID :23931
+</h3><img src='74425626.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+            &#47&#47 relation 特殊表示
+            index_ = torch.arange(self.start_idx, self.start_idx+num_relations).to(self.device)
+            index_<a id="change"> = </a>index_.expand(batch_size, num_relations)
+            &#47&#47 需要拼接的部分1：REL， 选取拼接的部分
+            relation_output_sigmoid_number = torch.masked_select(index_, relation_output_sigmoid_.bool())
+            &#47&#47 需要拼接的部分2：SEP
+            cat_sep = torch.full((relation_output_sigmoid_number.shape[0], 1), 102).long().to(self.device)
+            &#47&#47 需要拼接的部分3：[1]
+            cat_one = torch.full((relation_output_sigmoid_number.shape[0], 1), 1).long().to(self.device)
+            &#47&#47 需要拼接的部4：[0]
+            cat_zero = torch.full((relation_output_sigmoid_number.shape[0], 1), 0).long().to(self.device)
+
+            &#47&#47 需要原来的input_ids 扩展到relation num维度。
+            input_ids_ner = torch.unsqueeze(inputs[&quotinput_ids&quot], 1)
+            &#47&#47 [batch_size, 50, max_length], 复制50份
+            input_ids_ner = input_ids_ner.expand(-1, len(self.label_map_seq.keys()), -1)
+            &#47&#47 [batch_size * 50, max_length]
+            input_ids_ner_reshape = input_ids_ner.reshape(batch_size * num_relations, max_length)
+            &#47&#47 选择预测正确的所有关系
+            tmp1 = relation_output_sigmoid_index.unsqueeze(dim=1)  &#47&#47 [200, 1]
+            mask = tmp1.expand(-1, max_length)  &#47&#47 [200, 79]
+            tmp2 = torch.masked_select(input_ids_ner_reshape, mask.bool())
+            &#47&#47 n(选出来的关系数字) * max_length
+            &#47&#47 n &gt;&gt; batch_size, 因为一句话中有多个关系
+            tmp3 = tmp2.view(-1, max_length)
+            &#47&#47 拼接 0
+            tmp4 = torch.cat((tmp3, cat_zero), 1)
+            &#47&#47 拼接 0
+            input_ids_ner = torch.cat((tmp4, cat_zero), 1)
+
+            &#47&#47 利用attention中1的求和的到rel_pos的位置
+            attention_mask_ner = torch.unsqueeze(inputs[&quotattention_mask&quot], 1)
+            &#47&#47 [batch_size, 50, max_length], 复制50份
+            attention_mask_ner = attention_mask_ner.expand(-1, len(self.label_map_seq.keys()), -1)
+            &#47&#47 [batch_size * 50, max_length]
+            attention_mask_ner_reshape = attention_mask_ner.reshape(batch_size * num_relations, max_length)
+            &#47&#47 选择预测正确的所有关系
+            tmp1 = relation_output_sigmoid_index.unsqueeze(dim=1)  &#47&#47 [200, 1]
+            mask = tmp1.expand(-1, max_length)  &#47&#47 [200, 79]
+            tmp2 = torch.masked_select(attention_mask_ner_reshape, mask.bool())
+            &#47&#47 n(选出来的关系数字) * max_length
+            &#47&#47 n &gt;&gt; batch_size, 因为一句话中有多个关系
+            tmp3 = tmp2.view(-1, max_length)
+            &#47&#47 利用attention中1的求和的到rel_pos的位置
+            rel_pos = torch.sum(tmp3, dim=1)
+            (rel_number_find, max_length_find) = input_ids_ner.shape
+            one_hot = torch.sparse.torch.eye(max_length_find).long().to(self.device)
+            rel_pos_mask = one_hot.index_select(0, rel_pos)
+            rel_pos_mask_plus = one_hot.index_select(0, rel_pos+1)
+
+            &#47&#47 拼接input_ids的输入
+            input_ids_ner[rel_pos_mask.bool()] = relation_output_sigmoid_number
+            input_ids_ner[rel_pos_mask_plus.bool()] = cat_sep.squeeze()
+
+            &#47&#47 拼接token_type_ids的输入
+            token_type_ids_ner = torch.zeros(rel_number_find, max_length_find).to(self.device)
+            token_type_ids_ner[rel_pos_mask.bool()] = 1
+            token_type_ids_ner[rel_pos_mask_plus.bool()] = 1
+            token_type_ids_ner = token_type_ids_ner.long()
+
+            &#47&#47 拼接attention_mask的输入
+            &#47&#47 拼接 0
+            tmp4 = torch.cat((tmp3, cat_zero), dim=1)
+            &#47&#47 拼接 0
+            tmp5 = torch.cat((tmp4, cat_zero), dim=1)
+            tmp5[rel_pos_mask.bool()] = 1
+            tmp5[rel_pos_mask_plus.bool()] = 1
+            attention_mask_ner_tmp = tmp5
+
+            inputs_ner = {
+                &quotinput_ids&quot: input_ids_ner,
+                &quottoken_type_ids&quot: token_type_ids_ner,
+                &quotattention_mask&quot: attention_mask_ner_tmp,
+            }
+
+            try:
+                outputs_ner = self.model_ner(**inputs_ner)[0]
+            except BaseException:
+                print(&quot23&quot)
+
+            _, results = torch.max(outputs_ner, dim=2)
+            results_np = results.cpu().numpy()
+            attention_position_np = rel_pos.cpu().numpy()
+
+            results_list = results_np.tolist()
+            attention_position_list = attention_position_np.tolist()
+            predict_relation_list<a id="change"> = </a><a id="change">relation_output_sigmoid_number.long()</a>.tolist()
+            input_ids_list = input_ids_ner.tolist()
+
+            processed_results_list = []</code></pre><h3>After Change</h3><pre><code class='java'>
+            &#47&#47 选择预测正确的所有关系
+            mask = mask_output.unsqueeze(dim=1).expand(-1, max_length)  &#47&#47 [batch_size * num_relations, max_length]
+            &#47&#47 选取了正确的input_ids
+            input_ids = <a id="change">torch.masked_select(input_ids_ner_reshape, mask.bool()).view(-1</a>, max_length<a id="change">)</a>
+            &#47&#47 n(选出来的关系数字) * max_length
+            &#47&#47 n &gt;&gt; batch_size, 因为一句话中有多个关系
+            &#47&#47 添加 sep relation_ids 需要增加的东西
+            input_ids = torch.cat((input_ids, cat_zero), 1)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/zjunlp/openue/commit/aab5c330dc47a5099aaf25907950602ab8e8b652#diff-657eee00f175ecd87c4b3a8c9d8325ce5fd0980db6af5c78e172bffe343bdf90L220' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 74425626</div><div id='project'> Project Name: zjunlp/openue</div><div id='commit'> Commit Name: aab5c330dc47a5099aaf25907950602ab8e8b652</div><div id='time'> Time: 2021-09-14</div><div id='author'> Author: 852975133@qq.com</div><div id='file'> File Name: src/openue/models/model.py</div><div id='m_class'> M Class Name: Inference</div><div id='n_method'> N Class Name: Inference</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: torch.nn.Module</div><div id='n_parent_class'> N Parent Class: torch.nn.Module</div><div id='m_file'> M File Name: src/openue/models/model.py</div><div id='n_file'> N File Name: src/openue/models/model.py</div><div id='m_start'> M Start Line: 225</div><div id='m_end'> M End Line: 331</div><div id='n_start'> N Start Line: 220</div><div id='n_end'> N End Line: 324</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        )
+        for sample_idx in range(context.num_samples):
+            &#47&#47 Get correct repetition
+            r<a id="change"> = </a>context.repetition_indices[sample_idx]
+
+            &#47&#47 Get correct parent_indices
+            parent_indices_out = parent_indices[sample_idx]
+
+            &#47&#47 Get scope for the current repetition
+            scope = self.scopes[:, :, r]
+
+            &#47&#47 Turn one-hot encoded in-feature -&gt; out-feature mapping into a linear index
+            rnge_in = torch.arange(self.out_features, device=samples.device)
+            scope<a id="change"> = </a><a id="change">(scope * rnge_in).sum(-1).long()</a>
+
+            &#47&#47 Map parent_indices from original "out_features" view to "in_feautres" view
+            parent_indices_in = parent_indices_out[scope]
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        &#47&#47 assert (indices_in_tmp == indices_in_gather).all()
+
+        indices_in_gather = <a id="change">indices_in_gather.view(</a>num_samples, 1, -1, <a id="change">1</a><a id="change">)</a>.expand(-1, samples.shape[1], -1, -1)
+        samples = samples.gather(dim=-1, index=indices_in_gather)
+        samples.squeeze_(-1)  &#47&#47 Remove num_leaves dimension
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/braun-steven/simple-einet/commit/e657fc668bd0f87f5e622a8b2549cd9e8ade437a#diff-0e167804f5443ae4e51928b2569dfa157205f2b3fd2aa197779a9ef67fb370e5L60' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 74425625</div><div id='project'> Project Name: braun-steven/simple-einet</div><div id='commit'> Commit Name: e657fc668bd0f87f5e622a8b2549cd9e8ade437a</div><div id='time'> Time: 2022-01-11</div><div id='author'> Author: steven.lang.mz@gmail.com</div><div id='file'> File Name: simple_einet/factorized_leaf_layer.py</div><div id='m_class'> M Class Name: FactorizedLeaf</div><div id='n_method'> N Class Name: FactorizedLeaf</div><div id='m_method'> M Method Name: sample(3)</div><div id='n_method'> N Method Name: sample(3)</div><div id='m_parent_class'> M Parent Class: AbstractLayer</div><div id='n_parent_class'> N Parent Class: AbstractLayer</div><div id='m_file'> M File Name: simple_einet/factorized_leaf_layer.py</div><div id='n_file'> N File Name: simple_einet/factorized_leaf_layer.py</div><div id='m_start'> M Start Line: 63</div><div id='m_end'> M End Line: 120</div><div id='n_start'> N Start Line: 68</div><div id='n_end'> N End Line: 147</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                            ], device=targets.device).float() * g  &#47&#47 offsets
+
+        for i in range(self.nl):
+            anchors<a id="change"> = </a>self.anchors[i]
+            gain[2:6] = torch.tensor(p[i].shape)[[3, 2, 3, 2]]  &#47&#47 xyxy gain
+
+            &#47&#47 Match targets to anchors
+            t = targets * gain
+            if nt:
+                &#47&#47 Matches
+                r = t[:, :, 4:6] / anchors[:, None]  &#47&#47 wh ratio
+                j = torch.max(r, 1. / r).max(2)[0] &lt; self.hyp[&quotanchor_t&quot]  &#47&#47 compare
+                &#47&#47 j = wh_iou(anchors, t[:, 4:6]) &gt; model.hyp[&quotiou_t&quot]  &#47&#47 iou(3,n)=wh_iou(anchors(3,2), gwh(n,2))
+                t = t[j]  &#47&#47 filter
+
+                &#47&#47 Offsets
+                gxy = t[:, 2:4]  &#47&#47 grid xy
+                gxi = gain[[2, 3]] - gxy  &#47&#47 inverse
+                j, k = ((gxy % 1. &lt; g) & (gxy &gt; 1.)).T
+                l, m = ((gxi % 1. &lt; g) & (gxi &gt; 1.)).T
+                j = torch.stack((torch.ones_like(j), j, k, l, m))
+                t = t.repeat((5, 1, 1))[j]
+                offsets = (torch.zeros_like(gxy)[None] + off[:, None])[j]
+            else:
+                t = targets[0]
+                offsets = 0
+
+            &#47&#47 Define
+            b, c = t[:, :2].long().T  &#47&#47 image, class
+            gxy = t[:, 2:4]  &#47&#47 grid xy
+            gwh = t[:, 4:6]  &#47&#47 grid wh
+            gij = (gxy - offsets).long()
+            gi, gj = gij.T  &#47&#47 grid xy indices
+
+            &#47&#47 Append
+            a<a id="change"> = </a><a id="change">t[:, 6].long()</a>  &#47&#47 anchor indices
+            indices.append((b, a, gj.clamp_(0, gain[3] - 1), gi.clamp_(0, gain[2] - 1)))  &#47&#47 image, anchor, grid indices
+            tbox.append(torch.cat((gxy - gij, gwh), 1))  &#47&#47 box
+            anch.append(anchors[a])  &#47&#47 anchors</code></pre><h3>After Change</h3><pre><code class='java'>
+
+            &#47&#47 Define
+            bc, gxy, gwh, a = t.chunk(4, 1)  &#47&#47 (image, class), grid xy, grid wh, anchors
+            a, (b, c) = <a id="change">a.long().view(-1</a><a id="change">)</a>, bc.long().T  &#47&#47 anchors, image, class
+            gij = (gxy - offsets).long()
+            gi, gj = gij.T  &#47&#47 grid indices
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/bobo-y/flexible-yolov5/commit/9fb058ef7b7925a243a436788f3f55dbb4b3e263#diff-1d2722d9febbbcc664b268ca7c1587391e5c2fee9a63943a9577a5d3f29d31ccL163' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 74425637</div><div id='project'> Project Name: bobo-y/flexible-yolov5</div><div id='commit'> Commit Name: 9fb058ef7b7925a243a436788f3f55dbb4b3e263</div><div id='time'> Time: 2022-07-02</div><div id='author'> Author: yl305237731@gmail.com</div><div id='file'> File Name: od/models/loss/yolo.py</div><div id='m_class'> M Class Name: ComputeLoss</div><div id='n_method'> N Class Name: ComputeLoss</div><div id='m_method'> M Method Name: build_targets(3)</div><div id='n_method'> N Method Name: build_targets(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: od/models/loss/yolo.py</div><div id='n_file'> N File Name: od/models/loss/yolo.py</div><div id='m_start'> M Start Line: 167</div><div id='m_end'> M End Line: 211</div><div id='n_start'> N Start Line: 178</div><div id='n_end'> N End Line: 226</div><BR>

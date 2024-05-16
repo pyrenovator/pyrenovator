@@ -1,0 +1,104 @@
+<html><h3>Pattern ID :15709
+</h3><img src='53045033.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        device = torch.device(&quotcuda:0&quot if cuda else &quotcpu&quot)
+
+        if torch.cuda.device_count() &gt; 1:
+            device = <a id="change">torch.device(</a>&quotcuda&quot if cuda else &quotcpu&quot<a id="change">)</a>
+            print(&quotFound %g GPUs&quot % torch.cuda.device_count())
+            &#47&#47 print(&quotMulti-GPU Issue: https://github.com/ultralytics/yolov3/issues/21&quot)
+            &#47&#47 torch.cuda.set_device(0)  &#47&#47 OPTIONAL: Set your GPU if multiple available
+            &#47&#47 print(&quotUsing &quot, torch.cuda.device_count(), &quot GPUs&quot)</code></pre><h3>After Change</h3><pre><code class='java'>
+              (x[0].name, x[0].total_memory / c))
+        if ng &gt; 0:
+            &#47&#47 torch.cuda.set_device(0)  &#47&#47 OPTIONAL: Set GPU ID
+            <a id="change">for </a>i in range(1, ng)<a id="change">:
+                print(</a>"           device%g _CudaDeviceProperties(name=&quot%s&quot, total_memory=%dMB)" %
+                      (i, x[i].name, x[i].total_memory / c)<a id="change">)</a>
+
+    return device
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/nightsnack/yolobile/commit/3825e99ee36bd237d11f702af93a2acba4496c9b#diff-a4cd44fa2e00ba300e04c8799657a2329509edef8e79a488ccfb3464e7dc4394L11' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 53045033</div><div id='project'> Project Name: nightsnack/yolobile</div><div id='commit'> Commit Name: 3825e99ee36bd237d11f702af93a2acba4496c9b</div><div id='time'> Time: 2019-04-08</div><div id='author'> Author: glenn.jocher@ultralytics.com</div><div id='file'> File Name: utils/torch_utils.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: select_device(1)</div><div id='n_method'> N Method Name: select_device(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: utils/torch_utils.py</div><div id='n_file'> N File Name: utils/torch_utils.py</div><div id='m_start'> M Start Line: 11</div><div id='m_end'> M End Line: 25</div><div id='n_start'> N Start Line: 11</div><div id='n_end'> N End Line: 28</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    &#47&#47     m2 = nn.SiLU()
+    &#47&#47     profile(x, [m1, m2], n=100)  &#47&#47 profile speed over 100 iterations
+
+    device = device or <a id="change">torch.device(</a>&quotcuda:0&quot if torch.cuda.is_available() else &quotcpu&quot<a id="change">)</a>
+    x = x.to(device)
+    x.requires_grad = True
+    print(torch.__version__, device.type, torch.cuda.get_device_properties(0) if device.type == &quotcuda&quot else &quot&quot)
+    print(f"\n{&quotParams&quot:&gt;12s}{&quotGFLOPs&quot:&gt;12s}{&quotforward (ms)&quot:&gt;16s}{&quotbackward (ms)&quot:&gt;16s}{&quotinput&quot:&gt;24s}{&quotoutput&quot:&gt;24s}")</code></pre><h3>After Change</h3><pre><code class='java'>
+    print(f"{&quotParams&quot:&gt;12s}{&quotGFLOPs&quot:&gt;12s}{&quotGPU_mem (GB)&quot:&gt;14s}{&quotforward (ms)&quot:&gt;14s}{&quotbackward (ms)&quot:&gt;14s}"
+          f"{&quotinput&quot:&gt;24s}{&quotoutput&quot:&gt;24s}")
+
+    <a id="change">for x</a> in input if isinstance(input, list) else [input]<a id="change">:
+        </a>x = x.to(device)
+        x.requires_grad = True
+        for m in ops if isinstance(ops, list) else [ops]:
+            m = m.to(device) if hasattr(m, &quotto&quot) else m  &#47&#47 device
+            m = m.half() if hasattr(m, &quothalf&quot) and isinstance(x, torch.Tensor) and x.dtype is torch.float16 else m
+            tf, tb, t = 0., 0., [0., 0., 0.]  &#47&#47 dt forward, backward
+            try:
+                flops = thop.profile(m, inputs=(x,), verbose=False)[0] / 1E9 * 2  &#47&#47 GFLOPs
+            except:
+                flops = 0
+
+            try:
+                for _ in range(n):
+                    t[0] = time_sync()
+                    y = m(x)
+                    t[1] = time_sync()
+                    try:
+                        _ = (sum([yi.sum() for yi in y]) if isinstance(y, list) else y).sum().backward()
+                        t[2] = time_sync()
+                    except Exception as e:  &#47&#47 no backward method
+                        print(e)
+                        t[2] = float(&quotnan&quot)
+                    tf += (t[1] - t[0]) * 1000 / n  &#47&#47 ms per op forward
+                    tb += (t[2] - t[1]) * 1000 / n  &#47&#47 ms per op backward
+                mem = torch.cuda.memory_reserved() / 1E9 if torch.cuda.is_available() else 0  &#47&#47 (GB)
+                s_in = tuple(x.shape) if isinstance(x, torch.Tensor) else &quotlist&quot
+                s_out = tuple(y.shape) if isinstance(y, torch.Tensor) else &quotlist&quot
+                p = sum(list(x.numel() for x in m.parameters())) if isinstance(m, nn.Module) else 0  &#47&#47 parameters
+                print(f&quot{p:12}{flops:12.4g}{mem:&gt;14.3f}{tf:14.4g}{tb:14.4g}{str(s_in):&gt;24s}{str(s_out):&gt;24s}&quot)
+                results.append([p, flops, mem, tf, tb, s_in, s_out])
+            except Exception as e:
+                <a id="change">print(</a>e<a id="change">)</a>
+                results.append(None)
+            torch.cuda.empty_cache()
+    return results
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/fcakyon/yolov5-pip/commit/5324365eacdf6cd58cfc37cc133bbc344f1922be#diff-a48815b08733f1fa35d79a8996296f380a25f82d4612e89bd45db6601b991df4L98' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 53045035</div><div id='project'> Project Name: fcakyon/yolov5-pip</div><div id='commit'> Commit Name: 5324365eacdf6cd58cfc37cc133bbc344f1922be</div><div id='time'> Time: 2021-08-24</div><div id='author'> Author: 34196005+fcakyon@users.noreply.github.com</div><div id='file'> File Name: yolov5/utils/torch_utils.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: profile(4)</div><div id='n_method'> N Method Name: profile(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: yolov5/utils/torch_utils.py</div><div id='n_file'> N File Name: yolov5/utils/torch_utils.py</div><div id='m_start'> M Start Line: 105</div><div id='m_end'> M End Line: 136</div><div id='n_start'> N Start Line: 112</div><div id='n_end'> N End Line: 153</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    else:
+        os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+        os.environ["CUDA_VISIBLE_DEVICES"] = "{}".format(gpu_id)
+        device = <a id="change">torch.device(</a>"cuda"<a id="change">)</a>
+
+    torch.manual_seed(131714)
+    random.seed(131714)
+    torch.random.manual_seed(131714)</code></pre><h3>After Change</h3><pre><code class='java'>
+                processes.pop(0)
+                gpus_available.append(gpus_in_use.pop(0))
+
+        <a id="change">for process</a> in processes<a id="change">:
+            print(</a>"Waiting for the remainders to finish..."<a id="change">)</a>
+            process.join()
+            gpus_available.append(gpus_in_use.pop(0))
+
+        meta_model = average_models(individual_models)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/digitalphonetics/ims-toucan/commit/c2d6763d59533aadfe9096a70cf208455e3aee9c#diff-35ce52bf4206f5886ecd8e11eec900fc41f488e1fef7bb51d5e1e75213981b52L11' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 53045023</div><div id='project'> Project Name: digitalphonetics/ims-toucan</div><div id='commit'> Commit Name: c2d6763d59533aadfe9096a70cf208455e3aee9c</div><div id='time'> Time: 2021-10-16</div><div id='author'> Author: florian.lux@ims.uni-stuttgart.de</div><div id='file'> File Name: TrainingInterfaces/TrainingPipelines/Tacotron2_MetaCheckpoint.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: run(5)</div><div id='n_method'> N Method Name: run(5)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: TrainingInterfaces/TrainingPipelines/Tacotron2_MetaCheckpoint.py</div><div id='n_file'> N File Name: TrainingInterfaces/TrainingPipelines/Tacotron2_MetaCheckpoint.py</div><div id='m_start'> M Start Line: 12</div><div id='m_end'> M End Line: 175</div><div id='n_start'> N Start Line: 152</div><div id='n_end'> N End Line: 198</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+def select_device(force_cpu=False):
+    if force_cpu:
+        cuda = False
+        device = <a id="change">torch.device(</a>&quotcpu&quot<a id="change">)</a>
+    else:
+        cuda = torch.cuda.is_available()
+        device = torch.device(&quotcuda:0&quot if cuda else &quotcpu&quot)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+              (x[0].name, x[0].total_memory / c))
+        if ng &gt; 0:
+            &#47&#47 torch.cuda.set_device(0)  &#47&#47 OPTIONAL: Set GPU ID
+            <a id="change">for i</a> in range(1, ng)<a id="change">:
+                print(</a>"           device%g _CudaDeviceProperties(name=&quot%s&quot, total_memory=%dMB)" %
+                      (i, x[i].name, x[i].total_memory / c)<a id="change">)</a>
+
+    return device
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/nightsnack/yolobile/commit/3825e99ee36bd237d11f702af93a2acba4496c9b#diff-a4cd44fa2e00ba300e04c8799657a2329509edef8e79a488ccfb3464e7dc4394L10' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 53045028</div><div id='project'> Project Name: nightsnack/yolobile</div><div id='commit'> Commit Name: 3825e99ee36bd237d11f702af93a2acba4496c9b</div><div id='time'> Time: 2019-04-08</div><div id='author'> Author: glenn.jocher@ultralytics.com</div><div id='file'> File Name: utils/torch_utils.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: select_device(1)</div><div id='n_method'> N Method Name: select_device(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: utils/torch_utils.py</div><div id='n_file'> N File Name: utils/torch_utils.py</div><div id='m_start'> M Start Line: 11</div><div id='m_end'> M End Line: 25</div><div id='n_start'> N Start Line: 11</div><div id='n_end'> N End Line: 28</div><BR>

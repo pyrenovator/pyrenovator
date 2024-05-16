@@ -1,0 +1,67 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            &#47&#47 discriminator loss is the average of these
+            d_loss = (real_loss + fake_loss) / 2
+            self.log("d_loss", d_loss, prog_bar=True)
+            <a id="change">return </a>d_loss
+
+    def configure_optimizers(self):
+        lr = self.hparams.lr</code></pre><h3>After Change</h3><pre><code class='java'>
+    def training_step(self, batch):
+        imgs, _ = batch
+
+        optimizer_g<a id="change">, optimizer_d = self</a><a id="change">.optimizers()</a>
+
+        &#47&#47 sample noise
+        z = torch.randn(imgs.shape[0], self.hparams.latent_dim)
+        z = z.type_as(imgs)
+
+        &#47&#47 train generator
+        &#47&#47 generate images
+        self.toggle_optimizer(optimizer_g)
+        self.generated_imgs = self(z)
+
+        &#47&#47 log sampled images
+        sample_imgs = self.generated_imgs[:6]
+        grid = torchvision.utils.make_grid(sample_imgs)
+        self.logger.experiment.add_image("generated_images", grid, 0)
+
+        &#47&#47 ground truth result (ie: all fake)
+        &#47&#47 put on GPU because we created this tensor inside training_loop
+        valid = torch.ones(imgs.size(0), 1)
+        valid = valid.type_as(imgs)
+
+        &#47&#47 adversarial loss is binary cross-entropy
+        g_loss = self.adversarial_loss(self.discriminator(self(z)), valid)
+        self.log("g_loss", g_loss, prog_bar=True)
+        self.manual_backward(g_loss)
+        optimizer_g.step()
+        optimizer_g.zero_grad()
+        self.untoggle_optimizer(optimizer_g)
+
+        &#47&#47 train discriminator
+        &#47&#47 Measure discriminator&quots ability to classify real from generated samples
+        self.toggle_optimizer(optimizer_d)
+
+        &#47&#47 how well can it label as real?
+        valid = torch.ones(imgs.size(0), 1)
+        valid = valid.type_as(imgs)
+
+        real_loss = self.adversarial_loss(self.discriminator(imgs), valid)
+
+        &#47&#47 how well can it label as fake?
+        fake = torch.zeros(imgs.size(0), 1)
+        fake = fake.type_as(imgs)
+
+        fake_loss = self.adversarial_loss(self.discriminator(self(z).detach()), fake)
+
+        &#47&#47 discriminator loss is the average of these
+        d_loss = (real_loss + fake_loss) / 2
+        self.log("d_loss", d_loss, prog_bar=True)
+        <a id="change">self.manual_backward(</a>d_loss<a id="change">)</a>
+        optimizer_d.step()
+        optimizer_d.zero_grad()
+        self.untoggle_optimizer(optimizer_d)
+</code></pre>

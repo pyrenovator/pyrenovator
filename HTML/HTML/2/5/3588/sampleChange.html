@@ -1,0 +1,20 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            &#47&#47 get per sample grads with a for loop, running over the input twice
+            expected_grads = []
+            for i in range(batch_size):
+                res = <a id="change">module(input[i].unsqueeze(0)).sum()</a>
+                expected_grads.append(torch.autograd.grad(res, module.parameters(), torch.ones_like(res)))
+            expected_grads = tuple(torch.stack(grad) for grad in zip(*expected_grads))
+        assert [self.assertEqual(actual, 2 * expected) for (actual, expected) in zip(actual_grads, expected_grads)]
+</code></pre><h3>After Change</h3><pre><code class='java'>
+                diff_params = module.parameters()
+                if diff_input:
+                    diff_params = chain(diff_params, (input_slice,))
+                res = <a id="change">module(input_slice.unsqueeze(0)).sum()</a>
+                out_grads<a id="change"> = </a>torch.autograd.grad(res, diff_params, torch.ones_like(res), allow_unused=True)
+                expected_grads.append(out_grads)
+        expected_grads = tuple(torch.stack(grad) for grad in zip(*expected_grads))
+        expected_grads = tuple(expected_grad for expected_grad in expected_grads if expected_grad is not None)</code></pre>

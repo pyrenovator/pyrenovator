@@ -1,0 +1,60 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        self.use_guided_attn_loss = use_guided_attn_loss
+        self.loss_type = loss_type
+        if self.spk_embed_dim is not None:
+            self.spk_embed_integration_type<a id="change"> = spk_embed_integration_type</a>
+
+        &#47&#47 define activation function for the final output
+        if output_activation is None:
+            self.output_activation_fn = None
+        elif hasattr(F, output_activation):
+            self.output_activation_fn = getattr(F, output_activation)
+        else:
+            raise ValueError(f"there is no such activation function. " f"({output_activation})")
+
+        self.language_embedding = None
+        if language_embedding_amount is not None:
+            self.language_embedding = torch.nn.Embedding(language_embedding_amount, eunits)
+
+        &#47&#47 set padding idx
+        self.padding_idx = torch.zeros(idim)
+
+        &#47&#47 define network modules
+        self.enc = Encoder(idim=idim,
+                           input_layer=input_layer_type,
+                           embed_dim=embed_dim,
+                           elayers=elayers,
+                           eunits=eunits,
+                           econv_layers=econv_layers,
+                           econv_chans=econv_chans,
+                           econv_filts=econv_filts,
+                           use_batch_norm=use_batch_norm,
+                           use_residual=use_residual,
+                           dropout_rate=dropout_rate)
+
+        if spk_embed_dim is None:
+            dec_idim = eunits
+        elif <a id="change">spk_embed_integration_type == "concat"</a>:
+            dec_idim = eunits + spk_embed_dim
+        elif spk_embed_integration_type == "add":
+            dec_idim = eunits
+            self.projection = torch.nn.Linear(self.spk_embed_dim, eunits)
+        else:
+            <a id="change">raise ValueError(f"{spk_embed_integration_type} is not supported."</a><a id="change">)</a>
+
+        if atype == "location":
+            att = AttLoc(dec_idim, dunits, adim, aconv_chans, aconv_filts)
+        elif atype == "forward":</code></pre><h3>After Change</h3><pre><code class='java'>
+                           dropout_rate=dropout_rate)
+
+        if spk_embed_dim is not None:
+            self.projection = <a id="change">torch.nn.Sequential(</a>torch.nn.Linear(eunits + spk_embed_dim, eunits),
+                                                  <a id="change">torch.nn.Tanh()</a>,
+                                                  <a id="change">torch.nn.Linear(</a>eunits, eunits<a id="change">)</a><a id="change">)</a>
+        dec_idim = eunits
+
+        if atype == "location":
+            att = AttLoc(dec_idim, dunits, adim, aconv_chans, aconv_filts)</code></pre>

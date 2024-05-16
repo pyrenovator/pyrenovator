@@ -1,0 +1,85 @@
+<html><h3>Pattern ID :21961
+</h3><img src='69821784.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    element_numbers = np.arange(output_elements).reshape(
+        output_columns, output_rows)
+
+    strided_rows = <a id="change">element_numbers[::stride, ::stride].flatten()</a>
+
+    &#47&#47 TODO: finish me!
+    indices = convolution_matrix.coalesce().indices().numpy()
+    values = convolution_matrix.coalesce().values().numpy()</code></pre><h3>After Change</h3><pre><code class='java'>
+    indices = convolution_matrix.coalesce().indices().numpy()
+    values = convolution_matrix.coalesce().values().numpy()
+    mask = []
+    strided_row_indices<a id="change"> = </a><a id="change">[]</a>
+    non_zero_row_entries = indices[0, :]
+    counter = 0
+    previous_entry = 0
+    for entry in non_zero_row_entries:
+        if entry in strided_rows:
+            mask.append(True)
+            if previous_entry != entry:
+                counter += 1
+            strided_row_indices.append(counter)
+        else:
+            mask.append(False)
+        previous_entry = entry
+    mask = np.array(mask)
+
+    strided_row_indices = np.array(strided_row_indices)
+    strided_col_indices = indices[1, mask]
+    strided_indices = <a id="change">np.stack(</a>[strided_row_indices, strided_col_indices], 0<a id="change">)</a>
+    strided_values = values[mask]
+    strided_matrix = torch.sparse_coo_tensor(
+        strided_indices, strided_values, dtype=dtype).coalesce()
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/v0lta/pytorch-wavelet-toolbox/commit/f659f1a0eacbd03f1438d0c70729ce7e95eb9ea0#diff-b2c14784062dafa1b500635f516bab2d23e5906b7f3039f5c1722119965d7c6cL80' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 69821784</div><div id='project'> Project Name: v0lta/pytorch-wavelet-toolbox</div><div id='commit'> Commit Name: f659f1a0eacbd03f1438d0c70729ce7e95eb9ea0</div><div id='time'> Time: 2021-09-13</div><div id='author'> Author: moritz.wolter@scai.fraunhofer.de</div><div id='file'> File Name: src/ptwt/matmul_transform_2d.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: construct_strided_conv2d_matrix(5)</div><div id='n_method'> N Method Name: construct_strided_conv2d_matrix(5)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/ptwt/matmul_transform_2d.py</div><div id='n_file'> N File Name: src/ptwt/matmul_transform_2d.py</div><div id='m_start'> M Start Line: 80</div><div id='m_end'> M End Line: 113</div><div id='n_start'> N Start Line: 88</div><div id='n_end'> N End Line: 127</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+        &#47&#47 input should be (seq_len, batch, input_size)
+        output, h_n = self.rnn(x.unsqueeze(1))
+        output = self.fc(<a id="change">output.flatten()</a>)
+        &#47&#47 print(output)
+        &#47&#47 return torch.mean(output, dim=0)
+        return output</code></pre><h3>After Change</h3><pre><code class='java'>
+        self.fc = nn.Linear(100, 1)
+
+    def forward(self, st_maps, target):
+        output_per_clip<a id="change"> = </a><a id="change">[]</a>
+        &#47&#47 so as to reflect a batch_size = 1
+        st_maps = st_maps.unsqueeze(0)
+        for t in range(st_maps.size(1)):
+            with torch.no_grad():
+                x = self.resnet18(st_maps[:, t, :, :, :])
+                &#47&#47 collapse dimensions to BSx512 (resnet o/p)
+                x = x.view(x.size(0), -1)
+            &#47&#47 output dim: BSx1
+            x = self.fc_resnet(x)
+            &#47&#47 For now since we&quotre working with BS = 1, lets collapse that dimension
+            output_per_clip.append(x.squeeze(0))
+            &#47&#47 input should be (seq_len, batch, input_size)
+
+        output_seq = <a id="change">torch.stack(</a>output_per_clip<a id="change">, dim=0)</a>.transpose_(0, 1)
+        gru_output, h_n = self.rnn(output_seq.unsqueeze(1))
+        return output_seq, gru_output.squeeze(0)
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/anweshcr7/rhythmnet/commit/5486b317570359a6ab1971196350ee70894b19db#diff-3fc5bf831ef8bd1cc5d50189ec691215fb3d3ae0cbb974e736200edc7f8c65cdL24' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 69821788</div><div id='project'> Project Name: anweshcr7/rhythmnet</div><div id='commit'> Commit Name: 5486b317570359a6ab1971196350ee70894b19db</div><div id='time'> Time: 2021-02-02</div><div id='author'> Author: anwesh.marwade@beyondsports.nl</div><div id='file'> File Name: src/models/rhythmNet.py</div><div id='m_class'> M Class Name: RhythmNet</div><div id='n_method'> N Class Name: RhythmNet</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: src/models/rhythmNet.py</div><div id='n_file'> N File Name: src/models/rhythmNet.py</div><div id='m_start'> M Start Line: 25</div><div id='m_end'> M End Line: 32</div><div id='n_start'> N Start Line: 32</div><div id='n_end'> N End Line: 48</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    def get_logits(self, _input: torch.Tensor, randomized_smooth=False, sigma=0.1, n=100, **kwargs):
+        if randomized_smooth:
+            _input_noise = <a id="change">add_noise(repeat_to_batch(_input, batch_size=n), std=sigma).flatten(end_dim=1)</a>
+            return self.model(_input_noise, **kwargs).view(n, len(_input), self.num_classes).mean(dim=0)
+        else:
+            return self.model(_input, **kwargs)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    def get_logits(self, _input: torch.Tensor, randomized_smooth=False, sigma=0.1, n=100, **kwargs):
+        if randomized_smooth:
+            _list<a id="change"> = </a><a id="change">[]</a>
+            for _ in range(n):
+                _input_noise = add_noise(_input, std=sigma)
+                _list.append(self.model(_input_noise, **kwargs))
+            return <a id="change">torch.stack(</a>_list<a id="change">)</a>.mean(dim=0)
+            &#47&#47 _input_noise = add_noise(repeat_to_batch(_input, batch_size=n), std=sigma).flatten(end_dim=1)
+            &#47&#47 return self.model(_input_noise, **kwargs).view(n, len(_input), self.num_classes).mean(dim=0)
+        else:</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/ain-soph/trojanzoo/commit/c27bc51ba9150d882f240c599f52c8c475844eb8#diff-88a9308c080a187aa3abb15d0ec02fe23bfe1233b6bb835d8df8f09b21091877L157' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 69821795</div><div id='project'> Project Name: ain-soph/trojanzoo</div><div id='commit'> Commit Name: c27bc51ba9150d882f240c599f52c8c475844eb8</div><div id='time'> Time: 2020-08-24</div><div id='author'> Author: ain-soph@live.com</div><div id='file'> File Name: trojanzoo/model/model.py</div><div id='m_class'> M Class Name: Model</div><div id='n_method'> N Class Name: Model</div><div id='m_method'> M Method Name: get_logits(5)</div><div id='n_method'> N Method Name: get_logits(5)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: trojanzoo/model/model.py</div><div id='n_file'> N File Name: trojanzoo/model/model.py</div><div id='m_start'> M Start Line: 159</div><div id='m_end'> M End Line: 160</div><div id='n_start'> N Start Line: 159</div><div id='n_end'> N End Line: 163</div><BR>

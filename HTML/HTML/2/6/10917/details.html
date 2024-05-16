@@ -1,0 +1,86 @@
+<html><h3>Pattern ID :10917
+</h3><img src='37736119.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            x = x.to(pl_module.device)       
+            with torch.no_grad():
+                pl_module.eval()
+                logits<a id="change"> = </a>pl_module(text, x)
+                img_logits = <a id="change">logits[:, -pl_module.image_seq_len:].long()</a>
+                img_seq = torch.argmax(img_logits, dim = -1)
+                img_seq<a id="change"> -= </a>pl_module.num_text_tokens              
+                x_rec = pl_module.vae.decode(img_seq, feed_seq=True)     
+
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            sample_text = text[:1]
+            token_list = sample_text.masked_select(sample_text != 0).tolist()
+            decoded_text = self.tokenizer.decode(token_list)       
+            x<a id="change">, _</a> = batch
+            x = x[:1]
+            x_rec = outputs[&quotxrec&quot][:1]
+            &quot&quot&quot</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 6</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/tgisaturday/dalle-lightning/commit/9c1458557eb1d1a37d11b52079ef40d614175f86#diff-a83484d4c7b7ebe0b0e0ade59c8557937a9e940ae331d28b6debb50cefd16ffcL441' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 37736119</div><div id='project'> Project Name: tgisaturday/dalle-lightning</div><div id='commit'> Commit Name: 9c1458557eb1d1a37d11b52079ef40d614175f86</div><div id='time'> Time: 2021-07-29</div><div id='author'> Author: jamesk1228@gmail.com</div><div id='file'> File Name: pl_dalle/callbacks.py</div><div id='m_class'> M Class Name: DalleSimpleImageSampler</div><div id='n_method'> N Class Name: DalleSimpleImageSampler</div><div id='m_method'> M Method Name: on_validation_batch_end(7)</div><div id='n_method'> N Method Name: on_validation_batch_end(7)</div><div id='m_parent_class'> M Parent Class: Callback</div><div id='n_parent_class'> N Parent Class: Callback</div><div id='m_file'> M File Name: pl_dalle/callbacks.py</div><div id='n_file'> N File Name: pl_dalle/callbacks.py</div><div id='m_start'> M Start Line: 441</div><div id='m_end'> M End Line: 452</div><div id='n_start'> N Start Line: 445</div><div id='n_end'> N End Line: 447</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                            ], device=targets.device).float() * g  &#47&#47 offsets
+
+        for i in range(self.nl):
+            anchors<a id="change"> = </a>self.anchors[i]
+            gain[2:6] = torch.tensor(p[i].shape)[[3, 2, 3, 2]]  &#47&#47 xyxy gain
+
+            &#47&#47 Match targets to anchors
+            t = targets * gain
+            if nt:
+                &#47&#47 Matches
+                r = t[:, :, 4:6] / anchors[:, None]  &#47&#47 wh ratio
+                j = torch.max(r, 1. / r).max(2)[0] &lt; self.hyp[&quotanchor_t&quot]  &#47&#47 compare
+                &#47&#47 j = wh_iou(anchors, t[:, 4:6]) &gt; model.hyp[&quotiou_t&quot]  &#47&#47 iou(3,n)=wh_iou(anchors(3,2), gwh(n,2))
+                t = t[j]  &#47&#47 filter
+
+                &#47&#47 Offsets
+                gxy = t[:, 2:4]  &#47&#47 grid xy
+                gxi = gain[[2, 3]] - gxy  &#47&#47 inverse
+                j, k = ((gxy % 1. &lt; g) & (gxy &gt; 1.)).T
+                l, m = ((gxi % 1. &lt; g) & (gxi &gt; 1.)).T
+                j = torch.stack((torch.ones_like(j), j, k, l, m))
+                t = t.repeat((5, 1, 1))[j]
+                offsets = (torch.zeros_like(gxy)[None] + off[:, None])[j]
+            else:
+                t = targets[0]
+                offsets = 0
+
+            &#47&#47 Define
+            b, c = t[:, :2].long().T  &#47&#47 image, class
+            gxy = t[:, 2:4]  &#47&#47 grid xy
+            gwh = t[:, 4:6]  &#47&#47 grid wh
+            gij = (gxy - offsets).long()
+            gi, gj = gij.T  &#47&#47 grid xy indices
+
+            &#47&#47 Append
+            a<a id="change"> = t[:, 6]</a><a id="change">.long()</a>  &#47&#47 anchor indices
+            indices.append((b, a, gj.clamp_(0, gain[3] - 1), gi.clamp_(0, gain[2] - 1)))  &#47&#47 image, anchor, grid indices
+            tbox.append(torch.cat((gxy - gij, gwh), 1))  &#47&#47 box
+            anch.append(anchors[a])  &#47&#47 anchors</code></pre><h3>After Change</h3><pre><code class='java'>
+            device=self.device).float() * g  &#47&#47 offsets
+
+        for i in range(self.nl):
+            anchors, shape = self.anchors[i]<a id="change">, p[i].shape</a>
+            gain[2:6] = torch.tensor(shape)[[3, 2, 3, 2]]  &#47&#47 xyxy gain
+
+            &#47&#47 Match targets to anchors
+            t = targets * gain  &#47&#47 shape(3,n,7)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/bobo-y/flexible-yolov5/commit/9fb058ef7b7925a243a436788f3f55dbb4b3e263#diff-1d2722d9febbbcc664b268ca7c1587391e5c2fee9a63943a9577a5d3f29d31ccL163' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 37736118</div><div id='project'> Project Name: bobo-y/flexible-yolov5</div><div id='commit'> Commit Name: 9fb058ef7b7925a243a436788f3f55dbb4b3e263</div><div id='time'> Time: 2022-07-02</div><div id='author'> Author: yl305237731@gmail.com</div><div id='file'> File Name: od/models/loss/yolo.py</div><div id='m_class'> M Class Name: ComputeLoss</div><div id='n_method'> N Class Name: ComputeLoss</div><div id='m_method'> M Method Name: build_targets(3)</div><div id='n_method'> N Method Name: build_targets(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: od/models/loss/yolo.py</div><div id='n_file'> N File Name: od/models/loss/yolo.py</div><div id='m_start'> M Start Line: 167</div><div id='m_end'> M End Line: 211</div><div id='n_start'> N Start Line: 178</div><div id='n_end'> N End Line: 226</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            x = x.to(pl_module.device)       
+            with torch.no_grad():
+                pl_module.eval()
+                logits<a id="change"> = </a>pl_module(text, x)
+                img_logits = <a id="change">logits[:, -pl_module.image_seq_len:].long()</a>
+                img_seq = torch.argmax(img_logits, dim = -1)
+                img_seq<a id="change"> -= </a>pl_module.num_text_tokens           
+                x_rec = pl_module.vae.decode(img_seq, feed_seq=True)                
+
+                pl_module.train()  </code></pre><h3>After Change</h3><pre><code class='java'>
+            sample_text = text[:1]
+            token_list = sample_text.masked_select(sample_text != 0).tolist()
+            decoded_text = self.tokenizer.decode(token_list)   
+            x<a id="change">, _</a> = batch
+            x = x[:1]
+            x_rec = outputs[&quotxrec&quot][:1]
+            &quot&quot&quot</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/tgisaturday/dalle-lightning/commit/9c1458557eb1d1a37d11b52079ef40d614175f86#diff-a83484d4c7b7ebe0b0e0ade59c8557937a9e940ae331d28b6debb50cefd16ffcL370' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 37736117</div><div id='project'> Project Name: tgisaturday/dalle-lightning</div><div id='commit'> Commit Name: 9c1458557eb1d1a37d11b52079ef40d614175f86</div><div id='time'> Time: 2021-07-29</div><div id='author'> Author: jamesk1228@gmail.com</div><div id='file'> File Name: pl_dalle/callbacks.py</div><div id='m_class'> M Class Name: DalleSimpleImageSampler</div><div id='n_method'> N Class Name: DalleSimpleImageSampler</div><div id='m_method'> M Method Name: on_train_batch_end(7)</div><div id='n_method'> N Method Name: on_train_batch_end(7)</div><div id='m_parent_class'> M Parent Class: Callback</div><div id='n_parent_class'> N Parent Class: Callback</div><div id='m_file'> M File Name: pl_dalle/callbacks.py</div><div id='n_file'> N File Name: pl_dalle/callbacks.py</div><div id='m_start'> M Start Line: 385</div><div id='m_end'> M End Line: 398</div><div id='n_start'> N Start Line: 385</div><div id='n_end'> N End Line: 387</div><BR>

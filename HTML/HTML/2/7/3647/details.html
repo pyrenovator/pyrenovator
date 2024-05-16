@@ -1,0 +1,157 @@
+<html><h3>Pattern ID :3647
+</h3><img src='13753808.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        feat_aug[div_mask] /= scale_factor
+
+        edge_index_aug = dense_to_sparse(adj_aug)[0].to(self.device)
+        feat_aug<a id="change"> = </a><a id="change">feat_aug.to(</a>self.device<a id="change">)</a>
+        label_aug = label_aug.to(self.device)
+        return feat_aug, edge_index_aug, label_aug
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        adj = data.s
+        node_idx = data.n_id
+
+        batch_size<a id="change"> = </a>adj.shape[0]
+        num_nodes = adj.shape[1]
+
+        adj_aug, feat_aug = deepcopy(adj), deepcopy(x)
+        label_aug = torch.zeros(batch_size, dtype=torch.int32)
+
+        prob = torch.rand(batch_size)
+        label_aug[prob &lt; rate] = 1
+
+        &#47&#47 high-degree
+        hd_mask = prob &lt; rate / 4
+        n_hd = torch.sum(hd_mask)
+        edges_mask = torch.rand(n_hd, num_nodes) &lt; num_added_edge / num_nodes
+        edges_mask<a id="change"> = </a>edges_mask
+        adj_aug[hd_mask, :] = edges_mask.float()
+
+        &#47&#47 outlying
+        ol_mask = torch.logical_and(rate / 4 &lt;= prob, prob &lt; rate / 2)
+        adj_aug[ol_mask, :] = 0
+
+        &#47&#47 deviated
+        dv_mask = torch.logical_and(rate / 2 &lt;= prob, prob &lt; rate * 3 / 4)
+        feat_c = feat_aug[torch.randperm(batch_size)[:surround]]
+        ds = torch.cdist(feat_aug[dv_mask], feat_c)
+        feat_aug[dv_mask] = feat_c[torch.argmax(ds, 1)]
+
+        &#47&#47 disproportionate
+        mul_mask = torch.logical_and(rate * 3 / 4 &lt;= prob, prob &lt; rate * 7 / 8)
+        div_mask = rate * 7 / 8 &lt;= prob
+        feat_aug[mul_mask] *= scale_factor
+        feat_aug[div_mask] /= scale_factor
+
+        edge_index_aug = dense_to_sparse(adj_aug)[0]
+        inv_idx<a id="change"> = </a><a id="change">torch.zeros(</a>num_nodes<a id="change">, dtype=torch.int64)</a>
+        inv_idx[node_idx] = torch.arange(batch_size)
+        edge_index_aug[1]<a id="change"> = </a>inv_idx[edge_index_aug[1]]
+
+        return feat_aug, edge_index_aug, label_aug
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 7</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/pygod-team/pygod/commit/586b136a6083b25183c4b6e4b86b0e0d0a4e1a0f#diff-f070c086904b70a740ff6fcb24601d5c9a7f6a2f192168b356affef5a4c1a187L219' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 13753808</div><div id='project'> Project Name: pygod-team/pygod</div><div id='commit'> Commit Name: 586b136a6083b25183c4b6e4b86b0e0d0a4e1a0f</div><div id='time'> Time: 2023-05-11</div><div id='author'> Author: zliu234@uic.edu</div><div id='file'> File Name: pygod/detector/conad.py</div><div id='m_class'> M Class Name: CONAD</div><div id='n_method'> N Class Name: CONAD</div><div id='m_method'> M Method Name: _data_augmentation(2)</div><div id='n_method'> N Method Name: _data_augmentation(3)</div><div id='m_parent_class'> M Parent Class: DeepDetector</div><div id='n_parent_class'> N Parent Class: DeepDetector</div><div id='m_file'> M File Name: pygod/detector/conad.py</div><div id='n_file'> N File Name: pygod/detector/conad.py</div><div id='m_start'> M Start Line: 219</div><div id='m_end'> M End Line: 279</div><div id='n_start'> N Start Line: 249</div><div id='n_end'> N End Line: 288</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            recombine = True
+            for i, target in enumerate(targets):
+                ids, targ, targ_lens = target
+                target[1] = <a id="change">target[1].to(</a>self.device<a id="change">)</a>
+                targ_lens<a id="change"> = </a>targ_lens.to(self.device)
+                target[1] = self.hparams.speedperturb(target[1], targ_lens)
+                if i == 0:
+                    min_len = target[1].shape[1]
+                else:
+                    if target[1].shape[1] &lt; min_len:
+                        min_len = target[1].shape[1]
+
+        if self.hparams.use_rand_shift:
+            &#47&#47 Performing random_shift (independently on each source)
+            recombine = True
+            for target in targets:
+                rand_shift = torch.randint(
+                    self.hparams.min_shift, self.hparams.max_shift, (1,)
+                )
+                target[1] = target[1].to(self.device)
+                target[1] = torch.roll(
+                    target[1], shifts=(rand_shift[0],), dims=1
+                )
+
+        &#47&#47 Re-combination
+        if recombine:
+            for i, target in enumerate(targets):
+                if self.hparams.use_speedperturb:
+                    target[1] = target[1][:, 0:min_len]
+                if i == 0:
+                    mix = target[1]
+                else:
+                    mix<a id="change"> = </a>mix + target[1]
+        return [mix, targets]
+
+    def cut_signals(self, mixture, targets):</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        if self.hparams.use_speedperturb:
+            &#47&#47 Performing speed change (independently on each source)
+            new_targets<a id="change"> = </a>[]
+            recombine = True
+
+            for i in range(targets.shape[-1]):
+                new_target = self.hparams.speedperturb(
+                    targets[:, :, i], targ_lens
+                )
+                new_targets.append(new_target)
+                if i == 0:
+                    min_len = new_target.shape[-1]
+                else:
+                    if new_target.shape[-1] &lt; min_len:
+                        min_len = new_target.shape[-1]
+
+            if self.hparams.use_rand_shift:
+                &#47&#47 Performing random_shift (independently on each source)
+                recombine = True
+                for i in range(targets.shape[-1]):
+                    rand_shift = torch.randint(
+                        self.hparams.min_shift, self.hparams.max_shift, (1,)
+                    )
+                    new_targets[i] = new_targets[i].to(self.device)
+                    new_targets[i] = torch.roll(
+                        new_target, shifts=(rand_shift[0],), dims=1
+                    )
+
+            &#47&#47 Re-combination
+            if recombine:
+                if self.hparams.use_speedperturb:
+                    targets<a id="change"> = </a><a id="change">torch.zeros(
+                        </a>targets.shape[0],
+                        min_len,
+                        targets.shape[-1]<a id="change">,
+                        device=targets.device,
+                        dtype=torch.float,
+                    )</a>
+                for i, new_target in enumerate(new_targets):
+                    targets[:, :, i] = new_targets[i][:, 0:min_len]
+        mix<a id="change"> = </a>targets.sum(-1)
+        return mix, targets
+
+    def cut_signals(self, mixture, targets):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/speechbrain/speechbrain/commit/8534c79a22138d90a7df3b6a93a785806e8c3cfd#diff-fd30eeb0106c30b554c4a7b9cb5d5bc3c272db2f77736588b90268bbbcded896L197' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 13753820</div><div id='project'> Project Name: speechbrain/speechbrain</div><div id='commit'> Commit Name: 8534c79a22138d90a7df3b6a93a785806e8c3cfd</div><div id='time'> Time: 2020-12-11</div><div id='author'> Author: ravanelm@cdr2596.int.cedar.computecanada.ca</div><div id='file'> File Name: recipes/WSJ2Mix/separation/train.py</div><div id='m_class'> M Class Name: Separation</div><div id='n_method'> N Class Name: Separation</div><div id='m_method'> M Method Name: add_speed_perturb(3)</div><div id='n_method'> N Method Name: add_speed_perturb(2)</div><div id='m_parent_class'> M Parent Class: sb.Brain</div><div id='n_parent_class'> N Parent Class: sb.Brain</div><div id='m_file'> M File Name: recipes/WSJ2Mix/separation/train.py</div><div id='n_file'> N File Name: recipes/WSJ2Mix/separation/train.py</div><div id='m_start'> M Start Line: 206</div><div id='m_end'> M End Line: 238</div><div id='n_start'> N Start Line: 198</div><div id='n_end'> N End Line: 245</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+      loss: A float32 scalar representing normalized total loss.
+    
+
+    positive_label_mask<a id="change"> = </a>targets == 1.0
+    cross_entropy = F.binary_cross_entropy_with_logits(logits, <a id="change">targets.to(</a>logits.dtype<a id="change">)</a>, reduction=&quotnone&quot)
+    neg_logits<a id="change"> = </a>-1.0 * logits
+    modulator = torch.exp(gamma * targets * neg_logits - gamma * torch.log1p(torch.exp(neg_logits)))
+    loss = modulator * cross_entropy
+    weighted_loss = torch.where(positive_label_mask, alpha * loss, (1.0 - alpha) * loss)
+    weighted_loss<a id="change"> /= </a>normalizer
+    return weighted_loss
+
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            + (1.0 - targets) * torch.log(1.0 - outputs))
+    loss = focal_weight * bce
+
+    loss<a id="change"> = </a>torch.where(torch.ne(targets, -1.0), loss,
+                       <a id="change">torch.zeros(</a>loss.shape<a id="change">, device=device)</a>)
+    loss<a id="change"> /= </a>normalizer
+    return loss
+
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/sevakon/efficientdet/commit/cc2e5246bcb32e8fd405e64eec12b70088f1f097#diff-217ea1e96fb551669028a03451214681afc74f587f6cf04eff69c306d74bdcb6L63' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 13753694</div><div id='project'> Project Name: sevakon/efficientdet</div><div id='commit'> Commit Name: cc2e5246bcb32e8fd405e64eec12b70088f1f097</div><div id='time'> Time: 2020-05-25</div><div id='author'> Author: sevakonyakhin@gmail.com</div><div id='file'> File Name: utils/tools.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: focal_loss(5)</div><div id='n_method'> N Method Name: focal_loss(5)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: utils/tools.py</div><div id='n_file'> N File Name: utils/tools.py</div><div id='m_start'> M Start Line: 80</div><div id='m_end'> M End Line: 87</div><div id='n_start'> N Start Line: 74</div><div id='n_end'> N End Line: 91</div><BR>

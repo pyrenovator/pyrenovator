@@ -1,0 +1,104 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    batch_size = segmask_array.shape[0]
+    &#47&#47 batch_stack = None
+    def_shape = segmask_array.shape
+    batch_stack = <a id="change">np.zeros(</a>[def_shape[0], len(class_list), def_shape[2], def_shape[3], def_shape[4]]<a id="change">, dtype=np.float32)</a>
+    for b in range(batch_size):
+        &#47&#47 one_hot_stack = np.zeros([len(class_list), def_shape[2], def_shape[3], def_shape[4]])
+        &#47&#47 since the input tensor is 5D, with [batch_size, modality, x, y, z], we do not need to consider the modality dimension for labels
+        segmask_array_iter = segmask_array[b, 0, ...]
+        bin_mask = (segmask_array_iter == 0).numpy()  &#47&#47 initialize bin_mask
+        &#47&#47 this implementation allows users to combine logical operands
+
+        class_idx = 0
+        for _class in class_list:
+            if isinstance(_class, str):
+                if "||" in _class:  &#47&#47 special case
+                    class_split = _class.split("||")
+                    bin_mask = segmask_array_iter == int(class_split[0])
+                    for i in range(1, len(class_split)):
+                        bin_mask = bin_mask | (
+                            segmask_array_iter == int(class_split[i])
+                        )
+                elif "|" in _class:  &#47&#47 special case
+                    class_split = _class.split("|")
+                    bin_mask = segmask_array_iter == int(class_split[0])
+                    for i in range(1, len(class_split)):
+                        bin_mask = bin_mask | (
+                            segmask_array_iter == int(class_split[i])
+                        )
+                else:
+                    &#47&#47 assume that it is a simple int
+                    bin_mask = segmask_array_iter == int(_class)
+            else:
+                bin_mask = segmask_array_iter == int(_class)
+            bin_mask = bin_mask.long()
+            &#47&#47 we always ensure the append happens in dim 0, which is blank
+            bin_mask = bin_mask.unsqueeze(0)
+
+            <a id="change">batch_stack[b, class_idx, ...]</a> = bin_mask
+            class_idx += 1
+                
+        &#47&#47     if one_hot_stack is None:
+        &#47&#47         one_hot_stack = bin_mask
+        &#47&#47     else:
+        &#47&#47         one_hot_stack = torch.cat((one_hot_stack, bin_mask))
+                
+        &#47&#47 if batch_stack is None:
+        &#47&#47     batch_stack = one_hot_stack
+        &#47&#47     &#47&#47 always ensure we are returning a tensor with batch_size encoded
+        &#47&#47     batch_stack = batch_stack.unsqueeze(0)
+        &#47&#47 else:
+        &#47&#47     if one_hot_stack.shape != batch_stack.shape:
+        &#47&#47         one_hot_stack = one_hot_stack.unsqueeze(0)
+        &#47&#47     batch_stack = torch.cat((batch_stack, one_hot_stack))
+    
+    return <a id="change">torch.from_numpy(batch_stack</a><a id="change">)</a>
+
+
+def reverse_one_hot(predmask_array, class_list):
+    </code></pre><h3>After Change</h3><pre><code class='java'>
+    batch_size = segmask_array.shape[0]
+    &#47&#47 batch_stack = None
+    def_shape = segmask_array.shape
+    batch_stack = <a id="change">torch.zeros(</a>def_shape[0], len(class_list), def_shape[2], def_shape[3], def_shape[4]<a id="change">, dtype=torch.float32)</a>
+    for b in range(batch_size):
+        &#47&#47 one_hot_stack = np.zeros([len(class_list), def_shape[2], def_shape[3], def_shape[4]])
+        &#47&#47 since the input tensor is 5D, with [batch_size, modality, x, y, z], we do not need to consider the modality dimension for labels
+        segmask_array_iter = segmask_array[b, 0, ...]
+        bin_mask = (segmask_array_iter == 0)  &#47&#47 initialize bin_mask
+        &#47&#47 this implementation allows users to combine logical operands
+
+        class_idx = 0
+        for _class in class_list:
+            if isinstance(_class, str):
+                if "||" in _class:  &#47&#47 special case
+                    class_split = _class.split("||")
+                    bin_mask = segmask_array_iter == int(class_split[0])
+                    for i in range(1, len(class_split)):
+                        bin_mask = bin_mask | (
+                            segmask_array_iter == int(class_split[i])
+                        )
+                elif "|" in _class:  &#47&#47 special case
+                    class_split = _class.split("|")
+                    bin_mask = segmask_array_iter == int(class_split[0])
+                    for i in range(1, len(class_split)):
+                        bin_mask = bin_mask | (
+                            segmask_array_iter == int(class_split[i])
+                        )
+                else:
+                    &#47&#47 assume that it is a simple int
+                    bin_mask = segmask_array_iter == int(_class)
+            else:
+                bin_mask = segmask_array_iter == int(_class)
+            bin_mask = bin_mask.long()
+            &#47&#47 we always ensure the append happens in dim 0, which is blank
+            bin_mask = bin_mask.unsqueeze(0)
+
+            <a id="change">batch_stack[b, class_idx, ...]</a> = bin_mask
+            class_idx += 1
+                
+        &#47&#47     if one_hot_stack is None:</code></pre>

@@ -1,0 +1,141 @@
+<html><h3>Pattern ID :5741
+</h3><img src='20097239.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        path = Path(cfg.path) / i
+        split = path / "lang_annotations/auto_lang_ann.npy"
+        data = np.load(split, allow_pickle=True).reshape(-1)[0]
+        task_ann = cfg.val_instructions<a id="change"> if "val" in i</a><a id="change"> else </a>cfg.train_instructions
+        if cfg.reannotate and "train" in i:
+            print("Re-annotating sequences...")
+            data["language"]["ann"] = [</code></pre><h3>After Change</h3><pre><code class='java'>
+    save_path.mkdir(exist_ok=True)
+    np.save(save_path / "auto_lang_ann.npy", data)
+
+    <a id="change">if "validation" in cfg.path</a>:
+        embeddings: Dict = {}
+        for task, ann in cfg.val_instructions.items():
+            embeddings[task] = {}
+            language_embedding = model(list(ann))
+            embeddings[task]["emb"] = language_embedding.cpu().numpy()
+            <a id="change">embeddings[task]["ann"] = </a>ann
+        np.save(save_path / "embeddings", embeddings)  &#47&#47 type:ignore
+        print("Done saving val language embeddings for Rollouts !")
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 6</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/mees/calvin/commit/e5b712f12f5a2c5bf461a633771f1f7be42666a2#diff-a8af52d2b408a2118467e90ca6cc196f882296e11f9a1a15d03163a462e8aacbL21' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 20097239</div><div id='project'> Project Name: mees/calvin</div><div id='commit'> Commit Name: e5b712f12f5a2c5bf461a633771f1f7be42666a2</div><div id='time'> Time: 2022-04-14</div><div id='author'> Author: oier.mees@gmail.com</div><div id='file'> File Name: calvin_models/calvin_agent/utils/relabel_with_new_lang_model.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(1)</div><div id='n_method'> N Method Name: main(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: calvin_models/calvin_agent/utils/relabel_with_new_lang_model.py</div><div id='n_file'> N File Name: calvin_models/calvin_agent/utils/relabel_with_new_lang_model.py</div><div id='m_start'> M Start Line: 21</div><div id='m_end'> M End Line: 41</div><div id='n_start'> N Start Line: 23</div><div id='n_end'> N End Line: 55</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        for metric in ood_metrics:
+          ood_scores = metric.compute_ood_scores(batch_scores)
+          ood_labels = np.zeros_like(
+              ood_scores)<a id="change"> if val_name == &quotind&quot</a><a id="change"> else </a>np.ones_like(ood_scores)
+          metric.update(ood_scores, ood_labels)
+
+    if val_name == &quottrain_maha&quot:</code></pre><h3>After Change</h3><pre><code class='java'>
+  &#47&#47 https://arxiv.org/abs/2106.09022
+  ood_metrics = {}
+  for ood_ds_name in ood_ds_names:
+    <a id="change">if &quotood&quot in ood_ds_name</a>:
+      ood_metrics[ood_ds_name]<a id="change"> = </a>[
+          OODMetric(ood_ds_name, ood_method) for ood_method in ood_methods
+      ]
+
+  output = {}
+  &#47&#47 Mean and cov of class conditional Guassian in Mahalanobis distance.
+  &#47&#47 Mean_background and cov_background for the unified Guassian model
+  &#47&#47 regardless of class labels for computing Relative Mahalanobis distance
+  mean_list, cov = None, None
+  mean_list_background, cov_background = None, None
+  for ood_ds_name in ood_ds_names:
+    &#47&#47 The dataset train_maha must come before ind and ood
+    &#47&#47 because the train_maha will be used to esimate the class conditional
+    &#47&#47 mean and shared covariance.
+    val_iter, val_steps = ood_ds[ood_ds_name]
+    ncorrect, loss, nseen = 0, 0, 0
+    pre_logits_list, labels_list = [], []
+    for _, batch in zip(range(val_steps), val_iter):
+      batch_scores = {}
+      batch_ncorrect, batch_losses, batch_n, batch_metric_args = evaluation_fn(
+          opt_repl.target, batch[&quotimage&quot], batch[&quotlabels&quot], batch[&quotmask&quot])
+      ncorrect += np.sum(np.array(batch_ncorrect[0]))
+      loss += np.sum(np.array(batch_losses[0]))
+      nseen += np.sum(np.array(batch_n[0]))
+
+      &#47&#47 Here we parse batch_metric_args to compute OOD metrics.
+      logits, labels, pre_logits, masks = batch_metric_args
+      masks_bool = np.array(masks[0], dtype=bool)
+      if not np.any(masks_bool):
+        continue  &#47&#47 No valid examples in this batch.
+      if ood_ds_name == &quottrain_maha&quot:
+        &#47&#47 For Mahalanobis distance, we need to first fit class conditional
+        &#47&#47 Gaussian using training data.
+        pre_logits_list.append(np.array(pre_logits[0])[masks_bool])
+        labels_list.append(np.array(labels[0])[masks_bool])
+      else:
+        &#47&#47 Computes Mahalanobis distance.
+        if mean_list is not None and cov is not None:
+          dists = compute_mahalanobis_distance(
+              np.array(pre_logits[0])[masks_bool], mean_list, cov)
+          batch_scores[&quotdists&quot] = dists
+
+        if mean_list_background is not None and cov_background is not None:
+          dists_background = compute_mahalanobis_distance(
+              np.array(pre_logits[0])[masks_bool], mean_list_background,
+              cov_background)
+          batch_scores[&quotdists_background&quot] = dists_background
+
+        &#47&#47 Computes Maximum softmax probability (MSP)
+        probs = jax.nn.softmax(logits[0], axis=-1)[masks_bool]
+        batch_scores[&quotprobs&quot] = probs
+
+        &#47&#47 Compute Entropy
+        batch_scores[&quotentropy&quot] = np.array(
+            [scipy.stats.entropy(prob) for prob in probs])
+
+        &#47&#47 Update metric state for each metric in ood_metrics
+        if ood_ds_name == &quotind&quot:
+          for metric_list in ood_metrics.values():
+            for metric in metric_list:
+              ood_scores = metric.compute_ood_scores(batch_scores)
+              ood_labels = np.zeros_like(ood_scores)
+              metric.update(ood_scores, ood_labels)
+        else:
+          for metric in ood_metrics[ood_ds_name]:
+            ood_scores = metric.compute_ood_scores(batch_scores)
+            ood_labels = np.ones_like(ood_scores)
+            metric.update(ood_scores, ood_labels)
+
+    if ood_ds_name == &quottrain_maha&quot:
+      &#47&#47 Estimate class conditional Gaussian distribution for Mahalanobis dist.
+      pre_logits_train = np.vstack(np.vstack(pre_logits_list))
+      labels_train = np.argmax(np.vstack(np.vstack(labels_list)), axis=-1)
+      mean_list, cov = compute_mean_and_cov(pre_logits_train, labels_train)
+      mean_list_background, cov_background = compute_mean_and_cov(
+          pre_logits_train, np.zeros_like(labels_train))
+    elif ood_ds_name == &quotind&quot:
+      &#47&#47 Evaluate in-distribution prediction accuracy
+      output[f&quot{ood_ds_name}_prec@1&quot] = ncorrect / nseen
+      output[f&quot{ood_ds_name}_loss&quot] = loss / nseen
+
+  for metric_list in ood_metrics.values():
+    for metric in metric_list:
+      metric_name = metric.get_metric_name()
+      metric_values = metric.compute_metrics()
+      for key, value in metric_values.items():
+        <a id="change">output[f&quot{metric_name}_{key}&quot]</a> = value
+
+  return output
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/google/uncertainty-baselines/commit/8eba807c5224279c582b9d6b86035e6f8a3783a9#diff-680208de64e66c09a1da760aac839b3e1483c32ee51572fdeef2c2b273880484L277' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 20097242</div><div id='project'> Project Name: google/uncertainty-baselines</div><div id='commit'> Commit Name: 8eba807c5224279c582b9d6b86035e6f8a3783a9</div><div id='time'> Time: 2021-10-08</div><div id='author'> Author: jjren@google.com</div><div id='file'> File Name: baselines/jft/ood_utils.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: eval_ood_metrics(5)</div><div id='n_method'> N Method Name: eval_ood_metrics(5)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: baselines/jft/ood_utils.py</div><div id='n_file'> N File Name: baselines/jft/ood_utils.py</div><div id='m_start'> M Start Line: 289</div><div id='m_end'> M End Line: 367</div><div id='n_start'> N Start Line: 300</div><div id='n_end'> N End Line: 391</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    except Exception:
+        gpu_memory_frac = 0.01
+
+    columns = mycols_pq<a id="change"> if engine == "parquet"</a><a id="change"> else </a>mycols_csv
+
+    return nvtabular.io.GPUDatasetIterator(
+        paths,</code></pre><h3>After Change</h3><pre><code class='java'>
+        gpu_memory_frac = 0.01
+
+    kwargs = {}
+    <a id="change">if engine == "csv-no-header"</a>:
+        <a id="change">kwargs["names"] = </a>allcols_csv
+
+    return nvtabular.dask.io.DaskDataset(paths, part_mem_fraction=gpu_memory_frac, **kwargs)
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/nvidia/nvtabular/commit/e144f110654a203e5ba6b8694b9a39acbbe47975#diff-e52e4ddd58b7ef887ab03c04116e676f6280b824ab7469d5d3080e5cba4f2128L140' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 20097243</div><div id='project'> Project Name: nvidia/nvtabular</div><div id='commit'> Commit Name: e144f110654a203e5ba6b8694b9a39acbbe47975</div><div id='time'> Time: 2020-06-26</div><div id='author'> Author: github@benfrederickson.com</div><div id='file'> File Name: tests/conftest.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: dataset(1)</div><div id='n_method'> N Method Name: dataset(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: tests/conftest.py</div><div id='n_file'> N File Name: tests/conftest.py</div><div id='m_start'> M Start Line: 141</div><div id='m_end'> M End Line: 156</div><div id='n_start'> N Start Line: 153</div><div id='n_end'> N End Line: 164</div><BR>

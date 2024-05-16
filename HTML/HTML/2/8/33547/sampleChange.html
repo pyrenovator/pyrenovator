@@ -1,0 +1,42 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    &#47&#47 constant folding
+    const = None
+    if self.bufs[buf_index]._base_shape == (1,) and self.bufs[buf_index]._backing is not None:
+      <a id="change">assert </a>self.buftokens[buf_index].typ == Types.FLOAT
+      if buf_index != 0: self.bufs_to_delete.add(buf_index)
+      const = Token(f"({self.bufs[buf_index]._backing[0]}f)", self.buftokens[buf_index].typ)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+      if buf_index != 0: self.bufs_to_delete.add(buf_index)
+      const = Token(f"({self.bufs[buf_index]._backing[0]}f)", Types.FLOAT)
+
+    can_merge = (not self.bufs[buf_index].st.needs_valid() and len(self.bufs[buf_index].st.views) == 1) or <a id="change">"Image" in str(type(self.bufs[buf_index]._buf))</a>
+    should_upcast = const is None and can_merge and self.buftokens[buf_index].can_float4()
+
+    tokens = []
+    for o in self.buftokens[buf_index].offsets():
+      key = f"val{buf_index}_{o}" if o &gt;= 0 else f"val{buf_index}_m{-o}"
+      if (buf_index, o) not in self.loaded_keys:
+        idxy, valid = self.sts[buf_index].expr_idxs(o)
+        if const is not None:
+          ldr = const
+        elif isinstance(self.bufs[buf_index]._buf, CLImage):
+          assert should_upcast, f"Image requires upcasting to FLOAT4 {self.buftokens[buf_index]}"
+          ldr = Token(f"read_imagef({self.buftokens[buf_index].tok}, smp, {self.image_idx(buf_index, idxy, VALIDHACKS)}) /* {self.bufs[buf_index]._base_shape} */", Types.FLOAT4)
+        elif should_upcast:
+          ldr = Token(f"(({CLProgram.buffer_prefix}float4*){self.buftokens[buf_index].tok})[{(idxy//4).render(render_cl)}]", Types.FLOAT4)
+        else:
+          ldr = Token(f"{self.buftokens[buf_index].tok}[{idxy.render(render_cl)}]", Types.FLOAT)
+        ldr = ldr if valid.min == 1 or (VALIDHACKS and isinstance(self.bufs[buf_index]._buf, CLImage)) else (Token(f"({valid.render(render_cl)} ? {ldr.tok} : 0.0f)", ldr.typ) if valid.max == 1 else Token("0.0f", ldr.typ))
+        if const is not None:
+          self.loaded_keys[(buf_index,o)] = ldr
+        else:
+          self.kernel.append(f"{ldr.decltype()} {key} = {ldr.tok};\n")
+          <a id="change">if </a>should_upcast:
+            <a id="change">for j</a> in <a id="change">range(4</a><a id="change">):
+              </a>self.loaded_keys[(buf_index,o<a id="change">+j</a>)] = Token(key+f&quot.{"xyzw"[j]}&quot, Types.FLOAT)
+          else:
+            self.loaded_keys[(buf_index,o)] = Token(key, Types.FLOAT)
+      tokens.append(self.loaded_keys[(buf_index,o)])</code></pre>

@@ -1,0 +1,73 @@
+<html><h3>Pattern ID :38060
+</h3><img src='109078503.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            for i in range(4):
+                test_result = render_image(fine_net, test_cam_tf[i * 10], 200, test_focal, near_t, far_t, fine_sample_pnum)
+                test_results.append(test_result)
+                test_loss<a id="change"> += </a>loss_func(test_result, <a id="change">testset[i * 10].cuda()</a>)
+            render_timer.toc()
+            eval_timer.toc()
+            writer.add_scalar(&quotTest Loss&quot, loss, test_cnt)</code></pre><h3>After Change</h3><pre><code class='java'>
+    train_focal = fov2Focal(cam_fov_train, 200)
+    test_focal = fov2Focal(cam_fov_test, 200)
+    test_cam_tf = test_cam_tf.cuda()
+    train_images = <a id="change">train_images[0].unsqueeze(0</a><a id="change">)</a>
+
+    &#47&#47 ====== tensorboard summary writer ======
+    writer = getSummaryWriter(epochs, del_dir)
+
+    &#47&#47 有如下两处可以修改：（1）默认训练方式是每次迭代随机选择一张图，从一张图中随机选择光线 （2）使用centercorp（初始化阶段，希望获得更多的图像信息，以免学习到无效信息引起梯度偏移）
+
+    train_cnt, test_cnt = 0, 0
+    train_timer, eval_timer, epoch_timer, render_timer = Timer(5), Timer(5), Timer(3), Timer(4)
+    torch.cuda.empty_cache()
+    for ep in range(epochs):
+        epoch_timer.tic()
+        coarse_net.train()
+        fine_net.train()
+        for i in range(train_per_epoch):
+            train_timer.tic()
+            now_crop = (center_crop if train_cnt &lt; center_crop_iter else 1.)
+            valid_pixels<a id="change">, valid_coords, img_idx = </a>randomFromOneImage(train_images, now_crop)
+            coarse_samples, coarse_lengths, rgb_targets, coarse_cam_rays = validSampler(
+                valid_pixels, valid_coords, train_cam_tf[img_idx], sample_ray_num, coarse_sample_pnum, 200, 200, train_focal, near_t, far_t
+            )</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/enigmatisms/nerf/commit/926e53d582b75b6d41aa6ffb38432e21706adc6f#diff-ed183d67207df065a11e1289f19d34cc2abbc5448dea952683cfe9728c342b95L73' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 109078503</div><div id='project'> Project Name: enigmatisms/nerf</div><div id='commit'> Commit Name: 926e53d582b75b6d41aa6ffb38432e21706adc6f</div><div id='time'> Time: 2022-04-14</div><div id='author'> Author: 984041003@qq.com</div><div id='file'> File Name: train.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(0)</div><div id='n_method'> N Method Name: main(0)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: train.py</div><div id='n_file'> N File Name: train.py</div><div id='m_start'> M Start Line: 73</div><div id='m_end'> M End Line: 188</div><div id='n_start'> N Start Line: 78</div><div id='n_end'> N End Line: 178</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        coords = torch.stack((u_coord, v_coord), dim=1)  &#47&#47 HW x 2
+        tgt_coords_dense = coords.unsqueeze(0).expand(batch_size, height * width, 2) &#47&#47 B x HW x 2
+        if config[&quotgpuid&quot] != &quotcpu&quot:
+            tgt_coords_dense = <a id="change">tgt_coords_dense.cuda()</a>
+
+        pseudo_coords = torch.matmul(tgt_coords_dense.transpose(2, 1).contiguous(),
+            soft_match_vals.transpose(2, 1).contiguous()).transpose(2, 1).contiguous()  &#47&#47 BxNx2
+
+        &#47&#47 GET SCORES for pseudo point locations
+        n_points = keypoint_scores.size(2)
+        pseudo_norm<a id="change"> = </a>normalize_coords(pseudo_coords, batch_size, height, width).unsqueeze(1)   &#47&#47 B x 1 x N x 2
+        tgt_scores_dense = scores_dense[1::self.window_size]
+        pseudo_scores = F.grid_sample(tgt_scores_dense, pseudo_norm, mode=&quotbilinear&quot)           &#47&#47 B x 1 x 1 x N
+        pseduo_scores = pseduo_scores.reshape(batch_size, 1, n_points)                          &#47&#47 B x 1 x N</code></pre><h3>After Change</h3><pre><code class='java'>
+            soft_match_vals.transpose(2, 1).contiguous()).transpose(2, 1).contiguous()  &#47&#47 BxNx2
+
+        &#47&#47 GET SCORES for pseudo point locations
+        pseudo_norm<a id="change"> = </a><a id="change">normalize_coords(pseudo_coords, height, width).unsqueeze(1</a><a id="change">)</a>               &#47&#47 B x 1 x N x 2
+        tgt_scores_dense = scores_dense[1::self.window_size]
+        pseudo_scores = F.grid_sample(tgt_scores_dense, pseudo_norm, mode=&quotbilinear&quot)           &#47&#47 B x 1 x 1 x N
+        pseduo_scores = pseduo_scores.reshape(batch_size, 1, n_points)                          &#47&#47 B x 1 x N</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/utiasasrl/hero_radar_odometry/commit/dcd5074dd5dff7bab272cddac2ba50b426590076#diff-23e0da2f9fd5de38a06280e99a19331414bae7133b397e03cf546a99b3ddce20L12' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 109078518</div><div id='project'> Project Name: utiasasrl/hero_radar_odometry</div><div id='commit'> Commit Name: dcd5074dd5dff7bab272cddac2ba50b426590076</div><div id='time'> Time: 2020-11-13</div><div id='author'> Author: keenburn2004@gmail.com</div><div id='file'> File Name: networks/softmax_matcher.py</div><div id='m_class'> M Class Name: SoftmaxMatcher</div><div id='n_method'> N Class Name: SoftmaxMatcher</div><div id='m_method'> M Method Name: forward(5)</div><div id='n_method'> N Method Name: forward(5)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: networks/softmax_matcher.py</div><div id='n_file'> N File Name: networks/softmax_matcher.py</div><div id='m_start'> M Start Line: 20</div><div id='m_end'> M End Line: 54</div><div id='n_start'> N Start Line: 21</div><div id='n_end'> N End Line: 52</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            self.IMP_chunkid_Embedding.weight[_id] = chunk_id
+            self.IMP_offsetinchunk_Embedding.weight[_id] = offset_in_chunk
+        self.IMP_chunkid_Embedding = self.IMP_chunkid_Embedding.cuda()
+        self.IMP_offsetinchunk_Embedding<a id="change"> = </a><a id="change">self.IMP_offsetinchunk_Embedding.cuda()</a>
+
+    @torch.no_grad()
+    def _id_to_cached_cuda_id(self, ids: torch.Tensor) -&gt; torch.Tensor:
+        </code></pre><h3>After Change</h3><pre><code class='java'>
+        else:
+            sorted_idx = torch.arange(self.num_embeddings, device=torch.cuda.current_device(), dtype=torch.long)
+
+        divs<a id="change"> = </a><a id="change">torch.div(sorted_idx, self.chunk_size, rounding_mode=&quotfloor&quot).unsqueeze(1</a><a id="change">)</a>
+        mods = torch.remainder(sorted_idx, self.chunk_size).unsqueeze(1)
+
+        self.IMP_chunkid_Embedding.weight.data.copy_(divs)
+        self.IMP_offsetinchunk_Embedding.weight.data.copy_(mods)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/hpcaitech/cachedembedding/commit/649b198bab518ec907dcf5b4ad2f33c6058b5697#diff-aab5f7e7e049810d29a74e3eab12af668892a81357998cc464ab0f8cd2272767L114' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 109078508</div><div id='project'> Project Name: hpcaitech/cachedembedding</div><div id='commit'> Commit Name: 649b198bab518ec907dcf5b4ad2f33c6058b5697</div><div id='time'> Time: 2022-07-26</div><div id='author'> Author: 34452939+zxgx@users.noreply.github.com</div><div id='file'> File Name: recsys/modules/embeddings/chunk_param_mgr.py</div><div id='m_class'> M Class Name: ChunkParamMgr</div><div id='n_method'> N Class Name: ChunkParamMgr</div><div id='m_method'> M Method Name: reorder(2)</div><div id='n_method'> N Method Name: reorder(2)</div><div id='m_parent_class'> M Parent Class: object</div><div id='n_parent_class'> N Parent Class: object</div><div id='m_file'> M File Name: recsys/modules/embeddings/chunk_param_mgr.py</div><div id='n_file'> N File Name: recsys/modules/embeddings/chunk_param_mgr.py</div><div id='m_start'> M Start Line: 122</div><div id='m_end'> M End Line: 130</div><div id='n_start'> N Start Line: 125</div><div id='n_end'> N End Line: 133</div><BR>

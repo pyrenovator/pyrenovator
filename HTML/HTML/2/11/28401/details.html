@@ -1,0 +1,147 @@
+<html><h3>Pattern ID :28401
+</h3><img src='83754557.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+        all_hidden_states = [] if output_hidden_states else None
+        hidden_states = embedding_output
+        <a id="change">for layer</a> in self.encoder<a id="change">:
+            </a>hidden_states<a id="change"> = </a>layer(hidden_states, attention_mask)
+            if output_hidden_states:
+                all_hidden_states.append(hidden_states)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
+
+        &#47&#47 check the variable of `input_ids` and `inputs_embeds`
+        <a id="change">if input_ids is None</a> and inputs_embeds is None:
+            <a id="change">raise </a><a id="change">ValueError("You have to specify either input_ids or inputs_embeds"</a><a id="change">)</a>
+        <a id="change">if </a>input_ids is not None and <a id="change">inputs_embeds is not None</a>:
+            raise ValueError("You cannot specify both input_ids and inputs_embeds at the same time")
+
+        if attention_mask is None:
+            attention_mask = paddle.unsqueeze(
+                (input_ids == self.pad_token_id).astype(self.pooler.dense.weight.dtype) * -1e4, axis=[1, 2]
+            )
+        &#47&#47 For 2D attention_mask from tokenizer
+        elif attention_mask.ndim == 2:
+            attention_mask = paddle.unsqueeze(attention_mask, axis=[1, 2]).astype(paddle.get_default_dtype())
+            attention_mask = (1.0 - attention_mask) * -1e4
+        attention_mask.stop_gradient = True
+
+        embedding_output = self.embeddings(
+            input_ids=input_ids, position_ids=position_ids, token_type_ids=token_type_ids, inputs_embeds=inputs_embeds
+        )
+        embedding_output = self.embedding_hidden_mapping_in(embedding_output)
+
+        hidden_states = embedding_output
+
+        encoder_output = self.encoder(
+            hidden_states,
+            src_mask=attention_mask,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
+
+        &#47&#47 when `output_attentions` and `output_hidden_states` are False, it wll return tensor object.
+        encoder_output = (encoder_output,) if paddle.is_tensor(encoder_output) else encoder_output
+
+        sequence_output<a id="change"> = </a>encoder_output[0]
+
+        pooled_output = self.pooler(sequence_output)
+        content_output = sequence_output[:, self.content_summary_index] if self.use_content_summary else None</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 9</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/paddlepaddle/paddlenlp/commit/5e4d789496b1ef7bf7d1fd3b09c198105cc29aea#diff-ee0b626dc221753cba50d81a16b8ff808f451ea0cb445da307395f4d8e3a214eL291' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 83754557</div><div id='project'> Project Name: paddlepaddle/paddlenlp</div><div id='commit'> Commit Name: 5e4d789496b1ef7bf7d1fd3b09c198105cc29aea</div><div id='time'> Time: 2023-03-23</div><div id='author'> Author: 1435130236@qq.com</div><div id='file'> File Name: paddlenlp/transformers/ernie_ctm/modeling.py</div><div id='m_class'> M Class Name: ErnieCtmModel</div><div id='n_method'> N Class Name: ErnieCtmModel</div><div id='m_method'> M Method Name: forward(10)</div><div id='n_method'> N Method Name: forward(9)</div><div id='m_parent_class'> M Parent Class: ErnieCtmPretrainedModel</div><div id='n_parent_class'> N Parent Class: ErnieCtmPretrainedModel</div><div id='m_file'> M File Name: paddlenlp/transformers/ernie_ctm/modeling.py</div><div id='n_file'> N File Name: paddlenlp/transformers/ernie_ctm/modeling.py</div><div id='m_start'> M Start Line: 376</div><div id='m_end'> M End Line: 440</div><div id='n_start'> N Start Line: 291</div><div id='n_end'> N End Line: 461</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            sorted(example_uris.keys()))
+
+        with self._make_beam_pipeline() as pipeline:
+            <a id="change">for </a>split, <a id="change">example_uri</a> in example_uris.items()<a id="change">:
+                </a>output_examples_split_uri = artifact_utils.get_split_uri(
+                    [output_examples], split)
+                inferrer_step.set_output_uri(output_examples_split_uri)
+
+                _<a id="change"> = </a>(pipeline
+                     | &quotReadData[{}]&quot.format(split) &gt;&gt;
+                     beam.io.ReadFromTFRecord(
+                         file_pattern=io_utils.all_files_pattern(example_uri))</code></pre><h3>After Change</h3><pre><code class='java'>
+        output_examples = artifact_utils.get_single_instance(
+            output_dict[PREDICTIONS])
+
+        <a id="change">if EXAMPLES not in input_dict</a>:
+            <a id="change">raise </a><a id="change">ValueError(&quot\&quotexamples\&quot is missing in input dict.&quot</a><a id="change">)</a>
+        if MODEL not in input_dict:
+            raise ValueError(&quotInput models are not valid, model &quot
+                             &quotneed to be specified.&quot)
+        <a id="change">if MODEL_BLESSING in input_dict</a>:
+            model_blessing<a id="change"> = </a>artifact_utils.get_single_instance(
+                input_dict[&quotmodel_blessing&quot])
+            if not model_utils.is_model_blessed(model_blessing):
+                logging.info(&quotModel on %s was not blessed&quot, model_blessing.uri)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/maiot-io/zenml/commit/1f86eb5ae94e0dc71caf2edadd7a41f84a41fa35#diff-549acfa988fe6f9d971198bf183f103ffd348f89f78ce1e80ac7b8d886933c72L40' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 83754552</div><div id='project'> Project Name: maiot-io/zenml</div><div id='commit'> Commit Name: 1f86eb5ae94e0dc71caf2edadd7a41f84a41fa35</div><div id='time'> Time: 2021-03-18</div><div id='author'> Author: bariscandurak@hotmail.com</div><div id='file'> File Name: zenml/components/bulk_inferrer/executor.py</div><div id='m_class'> M Class Name: BulkInferrerExecutor</div><div id='n_method'> N Class Name: BulkInferrerExecutor</div><div id='m_method'> M Method Name: Do(4)</div><div id='n_method'> N Method Name: Do(4)</div><div id='m_parent_class'> M Parent Class: base_executor.BaseExecutor</div><div id='n_parent_class'> N Parent Class: base_executor.BaseExecutor</div><div id='m_file'> M File Name: zenml/components/bulk_inferrer/executor.py</div><div id='n_file'> N File Name: zenml/components/bulk_inferrer/executor.py</div><div id='m_start'> M Start Line: 49</div><div id='m_end'> M End Line: 101</div><div id='n_start'> N Start Line: 63</div><div id='n_end'> N End Line: 111</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            self.metrics_meter = {k: AverageMeter() for k in metrics}
+
+        monitor = {}
+        <a id="change">for m_m</a> in self.metrics_meter<a id="change">:
+            </a>self.metrics_meter[m_m].update(metrics[m_m].cpu().detach().numpy(), data_loader.batch_size)
+            monitor[m_m]<a id="change"> = </a>self.metrics_meter[m_m].avg
+        if self.model_state == enums.ModelState.TRAIN:
+            self.current_train_step += 1
+        else:</code></pre><h3>After Change</h3><pre><code class='java'>
+            if self.train_batch_index == 0:
+                self.train_meter = {k: AverageMeter() for k in metrics}
+            losses.update(loss.item() * self.config.gradient_accumulation_steps, data_loader.batch_size)
+        elif <a id="change">self._model_state == enums.ModelState.VALID</a>:
+            <a id="change">if self.valid_batch_index == 0</a>:
+                self.valid_meter<a id="change"> = </a>{k: AverageMeter() for k in metrics}
+            losses.update(loss.item(), data_loader.batch_size)
+        else:
+            <a id="change">raise </a><a id="change">ValueError("Invalid model state"</a><a id="change">)</a>
+
+        monitor = self._update_monitor(losses, metrics, data_loader)
+
+        if self._model_state == enums.ModelState.TRAIN:</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/abhi1thakur/tez/commit/f1c2b3c582a5c0c298458bb76ec4a7a8ed01b420#diff-f660d461854c66d0499111062c0db2ec9def34eb74858385556acf394ec6032cL366' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 83754570</div><div id='project'> Project Name: abhi1thakur/tez</div><div id='commit'> Commit Name: f1c2b3c582a5c0c298458bb76ec4a7a8ed01b420</div><div id='time'> Time: 2022-07-06</div><div id='author'> Author: abhishek4@gmail.com</div><div id='file'> File Name: tez/model/tez.py</div><div id='m_class'> M Class Name: Tez</div><div id='n_method'> N Class Name: Tez</div><div id='m_method'> M Method Name: _update_loss_metrics(5)</div><div id='n_method'> N Method Name: _update_loss_metrics(5)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: tez/model/tez.py</div><div id='n_file'> N File Name: tez/model/tez.py</div><div id='m_start'> M Start Line: 370</div><div id='m_end'> M End Line: 383</div><div id='n_start'> N Start Line: 414</div><div id='n_end'> N End Line: 431</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            )
+
+            while response.get("records"):
+                <a id="change">for record</a> in response["records"]<a id="change">:
+                    </a>yield record
+                    yield_fields<a id="change"> += </a>1
+                    if limit and limit &lt;= yield_fields:
+                        return
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            An iterable of raw object containing per-record info
+        
+
+        <a id="change">if </a>limit and <a id="change">limit &lt; 0</a>:
+            <a id="change">raise </a><a id="change">ValueError("The scan limit must be non-negative."</a><a id="change">)</a>
+
+        batch_size = self.DEFAULT_SCAN_SIZE
+        limit = limit if limit else math.inf
+        url = f"{self._API_PREFIX}/{name}/records/:search?limit={{limit}}"
+        query = self._parse_query(query=query)
+
+        request = {
+            "fields": list(projection) if projection else ["id"],
+            "query": query,
+        }
+
+        if id_from:
+            request["next_idx"] = id_from
+
+        with api_compatibility(self, min_version="1.2.0"):
+            request_limit = min(limit, batch_size)
+            response = self.http_client.post(
+                url.format(limit=request_limit),
+                json=request,
+            )
+
+            while response.get("records"):
+                yield from response["records"]
+                limit -= request_limit
+                <a id="change">if limit &lt;= 0</a>:
+                    return
+
+                next_idx = response.get("next_idx")
+                if next_idx:
+                    request_limit<a id="change"> = </a>min(limit, batch_size)
+                    response = self.http_client.post(
+                        path=url.format(limit=request_limit),
+                        json={**request, "next_idx": next_idx},</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/recognai/rubrix/commit/f5834a5408051bf1fa60d42aede6b325dc07fdbd#diff-719e1e0841a617c55a90b5c05893d61d23b5727ac2e744cb4468e6044235bb2eL151' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 83754551</div><div id='project'> Project Name: recognai/rubrix</div><div id='commit'> Commit Name: f5834a5408051bf1fa60d42aede6b325dc07fdbd</div><div id='time'> Time: 2023-03-01</div><div id='author'> Author: 37621491+tomaarsen@users.noreply.github.com</div><div id='file'> File Name: src/argilla/client/apis/datasets.py</div><div id='m_class'> M Class Name: Datasets</div><div id='n_method'> N Class Name: Datasets</div><div id='m_method'> M Method Name: scan(5)</div><div id='n_method'> N Method Name: scan(5)</div><div id='m_parent_class'> M Parent Class: AbstractApi</div><div id='n_parent_class'> N Parent Class: AbstractApi</div><div id='m_file'> M File Name: src/argilla/client/apis/datasets.py</div><div id='n_file'> N File Name: src/argilla/client/apis/datasets.py</div><div id='m_start'> M Start Line: 178</div><div id='m_end'> M End Line: 206</div><div id='n_start'> N Start Line: 177</div><div id='n_end'> N End Line: 208</div><BR>

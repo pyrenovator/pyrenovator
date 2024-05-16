@@ -1,0 +1,37 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            self.state = self.state * self.alpha_mem
+
+            &#47&#47 add recurrent input
+            rec_input = self.hidden_layer(<a id="change">self.activations.reshape(</a>batch_size, <a id="change">-1</a><a id="change">)</a>).reshape(input_current[:, step].shape)
+            total_input = input_current[:, step] + rec_input
+
+            &#47&#47 Add the input currents which are normalised by tau to membrane potential state
+            self.state<a id="change"> = </a>self.state<a id="change"> + </a>total_input * (1-self.alpha_mem)
+
+            &#47&#47 Clip membrane potential that is too low
+            if self.threshold_low: self.state<a id="change"> = </a>torch.clamp(self.state, min=self.threshold_low)
+
+        self.tw = time_steps
+        self.spikes_number = output_spikes.abs().sum()</code></pre><h3>After Change</h3><pre><code class='java'>
+        
+        
+        batch_size, n_time_steps, *other_dimensions = input_current.shape
+        rec_out = <a id="change">torch.zeros(</a>(batch_size<a id="change">, 1, *other_dimensions</a>)<a id="change">)</a>
+        output_spikes = torch.zeros_like(input_current)
+        
+        for step in range(n_time_steps):
+            total_input = input_current[:, step:step+1] + rec_out
+
+            &#47&#47 compute output spikes
+            output = self.lif(total_input)
+            output_spikes[:, step:step+1]<a id="change"> = </a>output
+            
+            &#47&#47 compute recurrent output that will be added to the input at the next time step
+            rec_out = <a id="change">self.rec_weights(output.reshape(batch_size, -1)).reshape(</a>input_current[:, step:step+1].shape<a id="change">)</a>
+
+        return output_spikes
+
+    def reset_states(self, shape=None, randomize=False):</code></pre>

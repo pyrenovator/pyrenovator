@@ -1,0 +1,19 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        g_kfe = self._to_kfe_sua(g, kfe_x, kfe_gy)
+        m2.mul_(self.alpha).add_((1. - self.alpha) * bs, g_kfe ** 2)
+        g_nat_kfe = g_kfe / (m2 + self.eps)
+        g_nat<a id="change"> = </a>self._to_kfe_sua(g_nat_kfe, kfe_x.t(), <a id="change">kfe_gy.t()</a>)
+        if bias_grad is not None:
+            gb = g_nat[:, -1, s[2] // 2, s[3] // 2]
+            &#47&#47 bias.grad.data = gb</code></pre><h3>After Change</h3><pre><code class='java'>
+            gb = gb[None, :, None, None].repeat(1, 1, s[2], s[3])    &#47&#47 (out, 1, kh, kw)
+            g = torch.cat([g, gb], dim=1)    &#47&#47 (out, in + 1, kh, kw)
+
+        N = <a id="change">state.x.size(0</a><a id="change">)</a>
+        g_kfe = self.to_kfe_sua(g, state.kfe_x, state.kfe_gy)  &#47&#47 (out, in + 1, kh, kw)
+        m2 = self.alpha * state.m2 + (1 - self.alpha) * N * (g_kfe.square())  &#47&#47 (out, in + 1, kh, kw)
+        g_nat_kfe = g_kfe / (m2 + self.eps)  &#47&#47 (out, in + 1, kh, kw)
+        g = self.to_kfe_sua(g_nat_kfe, state.kfe_x.t(), state.kfe_gy.t())  &#47&#47 (out, in + 1, kh, kw)</code></pre>

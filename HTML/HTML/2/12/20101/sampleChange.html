@@ -1,0 +1,35 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        self._input_dists: nn.ModuleList = nn.ModuleList()
+        self._lookups: nn.ModuleList = nn.ModuleList()
+        self._create_lookups(fused_params)
+        self._output_dists: nn.ModuleList = <a id="change">nn.ModuleList()</a>
+        self._embedding_names: List[str] = []
+        self._embedding_dims: List[int] = []
+        self._feature_splits: List[int] = []
+        self._features_order: List[int] = []</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 nn.Module API calls (state_dict, named_modules, etc)
+        &#47&#47 Currently, Sharded Quant EBC only uses TW sharding, and returns non-sharded tensors as part of state dict
+        &#47&#47 TODO - revisit if we state_dict can be represented as sharded tensor
+        <a id="change">self.embedding_bags: nn.ModuleDict = </a><a id="change">nn.ModuleDict()</a>
+        for table in self._embedding_bag_configs:
+            <a id="change">self.embedding_bags[table.name]</a> = torch.nn.Module()
+
+        <a id="change">for </a>_sharding_type, lookup in zip(
+            self._sharding_type_to_sharding.keys(), self._lookups
+        )<a id="change">:
+            </a>lookup_state_dict = lookup.state_dict()
+            <a id="change">for </a>key in lookup_state_dict<a id="change">:
+                </a>if not key.endswith(".weight"):
+                    continue
+                table_name = key[: -len(".weight")]
+                &#47&#47 Register as buffer because this is an inference model, and can potentially use uint8 types.
+                <a id="change">self.embedding_bags[table_name].register_buffer(
+                    "weight"</a>, lookup_state_dict[key]<a id="change">
+                )</a>
+
+    def _create_input_dist(
+        self,
+        input_feature_names: List[str],</code></pre>

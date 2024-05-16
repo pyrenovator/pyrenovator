@@ -1,0 +1,80 @@
+<html><h3>Pattern ID :8498
+</h3><img src='29471921.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        xs = torch.stack([conv(x) for conv in self.block1])
+        x = reduce(xs, "n b c t -&gt; b c t", "sum")
+        xs = torch.stack([conv(x) for conv in self.block2])
+        x = <a id="change">reduce(</a>xs, "n b c t -&gt; b c t", "sum"<a id="change">)</a>
+        return x
+
+
+class UNet1d(nn.Module):</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    def forward(self, x: Tensor) -&gt; Tensor:
+        xs = torch.stack([conv(x) for conv in self.convs_in])
+        x = <a id="change">reduce(</a>xs, "n b c t -&gt; b c t", "sum"<a id="change">) + </a>x
+        x = self.conv_mid(x)
+        x = self.conv_out(x)
+        return x</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/archinetai/audio-diffusion-pytorch/commit/7004f00247f314f8384049b87e07d64352b9ff70#diff-daa41e4baa3d2f79ac9df5a1fdce9cb4f87f4b10c9335e3653c38e64ecae3966L56' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 29471921</div><div id='project'> Project Name: archinetai/audio-diffusion-pytorch</div><div id='commit'> Commit Name: 7004f00247f314f8384049b87e07d64352b9ff70</div><div id='time'> Time: 2022-09-19</div><div id='author'> Author: flavio.schneider.97@gmail.com</div><div id='file'> File Name: audio_diffusion_pytorch/modules.py</div><div id='m_class'> M Class Name: ConvOut1d</div><div id='n_method'> N Class Name: ConvOut1d</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: audio_diffusion_pytorch/modules.py</div><div id='n_file'> N File Name: audio_diffusion_pytorch/modules.py</div><div id='m_start'> M Start Line: 821</div><div id='m_end'> M End Line: 824</div><div id='n_start'> N Start Line: 56</div><div id='n_end'> N End Line: 59</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            &#47&#47 more than deep layer
+            &#47&#47 the following loss will gradually increase the weight for former layer by exponential of gamma
+            &#47&#47 i.e. (loss_layer5*gamma^3 + loss_layer8*gamma^2 + loss_layer12*gamma^1)/(gamma^3+gamma^2+gamma^1)
+            aux_loss = <a id="change">reduce(</a>lambda acc, elem: acc + self.criterions[2](elem[0], elem[1]),
+                              zip(self.model.student_aux_outputs, self.model.teacher_aux_outputs),
+                              0<a id="change">)</a> / self.accumulation_steps
+
+            &#47&#47 TODO: Early stop with teacher loss
+            teacher_loss = self.criterions[0](output_tc, target)  &#47&#47 for comparision</code></pre><h3>After Change</h3><pre><code class='java'>
+
+            &#47&#47 auxiliary loss:
+            if len(self.model.student_aux_outputs) &gt; 0:
+                aux_loss = <a id="change">reduce(lambda acc, elem: acc + self.criterions[2](elem[0], elem[1]),
+                                  zip(self.model.student_aux_outputs, self.model.teacher_aux_outputs),
+                                  0) / self.accumulation_steps / </a>len(self.model.student_aux_outputs)
+            else:
+                aux_loss = 0
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lehduong/knowledge-distillation-by-replacing-cheap-conv/commit/2eaea49add335e0453fd6ee5e0968833040a5815#diff-e8e0e0e2ed2cba04fff88771f359d8bd33954ec7141108cef021efb865c84554L22' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 29471920</div><div id='project'> Project Name: lehduong/knowledge-distillation-by-replacing-cheap-conv</div><div id='commit'> Commit Name: 2eaea49add335e0453fd6ee5e0968833040a5815</div><div id='time'> Time: 2020-02-17</div><div id='author'> Author: oopsxilitol@gmail.com</div><div id='file'> File Name: trainer/atakdp.py</div><div id='m_class'> M Class Name: ATAKDPTrainer</div><div id='n_method'> N Class Name: ATAKDPTrainer</div><div id='m_method'> M Method Name: _train_epoch(2)</div><div id='n_method'> N Method Name: _train_epoch(2)</div><div id='m_parent_class'> M Parent Class: TAKDPTrainer</div><div id='n_parent_class'> N Parent Class: TAKDPTrainer</div><div id='m_file'> M File Name: trainer/atakdp.py</div><div id='n_file'> N File Name: trainer/atakdp.py</div><div id='m_start'> M Start Line: 85</div><div id='m_end'> M End Line: 111</div><div id='n_start'> N Start Line: 75</div><div id='n_end'> N End Line: 115</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+            supervised_loss = self.criterions[0](output_st, target)/self.accumulation_steps
+            div_loss = self.criterions[1](output_st, output_tc)/self.accumulation_steps
+            kd_loss = <a id="change">reduce(</a>lambda acc, elem: acc+self.criterions[2](elem[0], elem[1]),
+                             zip(self.model.student_hidden_outputs, self.model.teacher_hidden_outputs),
+                             0<a id="change">)</a>/self.accumulation_steps
+            &#47&#47TODO: Early stop with teacher loss
+            teacher_loss = self.criterions[0](output_tc, target) &#47&#47 for comparision
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            exponent_magnitude = list(range(len(self.model.hidden_teacher_outputs)))
+            print(exponent_magnitude)
+            normalized_term = reduce(lambda acc, elem: acc+gamma**elem, exponent_magnitude, 0)
+            kd_loss = <a id="change">reduce(</a>lambda acc, elem: acc+gamma**elem[2]*self.criterions[2](elem[0], elem[1]),
+                             zip(self.model.student_hidden_outputs, self.model.teacher_hidden_outputs,
+                                 exponent_magnitude),
+                             0<a id="change">)</a>/self.accumulation_steps/normalized_term
+
+            &#47&#47TODO: Early stop with teacher loss
+            teacher_loss = self.criterions[0](output_tc, target) &#47&#47 for comparision
+
+            alpha = self.weight_scheduler.alpha
+            beta = self.weight_scheduler.beta
+            loss = alpha<a id="change"> * supervised_loss + beta * div_loss + </a>(1-alpha-beta)*kd_loss
+            loss.backward()
+            self._clean_cache()
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lehduong/knowledge-distillation-by-replacing-cheap-conv/commit/dc17e6609ba4c466024f5592652cd83daab95bb4#diff-ac068922bb337e665557b399af9429c2a8bc642cbd79f72e3b7abb5c527befc9L61' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 29471915</div><div id='project'> Project Name: lehduong/knowledge-distillation-by-replacing-cheap-conv</div><div id='commit'> Commit Name: dc17e6609ba4c466024f5592652cd83daab95bb4</div><div id='time'> Time: 2020-02-01</div><div id='author'> Author: oopsxilitol@gmail.com</div><div id='file'> File Name: trainer/kd_trainer.py</div><div id='m_class'> M Class Name: KnowledgeDistillationTrainer</div><div id='n_method'> N Class Name: KnowledgeDistillationTrainer</div><div id='m_method'> M Method Name: _train_epoch(2)</div><div id='n_method'> N Method Name: _train_epoch(2)</div><div id='m_parent_class'> M Parent Class: BaseTrainer</div><div id='n_parent_class'> N Parent Class: BaseTrainer</div><div id='m_file'> M File Name: trainer/kd_trainer.py</div><div id='n_file'> N File Name: trainer/kd_trainer.py</div><div id='m_start'> M Start Line: 70</div><div id='m_end'> M End Line: 124</div><div id='n_start'> N Start Line: 60</div><div id='n_end'> N End Line: 131</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    def forward(self, x: Tensor) -&gt; Tensor:
+        xs = torch.stack([conv(x) for conv in self.convs_in])
+        x = <a id="change">reduce(</a>xs, "n b c t -&gt; b c t", "sum"<a id="change">)</a> + x
+        x = self.conv_mid(x)
+        x = self.conv_out(x)
+        return x</code></pre><h3>After Change</h3><pre><code class='java'>
+    def forward(self, x: Tensor) -&gt; Tensor:
+        skip = x
+        xs = torch.stack([conv(x) for conv in self.convs_in])
+        x = <a id="change">reduce(</a>xs, "n b c t -&gt; b c t", "sum"<a id="change">)</a>
+        x = self.conv_mid(x)
+        x = self.conv_out(x)<a id="change"> + </a>skip
+        return x
+
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/archinetai/audio-diffusion-pytorch/commit/4e6ee2c0299d79faab7d483a73756523700195ca#diff-daa41e4baa3d2f79ac9df5a1fdce9cb4f87f4b10c9335e3653c38e64ecae3966L55' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 29471914</div><div id='project'> Project Name: archinetai/audio-diffusion-pytorch</div><div id='commit'> Commit Name: 4e6ee2c0299d79faab7d483a73756523700195ca</div><div id='time'> Time: 2022-09-19</div><div id='author'> Author: flavio.schneider.97@gmail.com</div><div id='file'> File Name: audio_diffusion_pytorch/modules.py</div><div id='m_class'> M Class Name: ConvOut1d</div><div id='n_method'> N Class Name: ConvOut1d</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: audio_diffusion_pytorch/modules.py</div><div id='n_file'> N File Name: audio_diffusion_pytorch/modules.py</div><div id='m_start'> M Start Line: 56</div><div id='m_end'> M End Line: 59</div><div id='n_start'> N Start Line: 54</div><div id='n_end'> N End Line: 58</div><BR>

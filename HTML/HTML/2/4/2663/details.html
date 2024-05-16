@@ -1,0 +1,50 @@
+<html><h3>Pattern ID :2663
+</h3><img src='10891878.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        for i in range(nruns):
+            neighbors, distances, distance_vecs = nl(pos, batch)
+        end.record()
+    <a id="change">if </a>device == "cuda":
+        torch.cuda.synchronize()
+    &#47&#47 Final time
+    return start.elapsed_time(end) / nruns</code></pre><h3>After Change</h3><pre><code class='java'>
+    &#47&#47 Warmup
+    s = torch.cuda.Stream()
+    s.wait_stream(torch.cuda.current_stream())
+    <a id="change">with torch</a><a id="change">.cuda.stream(s):
+        </a>for i in range(10):
+            neighbors, distances, distance_vecs = nl(pos, batch)
+    torch.cuda.synchronize()
+    nruns = 50</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/torchmd/torchmd-net/commit/5601b47bcc20a6d71da74e3d4940bf58e8f084f8#diff-ff79c38fc08d4f21f1ee7eca2a91226a86d0390944aa221e91f783d20aa7ddf0L80' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 10891878</div><div id='project'> Project Name: torchmd/torchmd-net</div><div id='commit'> Commit Name: 5601b47bcc20a6d71da74e3d4940bf58e8f084f8</div><div id='time'> Time: 2023-05-12</div><div id='author'> Author: raulppelaez@gmail.com</div><div id='file'> File Name: benchmarks/neighbors.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: benchmark_neighbors(6)</div><div id='n_method'> N Method Name: benchmark_neighbors(6)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: benchmarks/neighbors.py</div><div id='n_file'> N File Name: benchmarks/neighbors.py</div><div id='m_start'> M Start Line: 80</div><div id='m_end'> M End Line: 107</div><div id='n_start'> N Start Line: 80</div><div id='n_end'> N End Line: 105</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    def has_overflow(self, partition_gradients=True):
+        if partition_gradients:
+            <a id="change">if </a>self.overlap_comm:
+                self.local_overflow = self._has_inf_or_nan(self.gpu_sum)
+                self.gpu_sum = torch.zeros(1, dtype=torch.float).cuda()
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    @instrument_w_nvtx
+    def has_overflow(self, partition_gradients=True):
+        if partition_gradients:
+            <a id="change">with torch</a><a id="change">.cuda.stream(self.__reduce_and_partition_stream):
+                </a>self.local_overflow = bool(self.__inf_or_nan_tracker.item())
+                self.__inf_or_nan_tracker.zero_()
+
+            overflow = self.local_overflow</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/microsoft/deepspeed/commit/4912e0ad7efcaf97389ae944259aa0e9f331038a#diff-1ad5daa1b31aa5573616024068d646f0c38e88d4d3a71d3d0e4bc352ea232178L2859' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 10891879</div><div id='project'> Project Name: microsoft/deepspeed</div><div id='commit'> Commit Name: 4912e0ad7efcaf97389ae944259aa0e9f331038a</div><div id='time'> Time: 2022-01-20</div><div id='author'> Author: 31414860+jfc4050@users.noreply.github.com</div><div id='file'> File Name: deepspeed/runtime/zero/stage3.py</div><div id='m_class'> M Class Name: DeepSpeedZeroOptimizer_Stage3</div><div id='n_method'> N Class Name: DeepSpeedZeroOptimizer_Stage3</div><div id='m_method'> M Method Name: has_overflow(2)</div><div id='n_method'> N Method Name: has_overflow(2)</div><div id='m_parent_class'> M Parent Class: object</div><div id='n_parent_class'> N Parent Class: object</div><div id='m_file'> M File Name: deepspeed/runtime/zero/stage3.py</div><div id='n_file'> N File Name: deepspeed/runtime/zero/stage3.py</div><div id='m_start'> M Start Line: 2861</div><div id='m_end'> M End Line: 2866</div><div id='n_start'> N Start Line: 2728</div><div id='n_end'> N End Line: 2732</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                    &#47&#47 receive_rank = receive_ranks[0]
+                    q = self.rcv_queues[self.rank][receive_rank]
+
+                    <a id="change">if </a>is_activations:
+                        is_parameter = is_shared_parameter(tensor_name)
+                        if is_parameter:
+                            &#47&#47 we don&quott use a reuse queue.</code></pre><h3>After Change</h3><pre><code class='java'>
+                          is_activations):
+        try:
+            stream = self.grad_recv_stream if not is_activations else self.acti_recv_stream
+            <a id="change">with torch</a><a id="change">.cuda.stream(stream):
+                </a>request_objects = []
+                if not is_activations:
+                    ranks_dict_items = reversed(ranks_dict_items)
+                for (tensor_name, receive_ranks) in ranks_dict_items:</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/saareliad/ftpipe/commit/2cc10d5a34ef54c6fe4eb864a72f9063c1396579#diff-e8a3a19b1943afe92b627d303a564e72a2ad183b89af477fbd5c65031cec3416L171' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 10891875</div><div id='project'> Project Name: saareliad/ftpipe</div><div id='commit'> Commit Name: 2cc10d5a34ef54c6fe4eb864a72f9063c1396579</div><div id='time'> Time: 2020-08-25</div><div id='author'> Author: saareliad@campus.technion.ac.il</div><div id='file'> File Name: pipeline/communication/multiprocessing.py</div><div id='m_class'> M Class Name: MultiprocessingCommunicationHandler</div><div id='n_method'> N Class Name: MultiprocessingCommunicationHandler</div><div id='m_method'> M Method Name: _recv_tensors_p2p(4)</div><div id='n_method'> N Method Name: _recv_tensors_p2p(5)</div><div id='m_parent_class'> M Parent Class: SimpleCommBase</div><div id='n_parent_class'> N Parent Class: SimpleCommBase</div><div id='m_file'> M File Name: pipeline/communication/multiprocessing.py</div><div id='n_file'> N File Name: pipeline/communication/multiprocessing.py</div><div id='m_start'> M Start Line: 171</div><div id='m_end'> M End Line: 235</div><div id='n_start'> N Start Line: 162</div><div id='n_end'> N End Line: 217</div><BR>

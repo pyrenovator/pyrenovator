@@ -1,0 +1,49 @@
+<html><h3>Pattern ID :9716
+</h3><img src='34899348.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        batch_size, _, F_bin, T_bin = input.size()
+        
+        log_amplitude = torch.log(input + eps)
+        x<a id="change"> = </a><a id="change">self.lstm(</a>log_amplitude<a id="change">)</a> &#47&#47 -&gt; (batch_size, T_bin, F_bin)
+        x = self.fc(x) &#47&#47 -&gt; (batch_size, T_bin, embed_dim*F_bin)
+        x = x.view(batch_size, T_bin, embed_dim, F_bin)
+        x = x.permute(0,2,3,1).contiguous()  &#47&#47 -&gt; (batch_size, embed_dim, F_bin, T_bin)</code></pre><h3>After Change</h3><pre><code class='java'>
+        
+        log_amplitude = torch.log(input + eps)
+        x = log_amplitude.squeeze(dim=1).permute(0, 2, 1).contiguous() &#47&#47 -&gt; (batch_size, n_frames, n_bins)
+        x, (_<a id="change">, _</a>) = self.rnn(x) &#47&#47 -&gt; (batch_size, n_frames, n_bins)
+        x = self.fc(x) &#47&#47 -&gt; (batch_size, n_frames, embed_dim*n_bins)
+        x = x.view(batch_size, n_frames, embed_dim, n_bins)
+        x = x.permute(0, 2, 3, 1).contiguous()  &#47&#47 -&gt; (batch_size, embed_dim, n_bins, n_frames)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/tky823/dnn-based_source_separation/commit/14a31d0fab0f62cd6e840c554223d5475068ef34#diff-cb2c1f5b7b1394a4f5c28103d04608a5dab9a37986e1ada8af232bfc3bd84961L51' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 34899348</div><div id='project'> Project Name: tky823/dnn-based_source_separation</div><div id='commit'> Commit Name: 14a31d0fab0f62cd6e840c554223d5475068ef34</div><div id='time'> Time: 2021-06-01</div><div id='author'> Author: 40362510+tky823@users.noreply.github.com</div><div id='file'> File Name: src/models/adanet.py</div><div id='m_class'> M Class Name: ADANet</div><div id='n_method'> N Class Name: ADANet</div><div id='m_method'> M Method Name: extract_latent(4)</div><div id='n_method'> N Method Name: extract_latent(4)</div><div id='m_parent_class'> M Parent Class: DANet</div><div id='n_parent_class'> N Parent Class: DANet</div><div id='m_file'> M File Name: src/models/adanet.py</div><div id='n_file'> N File Name: src/models/adanet.py</div><div id='m_start'> M Start Line: 51</div><div id='m_end'> M End Line: 59</div><div id='n_start'> N Start Line: 51</div><div id='n_end'> N End Line: 62</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        else:
+            hiddens1 = None
+            hiddens2 = None
+        lstm_last<a id="change">, hiddens1 = </a><a id="change">self.lstm(</a>x, hiddens1<a id="change">)</a>
+        lstm2_last, hiddens2 = self.lstm2(x, hiddens2)
+        concat_lstm = torch.concat([lstm_last, lstm2_last], dim=-1)
+        logits = self.linear(concat_lstm)
+        loss = self.loss_func(logits, y)</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 training_step is needed 2 step for 1 batch (1 step: 0~99, 2 step: 100~199)
+        &#47&#47 very cleverly, we just using hiddens parameter, lightning&quots tbptt not connected new batch&quots hiddens to past one
+        x, y = batch
+        logits<a id="change">, hiddens1, hiddens2</a> = self(x, hiddens)
+        loss = self.loss_func(logits, y)
+        self.log("train_loss", loss, sync_dist=(self.device != "cpu"))
+        &#47&#47 look this discussion for tbptt experiment (https://github.com/Lightning-AI/lightning/discussions/15643)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/yoosunghyun/pytorch-lightning-template/commit/e31ba2930352623556b022885ef2cb269370c975#diff-aebab7e121236eb0bad629139e9e8b895403caf822ce66eb06e349d8b4827de7L26' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 34899349</div><div id='project'> Project Name: yoosunghyun/pytorch-lightning-template</div><div id='commit'> Commit Name: e31ba2930352623556b022885ef2cb269370c975</div><div id='time'> Time: 2022-12-04</div><div id='author'> Author: shyu0522@hanmail.net</div><div id='file'> File Name: rnn_model.py</div><div id='m_class'> M Class Name: LSTMModel</div><div id='n_method'> N Class Name: LSTMModel</div><div id='m_method'> M Method Name: training_step(4)</div><div id='n_method'> N Method Name: training_step(4)</div><div id='m_parent_class'> M Parent Class: LightningModule</div><div id='n_parent_class'> N Parent Class: LightningModule</div><div id='m_file'> M File Name: rnn_model.py</div><div id='n_file'> N File Name: rnn_model.py</div><div id='m_start'> M Start Line: 34</div><div id='m_end'> M End Line: 42</div><div id='n_start'> N Start Line: 60</div><div id='n_end'> N End Line: 60</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            insample_y = torch.cat(( insample_y, stat_exog ), dim=2)
+
+        &#47&#47 LSTM forward
+        insample_y<a id="change">, _ = </a><a id="change">self.lstm(</a>insample_y<a id="change">)</a>
+        insample_y = self.adapterW(insample_y)
+        
+        return insample_y
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        if self.stat_exog_size &gt; 0:
+            stat_exog = stat_exog.unsqueeze(1).repeat(1, seq_len, 1) &#47&#47 [B, S] -&gt; [B, seq_len, S]
+            encoder_input = torch.cat((encoder_input<a id="change">, stat_exog</a>), dim=2)
+
+        &#47&#47 RNN forward
+        hidden_state, _ = self.hist_encoder(encoder_input) &#47&#47 [B, seq_len, rnn_hidden_state]</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/nixtla/neuralforecast/commit/9cdb8c8ddd592a3acd47aa982f42bf995092e049#diff-37719fefe7fecc63224807f84d904ce7fdaacdc3e4859aedaf6fb16e8fb9220dL75' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 34899350</div><div id='project'> Project Name: nixtla/neuralforecast</div><div id='commit'> Commit Name: 9cdb8c8ddd592a3acd47aa982f42bf995092e049</div><div id='time'> Time: 2022-11-04</div><div id='author'> Author: mergenthaler.m@gmail.com</div><div id='file'> File Name: neuralforecast/models/lstm.py</div><div id='m_class'> M Class Name: LSTM</div><div id='n_method'> N Class Name: LSTM</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: BaseRecurrent</div><div id='n_parent_class'> N Parent Class: BaseRecurrent</div><div id='m_file'> M File Name: neuralforecast/models/lstm.py</div><div id='n_file'> N File Name: neuralforecast/models/lstm.py</div><div id='m_start'> M Start Line: 78</div><div id='m_end'> M End Line: 102</div><div id='n_start'> N Start Line: 126</div><div id='n_end'> N End Line: 161</div><BR>

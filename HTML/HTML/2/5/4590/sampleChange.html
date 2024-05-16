@@ -1,0 +1,36 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+		self.classifier	= nn.Linear(self.bert.config.hidden_size, num_labels)
+	
+	def forward(self, input_ids=None, attention_mask=None, token_type_ids=None, position_ids=None, head_mask=None, inputs_embeds=None, labels=None):
+		outputs = <a id="change">self.bert(
+			input_ids 	= input_ids,
+			attention_mask	= attention_mask,
+			token_type_ids	= token_type_ids,
+			position_ids	= position_ids,
+			head_mask	= head_mask,
+			inputs_embeds	= inputs_embeds
+		)</a>
+
+		pooled_output	= outputs[1]
+		pooled_output	= self.dropout(pooled_output)
+		logits		= self.classifier(pooled_output)</code></pre><h3>After Change</h3><pre><code class='java'>
+		self.classifier	= nn.Linear(self.bert.config.hidden_size, num_labels)
+	
+	def forward(self, input_ids, attention_mask, mention_pos_idx, labels=None):
+		outputs = <a id="change">self.bert(
+			input_ids 	= input_ids,
+			attention_mask	= attention_mask
+		)</a>
+
+		tok_embed	= outputs[0]
+		bsz, mtok, dim  = tok_embed.shape
+		tok_embed_flat	= tok_embed.reshape(-1, dim)
+		men_idx<a id="change"> 	= </a>torch.arange(bsz).to(tok_embed.device) * mtok + mention_pos_idx
+		men_embed<a id="change"> 	= tok_embed_flat[men_idx]</a>
+
+		pooled_output	= self.dropout(men_embed)
+		logits		= self.classifier(pooled_output)
+		</code></pre>

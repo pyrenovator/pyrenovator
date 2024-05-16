@@ -1,0 +1,43 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        else:
+            self._is_chief = True
+
+        <a id="change">if </a>self._hvd_config.use:
+            &#47&#47 Initialize zmq comms.
+            srv_pub_port = (
+                constants.INTER_TRAIN_PROCESS_COMM_PORT_1 + self._env.det_trial_unique_port_offset
+            )
+            srv_pull_port<a id="change"> = </a>(
+                constants.INTER_TRAIN_PROCESS_COMM_PORT_2 + self._env.det_trial_unique_port_offset
+            )
+
+            if self._is_chief:
+                <a id="change">logging.debug(f"Chief setting up server with ports {srv_pub_port}/{srv_pull_port}."</a><a id="change">)</a>
+                self._chief_zmq = ipc.ZMQBroadcastServer(
+                    num_connections=self._env.experiment_config.slots_per_trial() - 1,
+                    pub_port=srv_pub_port,
+                    pull_port=srv_pull_port,
+                )
+
+            else:
+                chief_ip_address = self._rendezvous_info.get_ip_addresses()[0]
+                logging.debug(
+                    f"Non-Chief {horovod.hvd.rank()} setting up comm to "
+                    f"{chief_ip_address} w/ ports "
+                    f"{srv_pub_port}/{srv_pull_port}."
+                )
+                self._worker_zmq<a id="change"> = </a>ipc.ZMQBroadcastClient(
+                    srv_pub_url=f"tcp://{chief_ip_address}:{srv_pub_port}",
+                    srv_pull_url=f"tcp://{chief_ip_address}:{srv_pull_port}",
+                )</code></pre><h3>After Change</h3><pre><code class='java'>
+        self._is_chief = self._info.rank == 0
+        self._is_local_chief = self._info.local_rank == 0
+
+        <a id="change">if </a>len(self._rendezvous_info.get_addrs()) != self._info.cross_size:
+            <a id="change">raise </a>AssertionError(
+                f"rendezvous_info has {len(self._rendezvous_info.get_addrs())} addresses but "
+                f"rank_info indicates there are {self._info.cross_size} machines"
+            )</code></pre>

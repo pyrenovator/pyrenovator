@@ -1,0 +1,43 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        return self.item_list_embedding.weight.t()
+
+    def forward(self, interaction):
+        item_list_emb = <a id="change">self.item_list_embedding(</a>interaction[self.ITEM_ID_LIST]<a id="change">)</a>
+        position_list_emb = self.position_list_embedding(interaction[self.POSITION_ID])
+        behavior_list_emb = item_list_emb + position_list_emb
+        behavior_list_emb_drop = self.emb_dropout(behavior_list_emb)
+        key_padding_mask = <a id="change">self.get_attn_pad_mask(</a>interaction[self.ITEM_ID_LIST], interaction[self.ITEM_ID_LIST]<a id="change">)</a>
+        look_ahead_mask = self.get_attn_subsequence_mask(interaction[self.ITEM_ID_LIST])
+        mask = torch.gt((key_padding_mask + look_ahead_mask), 0)
+        attn_weights = []
+        attn_outputs = behavior_list_emb_drop
+        for i in range(self.num_blocks):
+            attn_outputs, attn = self.multi_head_attention(attn_outputs, attn_outputs, attn_outputs, mask)
+            attn_weights.append(attn)
+            attn_outputs = self.feedforward(attn_outputs)
+        long_term_prefernce = self.gather_indexes(attn_outputs, interaction[self.ITEM_LIST_LEN] - 1)
+        predict_behavior_emb<a id="change"> = </a>self.layer_norm(long_term_prefernce)
+        return predict_behavior_emb, attn_weights
+
+    def get_attn_pad_mask(self, seq_q, seq_k):</code></pre><h3>After Change</h3><pre><code class='java'>
+        position_ids = position_ids.unsqueeze(0).expand_as(item_list)
+        position_embedding = self.position_embedding(position_ids)
+
+        item_emb = <a id="change">self.item_embedding(</a>item_list<a id="change">)</a>
+        input_emb = item_emb + position_embedding
+        input_emb = self.LayerNorm(input_emb)
+        input_emb = self.dropout(input_emb)
+
+        extended_attention_mask = <a id="change">self.get_attention_mask(</a>item_list<a id="change">)</a>
+
+        trm_output = self.trm_encoder(input_emb,
+                                      extended_attention_mask,
+                                      output_all_encoded_layers=True)
+        output<a id="change"> = </a><a id="change">trm_output[-1]</a>
+        output = self.gather_indexes(output, interaction[self.ITEM_LIST_LEN] - 1)
+        return output &#47&#47 [B H]
+
+    def calculate_loss(self, interaction):</code></pre>

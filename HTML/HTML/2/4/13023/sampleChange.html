@@ -1,0 +1,21 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        :return:
+        
+        batch_size, N, _ = tar_candidate.size()
+        tar_pred_prob, dx, dy, top_m_indices = <a id="change">self.forward(</a>feat_in, tar_candidate<a id="change">)</a>
+
+        &#47&#47 select the M output and gt
+        index_offset = torch.arange(0, batch_size, device=self.device).view(batch_size, -1).repeat(1, self.M).view(-1)
+        top_m_indices = top_m_indices.view(-1) + index_offset * N</code></pre><h3>After Change</h3><pre><code class='java'>
+        m_candidate_loss = F.binary_cross_entropy(tar_pred_prob_selected, candidate_gt_selected, reduction=reduction)
+
+        &#47&#47 pred offset and compute regression loss
+        feat_in_reg = torch.cat(<a id="change">[</a>feat_in, tar_candidate[candidate_gt.bool()]<a id="change"></a>], dim=1)  &#47&#47 [batch_size, feat_dim + 2]
+        tar_offset_mean<a id="change"> = </a>self.mean_mlp(feat_in_reg)                            &#47&#47 [batch_size, 2]
+        offset_loss<a id="change"> = </a>F.smooth_l1_loss(tar_offset_mean,
+                                       offset_gt,
+                                       reduction=reduction)
+        return n_candidate_loss + m_candidate_loss + offset_loss</code></pre>

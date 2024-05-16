@@ -1,0 +1,65 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                    taskset_params = "-c {}".format(cur_process_cores)
+                    cmd.extend(taskset_params.split())
+
+            with_python<a id="change"> = </a><a id="change">not args.no_python</a>
+            if with_python:
+                cmd.append(sys.executable)
+                <a id="change">cmd.append("-u"</a><a id="change">)</a>
+            <a id="change">if args.module</a>:
+                <a id="change">cmd.append("-m"</a><a id="change">)</a>
+            cmd.append(args.program)
+
+            cmd.extend(args.program_args)
+            os.environ["LAUNCH_CMD"] += " ".join(cmd) + ",&#47&#47"</code></pre><h3>After Change</h3><pre><code class='java'>
+                program, args.dtype, args.auto_ipex_verbose, args.disable_ipex_graph_mode)
+
+        for i in range(args.ninstances):
+            <a id="change">cmd</a> = []
+            cur_process_cores = ""
+            if not args.disable_numactl or enable_taskset:
+                if not args.disable_numactl:
+                    cmd = ["numactl"]
+                elif enable_taskset:
+                    cmd = ["taskset"]
+
+                cores = sorted(cores)
+                if args.instance_idx == -1:  &#47&#47 sequentially assign ncores_per_instance to ninstances
+                    core_list = cores[i * args.ncore_per_instance: (
+                        i + 1) * args.ncore_per_instance]
+                else:  &#47&#47 assign ncores_per_instance from instance_idx
+                    core_list = cores[args.instance_idx * args.ncore_per_instance: (
+                        args.instance_idx + 1) * args.ncore_per_instance]
+
+                core_ranges = []
+                for core in core_list:
+                    if len(core_ranges) == 0:
+                        range_elem = {&quotstart&quot: core, &quotend&quot: core}
+                        core_ranges.append(range_elem)
+                    else:
+                        if core - core_ranges[-1][&quotend&quot] == 1:
+                            core_ranges[-1][&quotend&quot] = core
+                        else:
+                            range_elem = {&quotstart&quot: core, &quotend&quot: core}
+                            core_ranges.append(range_elem)
+                for r in core_ranges:
+                    cur_process_cores = cur_process_cores + "{}-{},".format(r[&quotstart&quot], r[&quotend&quot])
+                cur_process_cores = cur_process_cores[:-1]
+
+                if not args.disable_numactl:
+                    numa_params = "-C {} ".format(cur_process_cores)
+                    numa_params += "-m {}".format(",".join(
+                        [str(numa_id) for numa_id in self.cpuinfo.numa_aware_check(core_list)]))
+                    cmd.extend(numa_params.split())
+                elif enable_taskset:
+                    taskset_params = "-c {}".format(cur_process_cores)
+                    cmd.extend(taskset_params.split())
+
+            <a id="change">self.with_python_command(cmd</a><a id="change">)</a>
+            if self.program:
+                cmd.append(self.program)
+                cmd.extend(args.command[1:])
+            else:</code></pre>

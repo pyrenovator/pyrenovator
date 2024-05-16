@@ -1,0 +1,134 @@
+<html><h3>Pattern ID :14937
+</h3><img src='49801971.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        replicas=3,
+    )
+
+    <a id="change">with </a><a id="change">flow:
+        </a>with kubernetes_tools.get_port_forward_contextmanager(
+            &quottest-flow-slow-process-executor&quot, flow.port_expose
+        ):
+            &#47&#47 sleep as the port forward setup can take some time
+            time.sleep(0.1)
+            client_kwargs = dict(
+                host=&quotlocalhost&quot,
+                port=flow.port_expose,
+            )
+            client_kwargs.update(flow._common_kwargs)
+
+            stop_event = multiprocessing.Event()
+            scale_event = multiprocessing.Event()
+            received_resposes = multiprocessing.Queue()
+            process = multiprocessing.Process(
+                target=send_requests,
+                kwargs={
+                    &quotclient_kwargs&quot: client_kwargs,
+                    &quotstop_event&quot: stop_event,
+                    &quotscale_event&quot: scale_event,
+                    &quotreceived_resposes&quot: received_resposes,
+                    &quotlogger&quot: logger,
+                },
+                daemon=True,
+            )
+            process.start()
+
+            time.sleep(1.0)
+
+            &#47&#47 scale slow init executor up
+            k8s_clients<a id="change"> = </a>K8sClients()
+            logger.debug(&quotScale down executor to 1 replica&quot)
+            k8s_clients.apps_v1.patch_namespaced_deployment_scale(
+                &quotslow-process-executor&quot,</code></pre><h3>After Change</h3><pre><code class='java'>
+    api_client = client.ApiClient()
+    core_client = client.CoreV1Api(api_client=api_client)
+    app_client = client.AppsV1Api(api_client=api_client)
+    <a id="change">await </a>create_all_flow_pods_and_wait_ready(
+        dump_path,
+        namespace=namespace,
+        api_client=api_client,</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/jina-ai/jina/commit/6e9e7ef32f61cab04c6efc7a9f21659d26b50fdb#diff-9b579174c9a02ec0d540df54159de6ebe4b52ddccf227b3419430e9dfe4539d2L72' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 49801971</div><div id='project'> Project Name: jina-ai/jina</div><div id='commit'> Commit Name: 6e9e7ef32f61cab04c6efc7a9f21659d26b50fdb</div><div id='time'> Time: 2022-01-10</div><div id='author'> Author: joan.martinez@jina.ai</div><div id='file'> File Name: tests/k8s/test_graceful_request_handling.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: test_no_message_lost_during_scaling(3)</div><div id='n_method'> N Method Name: test_no_message_lost_during_scaling(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: tests/k8s/test_graceful_request_handling.py</div><div id='n_file'> N File Name: tests/k8s/test_graceful_request_handling.py</div><div id='m_start'> M Start Line: 72</div><div id='m_end'> M End Line: 154</div><div id='n_start'> N Start Line: 144</div><div id='n_end'> N End Line: 242</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+                cm1 = ProgressBar() if self.show_progress else nullcontext()
+
+                <a id="change">with </a><a id="change">cm1 as p_bar:
+                    &#47&#47 Unlike gRPC, any arbitrary function (generator) cannot be passed via websockets.
+                    &#47&#47 Simply iterating through the `req_iter` makes the request-response sequential.
+                    &#47&#47 To make client unblocking, :func:`send_requests` and `recv_responses` are separate tasks
+
+                    </a>asyncio.create_task(_send_requests(request_iterator=req_iter))
+                    async for response_bytes in websocket:
+                        &#47&#47 When we have a stream of responses, instead of doing `await websocket.recv()`,
+                        &#47&#47 we need to traverse through the websocket to recv messages.
+                        &#47&#47 https://websockets.readthedocs.io/en/stable/faq.html&#47&#47why-does-the-server-close-the-connection-after-processing-one-message
+
+                        resp = Request(response_bytes)
+                        resp<a id="change"> = </a>resp.as_typed_request(resp.request_type).as_response()
+                        callback_exec(
+                            response=resp,
+                            on_error=on_error,</code></pre><h3>After Change</h3><pre><code class='java'>
+
+                proto = &quotwss&quot if self.args.https else &quotws&quot
+                url = f&quot{proto}://{self.args.host}:{self.args.port}/&quot
+                iolet = <a id="change">await </a>stack.enter_async_context(
+                    WebsocketClientlet(url=url, logger=self.logger)
+                )
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/jina-ai/jina/commit/82d3eacef8e3090ba90330842a1c2840fff87764#diff-1e76e0aa58b7b7e1ccdef9138cf231d322a78c200f7e274c9efc6585362591b5L16' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 49801957</div><div id='project'> Project Name: jina-ai/jina</div><div id='commit'> Commit Name: 82d3eacef8e3090ba90330842a1c2840fff87764</div><div id='time'> Time: 2021-10-12</div><div id='author'> Author: deepankar.mahapatro@jina.ai</div><div id='file'> File Name: jina/clients/base/websocket.py</div><div id='m_class'> M Class Name: WebSocketBaseClient</div><div id='n_method'> N Class Name: WebSocketBaseClient</div><div id='m_method'> M Method Name: _get_results(5)</div><div id='n_method'> N Method Name: _get_results(5)</div><div id='m_parent_class'> M Parent Class: BaseClient</div><div id='n_parent_class'> N Parent Class: BaseClient</div><div id='m_file'> M File Name: jina/clients/base/websocket.py</div><div id='n_file'> N File Name: jina/clients/base/websocket.py</div><div id='m_start'> M Start Line: 38</div><div id='m_end'> M End Line: 105</div><div id='n_start'> N Start Line: 36</div><div id='n_end'> N End Line: 66</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                proto = &quothttps&quot if self.args.https else &quothttp&quot
+                url = f&quot{proto}://{self.args.host}:{self.args.port}/post&quot
+
+                <a id="change">with </a><a id="change">cm1 as p_bar:
+                    </a>all_responses<a id="change"> = </a>[]
+                    for req in req_iter:
+                        &#47&#47 fix the mismatch between pydantic model and Protobuf model
+                        req_dict = req.dict()</code></pre><h3>After Change</h3><pre><code class='java'>
+                url = f&quot{proto}://{self.args.host}:{self.args.port}/post&quot
+
+                p_bar = stack.enter_context(cm1)
+                iolet = <a id="change">await </a>stack.enter_async_context(HTTPClientlet(url=url))
+
+                prefetcher = HTTPClientPrefetcher(self.args, iolet=iolet)
+                async for response in prefetcher.send(request_iterator):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/jina-ai/jina/commit/2c51fa7e2ca4e2ef72355ae6210ba6056c388bba#diff-85f0eb5c63717161fc010675143a538088c294c1f332471fa9509c4a12616aebL24' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 49801970</div><div id='project'> Project Name: jina-ai/jina</div><div id='commit'> Commit Name: 2c51fa7e2ca4e2ef72355ae6210ba6056c388bba</div><div id='time'> Time: 2021-10-05</div><div id='author'> Author: deepankar.mahapatro@jina.ai</div><div id='file'> File Name: jina/clients/base/http.py</div><div id='m_class'> M Class Name: HTTPBaseClient</div><div id='n_method'> N Class Name: HTTPBaseClient</div><div id='m_method'> M Method Name: _get_results(5)</div><div id='n_method'> N Method Name: _get_results(5)</div><div id='m_parent_class'> M Parent Class: BaseClient</div><div id='n_parent_class'> N Parent Class: BaseClient</div><div id='m_file'> M File Name: jina/clients/base/http.py</div><div id='n_file'> N File Name: jina/clients/base/http.py</div><div id='m_start'> M Start Line: 58</div><div id='m_end'> M End Line: 104</div><div id='n_start'> N Start Line: 86</div><div id='n_end'> N End Line: 119</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        replicas=3,
+    )
+
+    <a id="change">with </a><a id="change">flow:
+        </a>with kubernetes_tools.get_port_forward_contextmanager(
+            &quottest-flow-slow-process-executor&quot, flow.port_expose
+        ):
+            client_kwargs = dict(
+                host=&quotlocalhost&quot,
+                port=flow.port_expose,
+            )
+            client_kwargs.update(flow._common_kwargs)
+
+            stop_event = multiprocessing.Event()
+            scale_event = multiprocessing.Event()
+            received_resposes = multiprocessing.Queue()
+            process = multiprocessing.Process(
+                target=send_requests,
+                kwargs={
+                    &quotclient_kwargs&quot: client_kwargs,
+                    &quotstop_event&quot: stop_event,
+                    &quotscale_event&quot: scale_event,
+                    &quotreceived_resposes&quot: received_resposes,
+                    &quotlogger&quot: logger,
+                },
+                daemon=True,
+            )
+            process.start()
+
+            time.sleep(1.0)
+
+            &#47&#47 scale slow init executor up
+            k8s_clients<a id="change"> = </a>K8sClients()
+            logger.debug(&quotKill 2 replicas&quot)
+
+            pods = k8s_clients.core_v1.list_namespaced_pod(</code></pre><h3>After Change</h3><pre><code class='java'>
+    api_client = client.ApiClient()
+    core_client = client.CoreV1Api(api_client=api_client)
+    app_client = client.AppsV1Api(api_client=api_client)
+    <a id="change">await </a>create_all_flow_pods_and_wait_ready(
+        dump_path,
+        namespace=namespace,
+        api_client=api_client,</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/jina-ai/jina/commit/6e9e7ef32f61cab04c6efc7a9f21659d26b50fdb#diff-9b579174c9a02ec0d540df54159de6ebe4b52ddccf227b3419430e9dfe4539d2L161' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 49801948</div><div id='project'> Project Name: jina-ai/jina</div><div id='commit'> Commit Name: 6e9e7ef32f61cab04c6efc7a9f21659d26b50fdb</div><div id='time'> Time: 2022-01-10</div><div id='author'> Author: joan.martinez@jina.ai</div><div id='file'> File Name: tests/k8s/test_graceful_request_handling.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: test_no_message_lost_during_kill(3)</div><div id='n_method'> N Method Name: test_no_message_lost_during_kill(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: tests/k8s/test_graceful_request_handling.py</div><div id='n_file'> N File Name: tests/k8s/test_graceful_request_handling.py</div><div id='m_start'> M Start Line: 162</div><div id='m_end'> M End Line: 253</div><div id='n_start'> N Start Line: 251</div><div id='n_end'> N End Line: 355</div><BR>

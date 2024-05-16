@@ -1,0 +1,54 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    assert global_dist.logits.shape == (5,)
+
+    input = T.Tensor([1, 1, 1, 1, 1]).repeat(actor_population_size, 1)
+    encoder = <a id="change">IdentityEncoder()</a>
+    torso = <a id="change">MLP(</a><a id="change">[5</a>, <a id="change">5</a>]<a id="change">)</a>
+    head_critic = ValueHead(input_shape=5)
+    head_actor = DiagGaussianHead(input_shape=5, action_size=5)
+
+    actor = Actor(encoder, torso, head_actor)
+    critic<a id="change"> = </a><a id="change">Critic(</a>encoder, torso, head_critic<a id="change">)</a>
+
+    model = ActorCritic(
+        actor,
+        critic,</code></pre><h3>After Change</h3><pre><code class='java'>
+    head_actor = DeterministicHead(input_shape=5, action_shape=1)
+
+    actor = Actor(encoder_actor, torso_actor, head_actor)
+    critic = <a id="change">Critic(</a>encoder_critic, torso_critic, head_critic<a id="change">)</a>
+
+    model = ActorCritic(
+        actor,
+        critic,
+        population_settings=PopulationSettings(
+            actor_population_size=actor_population_size,
+        ),
+    )
+
+    distribution = model.action_distribution(input)
+    global_dist = model.predict_distribution(T.Tensor([1, 1, 1, 1, 1]))
+    assert distribution is None
+    assert global_dist is None
+
+    input = T.Tensor([1, 1, 1, 1, 1]).repeat(actor_population_size, 1)
+    head_actor = CategoricalHead(input_shape=5, action_size=5)
+
+    actor = Actor(encoder_actor, torso_actor, head_actor)
+    critic = Critic(encoder_critic, torso_critic, head_critic)
+
+    model = ActorCritic(
+        actor,
+        critic,
+        population_settings=PopulationSettings(
+            actor_population_size=actor_population_size,
+        ),
+    )
+
+    distribution<a id="change"> = </a>model.action_distribution(input)
+    global_dist = model.predict_distribution(T.Tensor([1, 1, 1, 1, 1]))
+    assert isinstance(distribution, T.distributions.Categorical)
+    assert distribution.logits.shape == (actor_population_size, 5)</code></pre>

@@ -1,0 +1,66 @@
+<html><h3>Pattern ID :23310
+</h3><img src='73470763.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            &#47&#47         misc.nan_to_num(param.grad, nan=0, posinf=1e5, neginf=-1e5, out=param.grad)
+            if &quotG&quot in phase[&quotname&quot]:
+                for param_group in optimizers[&quotoptimizer_G&quot].param_groups:
+                    <a id="change">param_group["params"][0]</a>.requires_grad = False
+                optimizers[&quotoptimizer_G&quot].step()  &#47&#47 更新参数
+            elif &quotD&quot in phase[&quotname&quot]:
+                for param_group in optimizers[&quotoptimizer_D&quot].param_groups:</code></pre><h3>After Change</h3><pre><code class='java'>
+            if &quotG&quot in phase[&quotname&quot]:
+                optimizers[&quotoptimizer_G&quot].zero_grad(set_to_none=True)
+                self.mapping.requires_grad_(True)
+                <a id="change">self.synthesis.requires_grad_(</a>True<a id="change">)</a>
+                &#47&#47 for param_group in optimizers[&quotoptimizer_G&quot].param_groups:
+                &#47&#47     param_group["params"][0].requires_grad = True
+            elif &quotD&quot in phase[&quotname&quot]:
+                optimizers[&quotoptimizer_D&quot].zero_grad(set_to_none=True)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 2</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/miemie2013/miemiegan/commit/431068dfd98c432e71db955dcb8a6e7ac3a439aa#diff-c3be3e49b4968a2ee433a8b0d38c7aa9f68d5116602220ff22567e41b765b44bL316' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 73470763</div><div id='project'> Project Name: miemie2013/miemiegan</div><div id='commit'> Commit Name: 431068dfd98c432e71db955dcb8a6e7ac3a439aa</div><div id='time'> Time: 2022-04-08</div><div id='author'> Author: 53960695+miemie2013@users.noreply.github.com</div><div id='file'> File Name: mmgan/models/architectures/styleganv2ada_model.py</div><div id='m_class'> M Class Name: StyleGANv2ADAModel</div><div id='n_method'> N Class Name: StyleGANv2ADAModel</div><div id='m_method'> M Method Name: train_iter(3)</div><div id='n_method'> N Method Name: train_iter(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: torch.nn.Module</div><div id='m_file'> M File Name: mmgan/models/architectures/styleganv2ada_model.py</div><div id='n_file'> N File Name: mmgan/models/architectures/styleganv2ada_model.py</div><div id='m_start'> M Start Line: 351</div><div id='m_end'> M End Line: 387</div><div id='n_start'> N Start Line: 316</div><div id='n_end'> N End Line: 427</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        sequence_input, linear_param0, linear_param1, bn_weight0, bn_bias0, bn_weight1, bn_bias1 = ctx.saved_tensors
+        if not sequence_input.requires_grad:
+            return (None,) * 9
+        out0, out1 = <a id="change">ctx.output_list[0]</a>.chunk(2, -1)
+        with torch.no_grad():
+            inp0 = out0 - ReversibleRNNFunction._calc(out1, sequence_input, bn_weight1, bn_bias1, linear_param1)
+            inp1 = out1 - ReversibleRNNFunction._calc(inp0, sequence_input, bn_weight0, bn_bias0, linear_param0)</code></pre><h3>After Change</h3><pre><code class='java'>
+        with torch.enable_grad():
+            fn_input = torch.cat([inp0, inp1], -1)
+            fn_input.detach_()
+            <a id="change">fn_input.requires_grad_(</a>True<a id="change">)</a>
+            args = (fn_input, sequence_input, linear_param0, linear_param1, bn_weight0, bn_bias0, bn_weight1, bn_bias1)
+            grad_out = ReversibleRNNFunction._forward_pass(*args)
+        grad_out.requires_grad_(True)
+        grad_out = torch.autograd.grad(grad_out, args, grad_output)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/homebrewnlp/homebrewnlp/commit/a0f0b4030e607ddb8baa74812668409814dc9a48#diff-c98bba8dbdd18eb4e9fa8ae11c28e350c08ee816fce50f9fb86d61cbcd345276L46' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 73470765</div><div id='project'> Project Name: homebrewnlp/homebrewnlp</div><div id='commit'> Commit Name: a0f0b4030e607ddb8baa74812668409814dc9a48</div><div id='time'> Time: 2020-07-13</div><div id='author'> Author: 39779310+ClashLuke@users.noreply.github.com</div><div id='file'> File Name: module.py</div><div id='m_class'> M Class Name: ReversibleRNNFunction</div><div id='n_method'> N Class Name: ReversibleRNNFunction</div><div id='m_method'> M Method Name: backward(2)</div><div id='n_method'> N Method Name: backward(2)</div><div id='m_parent_class'> M Parent Class: torch.autograd.Function</div><div id='n_parent_class'> N Parent Class: torch.autograd.Function</div><div id='m_file'> M File Name: module.py</div><div id='n_file'> N File Name: module.py</div><div id='m_start'> M Start Line: 50</div><div id='m_end'> M End Line: 58</div><div id='n_start'> N Start Line: 51</div><div id='n_end'> N End Line: 67</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        grad_out = list(
+            torch.autograd.grad(grad_out, (fn_input, sequence_input, linear_param0, linear_param1), grad_output,
+                                allow_unused=True))
+        <a id="change">grad_out[1]</a> = grad_out[1][:, :-2]
+        fn_input.detach_()
+        fn_input.requires_grad_(True)
+        if not ctx.top:</code></pre><h3>After Change</h3><pre><code class='java'>
+        _sequence_input, linear_param0, linear_param1, pos_enc = ctx.saved_tensors
+        depth = ctx.depth
+        sequence_input = torch.cat([_sequence_input, pos_enc], -1)
+        <a id="change">sequence_input.requires_grad_(</a>_sequence_input.requires_grad<a id="change">)</a>
+        if not sequence_input.requires_grad:
+            return (None,) * 8
+        out0, out1 = ctx.output_list.pop(0).chunk(2, 1)
+        with torch.no_grad():</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/homebrewnlp/homebrewnlp/commit/d56dbd9d9e767e94890fb9281e9c69029cdc330d#diff-c98bba8dbdd18eb4e9fa8ae11c28e350c08ee816fce50f9fb86d61cbcd345276L78' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 73470764</div><div id='project'> Project Name: homebrewnlp/homebrewnlp</div><div id='commit'> Commit Name: d56dbd9d9e767e94890fb9281e9c69029cdc330d</div><div id='time'> Time: 2020-07-16</div><div id='author'> Author: 39779310+ClashLuke@users.noreply.github.com</div><div id='file'> File Name: module.py</div><div id='m_class'> M Class Name: ReversibleRNNFunction</div><div id='n_method'> N Class Name: ReversibleRNNFunction</div><div id='m_method'> M Method Name: backward(2)</div><div id='n_method'> N Method Name: backward(2)</div><div id='m_parent_class'> M Parent Class: torch.autograd.Function</div><div id='n_parent_class'> N Parent Class: torch.autograd.Function</div><div id='m_file'> M File Name: module.py</div><div id='n_file'> N File Name: module.py</div><div id='m_start'> M Start Line: 79</div><div id='m_end'> M End Line: 104</div><div id='n_start'> N Start Line: 57</div><div id='n_end'> N End Line: 80</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+        target1 = features1[-1]
+        target1 = target1.cpu().data.numpy()[0, :]
+        target2 = <a id="change">features2[-1]</a>
+        target2 = target2.cpu().data.numpy()[0, :]
+        print(&quottarget shape:&quot, target1.shape)
+
+        &quot&quot&quot</code></pre><h3>After Change</h3><pre><code class='java'>
+        print(&quotoutput&quot, output1.size())
+
+        similarity = 1.0 / F.pairwise_distance(output1, output2, 2)
+        similarity = <a id="change">similarity.requires_grad_(</a>True<a id="change">)</a>
+
+        self.feature_module.zero_grad()
+        self.model.zero_grad()
+        similarity.backward(retain_graph=True)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/rvl-lab-utoronto/video_similarity_search/commit/acce7be1aa24b87320dd3bf01eeaa9f29d08d264#diff-929991925aa0e906fbfd772b4c25468a615563d5507eee259781754acfd0d2e3L102' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 73470767</div><div id='project'> Project Name: rvl-lab-utoronto/video_similarity_search</div><div id='commit'> Commit Name: acce7be1aa24b87320dd3bf01eeaa9f29d08d264</div><div id='time'> Time: 2020-08-05</div><div id='author'> Author: salar77h@gmail.com</div><div id='file'> File Name: video_gradcam.py</div><div id='m_class'> M Class Name: VideoSimilarityGradCam</div><div id='n_method'> N Class Name: VideoSimilarityGradCam</div><div id='m_method'> M Method Name: __call__(3)</div><div id='n_method'> N Method Name: __call__(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: video_gradcam.py</div><div id='n_file'> N File Name: video_gradcam.py</div><div id='m_start'> M Start Line: 114</div><div id='m_end'> M End Line: 168</div><div id='n_start'> N Start Line: 153</div><div id='n_end'> N End Line: 180</div><BR>

@@ -1,0 +1,22 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+        &#47&#47 See paper p13
+        thetas = torch.arange(self.n_heads, dtype=torch.float32) * (2.0 * math.pi / self.n_heads)
+        grid_init = <a id="change">torch.stack([</a>thetas.cos(), thetas.sin(), thetas.cos()<a id="change"></a>], -1<a id="change">)</a> &#47&#47 TODO
+
+        &#47&#47 [NumHeads, FeatureLevels, NumPoints, Offset]
+        grid_init = (grid_init / grid_init.abs().max(-1, keepdim=True)[0]).view(self.n_heads, 1, 1, 3).repeat(1, self.n_levels, self.n_points, 1)</code></pre><h3>After Change</h3><pre><code class='java'>
+        constant_(self.sampling_offsets.weight.data, 0.)
+
+        &#47&#47 See paper p13
+        grid_init = <a id="change">torch.cartesian_prod(torch.tensor([-1, 0, 1]), torch.tensor([-1, 0, 1]), torch.tensor([-1, 0, 1])).to(dtype=torch.float32)</a>
+        if self.n_heads == 26:  &#47&#47 sample in 26 directions
+            grid_init = grid_init[torch.nonzero(torch.abs(grid_init).sum(dim=1)).squeeze()] &#47&#47 Get rid of origin
+        elif self.n_heads == 6: &#47&#47 sample in 6 directions
+            grid_init<a id="change"> = </a>grid_init[torch.nonzero(torch.logical_and(torch.abs(grid_init).sum(dim=1) &lt; 2, torch.abs(grid_init).sum(dim=1) &gt; 0)).squeeze()]
+        else:
+            raise ValueError("Only nheads of value 26 or 6 are supported.")
+        </code></pre>

@@ -1,0 +1,52 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+        all_hidden_states = [] if output_hidden_states else None
+        hidden_states = embedding_output
+        <a id="change">for layer</a> in self.encoder<a id="change">:
+            </a>hidden_states<a id="change"> = </a>layer(hidden_states, attention_mask)
+            if output_hidden_states:
+                all_hidden_states.append(hidden_states)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
+
+        &#47&#47 check the variable of `input_ids` and `inputs_embeds`
+        <a id="change">if input_ids is None</a> and inputs_embeds is None:
+            <a id="change">raise </a><a id="change">ValueError("You have to specify either input_ids or inputs_embeds"</a><a id="change">)</a>
+        <a id="change">if </a>input_ids is not None and <a id="change">inputs_embeds is not None</a>:
+            raise ValueError("You cannot specify both input_ids and inputs_embeds at the same time")
+
+        if attention_mask is None:
+            attention_mask = paddle.unsqueeze(
+                (input_ids == self.pad_token_id).astype(self.pooler.dense.weight.dtype) * -1e4, axis=[1, 2]
+            )
+        &#47&#47 For 2D attention_mask from tokenizer
+        elif attention_mask.ndim == 2:
+            attention_mask = paddle.unsqueeze(attention_mask, axis=[1, 2]).astype(paddle.get_default_dtype())
+            attention_mask = (1.0 - attention_mask) * -1e4
+        attention_mask.stop_gradient = True
+
+        embedding_output = self.embeddings(
+            input_ids=input_ids, position_ids=position_ids, token_type_ids=token_type_ids, inputs_embeds=inputs_embeds
+        )
+        embedding_output = self.embedding_hidden_mapping_in(embedding_output)
+
+        hidden_states = embedding_output
+
+        encoder_output = self.encoder(
+            hidden_states,
+            src_mask=attention_mask,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
+
+        &#47&#47 when `output_attentions` and `output_hidden_states` are False, it wll return tensor object.
+        encoder_output = (encoder_output,) if paddle.is_tensor(encoder_output) else encoder_output
+
+        sequence_output<a id="change"> = </a>encoder_output[0]
+
+        pooled_output = self.pooler(sequence_output)
+        content_output = sequence_output[:, self.content_summary_index] if self.use_content_summary else None</code></pre>

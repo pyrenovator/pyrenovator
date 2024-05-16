@@ -1,0 +1,88 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                torch._foreach_div_scalar_list_(exp_avg_sq_sqrt, bias_correction_sqrt)
+                denom = torch._foreach_add(exp_avg_sq_sqrt, group[&quoteps&quot])
+
+            step_size = [<a id="change">group[&quotlr&quot]</a> / bc for bc in bias_correction1]
+
+            <a id="change">for </a>i in range(len(step_size))<a id="change">:
+                params_with_grad[i]</a><a id="change">.addcdiv_(exp_avg[i]</a>, <a id="change">denom[i]</a><a id="change">, value=-step_size[i])</a>
+
+        return loss
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+            grads = []
+            states = []
+            <a id="change">exp_avg</a> = []
+            exp_avg_sq = []
+            max_exp_avg_sq = []
+            params_with_grad = []
+
+            for p in group[&quotparams&quot]:
+                if p.grad is not None:
+                    if p.grad.is_sparse:
+                        raise RuntimeError(&quotAdam does not support sparse gradients, please consider SparseAdam instead&quot)
+                    params_with_grad.append(p)
+                    grads.append(p.grad)
+
+            for p in params_with_grad:
+                state = self.state[p]
+
+                &#47&#47 State initialization
+                if len(state) == 0:
+                    state[&quotstep&quot] = 0
+                    &#47&#47 Exponential moving average of gradient values
+                    state[&quotexp_avg&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+                    &#47&#47 Exponential moving average of squared gradient values
+                    state[&quotexp_avg_sq&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+                    if amsgrad:
+                        &#47&#47 Maintains max of all exp. moving avg. of sq. grad. values
+                        state[&quotmax_exp_avg_sq&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+
+                exp_avg.append(state[&quotexp_avg&quot])
+                exp_avg_sq.append(state[&quotexp_avg_sq&quot])
+
+                if amsgrad:
+                    max_exp_avg_sq.append(state[&quotmax_exp_avg_sq&quot])
+
+                state[&quotstep&quot] += 1
+                states.append(state)
+
+            beta1, beta2 = group[&quotbetas&quot]
+
+            bias_correction1 = [1 - beta1 ** state[&quotstep&quot] for state in states] 
+            bias_correction2 = [1 - beta2 ** state[&quotstep&quot] for state in states] 
+            if group[&quotweight_decay&quot] != 0:
+                grads = torch._foreach_add(grads, params_with_grad, alpha=group[&quotweight_decay&quot])
+
+            &#47&#47
+            &#47&#47 Decay the first and second moment running average coefficient
+            &#47&#47
+            torch._foreach_mul_(exp_avg, beta1)
+            torch._foreach_add_(exp_avg, grads, alpha=1 - beta1)
+
+            torch._foreach_mul_(exp_avg_sq, beta2)
+            torch._foreach_addcmul_(exp_avg_sq, grads, grads, 1 - beta2)
+
+            if amsgrad:
+                &#47&#47 Maintains the maximum of all 2nd moment running avg. till now
+                max_exp_avg_sq = torch._foreach_maximum(max_exp_avg_sq, exp_avg_sq)
+
+                &#47&#47 Use the max. for normalizing running avg. of gradient
+                max_exp_avg_sq_sqrt = torch._foreach_sqrt(max_exp_avg_sq)
+                bias_correction_sqrt = [math.sqrt(bc) for bc in bias_correction2]
+                torch._foreach_div_scalar_list_(max_exp_avg_sq_sqrt, bias_correction_sqrt)
+                denom = torch._foreach_add(max_exp_avg_sq_sqrt, group[&quoteps&quot])
+            else:
+                exp_avg_sq_sqrt = torch._foreach_sqrt(exp_avg_sq)
+                bias_correction_sqrt = [math.sqrt(bc) for bc in bias_correction2]
+                torch._foreach_div_scalar_list_(exp_avg_sq_sqrt, bias_correction_sqrt)
+                denom = torch._foreach_add(exp_avg_sq_sqrt, group[&quoteps&quot])
+
+            step_size = [(<a id="change">group[&quotlr&quot]</a> / bc)<a id="change"> * -1</a> for bc in bias_correction1]
+            <a id="change">torch._foreach_addcdiv_(params_with_grad</a>, <a id="change">exp_avg</a>, denom, step_size<a id="change">)</a>
+
+        return loss
+</code></pre>

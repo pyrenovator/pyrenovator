@@ -1,0 +1,42 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    &#47&#47 weight = (groups, rcout, cin, H, W)
+    &#47&#47 output = (bs, groups, rcout, oy, ox)
+
+    conv<a id="change"> = </a><a id="change">clbuild(</a>"conv", <a id="change">
+    __kernel void conv(__global const float *input, __global const float *weight, __global float *output,
+      int H, int W, int groups, int rcout, int cin, int oy, int ox, int iy, int ix, int ys, int xs) {
+
+      int B = get_global_id(0)/(groups*rcout);  // range 0-bs
+      int g = (get_global_id(0)/rcout)%groups;
+      int c = get_global_id(0) % rcout;
+
+      int Y = get_global_id(1);  // range 0-oy
+      int X = get_global_id(2);  // range 0-ox
+      int IY = Y*ys;
+      int IX = X*xs;
+
+      float acc = 0.0;
+      for (int ci = 0; ci &lt; cin; ci++) {
+        for (int y = IY; y &lt; IY+H; y++) {
+          for (int x = IX; x &lt; IX+W; x++) {
+            acc += input[B*groups*cin*iy*ix + g*cin*iy*ix + ci*iy*ix + y*ix + x] * \
+              weight[g*rcout*cin*H*W + c*cin*H*W + ci*H*W + (y-IY)*W + (x-IX)];
+          }
+        }
+      }
+      output[B*groups*rcout*oy*ox + g*rcout*oy*ox + c*oy*ox + Y*ox + X] = acc;
+    }</a><a id="change">)</a>
+
+    conv_args = H, W, groups, rcout, cin, oy, ox, iy, ix, ys, xs
+    conv([bs*groups*rcout, oy, ox], None, x.cl, w.cl, ret.cl, *[i32(x) for x in conv_args])
+    return ret</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    &#47&#47 output buffer
+    conv_args = H, W, groups, rcout, cin, oy, ox, iy, ix, ys, xs, bs
+    <a id="change">return </a>conv(x, w, buffer_new(ctx, (bs, cout, oy, ox)), conv_args)
+
+  def backward(ctx, grad_output):
+    bs,_,oy,ox = grad_output.shape</code></pre>

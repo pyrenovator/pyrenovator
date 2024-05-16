@@ -1,0 +1,55 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+        scale = ctx.scale
+        causal = ctx.causal
+        q_block_size<a id="change"> = </a>ctx.q_block_size
+        k_block_size = ctx.k_block_size
+        tile_size = ctx.tile_size
+        backward_tile_size = ctx.backward_tile_size
+
+        dq, dk, dv = map(torch.zeros_like, (q, k, v))
+
+        db = torch.zeros((heads, src_seq, tgt_seq), device = device, dtype = dtype) if attn_bias.requires_grad else torch.zeros((heads, 0, 0), device = device, dtype = dtype)
+        do_scaled = torch.zeros_like(l)
+
+        <a id="change">backward(</a>do, o, l, q, k, v, dq, dk, dv, db, do_scaled, mask, attn_bias, scale, causal, q_block_size, k_block_size, backward_tile_size<a id="change">)</a>
+
+        db = db if attn_bias.requires_grad else None
+
+        return dq, dk, dv, None, db, None, None, None, None, None, None</code></pre><h3>After Change</h3><pre><code class='java'>
+        batch, heads, src_seq, tgt_seq, device, dtype = *q.shape[:3], k.shape[2], q.device, q.dtype
+
+        (
+            <a id="change">scale</a><a id="change">,
+            causal,
+            backward_row_tile_size,
+            backward_col_tile_size,
+            backward_row_tiles,
+            backward_col_tiles</a>
+        ) = ctx.params
+
+        dq, dk, dv = map(torch.zeros_like, (q, k, v))
+
+        db = torch.zeros((heads, src_seq, tgt_seq), device = device, dtype = dtype) if attn_bias.requires_grad else torch.zeros((heads, 0, 0), device = device, dtype = dtype)
+        do_scaled = torch.zeros_like(l)
+
+        <a id="change">backward(
+            </a>do, o, l,
+            q, k, v,
+            dq, dk, dv, db, do_scaled,
+            mask,
+            attn_bias,
+            <a id="change">scale</a>,
+            causal,
+            <a id="change">backward_row_tile_size</a>,
+            backward_col_tile_size,
+            backward_row_tiles,
+            <a id="change">backward_col_tiles</a><a id="change">
+        )</a>
+
+        db = db if attn_bias.requires_grad else None
+
+        return dq, dk, dv, None, db, None, None, None, None, None, None, None, None, None, None</code></pre>

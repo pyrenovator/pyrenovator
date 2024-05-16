@@ -1,0 +1,61 @@
+<html><h3>Pattern ID :29457
+</h3><img src='87399861.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    &#47&#47 this work at inference?
+    x = x.sub(self.running_mean.reshape(shape=[1, -1, 1, 1]))
+    x = x.mul(self.weight.reshape(shape=[1, -1, 1, 1]))
+    x<a id="change"> = </a>x.div(<a id="change">self.running_var.add(self.eps).reshape(shape=[1, -1, 1, 1]).sqrt()</a>)
+    x = x.add(self.bias.reshape(shape=[1, -1, 1, 1]))
+    return x
+</code></pre><h3>After Change</h3><pre><code class='java'>
+      y = (x - batch_mean.reshape(shape=[1, -1, 1, 1]))
+      batch_var = (y*y).mean(axis=(0,2,3))
+
+    <a id="change">if </a>self.track_running_stats:
+      self.running_mean = (<a id="change">1 - self.momentum) * self.running_mean + </a>self.momentum * batch_mean
+      self.running_var<a id="change"> = </a>(1 - self.momentum) * self.running_var + self.momentum<a id="change"> * </a>batch_var
+      self.num_batches_tracked<a id="change"> += </a>1
+
+    if self.training:
+      return self.normalize(x, batch_mean, batch_var)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 7</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/geohot/tinygrad/commit/ffb96b2d0b5f34a0acb63af0312871fd532138f4#diff-04bfd04e335c92e3bc999cad0d66db39117092e0e4be562cb42ea62f151893bbL18' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 87399861</div><div id='project'> Project Name: geohot/tinygrad</div><div id='commit'> Commit Name: ffb96b2d0b5f34a0acb63af0312871fd532138f4</div><div id='time'> Time: 2020-12-09</div><div id='author'> Author: geohot@gmail.com</div><div id='file'> File Name: tinygrad/nn.py</div><div id='m_class'> M Class Name: BatchNorm2D</div><div id='n_method'> N Class Name: BatchNorm2D</div><div id='m_method'> M Method Name: __call__(2)</div><div id='n_method'> N Method Name: __call__(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: tinygrad/nn.py</div><div id='n_file'> N File Name: tinygrad/nn.py</div><div id='m_start'> M Start Line: 21</div><div id='m_end'> M End Line: 25</div><div id='n_start'> N Start Line: 18</div><div id='n_end'> N End Line: 31</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                if group[&quotweight_decay&quot] != 0:
+                    adam_step.add_(group[&quotweight_decay&quot], p.data)
+
+                adam_norm<a id="change"> = </a><a id="change">adam_step.pow(2).sum().sqrt()</a>
+                if weight_norm == 0 or adam_norm == 0:
+                    trust_ratio = 1
+                else:
+                    trust_ratio = weight_norm / adam_norm</code></pre><h3>After Change</h3><pre><code class='java'>
+                exp_avg_sq.mul_(beta2).addcmul_(1 - beta2, grad, grad)
+
+                &#47&#47 Paper v3 does not use debiasing.
+                <a id="change">if </a>self.debias:
+                    bias_correction<a id="change"> = </a>math.sqrt(1 - beta2<a id="change"> ** </a>state[&quotstep&quot])
+                    bias_correction /= (1<a id="change"> - </a>beta1 ** state[&quotstep&quot])
+                else:
+                    bias_correction<a id="change"> = </a>1
+
+                &#47&#47 Apply bias to lr to avoid broadcast.
+                step_size = group[&quotlr&quot] * bias_correction</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/jettify/pytorch-optimizer/commit/33910567d52dfd8ccfe4723eeeb3475f9ac1b1ad#diff-fbfe617fbb19b468f8d84fa739523e3ee80954ae89bd01ca97dc9fa9c6a4e6bbL62' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 87400060</div><div id='project'> Project Name: jettify/pytorch-optimizer</div><div id='commit'> Commit Name: 33910567d52dfd8ccfe4723eeeb3475f9ac1b1ad</div><div id='time'> Time: 2020-03-03</div><div id='author'> Author: tkoncrypto@gmail.com</div><div id='file'> File Name: torch_optimizer/lamb.py</div><div id='m_class'> M Class Name: Lamb</div><div id='n_method'> N Class Name: Lamb</div><div id='m_method'> M Method Name: step(2)</div><div id='n_method'> N Method Name: step(2)</div><div id='m_parent_class'> M Parent Class: Optimizer</div><div id='n_parent_class'> N Parent Class: Optimizer</div><div id='m_file'> M File Name: torch_optimizer/lamb.py</div><div id='n_file'> N File Name: torch_optimizer/lamb.py</div><div id='m_start'> M Start Line: 72</div><div id='m_end'> M End Line: 119</div><div id='n_start'> N Start Line: 82</div><div id='n_end'> N End Line: 131</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        self.bb = self.add_weight(name="positional_embedding", shape=(kk_blocks, num_heads), initializer="zeros", trainable=True)
+        strides = int(tf.math.ceil(tf.math.sqrt(float(kk_blocks / qq_blocks))))
+        q_blocks_h = q_blocks_w = int(tf.math.sqrt(float(qq_blocks)))
+        k_blocks_h = k_blocks_w<a id="change"> = </a>int(<a id="change">tf.math.sqrt(</a>float(kk_blocks)<a id="change">)</a>)
+
+        x1, y1 = tf.meshgrid(range(q_blocks_h), range(q_blocks_w))
+        x2, y2 = tf.meshgrid(range(k_blocks_h), range(k_blocks_w))</code></pre><h3>After Change</h3><pre><code class='java'>
+            q_blocks_h, q_blocks_w = self.query_height, int(qq_blocks / self.query_height)
+
+        strides = int(tf.math.ceil(tf.math.sqrt(float(kk_blocks / qq_blocks))))
+        <a id="change">if </a>self.key_height == -1:
+            k_blocks_h = q_blocks_h * strides
+            while kk_blocks % k_blocks_h != 0:
+                k_blocks_h<a id="change"> -= </a>1
+            k_blocks_w<a id="change"> = </a>int(kk_blocks<a id="change"> / </a>k_blocks_h)
+        else:
+            k_blocks_h, k_blocks_w = self.key_height, int(kk_blocks<a id="change"> / </a>self.key_height)
+        self.k_blocks_h, self.k_blocks_w = k_blocks_h, k_blocks_w
+        &#47&#47 print(f"{q_blocks_h = }, {q_blocks_w = }, {k_blocks_h = }, {k_blocks_w = }, {strides = }")
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/leondgarse/keras_cv_attention_models/commit/4b675139fef68fbaf97bd575c11ea1736ee6de94#diff-419ea771811e38fb2e106cf19724ad992d4d6f2fbae3c511c734548a78b6d63bL22' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 87400088</div><div id='project'> Project Name: leondgarse/keras_cv_attention_models</div><div id='commit'> Commit Name: 4b675139fef68fbaf97bd575c11ea1736ee6de94</div><div id='time'> Time: 2022-07-22</div><div id='author'> Author: leondgarse@gmail.com</div><div id='file'> File Name: keras_cv_attention_models/levit/levit.py</div><div id='m_class'> M Class Name: MultiHeadPositionalEmbedding</div><div id='n_method'> N Class Name: MultiHeadPositionalEmbedding</div><div id='m_method'> M Method Name: build(2)</div><div id='n_method'> N Method Name: build(2)</div><div id='m_parent_class'> M Parent Class: keras.layers.Layer</div><div id='n_parent_class'> N Parent Class: keras.layers.Layer</div><div id='m_file'> M File Name: keras_cv_attention_models/levit/levit.py</div><div id='n_file'> N File Name: keras_cv_attention_models/levit/levit.py</div><div id='m_start'> M Start Line: 26</div><div id='m_end'> M End Line: 27</div><div id='n_start'> N Start Line: 27</div><div id='n_end'> N End Line: 40</div><BR>

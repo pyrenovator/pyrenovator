@@ -1,0 +1,25 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    ys,xs = ctx.stride
+    rcout = cout//ctx.groups
+
+    dx, dw = <a id="change">np.zeros_like(</a>x<a id="change">)</a>, np.zeros_like(w)
+
+    gdx = dx.reshape(bs,ctx.groups,cin,x.shape[2],x.shape[3])
+    gdw = dw.reshape(ctx.groups,rcout, cin, H, W)</code></pre><h3>After Change</h3><pre><code class='java'>
+    tx, tw, x_shape = ctx.saved_tensors
+    _,rcout,cin,H,W = tw.shape
+    ys,xs = ctx.stride
+    <a id="change">OY</a><a id="change">,OX</a> = x_shape[2:4]
+
+    ggg = grad_output.reshape(bs,ctx.groups,rcout,oy,ox)
+    gdw = np.einsum(&quotigkYX,igjYXyx -&gt; gkjyx&quot,ggg,tx)
+   
+    &#47&#47needs to be optimized
+    gdx = <a id="change">np.zeros(</a>(bs<a id="change">,ctx.groups,cin,OY,OX</a>)<a id="change">, dtype=tx.dtype)</a>
+    for Y in range(grad_output.shape[2]):
+      for X in range(grad_output.shape[3]):
+        iY,iX = Y*ys, X*xs
+        gdx[:,:,: , iY:iY+H, iX:iX+W] += np.einsum(&quotigk,gkjyx-&gt;igjyx&quot,ggg[:,:,:,Y,X], tw)</code></pre>

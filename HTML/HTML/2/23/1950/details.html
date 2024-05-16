@@ -1,0 +1,700 @@
+<html><h3>Pattern ID :1950
+</h3><img src='8661989.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        samples, model, batch_size, num_workers, skip_failures
+    )
+
+    <a id="change">errors = </a><a id="change">[]</a>
+
+    with fou.ProgressBar(samples) as pb:
+        for sample_batch, imgs in zip(samples_loader, data_loader):
+            try:
+                if isinstance(imgs, Exception):
+                    raise imgs
+
+                labels_batch = model.predict_all(imgs)
+
+                for sample, labels in zip(sample_batch, labels_batch):
+                    sample.add_labels(
+                        labels,
+                        label_field,
+                        confidence_thresh=confidence_thresh,
+                    )
+
+            except Exception as e:
+                if not skip_failures:
+                    raise e
+
+                errors.append((sample_batch[0].id, sample_batch[-1].id, e))
+
+            pb.update(len(sample_batch))
+
+    <a id="change">if errors</a>:
+        <a id="change">lines</a><a id="change"> = [
+            "Batch: %s - %s\nError: %s" % (id1, id2, str(e))
+            for id1, id2, e in errors
+        ]</a>
+        <a id="change">lines.append(
+            </a><a id="change">"Errors occured while generating predictions for %d batches. See "
+            "above for details."</a><a id="change"> % len(errors</a><a id="change">)</a><a id="change">
+        )</a>
+        <a id="change">logger.warning(</a><a id="change">"\n\n".join(lines</a><a id="change">))</a>
+
+
+def _apply_image_model_to_frames_single(
+    samples, model, label_field, confidence_thresh, skip_failures</code></pre><h3>After Change</h3><pre><code class='java'>
+                if not skip_failures:
+                    raise e
+
+                <a id="change">logger.warning(
+                    "Batch: %s - %s\nError: %s\n"</a>,
+                    sample_batch[0].id,
+                    sample_batch[-1].id,
+                    e<a id="change">,
+                )</a>
+
+            pb.update(len(sample_batch))
+
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 11</div><BR><div id='size'>Non-data size: 15</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/voxel51/fiftyone/commit/02b054d893a659174aad5b571323337f20d6a97e#diff-13100db40bf4740e3fc3ea44ae6c6d9498102a7da42b58a9a539173965e1dc24L311' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 8661989</div><div id='project'> Project Name: voxel51/fiftyone</div><div id='commit'> Commit Name: 02b054d893a659174aad5b571323337f20d6a97e</div><div id='time'> Time: 2021-11-23</div><div id='author'> Author: brimoor@umich.edu</div><div id='file'> File Name: fiftyone/core/models.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: _apply_image_model_data_loader(7)</div><div id='n_method'> N Method Name: _apply_image_model_data_loader(7)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: fiftyone/core/models.py</div><div id='n_file'> N File Name: fiftyone/core/models.py</div><div id='m_start'> M Start Line: 311</div><div id='m_end'> M End Line: 347</div><div id='n_start'> N Start Line: 312</div><div id='n_end'> N End Line: 317</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    is_clips = samples._dataset._is_clips
+
+    embeddings_dict = {}
+    <a id="change">errors = </a><a id="change">[]</a>
+
+    with fou.ProgressBar(total=total_frame_count) as pb:
+        for idx, sample in enumerate(samples):
+            embeddings = []
+
+            if is_clips:
+                frames = etaf.FrameRange(*sample.support)
+            else:
+                frames = None
+
+            try:
+                with etav.FFmpegVideoReader(
+                    sample.filepath, frames=frames
+                ) as video_reader:
+                    for img in video_reader:
+                        embedding = model.embed(img)[0]
+
+                        if embeddings_field is not None:
+                            sample.add_labels(
+                                {video_reader.frame_number: embedding},
+                                embeddings_field,
+                            )
+                        else:
+                            embeddings.append(embedding)
+
+                        pb.update()
+
+            except Exception as e:
+                if not skip_failures:
+                    raise e
+
+                errors.append((sample.id, e))
+
+            if embeddings_field is None:
+                if embeddings:
+                    embeddings = np.stack(embeddings)
+                else:
+                    embeddings = None
+
+                embeddings_dict[sample.id] = embeddings
+
+            &#47&#47 Explicitly set in case actual &#47&#47 frames differed from expected &#47&#47
+            pb.set_iteration(frame_counts[idx])
+
+    <a id="change">if errors</a>:
+        <a id="change">lines</a><a id="change"> = ["Sample: %s\nError: %s" % (_id, str(e)) for _id, e in errors]</a>
+        <a id="change">lines.append(
+            </a><a id="change">"Errors occurred while generating embeddings for %d videos. See "
+            "above for details."</a><a id="change"> % len(</a>errors<a id="change">)</a><a id="change">
+        )</a>
+        <a id="change">logger.warning(</a><a id="change">"\n\n".join(</a>lines<a id="change">))</a>
+
+    if embeddings_field:
+        return None
+</code></pre><h3>After Change</h3><pre><code class='java'>
+                if not skip_failures:
+                    raise e
+
+                <a id="change">logger.warning("Sample: %s\nError: %s\n"</a>, sample.id, e<a id="change">)</a>
+
+            if embeddings_field is None:
+                if embeddings:
+                    embeddings = np.stack(embeddings)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/voxel51/fiftyone/commit/02b054d893a659174aad5b571323337f20d6a97e#diff-13100db40bf4740e3fc3ea44ae6c6d9498102a7da42b58a9a539173965e1dc24L904' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 8662004</div><div id='project'> Project Name: voxel51/fiftyone</div><div id='commit'> Commit Name: 02b054d893a659174aad5b571323337f20d6a97e</div><div id='time'> Time: 2021-11-23</div><div id='author'> Author: brimoor@umich.edu</div><div id='file'> File Name: fiftyone/core/models.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: _compute_frame_embeddings_single(4)</div><div id='n_method'> N Method Name: _compute_frame_embeddings_single(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: fiftyone/core/models.py</div><div id='n_file'> N File Name: fiftyone/core/models.py</div><div id='m_start'> M Start Line: 912</div><div id='m_end'> M End Line: 965</div><div id='n_start'> N Start Line: 871</div><div id='n_end'> N End Line: 871</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    is_clips = samples._dataset._is_clips
+
+    embeddings_dict = {}
+    <a id="change">errors = </a><a id="change">[]</a>
+
+    with fou.ProgressBar(total=total_frame_count) as pb:
+        for idx, sample in enumerate(samples):
+            if is_clips:
+                frames = etaf.FrameRange(*sample.support)
+            else:
+                frames = None
+
+            frame_embeddings_dict = {}
+
+            try:
+                with etav.FFmpegVideoReader(
+                    sample.filepath, frames=frames
+                ) as video_reader:
+                    for img in video_reader:
+                        frame_number = video_reader.frame_number
+                        frame = sample.frames[frame_number]
+
+                        patches = foup.parse_patches(
+                            frame, patches_field, handle_missing=handle_missing
+                        )
+
+                        if patches is not None:
+                            if batch_size is None:
+                                embeddings = _embed_patches_single(
+                                    model, img, patches, force_square, alpha
+                                )
+                            else:
+                                embeddings = _embed_patches_batch(
+                                    model,
+                                    img,
+                                    patches,
+                                    force_square,
+                                    alpha,
+                                    batch_size,
+                                )
+
+                        if embeddings_field is not None:
+                            sample.add_labels(
+                                {frame_number: embeddings}, embeddings_field,
+                            )
+                        else:
+                            frame_embeddings_dict[frame_number] = embeddings
+
+                        pb.update()
+
+            except Exception as e:
+                if not skip_failures:
+                    raise e
+
+                errors.append((sample.id, e))
+
+            if embeddings_field is None:
+                embeddings_dict[sample.id] = frame_embeddings_dict
+
+            &#47&#47 Explicitly set in case actual &#47&#47 frames differed from expected &#47&#47
+            pb.set_iteration(frame_counts[idx])
+
+    <a id="change">if errors</a>:
+        <a id="change">lines</a><a id="change"> = ["Sample: %s\nError: %s" % (_id, str(e)) for _id, e in errors]</a>
+        <a id="change">lines.append(
+            </a><a id="change">"Errors occured while generating embeddings for %d videos. See "
+            "above for details."</a><a id="change"> % len(</a>errors<a id="change">)</a><a id="change">
+        )</a>
+        <a id="change">logger.warning(</a><a id="change">"\n\n".join(</a>lines<a id="change">))</a>
+
+    if embeddings_field:
+        return None
+</code></pre><h3>After Change</h3><pre><code class='java'>
+                if not skip_failures:
+                    raise e
+
+                <a id="change">logger.warning("Sample: %s\nError: %s\n"</a>, sample.id, e<a id="change">)</a>
+
+            if embeddings_field is None:
+                embeddings_dict[sample.id] = frame_embeddings_dict
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/voxel51/fiftyone/commit/02b054d893a659174aad5b571323337f20d6a97e#diff-13100db40bf4740e3fc3ea44ae6c6d9498102a7da42b58a9a539173965e1dc24L1438' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 8662005</div><div id='project'> Project Name: voxel51/fiftyone</div><div id='commit'> Commit Name: 02b054d893a659174aad5b571323337f20d6a97e</div><div id='time'> Time: 2021-11-23</div><div id='author'> Author: brimoor@umich.edu</div><div id='file'> File Name: fiftyone/core/models.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: _embed_frame_patches(9)</div><div id='n_method'> N Method Name: _embed_frame_patches(9)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: fiftyone/core/models.py</div><div id='n_file'> N File Name: fiftyone/core/models.py</div><div id='m_start'> M Start Line: 1454</div><div id='m_end'> M End Line: 1521</div><div id='n_start'> N Start Line: 1388</div><div id='n_end'> N End Line: 1388</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    is_clips = samples._dataset._is_clips
+
+    embeddings_dict = {}
+    <a id="change">errors = </a><a id="change">[]</a>
+
+    with fou.ProgressBar(total=total_frame_count) as pb:
+        for idx, sample in enumerate(samples):
+            embeddings = []
+
+            if is_clips:
+                frames = etaf.FrameRange(*sample.support)
+            else:
+                frames = None
+
+            try:
+                with etav.FFmpegVideoReader(
+                    sample.filepath, frames=frames
+                ) as video_reader:
+                    for fns, imgs in _iter_batches(video_reader, batch_size):
+                        embeddings_batch = list(model.embed_all(imgs))
+
+                        if embeddings_field is not None:
+                            sample.add_labels(
+                                {
+                                    fn: embedding
+                                    for fn, embedding in zip(
+                                        fns, embeddings_batch
+                                    )
+                                },
+                                embeddings_field,
+                            )
+                        else:
+                            embeddings.extend(embeddings_batch)
+
+                        pb.update(len(imgs))
+
+            except Exception as e:
+                if not skip_failures:
+                    raise e
+
+                errors.append((sample.id, e))
+
+            if embeddings_field is None:
+                if embeddings:
+                    embeddings = np.stack(embeddings)
+                else:
+                    embeddings = None
+
+                embeddings_dict[sample.id] = embeddings
+
+            &#47&#47 Explicitly set in case actual &#47&#47 frames differed from expected &#47&#47
+            pb.set_iteration(frame_counts[idx])
+
+    <a id="change">if errors</a>:
+        <a id="change">lines</a><a id="change"> = ["Sample: %s\nError: %s" % (_id, str(e)) for _id, e in errors]</a>
+        <a id="change">lines.append(
+            </a><a id="change">"Errors occurred while generating embeddings for %d videos. See "
+            "above for details."</a><a id="change"> % len(</a>errors<a id="change">)</a><a id="change">
+        )</a>
+        <a id="change">logger.warning(</a><a id="change">"\n\n".join(</a>lines<a id="change">))</a>
+
+    if embeddings_field:
+        return None
+</code></pre><h3>After Change</h3><pre><code class='java'>
+                if not skip_failures:
+                    raise e
+
+                <a id="change">logger.warning("Sample: %s\nError: %s\n"</a>, sample.id, e<a id="change">)</a>
+
+            if embeddings_field is None:
+                if embeddings:
+                    embeddings = np.stack(embeddings)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/voxel51/fiftyone/commit/02b054d893a659174aad5b571323337f20d6a97e#diff-13100db40bf4740e3fc3ea44ae6c6d9498102a7da42b58a9a539173965e1dc24L971' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 8661990</div><div id='project'> Project Name: voxel51/fiftyone</div><div id='commit'> Commit Name: 02b054d893a659174aad5b571323337f20d6a97e</div><div id='time'> Time: 2021-11-23</div><div id='author'> Author: brimoor@umich.edu</div><div id='file'> File Name: fiftyone/core/models.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: _compute_frame_embeddings_batch(5)</div><div id='n_method'> N Method Name: _compute_frame_embeddings_batch(5)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: fiftyone/core/models.py</div><div id='n_file'> N File Name: fiftyone/core/models.py</div><div id='m_start'> M Start Line: 979</div><div id='m_end'> M End Line: 1037</div><div id='n_start'> N Start Line: 934</div><div id='n_end'> N End Line: 934</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    frame_counts, total_frame_count = _get_frame_counts(samples)
+    is_clips = samples._dataset._is_clips
+
+    <a id="change">errors = </a><a id="change">[]</a>
+
+    with fou.ProgressBar(total=total_frame_count) as pb:
+        for idx, sample in enumerate(samples):
+            if is_clips:
+                frames = etaf.FrameRange(*sample.support)
+            else:
+                frames = None
+
+            try:
+                with etav.FFmpegVideoReader(
+                    sample.filepath, frames=frames
+                ) as video_reader:
+                    for img in video_reader:
+                        labels = model.predict(img)
+
+                        sample.add_labels(
+                            {video_reader.frame_number: labels},
+                            label_field,
+                            confidence_thresh=confidence_thresh,
+                        )
+
+                        pb.update()
+
+            except Exception as e:
+                if not skip_failures:
+                    raise e
+
+                errors.append((sample.id, e))
+
+            &#47&#47 Explicitly set in case actual &#47&#47 frames differed from expected &#47&#47
+            pb.set_iteration(frame_counts[idx])
+
+    <a id="change">if errors</a>:
+        <a id="change">lines</a><a id="change"> = ["Sample: %s\nError: %s" % (_id, str(e)) for _id, e in errors]</a>
+        <a id="change">lines.append(
+            </a><a id="change">"Errors occured while generating predictions for %d videos. See "
+            "above for details."</a><a id="change"> % len(</a>errors<a id="change">)</a><a id="change">
+        )</a>
+        <a id="change">logger.warning(</a><a id="change">"\n\n".join(</a>lines<a id="change">))</a>
+
+
+def _apply_image_model_to_frames_batch(
+    samples, model, label_field, confidence_thresh, batch_size, skip_failures</code></pre><h3>After Change</h3><pre><code class='java'>
+                if not skip_failures:
+                    raise e
+
+                <a id="change">logger.warning("Sample: %s\nError: %s\n"</a>, sample.id, e<a id="change">)</a>
+
+            &#47&#47 Explicitly set in case actual &#47&#47 frames differed from expected &#47&#47
+            pb.set_iteration(frame_counts[idx])
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/voxel51/fiftyone/commit/02b054d893a659174aad5b571323337f20d6a97e#diff-13100db40bf4740e3fc3ea44ae6c6d9498102a7da42b58a9a539173965e1dc24L348' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 8661991</div><div id='project'> Project Name: voxel51/fiftyone</div><div id='commit'> Commit Name: 02b054d893a659174aad5b571323337f20d6a97e</div><div id='time'> Time: 2021-11-23</div><div id='author'> Author: brimoor@umich.edu</div><div id='file'> File Name: fiftyone/core/models.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: _apply_image_model_to_frames_single(5)</div><div id='n_method'> N Method Name: _apply_image_model_to_frames_single(5)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: fiftyone/core/models.py</div><div id='n_file'> N File Name: fiftyone/core/models.py</div><div id='m_start'> M Start Line: 355</div><div id='m_end'> M End Line: 396</div><div id='n_start'> N Start Line: 355</div><div id='n_end'> N End Line: 355</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    frame_counts, total_frame_count = _get_frame_counts(samples)
+    is_clips = samples._dataset._is_clips
+
+    <a id="change">errors = </a><a id="change">[]</a>
+
+    with fou.ProgressBar(total=total_frame_count) as pb:
+        for idx, sample in enumerate(samples):
+            if is_clips:
+                frames = etaf.FrameRange(*sample.support)
+            else:
+                frames = None
+
+            try:
+                with etav.FFmpegVideoReader(
+                    sample.filepath, frames=frames
+                ) as video_reader:
+                    for fns, imgs in _iter_batches(video_reader, batch_size):
+                        labels_batch = model.predict_all(imgs)
+
+                        sample.add_labels(
+                            {
+                                fn: labels
+                                for fn, labels in zip(fns, labels_batch)
+                            },
+                            label_field,
+                            confidence_thresh=confidence_thresh,
+                        )
+
+                        pb.update(len(imgs))
+
+            except Exception as e:
+                if not skip_failures:
+                    raise e
+
+                errors.append((sample.id, e))
+
+            &#47&#47 Explicitly set in case actual &#47&#47 frames differed from expected &#47&#47
+            pb.set_iteration(frame_counts[idx])
+
+    <a id="change">if errors</a>:
+        <a id="change">lines</a><a id="change"> = ["Sample: %s\nError: %s" % (_id, str(e)) for _id, e in errors]</a>
+        <a id="change">lines.append(
+            </a><a id="change">"Errors occured while generating predictions for %d videos. See "
+            "above for details."</a><a id="change"> % len(</a>errors<a id="change">)</a><a id="change">
+        )</a>
+        <a id="change">logger.warning(</a><a id="change">"\n\n".join(</a>lines<a id="change">))</a>
+
+
+def _apply_video_model(
+    samples, model, label_field, confidence_thresh, skip_failures</code></pre><h3>After Change</h3><pre><code class='java'>
+                if not skip_failures:
+                    raise e
+
+                <a id="change">logger.warning("Sample: %s\nError: %s\n"</a>, sample.id, e<a id="change">)</a>
+
+            &#47&#47 Explicitly set in case actual &#47&#47 frames differed from expected &#47&#47
+            pb.set_iteration(frame_counts[idx])
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/voxel51/fiftyone/commit/02b054d893a659174aad5b571323337f20d6a97e#diff-13100db40bf4740e3fc3ea44ae6c6d9498102a7da42b58a9a539173965e1dc24L397' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 8661996</div><div id='project'> Project Name: voxel51/fiftyone</div><div id='commit'> Commit Name: 02b054d893a659174aad5b571323337f20d6a97e</div><div id='time'> Time: 2021-11-23</div><div id='author'> Author: brimoor@umich.edu</div><div id='file'> File Name: fiftyone/core/models.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: _apply_image_model_to_frames_batch(6)</div><div id='n_method'> N Method Name: _apply_image_model_to_frames_batch(6)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: fiftyone/core/models.py</div><div id='n_file'> N File Name: fiftyone/core/models.py</div><div id='m_start'> M Start Line: 404</div><div id='m_end'> M End Line: 448</div><div id='n_start'> N Start Line: 397</div><div id='n_end'> N End Line: 397</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    )
+
+    embeddings_dict = {}
+    <a id="change">errors = </a><a id="change">[]</a>
+
+    with fou.ProgressBar(samples) as pb:
+        for sample, patches in pb(zip(samples, data_loader)):
+            embeddings = None
+
+            try:
+                if isinstance(patches, Exception):
+                    raise patches
+
+                if patches is not None:
+                    embeddings = []
+                    for patches_batch in fou.iter_slices(patches, batch_size):
+                        embeddings_batch = model.embed_all(patches_batch)
+                        embeddings.append(embeddings_batch)
+
+                    embeddings = np.concatenate(embeddings)
+
+            except Exception as e:
+                if not skip_failures:
+                    raise e
+
+                errors.append((sample.id, e))
+
+            if embeddings_field:
+                sample[embeddings_field] = embeddings
+                sample.save()
+            else:
+                embeddings_dict[sample.id] = embeddings
+
+    <a id="change">if errors</a>:
+        <a id="change">lines</a><a id="change"> = ["Sample: %s\nError: %s" % (_id, str(e)) for _id, e in errors]</a>
+        <a id="change">lines.append(
+            </a><a id="change">"Errors occurred while generating embeddings for %d images. See "
+            "above for details."</a><a id="change"> % len(</a>errors<a id="change">)</a><a id="change">
+        )</a>
+        <a id="change">logger.warning(</a><a id="change">"\n\n".join(</a>lines<a id="change">))</a>
+
+    if embeddings_field:
+        return None
+</code></pre><h3>After Change</h3><pre><code class='java'>
+                if not skip_failures:
+                    raise e
+
+                <a id="change">logger.warning("Sample: %s\nError: %s\n"</a>, sample.id, e<a id="change">)</a>
+
+            if embeddings_field:
+                sample[embeddings_field] = embeddings
+                sample.save()</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/voxel51/fiftyone/commit/02b054d893a659174aad5b571323337f20d6a97e#diff-13100db40bf4740e3fc3ea44ae6c6d9498102a7da42b58a9a539173965e1dc24L1369' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 8661997</div><div id='project'> Project Name: voxel51/fiftyone</div><div id='commit'> Commit Name: 02b054d893a659174aad5b571323337f20d6a97e</div><div id='time'> Time: 2021-11-23</div><div id='author'> Author: brimoor@umich.edu</div><div id='file'> File Name: fiftyone/core/models.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: _embed_patches_data_loader(10)</div><div id='n_method'> N Method Name: _embed_patches_data_loader(10)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: fiftyone/core/models.py</div><div id='n_file'> N File Name: fiftyone/core/models.py</div><div id='m_start'> M Start Line: 1394</div><div id='m_end'> M End Line: 1432</div><div id='n_start'> N Start Line: 1308</div><div id='n_end'> N End Line: 1308</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    samples = samples.select_fields()
+    is_clips = samples._dataset._is_clips
+
+    <a id="change">errors = </a><a id="change">[]</a>
+
+    with fou.ProgressBar() as pb:
+        for sample in pb(samples):
+            if is_clips:
+                frames = etaf.FrameRange(*sample.support)
+            else:
+                frames = None
+
+            try:
+                with etav.FFmpegVideoReader(
+                    sample.filepath, frames=frames
+                ) as video_reader:
+                    labels = model.predict(video_reader)
+
+                sample.add_labels(
+                    labels, label_field, confidence_thresh=confidence_thresh
+                )
+            except Exception as e:
+                if not skip_failures:
+                    raise e
+
+                errors.append((sample.id, e))
+
+    <a id="change">if errors</a>:
+        <a id="change">lines</a><a id="change"> = ["Sample: %s\nError: %s" % (_id, str(e)) for _id, e in errors]</a>
+        <a id="change">lines.append(
+            </a><a id="change">"Errors occurred while generating predictions for %d videos. See "
+            "above for details."</a><a id="change"> % len(</a>errors<a id="change">)</a><a id="change">
+        )</a>
+        <a id="change">logger.warning(</a><a id="change">"\n\n".join(</a>lines<a id="change">))</a>
+
+
+def _get_frame_counts(samples):
+    if samples._dataset._is_clips:</code></pre><h3>After Change</h3><pre><code class='java'>
+                if not skip_failures:
+                    raise e
+
+                <a id="change">logger.warning("Sample: %s\nError: %s\n"</a>, sample.id, e<a id="change">)</a>
+
+
+def _get_frame_counts(samples):
+    if samples._dataset._is_clips:</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/voxel51/fiftyone/commit/02b054d893a659174aad5b571323337f20d6a97e#diff-13100db40bf4740e3fc3ea44ae6c6d9498102a7da42b58a9a539173965e1dc24L449' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 8661998</div><div id='project'> Project Name: voxel51/fiftyone</div><div id='commit'> Commit Name: 02b054d893a659174aad5b571323337f20d6a97e</div><div id='time'> Time: 2021-11-23</div><div id='author'> Author: brimoor@umich.edu</div><div id='file'> File Name: fiftyone/core/models.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: _apply_video_model(5)</div><div id='n_method'> N Method Name: _apply_video_model(5)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: fiftyone/core/models.py</div><div id='n_file'> N File Name: fiftyone/core/models.py</div><div id='m_start'> M Start Line: 455</div><div id='m_end'> M End Line: 487</div><div id='n_start'> N Start Line: 429</div><div id='n_end'> N End Line: 429</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+):
+    samples = samples.select_fields()
+
+    <a id="change">errors = </a><a id="change">[]</a>
+
+    with fou.ProgressBar() as pb:
+        for sample in pb(samples):
+            try:
+                img = etai.read(sample.filepath)
+                labels = model.predict(img)
+
+                sample.add_labels(
+                    labels, label_field, confidence_thresh=confidence_thresh
+                )
+            except Exception as e:
+                if not skip_failures:
+                    raise e
+
+                errors.append((sample.id, e))
+
+    <a id="change">if errors</a>:
+        <a id="change">lines</a><a id="change"> = ["Sample: %s\nError: %s" % (_id, str(e)) for _id, e in errors]</a>
+        <a id="change">lines.append(
+            </a><a id="change">"Errors occured while generating predictions for %d images. See "
+            "above for details."</a><a id="change"> % len(</a>errors<a id="change">)</a><a id="change">
+        )</a>
+        <a id="change">logger.warning(</a><a id="change">"\n\n".join(</a>lines<a id="change">))</a>
+
+
+def _apply_image_model_batch(
+    samples, model, label_field, confidence_thresh, batch_size, skip_failures</code></pre><h3>After Change</h3><pre><code class='java'>
+                if not skip_failures:
+                    raise e
+
+                <a id="change">logger.warning("Sample: %s\nError: %s\n"</a>, sample.id, e<a id="change">)</a>
+
+
+def _apply_image_model_batch(
+    samples, model, label_field, confidence_thresh, batch_size, skip_failures</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/voxel51/fiftyone/commit/02b054d893a659174aad5b571323337f20d6a97e#diff-13100db40bf4740e3fc3ea44ae6c6d9498102a7da42b58a9a539173965e1dc24L224' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 8661992</div><div id='project'> Project Name: voxel51/fiftyone</div><div id='commit'> Commit Name: 02b054d893a659174aad5b571323337f20d6a97e</div><div id='time'> Time: 2021-11-23</div><div id='author'> Author: brimoor@umich.edu</div><div id='file'> File Name: fiftyone/core/models.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: _apply_image_model_single(5)</div><div id='n_method'> N Method Name: _apply_image_model_single(5)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: fiftyone/core/models.py</div><div id='n_file'> N File Name: fiftyone/core/models.py</div><div id='m_start'> M Start Line: 229</div><div id='m_end'> M End Line: 254</div><div id='n_start'> N Start Line: 242</div><div id='n_end'> N End Line: 242</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        samples, model, batch_size, num_workers, skip_failures
+    )
+
+    <a id="change">errors = </a><a id="change">[]</a>
+
+    with fou.ProgressBar(samples) as pb:
+        for sample_batch, imgs in zip(samples_loader, data_loader):
+            try:
+                if isinstance(imgs, Exception):
+                    raise imgs
+
+                labels_batch = model.predict_all(imgs)
+
+                for sample, labels in zip(sample_batch, labels_batch):
+                    sample.add_labels(
+                        labels,
+                        label_field,
+                        confidence_thresh=confidence_thresh,
+                    )
+
+            except Exception as e:
+                if not skip_failures:
+                    raise e
+
+                errors.append((sample_batch[0].id, sample_batch[-1].id, e))
+
+            pb.update(len(sample_batch))
+
+    <a id="change">if errors</a>:
+        <a id="change">lines</a><a id="change"> = [
+            "Batch: %s - %s\nError: %s" % (id1, id2, str(e))
+            for id1, id2, e in errors
+        ]</a>
+        <a id="change">lines.append(
+            </a><a id="change">"Errors occured while generating predictions for %d batches. See "
+            "above for details."</a><a id="change"> % len(</a>errors<a id="change">)</a><a id="change">
+        )</a>
+        <a id="change">logger.warning(</a><a id="change">"\n\n".join(</a>lines<a id="change">))</a>
+
+
+def _apply_image_model_to_frames_single(
+    samples, model, label_field, confidence_thresh, skip_failures</code></pre><h3>After Change</h3><pre><code class='java'>
+                if not skip_failures:
+                    raise e
+
+                <a id="change">logger.warning(
+                    "Batch: %s - %s\nError: %s\n"</a>,
+                    sample_batch[0].id,
+                    sample_batch[-1].id,
+                    e<a id="change">,
+                )</a>
+
+            pb.update(len(sample_batch))
+
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/voxel51/fiftyone/commit/02b054d893a659174aad5b571323337f20d6a97e#diff-13100db40bf4740e3fc3ea44ae6c6d9498102a7da42b58a9a539173965e1dc24L296' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 8662008</div><div id='project'> Project Name: voxel51/fiftyone</div><div id='commit'> Commit Name: 02b054d893a659174aad5b571323337f20d6a97e</div><div id='time'> Time: 2021-11-23</div><div id='author'> Author: brimoor@umich.edu</div><div id='file'> File Name: fiftyone/core/models.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: _apply_image_model_data_loader(7)</div><div id='n_method'> N Method Name: _apply_image_model_data_loader(7)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: fiftyone/core/models.py</div><div id='n_file'> N File Name: fiftyone/core/models.py</div><div id='m_start'> M Start Line: 311</div><div id='m_end'> M End Line: 347</div><div id='n_start'> N Start Line: 312</div><div id='n_end'> N End Line: 317</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    samples = samples.select_fields(patches_field)
+
+    embeddings_dict = {}
+    <a id="change">errors = </a><a id="change">[]</a>
+
+    with fou.ProgressBar() as pb:
+        for sample in pb(samples):
+            embeddings = None
+
+            try:
+                patches = foup.parse_patches(
+                    sample, patches_field, handle_missing=handle_missing
+                )
+
+                if patches is not None:
+                    img = etai.read(sample.filepath)
+
+                    if batch_size is None:
+                        embeddings = _embed_patches_single(
+                            model, img, patches, force_square, alpha
+                        )
+                    else:
+                        embeddings = _embed_patches_batch(
+                            model,
+                            img,
+                            patches,
+                            force_square,
+                            alpha,
+                            batch_size,
+                        )
+
+            except Exception as e:
+                if not skip_failures:
+                    raise e
+
+                errors.append((sample.id, e))
+
+            if embeddings_field:
+                sample[embeddings_field] = embeddings
+                sample.save()
+            else:
+                embeddings_dict[sample.id] = embeddings
+
+    <a id="change">if errors</a>:
+        <a id="change">lines</a><a id="change"> = ["Sample: %s\nError: %s" % (_id, str(e)) for _id, e in errors]</a>
+        <a id="change">lines.append(
+            </a><a id="change">"Errors occured while generating embeddings for %d images. See "
+            "above for details."</a><a id="change"> % len(</a>errors<a id="change">)</a><a id="change">
+        )</a>
+        <a id="change">logger.warning(</a><a id="change">"\n\n".join(</a>lines<a id="change">))</a>
+
+    if embeddings_field:
+        return None
+</code></pre><h3>After Change</h3><pre><code class='java'>
+                if not skip_failures:
+                    raise e
+
+                <a id="change">logger.warning("Sample: %s\nError: %s\n"</a>, sample.id, e<a id="change">)</a>
+
+            if embeddings_field:
+                sample[embeddings_field] = embeddings
+                sample.save()</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/voxel51/fiftyone/commit/02b054d893a659174aad5b571323337f20d6a97e#diff-13100db40bf4740e3fc3ea44ae6c6d9498102a7da42b58a9a539173965e1dc24L1272' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 8661993</div><div id='project'> Project Name: voxel51/fiftyone</div><div id='commit'> Commit Name: 02b054d893a659174aad5b571323337f20d6a97e</div><div id='time'> Time: 2021-11-23</div><div id='author'> Author: brimoor@umich.edu</div><div id='file'> File Name: fiftyone/core/models.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: _embed_patches(9)</div><div id='n_method'> N Method Name: _embed_patches(9)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: fiftyone/core/models.py</div><div id='n_file'> N File Name: fiftyone/core/models.py</div><div id='m_start'> M Start Line: 1286</div><div id='m_end'> M End Line: 1334</div><div id='n_start'> N Start Line: 1219</div><div id='n_end'> N End Line: 1219</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    samples = samples.select_fields()
+    samples_loader = fou.iter_batches(samples, batch_size)
+
+    <a id="change">errors = </a><a id="change">[]</a>
+
+    with fou.ProgressBar(samples) as pb:
+        for sample_batch in samples_loader:
+            try:
+                imgs = [etai.read(sample.filepath) for sample in sample_batch]
+                labels_batch = model.predict_all(imgs)
+
+                for sample, labels in zip(sample_batch, labels_batch):
+                    sample.add_labels(
+                        labels,
+                        label_field,
+                        confidence_thresh=confidence_thresh,
+                    )
+
+            except Exception as e:
+                if not skip_failures:
+                    raise e
+
+                errors.append((sample_batch[0].id, sample_batch[-1].id, e))
+
+            pb.update(len(sample_batch))
+
+    <a id="change">if errors</a>:
+        <a id="change">lines</a><a id="change"> = [
+            "Batch: %s - %s\nError: %s" % (id1, id2, str(e))
+            for id1, id2, e in errors
+        ]</a>
+        <a id="change">lines.append(
+            </a><a id="change">"Errors occured while generating predictions for %d batches. See "
+            "above for details."</a><a id="change"> % len(</a>errors<a id="change">)</a><a id="change">
+        )</a>
+        <a id="change">logger.warning(</a><a id="change">"\n\n".join(</a>lines<a id="change">))</a>
+
+
+def _apply_image_model_data_loader(
+    samples,</code></pre><h3>After Change</h3><pre><code class='java'>
+                if not skip_failures:
+                    raise e
+
+                <a id="change">logger.warning(
+                    "Batch: %s - %s\nError: %s\n"</a>,
+                    sample_batch[0].id,
+                    sample_batch[-1].id,
+                    e<a id="change">,
+                )</a>
+
+            pb.update(len(sample_batch))
+
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/voxel51/fiftyone/commit/02b054d893a659174aad5b571323337f20d6a97e#diff-13100db40bf4740e3fc3ea44ae6c6d9498102a7da42b58a9a539173965e1dc24L255' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 8661994</div><div id='project'> Project Name: voxel51/fiftyone</div><div id='commit'> Commit Name: 02b054d893a659174aad5b571323337f20d6a97e</div><div id='time'> Time: 2021-11-23</div><div id='author'> Author: brimoor@umich.edu</div><div id='file'> File Name: fiftyone/core/models.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: _apply_image_model_batch(6)</div><div id='n_method'> N Method Name: _apply_image_model_batch(6)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: fiftyone/core/models.py</div><div id='n_file'> N File Name: fiftyone/core/models.py</div><div id='m_start'> M Start Line: 261</div><div id='m_end'> M End Line: 295</div><div id='n_start'> N Start Line: 268</div><div id='n_end'> N End Line: 273</div><BR>

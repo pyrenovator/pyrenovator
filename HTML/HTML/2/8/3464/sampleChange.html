@@ -1,0 +1,93 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+    outputDir_split = [outputDir]
+    if "," in outputDir:
+        outputDir_split = <a id="change">outputDir.split(","</a><a id="change">)</a>
+
+    averaged_probs_list = []
+    for current_outputDir in outputDir_split:
+        fold_dirs = []
+        if n_folds &gt; 1:
+            directories = sorted(os.listdir(current_outputDir))
+            for d in directories:
+                if d.isdigit():
+                    fold_dirs.append(os.path.join(current_outputDir, d, ""))
+        else:
+            fold_dirs = [current_outputDir]
+
+        &#47&#47 this is for the case where inference is happening using a single model
+        if len(fold_dirs) == 0:
+            fold_dirs = [current_outputDir]
+
+        probs_list = []
+        class_list = None
+        is_classification = parameters["problem_type"] == "classification"
+
+        &#47&#47 initialize model type for processing: if not defined, default to torch
+        if not ("type" in parameters["model"]):
+            parameters["model"]["type"] = "torch"
+
+        for fold_dir in fold_dirs:
+            parameters["current_fold_dir"] = fold_dir
+            inference_loop(
+                inferenceDataFromPickle=inferenceData_full,
+                outputDir_or_optimizedModel=fold_dir,
+                device=device,
+                parameters=parameters,
+            )
+
+            if is_classification:
+                logits_dir = os.path.join(fold_dir, "logits.csv")
+                is_logits_dir_exist = os.path.isfile(logits_dir)
+
+                if is_logits_dir_exist:
+                    &#47&#47 fold_logits = np.genfromtxt(logits_dir, delimiter=",")
+                    class_list = [str(c) for c in parameters["model"]["class_list"]]
+                    fold_logits = pd.read_csv(logits_dir)[class_list].values
+                    fold_logits = torch.from_numpy(fold_logits)
+                    fold_probs = F.softmax(fold_logits, dim=1)
+                    probs_list.append(fold_probs)
+
+        if is_classification and (n_folds &gt; 1):
+            probs_list = torch.stack(probs_list)
+            averaged_probs_list.append(torch.mean(probs_list, 0))
+
+    &#47&#47 this logic should be changed if we want to do multi-fold inference for histo images
+    if (parameters["modality"] == "rad") and averaged_probs_list and is_classification:
+        columns = ["SubjectID", "PredictedClass"] + parameters["model"]["class_list"]
+        averaged_probs_df = pd.DataFrame(columns=columns)
+        averaged_probs_df.SubjectID = dataframe[0]
+
+        averaged_probs_across_models = torch.stack(averaged_probs_list)
+        averaged_probs_across_models = torch.mean(
+            averaged_probs_across_models, 0
+        ).numpy()
+        averaged_probs_df[class_list] = averaged_probs_across_models
+        averaged_probs_df.PredictedClass = [
+            class_list[a] for a in averaged_probs_across_models.argmax(1)
+        ]
+        filepath_to_save = os.path.join(
+            outputDir_split[0], "final_preds_and_avg_probs.csv"
+        )
+        if os.path.isfile(filepath_to_save):
+            filepath_to_save = os.path.join(
+                <a id="change">outputDir_split[0]</a>,
+                "final_preds_and_avg_probs" + get_unique_timestamp() + ".csv",
+            )
+        averaged_probs_df.to_csv(filepath_to_save, index=False)</code></pre><h3>After Change</h3><pre><code class='java'>
+    inferenceData_full = dataframe
+
+    &#47&#47 if outputDir is not provided, create a new directory with a unique timestamp
+    <a id="change">if outputDir is None</a>:
+        outputDir = os.path.join(modelDir, get_unique_timestamp())
+        <a id="change">print(
+            "Output directory not provided, creating a new directory with a unique timestamp: "</a>,
+            outputDir<a id="change">,
+        )</a>
+    Path.mkdir(outputDir, parents=True, exist_ok=True)
+
+    &#47&#47 &#47&#47 initialize parameters for inference
+    if not ("weights" in parameters):</code></pre>

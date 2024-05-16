@@ -1,0 +1,33 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    Returns:
+        collected (list[data]): a list of data gathered from each rank
+    
+    world_size<a id="change"> = </a>get_world_size()
+    total_size = len(bytearray(nncore.dumps(data))) * world_size
+
+    pynvml.nvmlInit()
+    matched = False
+    <a id="change">for </a>i in range(world_size)<a id="change">:
+        </a>handle = pynvml.nvmlDeviceGetHandleByIndex(i)
+        meminfo = pynvml.nvmlDeviceGetMemoryInfo(handle)
+        <a id="change">if meminfo.free &lt; total_size</a>:
+            matched = True
+            <a id="change">break</a>
+
+    if matched:
+        return _all_gather_cpu(data)
+    else:</code></pre><h3>After Change</h3><pre><code class='java'>
+    tensor_list = [tensor.new_empty([max_size]) for _ in size_list]
+    dist.all_gather(tensor_list, tensor, group=group)
+
+    gathered<a id="change"> = </a><a id="change">[]</a>
+    <a id="change">for </a>size, tensor in zip(size_list, tensor_list)<a id="change">:
+        </a>buffer = tensor.cpu().numpy().tobytes()[:size]
+        <a id="change">gathered.append(</a>nncore.loads(buffer)<a id="change">)</a>
+
+    return gathered
+
+</code></pre>

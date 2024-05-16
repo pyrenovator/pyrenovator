@@ -1,0 +1,134 @@
+<html><h3>Pattern ID :1063
+</h3><img src='5364305.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        df_train (pd.DataFrame):  training data
+        df_val (pd.DataFrame): validation data
+    
+    n_samples<a id="change"> = </a>len(df)<a id="change"> - </a>n_lags + 2 - (2 * n_forecasts)
+    n_samples = n_samples if inputs_overbleed else n_samples - n_lags
+    if 0.0 &lt; valid_p &lt; 1.0:
+        n_valid<a id="change"> = </a>max(1, <a id="change">int(</a>n_samples<a id="change"> * </a>valid_p<a id="change">)</a>)
+    else:
+        assert valid_p &gt;= 1
+        assert type(valid_p) == int</code></pre><h3>After Change</h3><pre><code class='java'>
+        df_val_list = list()
+        if local_modeling:
+            for df in df_list:
+                df_train<a id="change">, df_val</a> = single_split_df(df, n_lags, n_forecasts, valid_p, inputs_overbleed)
+                df_train_list.append(df_train)
+                df_val_list.append(df_val)
+            df_train, df_val = df_train_list, df_val_list</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 6</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/ourownstory/neural_prophet/commit/d07b79568ef37904de81ba00248764233fbaa8c8#diff-cb8ae2d50e5d5d245ed6fcc8cadf2baf7294fa9ac5c63e819fbfe34f0e4c2552L297' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 5364305</div><div id='project'> Project Name: ourownstory/neural_prophet</div><div id='commit'> Commit Name: d07b79568ef37904de81ba00248764233fbaa8c8</div><div id='time'> Time: 2021-10-07</div><div id='author'> Author: ourownstory@users.noreply.github.com</div><div id='file'> File Name: neuralprophet/df_utils.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: split_df(6)</div><div id='n_method'> N Method Name: split_df(5)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: neuralprophet/df_utils.py</div><div id='n_file'> N File Name: neuralprophet/df_utils.py</div><div id='m_start'> M Start Line: 297</div><div id='m_end'> M End Line: 312</div><div id='n_start'> N Start Line: 506</div><div id='n_end'> N End Line: 539</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    timer = Timer()
+    epochs = num_epochs
+
+    train_set_size<a id="change"> = </a>int(train_percent<a id="change">*</a>num_data_points)
+    val_set_size = int(val_percent*num_data_points)
+    eval_start = train_set_size
+
+    for _ in range(epochs):
+
+        for emb_images,emb_text in zip(image_reader(batch_size=batch_size, start=0, end=train_set_size),
+                text_reader(batch_size=batch_size, start=0, end=train_set_size)):
+
+            trainer.train()
+            
+            emb_images_tensor = torch.tensor(emb_images[0]).to(device)
+            emb_text_tensor = torch.tensor(emb_text[0]).to(device)
+
+            loss = trainer(text_embed = emb_text_tensor, image_embed = emb_images_tensor)
+
+            &#47&#47 Samples per second
+
+            samples_per_sec = batch_size * step / timer.elapsed()
+
+            &#47&#47 Save checkpoint every save_interval minutes
+            if(int(timer.elapsed()) &gt;= 60 * save_interval):
+                timer.reset()
+
+                save_diffusion_model(
+                    save_path,
+                    diffusion_prior,
+                    trainer.optimizer,
+                    trainer.scaler,
+                    config,
+                    image_embed_dim)
+
+            &#47&#47 Log to wandb
+            tracker.log({"Training loss": loss.item(),
+                        "Steps": step,
+                        "Samples per second": samples_per_sec})
+            &#47&#47 Log cosineSim(text_embed,predicted_image_embed) - cosineSim(text_embed,image_embed)
+            &#47&#47 Use NUM_TEST_EMBEDDINGS samples from the test set each time
+            &#47&#47 Get embeddings from the most recently saved model
+            if(step % REPORT_METRICS_EVERY) == 0:
+                report_cosine_sims(diffusion_prior,
+                        image_reader,
+                        text_reader,
+                        train_set_size,
+                        NUM_TEST_EMBEDDINGS,
+                        device)
+                &#47&#47&#47&#47&#47&#47 Evaluate model(validation run) &#47&#47&#47&#47&#47&#47
+                eval_model(diffusion_prior,
+                        device,
+                        image_reader,
+                        text_reader,
+                        eval_start,
+                        eval_start+NUM_TEST_EMBEDDINGS,
+                        NUM_TEST_EMBEDDINGS,
+                        dp_loss_type,
+                        phase="Validation")
+
+            trainer.update()
+
+    &#47&#47&#47&#47&#47&#47 Test run &#47&#47&#47&#47&#47&#47
+    test_set_size<a id="change"> = </a><a id="change">int(</a>test_percent<a id="change">*</a>train_set_size<a id="change">)</a> 
+    start = train_set_size+val_set_size
+    end = num_data_points
+    eval_model(diffusion_prior,device,image_reader,text_reader,start,end,batch_size,dp_loss_type,phase="Test")</code></pre><h3>After Change</h3><pre><code class='java'>
+    else:
+        loader_args = dict(**loader_args, txt_url=text_embed_url)
+
+    train_loader<a id="change">, eval_loader, test_loader</a> = make_splits(**loader_args)
+
+    &#47&#47&#47&#47&#47&#47 Training code &#47&#47&#47&#47&#47&#47
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lucidrains/dalle2-pytorch/commit/4a59dea4cfad72176f35700296adfbc28e205598#diff-283456789c9565d0a8ad235fc41b44188f310b3043c3bcdeb6678f1958a57b51L144' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 5364343</div><div id='project'> Project Name: lucidrains/dalle2-pytorch</div><div id='commit'> Commit Name: 4a59dea4cfad72176f35700296adfbc28e205598</div><div id='time'> Time: 2022-05-15</div><div id='author'> Author: 51308183+nousr@users.noreply.github.com</div><div id='file'> File Name: train_diffusion_prior.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train(32)</div><div id='n_method'> N Method Name: train(29)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: train_diffusion_prior.py</div><div id='n_file'> N File Name: train_diffusion_prior.py</div><div id='m_start'> M Start Line: 200</div><div id='m_end'> M End Line: 343</div><div id='n_start'> N Start Line: 179</div><div id='n_end'> N End Line: 369</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB).astype(np.float32)
+
+        resize_ratio<a id="change"> = </a>min(1.0 * self.w_target / w_org, 1.0<a id="change"> * self.h_target / </a>h_org)
+        resize_w = int(resize_ratio * w_org)
+        resize_h = int(resize_ratio * h_org)
+        image_resized = cv2.resize(img, (resize_w, resize_h))
+
+        image_paded = np.full((self.h_target, self.w_target, 3), 128.0)
+        dw<a id="change"> = </a><a id="change">int(</a>(self.w_target<a id="change"> - </a>resize_w) / 2<a id="change">)</a>
+        dh = int((self.h_target - resize_h) / 2)
+        image_paded[dh:resize_h + dh, dw:resize_w + dw, :] = image_resized
+        image = image_paded / 255.0  &#47&#47 normalize to [0, 1]
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    def __call__(self, img, bboxes, target_shape):
+        h_org , w_org , _= img.shape
+        h_target<a id="change">, w_target</a> = target_shape
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB).astype(np.float32)
+
+        resize_ratio = min(1.0 * w_target / w_org, 1.0 * h_target / h_org)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/jingtianyilong/yolov4-pytorch/commit/fa2911f6607eb62ed3e362e1480183054382e1fe#diff-ccf38a4045e3d73ebbb2cc577506425a5b8c72563f437d61a97f54ef2ecd4f8fL138' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 5364345</div><div id='project'> Project Name: jingtianyilong/yolov4-pytorch</div><div id='commit'> Commit Name: fa2911f6607eb62ed3e362e1480183054382e1fe</div><div id='time'> Time: 2020-11-24</div><div id='author'> Author: zijie.guo@daimler.com</div><div id='file'> File Name: utils/data_augment.py</div><div id='m_class'> M Class Name: Resize</div><div id='n_method'> N Class Name: Resize</div><div id='m_method'> M Method Name: __call__(4)</div><div id='n_method'> N Method Name: __call__(3)</div><div id='m_parent_class'> M Parent Class: object</div><div id='n_parent_class'> N Parent Class: object</div><div id='m_file'> M File Name: utils/data_augment.py</div><div id='n_file'> N File Name: utils/data_augment.py</div><div id='m_start'> M Start Line: 143</div><div id='m_end'> M End Line: 150</div><div id='n_start'> N Start Line: 144</div><div id='n_end'> N End Line: 156</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    def __call__(self, img, annotations: dict):
+        width, height = img.size
+        if height &gt; width:
+            scale<a id="change"> = </a>self.target_size<a id="change"> / </a>height
+            scaled_height = self.target_size
+            scaled_width<a id="change"> = </a><a id="change">int(</a>width<a id="change"> * </a>scale<a id="change">)</a>
+        else:
+            scale = self.target_size / width
+            scaled_height = int(height * scale)
+            scaled_width = self.target_size</code></pre><h3>After Change</h3><pre><code class='java'>
+            &#47&#47 FIXME haven&quott tested this path since not currently using dataset annotations for train/eval
+            bbox = anno[&quotbbox&quot]
+            bbox[:, :4] *= img_scale
+            anno[&quotbbox&quot], anno[&quotcls&quot] = clip_boxes_remove_empty(bbox, anno[&quotcls&quot], (scaled_h<a id="change">, scaled_w</a>))
+
+        anno[&quotscale&quot] = 1. / img_scale  &#47&#47 back to original
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/rwightman/efficientdet-pytorch/commit/143f26f2857a5b14a1954ce400e88e65adcf073c#diff-479d84d070ee9f281525485c858feac53f0c674c69e1751c37e5f9aacf9e6db2L65' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 5364296</div><div id='project'> Project Name: rwightman/efficientdet-pytorch</div><div id='commit'> Commit Name: 143f26f2857a5b14a1954ce400e88e65adcf073c</div><div id='time'> Time: 2020-04-18</div><div id='author'> Author: rwightman@gmail.com</div><div id='file'> File Name: data/transforms.py</div><div id='m_class'> M Class Name: ResizePad</div><div id='n_method'> N Class Name: ResizePad</div><div id='m_method'> M Method Name: __call__(3)</div><div id='n_method'> N Method Name: __call__(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: data/transforms.py</div><div id='n_file'> N File Name: data/transforms.py</div><div id='m_start'> M Start Line: 67</div><div id='m_end'> M End Line: 94</div><div id='n_start'> N Start Line: 85</div><div id='n_end'> N End Line: 104</div><BR>

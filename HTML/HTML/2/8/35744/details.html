@@ -1,0 +1,101 @@
+<html><h3>Pattern ID :35744
+</h3><img src='101650381.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+        if (self.add_noise) and (self.noise_kind is not None) and (self.noise_amplitude is not None):
+            &#47&#47 Generate spectral noise
+            container_wav =  <a id="change">isdct_torch(container.squeeze(0).squeeze(0), frame_length=4096, frame_step=62, window=torch.hamming_window).cpu()</a>
+            noise = add_noise(container_wav, self.noise_kind, self.noise_amplitude).type(torch.float32)
+            spectral_noise = sdct_torch(noise, frame_length=4096, frame_step=62).unsqueeze(0).cuda()
+            &#47&#47 Add noise in frequency
+            corrupted_container = container + spectral_noise</code></pre><h3>After Change</h3><pre><code class='java'>
+            &#47&#47 Reveal image
+            revealed = self.RN(corrupted_container)
+        else: 
+            if <a id="change">self.switch</a>:
+                &#47&#47 Switch domain and back
+                container_wav<a id="change"> =  </a>isdct_torch(
+                    <a id="change">container.squeeze(0).squeeze(0</a><a id="change">)</a>, 
+                    frame_length=self.frame_length, 
+                    frame_step=self.frame_step, 
+                    window=torch.hamming_window
+                )
+                container<a id="change"> = </a><a id="change">sdct_torch(
+                    container_wav, 
+                    frame_length=self.frame_length, 
+                    frame_step=self.frame_step
+                ).unsqueeze(0).unsqueeze(0</a><a id="change">)</a>
+
+            &#47&#47 Reveal image
+            revealed = self.RN(container)
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 5</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/margaritageleta/pixinwav/commit/921dae69cc45996690b800761202a4c3b8e49f7e#diff-64f7debb3191d0fd28838ace396110273657c89a756b6f37307bfff6bd6b0528L183' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 101650381</div><div id='project'> Project Name: margaritageleta/pixinwav</div><div id='commit'> Commit Name: 921dae69cc45996690b800761202a4c3b8e49f7e</div><div id='time'> Time: 2021-03-11</div><div id='author'> Author: noticiasmundiales99@gmail.com</div><div id='file'> File Name: src/umodel_rgb_shuffle.py</div><div id='m_class'> M Class Name: StegoUNet</div><div id='n_method'> N Class Name: StegoUNet</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: src/umodel_rgb_shuffle.py</div><div id='n_file'> N File Name: src/umodel_rgb_shuffle.py</div><div id='m_start'> M Start Line: 183</div><div id='m_end'> M End Line: 183</div><div id='n_start'> N Start Line: 198</div><div id='n_end'> N End Line: 241</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+			container_2x = sdct_torch(container_wav, frame_length=4096, frame_step=62, window=torch.hamming_window).unsqueeze(0).unsqueeze(0)
+
+			loss, loss_cover, loss_secret, loss_spectrum = StegoLoss(secrets, covers, containers, container_2x, revealed, beta)
+			snr_audio = SNR(covers.cpu(), <a id="change">containers.cpu()</a>)
+			psnr_image = PSNR(secrets, revealed)
+			ssim_image = ssim(secrets, revealed)
+			dtw_loss = softDTW(original_wav.cpu().unsqueeze(0), container_wav.cpu().unsqueeze(0))</code></pre><h3>After Change</h3><pre><code class='java'>
+		train_loss, train_loss_cover, train_loss_secret, train_loss_spectrum, snr, psnr, ssim_secret, train_dtw_loss = [], [], [], [], [], [], [], []
+		vd_loss, vd_loss_cover, vd_loss_secret, vd_snr, vd_psnr, vd_ssim, vd_dtw = [], [], [], [], [], [], []
+		
+		for i, <a id="change">data</a> in enumerate(tr_loader):
+
+			if prev_i != None and i &lt; prev_i - 1: continue &#47&#47 Checkpoint pass
+
+			secrets, covers = data[0].to(device), data[1].to(device)
+			if transform == &quotfourier&quot: phase = data[2].to(device)
+			secrets = secrets.permute(0, 3, 1, 2).type(torch.cuda.FloatTensor)
+			covers = covers.unsqueeze(1) if transform == &quotcosine&quot else covers
+
+			optimizer.zero_grad()
+
+			containers, revealed = model(secrets, covers)
+
+			if transform == &quotcosine&quot:
+				original_wav = isdct_torch(covers.squeeze(0).squeeze(0), frame_length=4096, frame_step=62, window=torch.hamming_window)
+				container_wav = isdct_torch(containers.squeeze(0).squeeze(0), frame_length=4096, frame_step=62, window=torch.hamming_window)
+				container_2x = sdct_torch(container_wav, frame_length=4096, frame_step=62, window=torch.hamming_window).unsqueeze(0).unsqueeze(0)
+			elif transform == &quotfourier&quot: 
+				original_wav = stft.inverse(covers.squeeze(1), phase.squeeze(1))
+				container_wav<a id="change"> = </a>stft.inverse(containers.squeeze(1), <a id="change">phase.squeeze(1</a><a id="change">)</a>)
+				container_2x<a id="change"> = </a><a id="change">stft.transform(container_wav)[0].unsqueeze(0</a><a id="change">)</a>
+
+			loss, loss_cover, loss_secret, loss_spectrum = StegoLoss(secrets, covers, containers, container_2x, revealed, beta)
+			snr_audio = SNR(
+				covers, </code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/margaritageleta/pixinwav/commit/46f925c79c430a9c0ba5c2f596f7be2083026ad2#diff-83261217beedef1ce47cbeb040da0b656037253b0d15a0303014833ca51656bbL158' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 101650380</div><div id='project'> Project Name: margaritageleta/pixinwav</div><div id='commit'> Commit Name: 46f925c79c430a9c0ba5c2f596f7be2083026ad2</div><div id='time'> Time: 2021-03-13</div><div id='author'> Author: noticiasmundiales99@gmail.com</div><div id='file'> File Name: src/trainer_rgb.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train(13)</div><div id='n_method'> N Method Name: train(12)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/trainer_rgb.py</div><div id='n_file'> N File Name: src/trainer_rgb.py</div><div id='m_start'> M Start Line: 170</div><div id='m_end'> M End Line: 216</div><div id='n_start'> N Start Line: 165</div><div id='n_end'> N End Line: 252</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+			container_2x = sdct_torch(container_wav, frame_length=4096, frame_step=62, window=torch.hamming_window).unsqueeze(0).unsqueeze(0)
+
+			loss, loss_cover, loss_secret, loss_spectrum = StegoLoss(secrets, covers, containers, container_2x, revealed, beta)
+			vd_snr_audio = SNR(covers.cpu(), <a id="change">containers.cpu()</a>)
+			vd_psnr_image = PSNR(secrets, revealed)
+			ssim_image = ssim(secrets, revealed)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+	iniv = time.time()
+	with torch.no_grad():
+		print(&quotValidating current model...&quot)
+		for i, <a id="change">data</a> in enumerate(vd_loader):
+
+			secrets, covers = data[0].to(device), data[1].to(device)
+			secrets = secrets.permute(0, 3, 1, 2).type(torch.cuda.FloatTensor)
+			if transform == &quotfourier&quot: phase = data[2].to(device)
+			covers = covers.unsqueeze(1) if transform == &quotcosine&quot else covers
+
+			containers, revealed = model(secrets, covers)
+
+			if i == 0:
+				fig = viz2paper(secrets.cpu(), revealed.cpu(), covers.cpu(), containers.cpu())
+				wandb.log({f"Revelation at epoch {epoch}, vd iteration {tr_i}": fig})
+
+			if transform == &quotcosine&quot:
+				container_wav = isdct_torch(containers.squeeze(0).squeeze(0), frame_length=4096, frame_step=62, window=torch.hamming_window)
+				container_2x = sdct_torch(container_wav, frame_length=4096, frame_step=62, window=torch.hamming_window).unsqueeze(0).unsqueeze(0)
+			elif transform == &quotfourier&quot:
+				container_wav<a id="change"> = </a>transform_constructor.inverse(<a id="change">covers.squeeze(1</a><a id="change">)</a>, phase.squeeze(1))
+				container_2x<a id="change"> = </a><a id="change">transform_constructor.transform(container_wav)[0].unsqueeze(0</a><a id="change">)</a>
+
+			loss, loss_cover, loss_secret, loss_spectrum = StegoLoss(secrets, covers, containers, container_2x, revealed, beta)
+			vd_snr_audio = SNR(
+				covers, </code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/margaritageleta/pixinwav/commit/46f925c79c430a9c0ba5c2f596f7be2083026ad2#diff-83261217beedef1ce47cbeb040da0b656037253b0d15a0303014833ca51656bbL338' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 101650375</div><div id='project'> Project Name: margaritageleta/pixinwav</div><div id='commit'> Commit Name: 46f925c79c430a9c0ba5c2f596f7be2083026ad2</div><div id='time'> Time: 2021-03-13</div><div id='author'> Author: noticiasmundiales99@gmail.com</div><div id='file'> File Name: src/trainer_rgb.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: validate(9)</div><div id='n_method'> N Method Name: validate(7)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/trainer_rgb.py</div><div id='n_file'> N File Name: src/trainer_rgb.py</div><div id='m_start'> M Start Line: 363</div><div id='m_end'> M End Line: 383</div><div id='n_start'> N Start Line: 374</div><div id='n_end'> N End Line: 436</div><BR>

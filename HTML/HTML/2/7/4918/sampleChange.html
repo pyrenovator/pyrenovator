@@ -1,0 +1,34 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    def _crop(prediction, target, mask, channel_dim):
+        mask = mask.type(torch.bool)
+        pred = []
+        <a id="change">trgt</a> = <a id="change">[]</a>
+        n_channels = prediction.shape[channel_dim]
+        &#47&#47 for now only support same mask for all channels
+        &#47&#47 to be able to stack/concat afterwards
+        &#47&#47 TODO: make this more efficient, and for different
+        &#47&#47 masks per channel
+        assert mask.shape[channel_dim] == 1
+        <a id="change">for </a>c in range(n_channels)<a id="change">:
+            </a>p = torch.index_select(prediction, channel_dim, torch.LongTensor([c]))
+            t = torch.index_select(target, channel_dim, torch.LongTensor([c]))
+            pred.append(p[mask])
+            <a id="change">trgt.append(</a>t[mask]<a id="change">)</a>
+        &#47&#47 transpose to have N x C
+        &#47&#47 needed in torch_em.loss.dice.flatten_samples
+        pred = torch.stack(pred).transpose(0, 1)
+        trgt = <a id="change">torch.stack(trgt</a><a id="change">)</a>.transpose(0, 1)
+        return pred, trgt
+
+    def _multiply(prediction, target, mask, channel_dim):</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 masks per channel
+        assert mask.shape[channel_dim] == 1
+        &#47&#47 remove singleton axis
+        mask = <a id="change">mask.squeeze()</a>
+        &#47&#47 move channel axis to end
+        prediction = prediction.moveaxis(channel_dim, -1)
+        target = target.moveaxis(channel_dim, -1)
+        &#47&#47 output has shape N x C</code></pre>

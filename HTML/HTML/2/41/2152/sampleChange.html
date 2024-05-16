@@ -1,0 +1,43 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    &#47&#47 for simplicity
+    assert args.anneal_iters % args.iters_per_epoch == 0
+
+    if <a id="change">args.phase == &quottest&quot</a>:
+        checkpoint = torch.load(logger.get_checkpoint_path(&quotbest&quot), map_location=&quotcpu&quot)
+        classifier.load_state_dict(checkpoint)
+        acc1<a id="change"> = </a>utils.validate(test_loader, classifier, args, device)
+        <a id="change">print(</a>acc1<a id="change">)</a>
+        <a id="change">return</a>
+
+    &#47&#47 start training
+    best_val_acc1 = 0.
+    best_test_acc1 = 0.</code></pre><h3>After Change</h3><pre><code class='java'>
+        classifier.load_state_dict(checkpoint)
+
+    &#47&#47 analysis the model
+    <a id="change">if args.phase == &quotanalysis&quot</a>:
+        &#47&#47 extract features from both domains
+        <a id="change">feature_extractor = </a><a id="change">nn.Sequential(classifier.backbone, classifier.pool_layer, classifier.bottleneck).to(device</a><a id="change">)</a>
+        <a id="change">source_feature = utils</a><a id="change">.collect_feature(</a>val_loader, <a id="change">feature_extractor</a>, <a id="change">device</a><a id="change">, max_num_features=100)</a>
+        <a id="change">target_feature = utils</a><a id="change">.collect_feature(</a>test_loader, <a id="change">feature_extractor</a>, <a id="change">device</a><a id="change">, max_num_features=100)</a>
+        <a id="change">print(len(source_feature</a><a id="change">)</a>, <a id="change">len(target_feature</a><a id="change">)</a><a id="change">)</a>
+        &#47&#47 plot t-SNE
+        <a id="change">tSNE_filename = </a><a id="change">osp.join(</a>logger.visualize_directory, <a id="change">&quotTSNE.png&quot</a><a id="change">)</a>
+        <a id="change">tsne.visualize(source_feature</a>, <a id="change">target_feature</a>, <a id="change">tSNE_filename</a><a id="change">)</a>
+        <a id="change">print("Saving t-SNE to"</a>, <a id="change">tSNE_filename</a><a id="change">)</a>
+        &#47&#47 calculate A-distance, which is a measure for distribution discrepancy
+        A_distance<a id="change"> = a_distance.calculate(source_feature</a>, <a id="change">target_feature</a>, <a id="change">device</a><a id="change">)</a>
+        <a id="change">print("A-distance ="</a>, A_distance<a id="change">)</a>
+        <a id="change">return</a>
+
+    <a id="change">if args.phase == &quottest&quot</a>:
+        acc1<a id="change"> = </a>utils.validate(test_loader, classifier, args, device)
+        <a id="change">print(</a>acc1<a id="change">)</a>
+        <a id="change">return</a>
+
+    &#47&#47 start training
+    best_val_acc1 = 0.
+    best_test_acc1 = 0.</code></pre>

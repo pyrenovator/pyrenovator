@@ -1,0 +1,87 @@
+<html><h3>Pattern ID :19229
+</h3><img src='62481209.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        h1, z1 = self.forward(img_1)
+        h2, z2 = self.forward(img_2)
+        loss = self.loss_func(z1, z2, self.temp)
+        logs<a id="change"> = </a><a id="change">{</a>&quotval_loss&quot: loss.item()<a id="change">}</a>
+        return dict(val_loss=loss, log=logs)
+
+    def validation_epoch_end(self, outputs: list):
+        val_loss = mean(outputs, &quotval_loss&quot)</code></pre><h3>After Change</h3><pre><code class='java'>
+                (img_1, img_2), y = labeled_batch
+                h1, z1 = self.forward(img_1)
+
+            z_in = z1.reshape(<a id="change">z1.size(0</a><a id="change">)</a>, -1)
+            mlp_preds<a id="change"> = </a>self.non_linear_evaluator(z_in)
+            mlp_loss<a id="change"> = </a>F.cross_entropy(mlp_preds, y)
+            acc = metrics.accuracy(mlp_preds, y)
+            result[&quotmlp_acc&quot] = acc
+            result[&quotmlp_loss&quot] = mlp_loss
+
+        <a id="change">return </a>result
+
+    def validation_epoch_end(self, outputs: list):
+        val_loss = mean(outputs, &quotval_loss&quot)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 6</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/pytorchlightning/pytorch-lightning-bolts/commit/b7ab0ef78489106159312658c3755615131f573b#diff-c184e7c3308e065c2947456c6e903925fb6c3fa02d2dbbbbb0389099c22d991eL110' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 62481209</div><div id='project'> Project Name: pytorchlightning/pytorch-lightning-bolts</div><div id='commit'> Commit Name: b7ab0ef78489106159312658c3755615131f573b</div><div id='time'> Time: 2020-06-03</div><div id='author'> Author: waf2107@columbia.edu</div><div id='file'> File Name: pl_bolts/models/self_supervised/simclr/simclr_module.py</div><div id='m_class'> M Class Name: SimCLR</div><div id='n_method'> N Class Name: SimCLR</div><div id='m_method'> M Method Name: validation_step(3)</div><div id='n_method'> N Method Name: validation_step(3)</div><div id='m_parent_class'> M Parent Class: pl.LightningModule</div><div id='n_parent_class'> N Parent Class: pl.LightningModule</div><div id='m_file'> M File Name: pl_bolts/models/self_supervised/simclr/simclr_module.py</div><div id='n_file'> N File Name: pl_bolts/models/self_supervised/simclr/simclr_module.py</div><div id='m_start'> M Start Line: 110</div><div id='m_end'> M End Line: 112</div><div id='n_start'> N Start Line: 152</div><div id='n_end'> N End Line: 175</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+
+        &#47&#47 List of batch size many output with each being a (N_points, 3) flow prediction.
+        output<a id="change"> = </a><a id="change">[]</a>
+        return output
+
+    def general_step(self, batch, batch_idx, mode):
+        </code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 E.g. if we have 512 cells in both directions and x=1, y=2 is encoded as 512 + 2 = 514.
+        &#47&#47 Each new row of the grid (x-axis) starts at j % 512 = 0.
+        previous_batch_grid = augment_index(previous_batch_grid, previous_batch_pc_embedding.size(2), self._n_pillars_x)
+        current_batch_grid<a id="change"> = </a>augment_index(current_batch_grid, <a id="change">current_batch_pc_embedding.size(2</a><a id="change">)</a>, self._n_pillars_x)
+
+        &#47&#47 Now we need to scatter the points into their 2D matrix
+        previous_pillar_embeddings = self._pillar_feature_net(previous_batch_pc_embedding, previous_batch_grid)
+        current_pillar_embeddings = self._pillar_feature_net(current_batch_pc_embedding, current_batch_grid)
+
+        &#47&#47 2. Apply the U-net encoder step
+        &#47&#47 Note that weight sharing is used here. The same U-net is used for both point clouds.
+        &#47&#47 Corresponds to F, L and R from the paper
+        prev_64_conv, prev_128_conv, prev_256_conv = self._conv_encoder_net(previous_pillar_embeddings)
+        cur_64_conv, cur_128_conv, cur_256_conv = self._conv_encoder_net(current_pillar_embeddings)
+
+        &#47&#47 3. Apply the U-net decoder with skip connections
+        grid_flow_embeddings = self._conv_decoder_net(previous_pillar_embeddings, prev_64_conv,
+                                                      prev_128_conv, prev_256_conv,
+                                                      current_pillar_embeddings, cur_64_conv,
+                                                      cur_128_conv, cur_256_conv)
+
+        &#47&#47 grid_flow_embeddings -&gt; [batch_size, 64, 512, 512]
+
+        &#47&#47 4. Apply the unpillar and flow prediction operation
+        predictions<a id="change"> = </a>self._unpillar_network(grid_flow_embeddings, current_batch_pc_embedding, current_batch_grid)
+
+        &#47&#47 List of batch size many output with each being a (N_points, 3) flow prediction.
+        <a id="change">return </a>predictions
+
+    def masked_mse_loss(self, input, target, mask):
+        return (mask * (input - target) ** 2).mean()</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/jabb0/fastflow3d/commit/578f14f3ba867a062afcabad88fcb98008a45b23#diff-779d8a81f150236174636a6a0444855ba8e0fdbe8cb48dab33acc69be86a699cL52' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 62481213</div><div id='project'> Project Name: jabb0/fastflow3d</div><div id='commit'> Commit Name: 578f14f3ba867a062afcabad88fcb98008a45b23</div><div id='time'> Time: 2021-06-24</div><div id='author'> Author: 33359018+jabb0@users.noreply.github.com</div><div id='file'> File Name: models/FastFlow3DModelScatter.py</div><div id='m_class'> M Class Name: FastFlow3DModelScatter</div><div id='n_method'> N Class Name: FastFlow3DModelScatter</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: pl.LightningModule</div><div id='n_parent_class'> N Parent Class: pl.LightningModule</div><div id='m_file'> M File Name: models/FastFlow3DModelScatter.py</div><div id='n_file'> N File Name: models/FastFlow3DModelScatter.py</div><div id='m_start'> M Start Line: 71</div><div id='m_end'> M End Line: 98</div><div id='n_start'> N Start Line: 73</div><div id='n_end'> N End Line: 108</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            &#47&#47 if torch.isnan(a1).sum() or torch.isnan(a2).sum():
+            &#47&#47     print(xz1)
+            &#47&#47     print(xz2)
+            causal_logits_list<a id="change"> = </a><a id="change">[</a>self.causal_score(xz1), self.causal_score(xz2)<a id="change"></a>]
+            attn_list = [attn1, attn2]
+
+        else:</code></pre><h3>After Change</h3><pre><code class='java'>
+        dic_z = self.dic.to(device)
+        prior = self.prior.to(device)
+
+        box_size_list<a id="change"> = </a>[<a id="change">proposal.bbox.size(0</a><a id="change">)</a> for proposal in proposals]
+        feature_split<a id="change"> = </a>x.split(box_size_list)
+        xzs = [self.z_dic(feature_pre_obj, dic_z, prior) for feature_pre_obj in feature_split]
+
+        causal_logits_list = [self.causal_score(xz) for xz in xzs]
+
+
+        <a id="change">return </a>causal_logits_list
+
+
+    def z_dic(self, y, dic_z, prior):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/wangt-cn/vc-r-cnn/commit/51a882a36e8777715669773236cd8285b0d38986#diff-be62d5533104d4c97b3017be21afc11ab8aaaf90848ecea92447a04acbbb4e06L94' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 62481212</div><div id='project'> Project Name: wangt-cn/vc-r-cnn</div><div id='commit'> Commit Name: 51a882a36e8777715669773236cd8285b0d38986</div><div id='time'> Time: 2020-02-21</div><div id='author'> Author: wangt97@hotmail.com</div><div id='file'> File Name: vc_rcnn/vc_rcnn/modeling/roi_heads/box_head/roi_box_predictors.py</div><div id='m_class'> M Class Name: CausalPredictor</div><div id='n_method'> N Class Name: CausalPredictor</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: vc_rcnn/vc_rcnn/modeling/roi_heads/box_head/roi_box_predictors.py</div><div id='n_file'> N File Name: vc_rcnn/vc_rcnn/modeling/roi_heads/box_head/roi_box_predictors.py</div><div id='m_start'> M Start Line: 96</div><div id='m_end'> M End Line: 123</div><div id='n_start'> N Start Line: 91</div><div id='n_end'> N End Line: 101</div><BR>

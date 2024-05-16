@@ -1,0 +1,127 @@
+<html><h3>Pattern ID :10161
+</h3><img src='35930566.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    domain = check_domain(domain)
+    features = models["G"](x)
+    logits = models["C"](features)[domain]
+    <a id="change">return </a><a id="change">{</a>"features": features, "logits": logits<a id="change">}</a>
+
+
+&#47&#47 discriminator logits
+def d_fn(x, models, **kwargs):</code></pre><h3>After Change</h3><pre><code class='java'>
+    domain = check_domain(domain)
+    features = models["G"](x)
+    logits = models["C"](features)[domain]
+    <a id="change">output = {</a>"features": features, "logits": logits<a id="change">}</a>
+    <a id="change">if get_all</a>:
+        logits = models["C"](features)[int(not domain)]
+        <a id="change">output.update({</a>"other_logits": logits<a id="change">}</a><a id="change">)</a>
+    <a id="change">return output</a>
+
+
+def symnets_full_fn(**kwargs):
+    return symnets_fn(get_all=True, **kwargs)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 8</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/kevinmusgrave/pytorch-adapt/commit/cb3de48f044b2c9547f7465b3384f3fc332d79e0#diff-aca26258ec5c16b6c38dd5a181cb13554216e8d24a0414c353b9d3b33b7de748L97' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 35930566</div><div id='project'> Project Name: kevinmusgrave/pytorch-adapt</div><div id='commit'> Commit Name: cb3de48f044b2c9547f7465b3384f3fc332d79e0</div><div id='time'> Time: 2022-02-24</div><div id='author'> Author: tkm45@cornell.edu</div><div id='file'> File Name: src/pytorch_adapt/inference/inference.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: symnets_fn(4)</div><div id='n_method'> N Method Name: symnets_fn(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/pytorch_adapt/inference/inference.py</div><div id='n_file'> N File Name: src/pytorch_adapt/inference/inference.py</div><div id='m_start'> M Start Line: 106</div><div id='m_end'> M End Line: 108</div><div id='n_start'> N Start Line: 97</div><div id='n_end'> N End Line: 112</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    trade_dates = np.append(predict_dates[shift:], get_date_range(predict_dates[-1], left_shift=1, right_shift=shift))
+    executor = SimulatorExecutor(trade_exchange, verbose=verbose)
+    order_set = <a id="change">[]</a>
+    &#47&#47 trading apart
+    for pred_date, trade_date in zip(predict_dates, trade_dates):
+        &#47&#47 for loop predict date and trading date
+        &#47&#47 print
+        if verbose:
+            LOG.info("[I {:%Y-%m-%d}]: trade begin.".format(trade_date))
+
+        &#47&#47 1. Load the score_series at pred_date
+        try:
+            score = pred.loc(axis=0)[pred_date, :]  &#47&#47 (trade_date, stock_id) multi_index, score in pdate
+            score_series = score.reset_index(level="datetime", drop=True)[
+                "score"
+            ]  &#47&#47 pd.Series(index:stock_id, data: score)
+        except KeyError:
+            LOG.warning("No score found on predict date[{:%Y-%m-%d}]".format(trade_date))
+            score_series = None
+
+        if score_series is not None and score_series.count() &gt; 0:  &#47&#47 in case of the scores are all None
+            &#47&#47 2. Update your strategy (and model)
+            strategy.update(score_series, pred_date, trade_date)
+
+            &#47&#47 3. Generate order list
+            order_list = strategy.generate_order_list(
+                score_series=score_series,
+                current=trade_account.current,
+                trade_exchange=trade_exchange,
+                pred_date=pred_date,
+                trade_date=trade_date,
+            )
+        else:
+            order_list = []
+
+        order_set.append((trade_account, order_list, trade_date))
+        &#47&#47 4. Get result after executing order list
+        &#47&#47 NOTE: The following operation will modify order.amount.
+        &#47&#47 NOTE: If it is buy and the cash is insufficient, the tradable amount will be recalculated
+        trade_info = executor.execute(trade_account, order_list, trade_date)
+
+        &#47&#47 5. Update account information according to transaction
+        update_account(trade_account, trade_info, trade_exchange, trade_date)
+
+    if return_order:
+        <a id="change">return </a>order_set
+    else:
+        &#47&#47 generate backtest report
+        report_df = trade_account.report.generate_report_dataframe()</code></pre><h3>After Change</h3><pre><code class='java'>
+    report_df["bench"] = bench
+    positions = trade_account.get_positions()
+
+    <a id="change">report_dict = {</a>"report_df": report_df, "positions": positions<a id="change">}</a>
+    <a id="change">if return_order</a>:
+        <a id="change">report_dict.update({</a>"order_list": multi_order_list<a id="change">}</a><a id="change">)</a>
+    <a id="change">return </a>report_dict
+
+
+def update_account(trade_account, trade_info, trade_exchange, trade_date):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/microsoft/qlib/commit/0e0970f06eccba86483f137a7c48f5478b1a4949#diff-8e73d1efcac826bd4d675b67756c5259bd146d0bd6e6477185f00d6dc84f4f6eL18' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 35930573</div><div id='project'> Project Name: microsoft/qlib</div><div id='commit'> Commit Name: 0e0970f06eccba86483f137a7c48f5478b1a4949</div><div id='time'> Time: 2021-01-18</div><div id='author'> Author: bxddream@gmail.com</div><div id='file'> File Name: qlib/contrib/backtest/backtest.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: backtest(9)</div><div id='n_method'> N Method Name: backtest(8)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: qlib/contrib/backtest/backtest.py</div><div id='n_file'> N File Name: qlib/contrib/backtest/backtest.py</div><div id='m_start'> M Start Line: 73</div><div id='m_end'> M End Line: 124</div><div id='n_start'> N Start Line: 17</div><div id='n_end'> N End Line: 123</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+
+def merge_template_search(inp_list):
+    <a id="change">return </a><a id="change">{</a>"feat": torch.cat([x["feat"] for x in inp_list], dim=0),
+            "mask": torch.cat([x["mask"] for x in inp_list], dim=1),
+            "pos": torch.cat([x["pos"] for x in inp_list], dim=0)<a id="change">}</a>
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+def merge_template_search(inp_list, return_search=False, return_template=False):
+    NOTICE: search region related features must be in the last place
+    <a id="change">seq_dict = {</a>"feat": torch.cat([x["feat"] for x in inp_list], dim=0),
+                "mask": torch.cat([x["mask"] for x in inp_list], dim=1),
+                "pos": torch.cat([x["pos"] for x in inp_list], dim=0)<a id="change">}</a>
+    <a id="change">if return_search</a>:
+        x = inp_list[-1]
+        <a id="change">seq_dict.update({</a>"feat_x": x["feat"], "mask_x": x["mask"], "pos_x": x["pos"]<a id="change">}</a><a id="change">)</a>
+    if return_template:
+        z = inp_list[0]
+        seq_dict.update({"feat_z": z["feat"], "mask_z": z["mask"], "pos_z": z["pos"]})
+    <a id="change">return </a>seq_dict
+
+
+def get_qkv(inp_list):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/researchmm/stark/commit/9b84177870c86ef37e085ad597a7549d97648089#diff-7cae9fa9f2167187d6a7327619bbc1680051955c84368a54ab529fc34e7057b2L4' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 35930575</div><div id='project'> Project Name: researchmm/stark</div><div id='commit'> Commit Name: 9b84177870c86ef37e085ad597a7549d97648089</div><div id='time'> Time: 2021-07-24</div><div id='author'> Author: 40926230+MasterBin-IIAU@users.noreply.github.com</div><div id='file'> File Name: lib/utils/merge.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: merge_template_search(3)</div><div id='n_method'> N Method Name: merge_template_search(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: lib/utils/merge.py</div><div id='n_file'> N File Name: lib/utils/merge.py</div><div id='m_start'> M Start Line: 4</div><div id='m_end'> M End Line: 7</div><div id='n_start'> N Start Line: 4</div><div id='n_end'> N End Line: 15</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    domain = check_domain(domain)
+    features = models["G"](x)
+    logits = models["C"](features)[domain]
+    <a id="change">return </a><a id="change">{</a>"features": features, "logits": logits<a id="change">}</a>
+
+
+&#47&#47 discriminator logits
+def d_fn(x, models, **kwargs):</code></pre><h3>After Change</h3><pre><code class='java'>
+    domain = check_domain(domain)
+    features = models["G"](x)
+    logits = models["C"](features)[domain]
+    <a id="change">output = {</a>"features": features, "logits": logits<a id="change">}</a>
+    <a id="change">if get_all</a>:
+        logits = models["C"](features)[int(not domain)]
+        <a id="change">output.update({</a>"other_logits": logits<a id="change">}</a><a id="change">)</a>
+    <a id="change">return </a>output
+
+
+def symnets_full_fn(**kwargs):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/kevinmusgrave/pytorch-adapt/commit/cb3de48f044b2c9547f7465b3384f3fc332d79e0#diff-aca26258ec5c16b6c38dd5a181cb13554216e8d24a0414c353b9d3b33b7de748L97' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 35930571</div><div id='project'> Project Name: kevinmusgrave/pytorch-adapt</div><div id='commit'> Commit Name: cb3de48f044b2c9547f7465b3384f3fc332d79e0</div><div id='time'> Time: 2022-02-24</div><div id='author'> Author: tkm45@cornell.edu</div><div id='file'> File Name: src/pytorch_adapt/inference/inference.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: symnets_fn(4)</div><div id='n_method'> N Method Name: symnets_fn(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/pytorch_adapt/inference/inference.py</div><div id='n_file'> N File Name: src/pytorch_adapt/inference/inference.py</div><div id='m_start'> M Start Line: 106</div><div id='m_end'> M End Line: 108</div><div id='n_start'> N Start Line: 97</div><div id='n_end'> N End Line: 112</div><BR>

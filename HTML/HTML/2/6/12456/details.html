@@ -1,0 +1,59 @@
+<html><h3>Pattern ID :12456
+</h3><img src='42376263.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            xy = torch.sigmoid(p[..., 0:2]) + grid_xy  &#47&#47 x, y
+            wh = torch.exp(p[..., 2:4]) * anchor_wh  &#47&#47 width, height
+            p_conf = torch.sigmoid(p[..., 4:5])  &#47&#47 Conf
+            p_cls = <a id="change">p[..., 5:5 + self.nc]</a>
+            &#47&#47 Broadcasting only supported on first dimension in CoreML. See onnx-coreml/_operators.py
+            &#47&#47 p_cls = F.softmax(p_cls, 2) * p_conf  &#47&#47 SSD-like conf
+            p_cls = torch.exp(p_cls).permute((2, 1, 0))
+            p_cls = p_cls / p_cls.sum(0).unsqueeze(0) * p_conf.permute((2, 1, 0))  &#47&#47 F.softmax() equivalent</code></pre><h3>After Change</h3><pre><code class='java'>
+            xy = torch.sigmoid(p[..., 0:2]) + grid_xy[0]  &#47&#47 x, y
+            wh = torch.exp(p[..., 2:4]) * anchor_wh[0]  &#47&#47 width, height
+            p_conf = torch.sigmoid(p[:, 4:5])  &#47&#47 Conf
+            p_cls = <a id="change">F.softmax(</a>p[:, 5:85], 1<a id="change">) * </a>p_conf  &#47&#47 SSD-like conf
+            return torch.cat((xy / ngu[0], wh, p_conf, p_cls), 1).t()
+
+            &#47&#47 p = p.view(1, -1, 5 + self.nc)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 5</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/nightsnack/yolobile/commit/636c1cff7a91c0b54c996ef48b36274b08e4a8b8#diff-dcfeaa5ac3dffd54264034760914588d92fc7395c81eaa9274715840dc28100bL126' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 42376263</div><div id='project'> Project Name: nightsnack/yolobile</div><div id='commit'> Commit Name: 636c1cff7a91c0b54c996ef48b36274b08e4a8b8</div><div id='time'> Time: 2019-08-11</div><div id='author'> Author: glenn.jocher@ultralytics.com</div><div id='file'> File Name: models.py</div><div id='m_class'> M Class Name: YOLOLayer</div><div id='n_method'> N Class Name: YOLOLayer</div><div id='m_method'> M Method Name: forward(4)</div><div id='n_method'> N Method Name: forward(4)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: models.py</div><div id='n_file'> N File Name: models.py</div><div id='m_start'> M Start Line: 126</div><div id='m_end'> M End Line: 147</div><div id='n_start'> N Start Line: 126</div><div id='n_end'> N End Line: 135</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    cumulative_probabilities = lax.rev(jnp.cumsum(lax.rev(jax.nn.softmax(sorted_out), (1,)), -1), (1,))
+    overflow = jnp.greater(cumulative_probabilities, wctx.top_p)
+    overflow = jnp.concatenate([<a id="change">overflow[:, :, 1:]</a>, jnp.zeros_like(overflow[:, :, :1])], -1)
+    top_p_mask = jnp.take_along_axis(overflow, ranks, axis=2)
+    out_token = out_token + temp
+    out_token = out_token + (top_k_mask + top_p_mask) * -1e9</code></pre><h3>After Change</h3><pre><code class='java'>
+    ranks = jnp.argsort(argsort_out, -1)
+    top_k_mask = jnp.less(ranks, wctx.ctx.dims.vocab - wctx.top_k)  &#47&#47 we want to mask the bottom vocab - k
+    top_p_mask = get_top_p_mask(jax.nn.softmax(out_token), wctx.top_p)
+    typical_mask = get_top_p_mask(<a id="change">jax.nn.softmax(</a>out_token<a id="change">) * </a>jax.nn.log_softmax, wctx.mass)
+    out_token = out_token + temp
+    out_token = out_token + (top_k_mask + top_p_mask + typical_mask) * -1e9
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/homebrewnlp/homebrewnlp-jax/commit/98f449eb842384b49ad2820c078c7e4ceef0e014#diff-6bb87854f62182076b9d47e5a3fa17d5fb46826b979e3292b7ae7bef07022cf4L33' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 42376274</div><div id='project'> Project Name: homebrewnlp/homebrewnlp-jax</div><div id='commit'> Commit Name: 98f449eb842384b49ad2820c078c7e4ceef0e014</div><div id='time'> Time: 2022-05-14</div><div id='author'> Author: 39779310+ClashLuke@users.noreply.github.com</div><div id='file'> File Name: inference.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: body_fn(1)</div><div id='n_method'> N Method Name: body_fn(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: inference.py</div><div id='n_file'> N File Name: inference.py</div><div id='m_start'> M Start Line: 34</div><div id='m_end'> M End Line: 58</div><div id='n_start'> N Start Line: 44</div><div id='n_end'> N End Line: 65</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            original_mask = sample["original_mask"].cuda().long().cpu().numpy()
+
+            output = net(imgs)
+            binary_pred = torch.sigmoid(<a id="change">output[:, 4:, ...]</a>)
+
+            damage_preds = torch.sigmoid(output[:, :4, ...]).cpu().numpy()
+            for i in range(output.shape[0]):</code></pre><h3>After Change</h3><pre><code class='java'>
+            original_mask = sample["original_mask"].cuda().long().cpu().numpy()
+
+            output = net(imgs)
+            damage_preds = <a id="change">torch.softmax(</a>output<a id="change">, dim=1)</a>.cpu().numpy()
+            for i in range(output.shape[0]):
+                damage_pred = damage_preds[i]
+                argmax = np.argmax(damage_pred, axis=0)
+
+                cv2.imwrite(os.path.join(preds_dir,
+                                         "test_localization_" + sample["img_name"][i] + "_prediction.png"),
+                            mask.cpu().numpy()[i, 4])
+                cv2.imwrite(os.path.join(preds_dir, "test_damage_" + sample["img_name"][i] + "_prediction.png"),
+                            argmax)
+                cv2.imwrite(os.path.join(targs_dir, "test_localization_" + sample["img_name"][i] + "_target.png"),
+                            1<a id="change"> * </a>(argmax &gt; 0))
+                cv2.imwrite(
+                    os.path.join(targs_dir, "test_damage_" + sample["img_name"][i] + "_target.png"),
+                    original_mask[i])</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/selimsef/xview2_solution/commit/ea1fa7aa3efe68dc18f59453a1f093a0bf27112f#diff-ed183d67207df065a11e1289f19d34cc2abbc5448dea952683cfe9728c342b95L265' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 42376270</div><div id='project'> Project Name: selimsef/xview2_solution</div><div id='commit'> Commit Name: ea1fa7aa3efe68dc18f59453a1f093a0bf27112f</div><div id='time'> Time: 2020-04-17</div><div id='author'> Author: selim.sef@gmail.com</div><div id='file'> File Name: train.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: validate(3)</div><div id='n_method'> N Method Name: validate(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: train.py</div><div id='n_file'> N File Name: train.py</div><div id='m_start'> M Start Line: 277</div><div id='m_end'> M End Line: 294</div><div id='n_start'> N Start Line: 283</div><div id='n_end'> N End Line: 295</div><BR>

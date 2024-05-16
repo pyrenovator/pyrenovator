@@ -1,0 +1,133 @@
+<html><h3>Pattern ID :33547
+</h3><img src='96573104.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    &#47&#47 constant folding
+    const = None
+    if self.bufs[buf_index]._base_shape == (1,) and self.bufs[buf_index]._backing is not None:
+      <a id="change">assert </a>self.buftokens[buf_index].typ == Types.FLOAT
+      if buf_index != 0: self.bufs_to_delete.add(buf_index)
+      const = Token(f"({self.bufs[buf_index]._backing[0]}f)", self.buftokens[buf_index].typ)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+      if buf_index != 0: self.bufs_to_delete.add(buf_index)
+      const = Token(f"({self.bufs[buf_index]._backing[0]}f)", Types.FLOAT)
+
+    can_merge = (not self.bufs[buf_index].st.needs_valid() and len(self.bufs[buf_index].st.views) == 1) or <a id="change">"Image" in str(type(self.bufs[buf_index]._buf))</a>
+    should_upcast = const is None and can_merge and self.buftokens[buf_index].can_float4()
+
+    tokens = []
+    for o in self.buftokens[buf_index].offsets():
+      key = f"val{buf_index}_{o}" if o &gt;= 0 else f"val{buf_index}_m{-o}"
+      if (buf_index, o) not in self.loaded_keys:
+        idxy, valid = self.sts[buf_index].expr_idxs(o)
+        if const is not None:
+          ldr = const
+        elif isinstance(self.bufs[buf_index]._buf, CLImage):
+          assert should_upcast, f"Image requires upcasting to FLOAT4 {self.buftokens[buf_index]}"
+          ldr = Token(f"read_imagef({self.buftokens[buf_index].tok}, smp, {self.image_idx(buf_index, idxy, VALIDHACKS)}) /* {self.bufs[buf_index]._base_shape} */", Types.FLOAT4)
+        elif should_upcast:
+          ldr = Token(f"(({CLProgram.buffer_prefix}float4*){self.buftokens[buf_index].tok})[{(idxy//4).render(render_cl)}]", Types.FLOAT4)
+        else:
+          ldr = Token(f"{self.buftokens[buf_index].tok}[{idxy.render(render_cl)}]", Types.FLOAT)
+        ldr = ldr if valid.min == 1 or (VALIDHACKS and isinstance(self.bufs[buf_index]._buf, CLImage)) else (Token(f"({valid.render(render_cl)} ? {ldr.tok} : 0.0f)", ldr.typ) if valid.max == 1 else Token("0.0f", ldr.typ))
+        if const is not None:
+          self.loaded_keys[(buf_index,o)] = ldr
+        else:
+          self.kernel.append(f"{ldr.decltype()} {key} = {ldr.tok};\n")
+          <a id="change">if </a>should_upcast:
+            <a id="change">for j</a> in <a id="change">range(4</a><a id="change">):
+              </a>self.loaded_keys[(buf_index,o<a id="change">+j</a>)] = Token(key+f&quot.{"xyzw"[j]}&quot, Types.FLOAT)
+          else:
+            self.loaded_keys[(buf_index,o)] = Token(key, Types.FLOAT)
+      tokens.append(self.loaded_keys[(buf_index,o)])</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 6</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/geohot/tinygrad/commit/c4c2c28738c95929297bad30d4d277c677aef965#diff-305e94e84668440e8f8a2a4e17d5796e43233474510c7af082ab29c9aa824eeeL81' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 96573104</div><div id='project'> Project Name: geohot/tinygrad</div><div id='commit'> Commit Name: c4c2c28738c95929297bad30d4d277c677aef965</div><div id='time'> Time: 2023-02-22</div><div id='author'> Author: 72895+geohot@users.noreply.github.com</div><div id='file'> File Name: tinygrad/llops/ops_gpu.py</div><div id='m_class'> M Class Name: CLASTKernel</div><div id='n_method'> N Class Name: CLASTKernel</div><div id='m_method'> M Method Name: load(2)</div><div id='n_method'> N Method Name: load(2)</div><div id='m_parent_class'> M Parent Class: ASTKernel</div><div id='n_parent_class'> N Parent Class: ASTKernel</div><div id='m_file'> M File Name: tinygrad/llops/ops_gpu.py</div><div id='n_file'> N File Name: tinygrad/llops/ops_gpu.py</div><div id='m_start'> M Start Line: 81</div><div id='m_end'> M End Line: 103</div><div id='n_start'> N Start Line: 85</div><div id='n_end'> N End Line: 117</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        self.preactivation = preactivation
+        self._incremental_n_modes = incremental_n_modes
+
+        <a id="change">assert </a>len(self.layer_configs) == n_layers
+        
+
+        if domain_padding is not None and domain_padding &gt; 0:</code></pre><h3>After Change</h3><pre><code class='java'>
+            l_config[&quotres_scaling&quot] = uno_layers[&quotres_scaling&quot][l]
+            self.layer_configs.append(l_config)
+        
+        <a id="change">if self.horizontal_skips_map is None</a>:
+            self.horizontal_skips_map = {}
+            <a id="change">for i</a> in <a id="change">range(</a>n_layers//2,<a id="change">0</a><a id="change">,):
+                </a>self.horizontal_skips_map[n_layers<a id="change"> - </a>i -1] = i
+        
+
+        if domain_padding is not None and domain_padding &gt; 0:</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/neural-operator/fourier_neural_operator/commit/7a8f1452af3fa7f1d287d503e996c402f693cfb6#diff-ac4b85e380a4812b342c118065527678fa9aef5163e07cc6c0bec8e731055599L91' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 96573107</div><div id='project'> Project Name: neural-operator/fourier_neural_operator</div><div id='commit'> Commit Name: 7a8f1452af3fa7f1d287d503e996c402f693cfb6</div><div id='time'> Time: 2023-04-15</div><div id='author'> Author: ashiqbuet14@gmail.com</div><div id='file'> File Name: neuralop/models/uno.py</div><div id='m_class'> M Class Name: UNO</div><div id='n_method'> N Class Name: UNO</div><div id='m_method'> M Method Name: __init__(28)</div><div id='n_method'> N Method Name: __init__(28)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: neuralop/models/uno.py</div><div id='n_file'> N File Name: neuralop/models/uno.py</div><div id='m_start'> M Start Line: 119</div><div id='m_end'> M End Line: 142</div><div id='n_start'> N Start Line: 123</div><div id='n_end'> N End Line: 167</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        assert ratio_ul &gt;= 1 and 0 &lt; p_cutoff &lt;= 1
+
+        &#47&#47 mixup args
+        <a id="change">assert </a>mix_mode in [
+            "mixup", "manifoldmix", "cutmix", "saliencymix", "resizemix", "fmix"]
+        if mix_mode in ["manifoldmix"]:
+            assert 0 == min(mix_args[mix_mode]["layer"]) and max(mix_args[mix_mode]["layer"]) &lt; 4</code></pre><h3>After Change</h3><pre><code class='java'>
+        self.idx_list = [i for i in range(len(self.mix_mode))]
+        self.mix_args = mix_args
+        self.mix_prob = mix_prob if isinstance(mix_prob, list) else None
+        <a id="change">if self.mix_prob is not None</a>:
+            assert len(self.mix_prob) == len(self.alpha) and abs(sum(self.mix_prob)-1e-10) &lt;= 1, \
+                "mix_prob={}, sum={}, alpha={}".format(self.mix_prob, sum(self.mix_prob), self.alpha)
+            <a id="change">for i</a> in <a id="change">range(1</a>, len(self.mix_prob)<a id="change">):
+                </a>self.mix_prob[i] = self.mix_prob[i] + self.mix_prob[i<a id="change">-</a>1]
+        assert label_rescale in [&quotlabeled&quot, &quotunlabeled&quot, &quotboth&quot, &quotnone&quot]
+        self.label_rescale = label_rescale
+        assert lam_bias in [&quotlabeled&quot, &quotunlabeled&quot, &quotrand&quot]</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/westlake-ai/openmixup/commit/a4d82ebee5dd362b928569662920873822aa8236#diff-a02b679743c3c0a0116e09d80323737684d1da85800a3ca6751bd7d81da3eebeL51' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 96573109</div><div id='project'> Project Name: westlake-ai/openmixup</div><div id='commit'> Commit Name: a4d82ebee5dd362b928569662920873822aa8236</div><div id='time'> Time: 2022-02-18</div><div id='author'> Author: 1070535169@qq.com</div><div id='file'> File Name: openmixup/models/semisup/dmixmatch.py</div><div id='m_class'> M Class Name: DMixMatch</div><div id='n_method'> N Class Name: DMixMatch</div><div id='m_method'> M Method Name: __init__(21)</div><div id='n_method'> N Method Name: __init__(20)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: openmixup/models/semisup/dmixmatch.py</div><div id='n_file'> N File Name: openmixup/models/semisup/dmixmatch.py</div><div id='m_start'> M Start Line: 107</div><div id='m_end'> M End Line: 114</div><div id='n_start'> N Start Line: 71</div><div id='n_end'> N End Line: 127</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    
+    with contextlib.closing(wave.open(path, &quotrb&quot)) as wf:
+        num_channels = wf.getnchannels()
+        <a id="change">assert </a>num_channels == 1
+        sample_width = wf.getsampwidth()
+        assert sample_width == 2
+        sample_rate = wf.getframerate()</code></pre><h3>After Change</h3><pre><code class='java'>
+        assert sample_rate in (8000, 16000, 32000, 48000)
+        pcm_data = wf.readframes(wf.getnframes())
+        &#47&#47 多通道通道转单通道
+        <a id="change">if num_channels != 1</a>:
+            data = []
+            <a id="change">for i</a> in <a id="change">range(0</a>, len(pcm_data), sample_width * num_channels<a id="change">):
+                </a>data.append(pcm_data[i:i<a id="change"> + </a>sample_width])
+            pcm_data = b&quot&quot.join(data)
+        return pcm_data, sample_rate
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/yeyupiaoling/masr/commit/fd3d30bf91fd3d11a8e0fd9e7dbc608541b5db1a#diff-29e7dc4e680dfd604481bb613596355ba6230dddf7080330b6f0932af747db9dL9' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 96573110</div><div id='project'> Project Name: yeyupiaoling/masr</div><div id='commit'> Commit Name: fd3d30bf91fd3d11a8e0fd9e7dbc608541b5db1a</div><div id='time'> Time: 2022-01-12</div><div id='author'> Author: yeyupiaoling@foxmail.com</div><div id='file'> File Name: masr/utils/audio_vad.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: read_wave(1)</div><div id='n_method'> N Method Name: read_wave(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: masr/utils/audio_vad.py</div><div id='n_file'> N File Name: masr/utils/audio_vad.py</div><div id='m_start'> M Start Line: 15</div><div id='m_end'> M End Line: 15</div><div id='n_start'> N Start Line: 14</div><div id='n_end'> N End Line: 26</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    &#47&#47 constant folding
+    const = None
+    if self.bufs[buf_index]._base_shape == (1,) and self.bufs[buf_index]._backing is not None:
+      <a id="change">assert </a>self.buftokens[buf_index].typ == Types.FLOAT
+      if buf_index != 0: self.bufs_to_delete.add(buf_index)
+      const = Token(f"({self.bufs[buf_index]._backing[0]}f)", self.buftokens[buf_index].typ)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+      if buf_index != 0: self.bufs_to_delete.add(buf_index)
+      const = Token(f"({self.bufs[buf_index]._backing[0]}f)", Types.FLOAT)
+
+    can_merge = (not self.bufs[buf_index].st.needs_valid() and <a id="change">len(self.bufs[buf_index].st.views) == 1</a>) or "Image" in str(type(self.bufs[buf_index]._buf))
+    should_upcast = const is None and can_merge and self.buftokens[buf_index].can_float4()
+
+    tokens = []
+    for o in self.buftokens[buf_index].offsets():
+      key = f"val{buf_index}_{o}" if o &gt;= 0 else f"val{buf_index}_m{-o}"
+      if (buf_index, o) not in self.loaded_keys:
+        idxy, valid = self.sts[buf_index].expr_idxs(o)
+        if const is not None:
+          ldr = const
+        elif isinstance(self.bufs[buf_index]._buf, CLImage):
+          assert should_upcast, f"Image requires upcasting to FLOAT4 {self.buftokens[buf_index]}"
+          ldr = Token(f"read_imagef({self.buftokens[buf_index].tok}, smp, {self.image_idx(buf_index, idxy, VALIDHACKS)}) /* {self.bufs[buf_index]._base_shape} */", Types.FLOAT4)
+        elif should_upcast:
+          ldr = Token(f"(({CLProgram.buffer_prefix}float4*){self.buftokens[buf_index].tok})[{(idxy//4).render(render_cl)}]", Types.FLOAT4)
+        else:
+          ldr = Token(f"{self.buftokens[buf_index].tok}[{idxy.render(render_cl)}]", Types.FLOAT)
+        ldr = ldr if valid.min == 1 or (VALIDHACKS and isinstance(self.bufs[buf_index]._buf, CLImage)) else (Token(f"({valid.render(render_cl)} ? {ldr.tok} : 0.0f)", ldr.typ) if valid.max == 1 else Token("0.0f", ldr.typ))
+        if const is not None:
+          self.loaded_keys[(buf_index,o)] = ldr
+        else:
+          self.kernel.append(f"{ldr.decltype()} {key} = {ldr.tok};\n")
+          <a id="change">if </a>should_upcast:
+            <a id="change">for j</a> in <a id="change">range(4</a><a id="change">):
+              </a>self.loaded_keys[(buf_index,o<a id="change">+</a>j)] = Token(key+f&quot.{"xyzw"[j]}&quot, Types.FLOAT)
+          else:
+            self.loaded_keys[(buf_index,o)] = Token(key, Types.FLOAT)
+      tokens.append(self.loaded_keys[(buf_index,o)])</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/geohot/tinygrad/commit/c4c2c28738c95929297bad30d4d277c677aef965#diff-305e94e84668440e8f8a2a4e17d5796e43233474510c7af082ab29c9aa824eeeL79' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 96573112</div><div id='project'> Project Name: geohot/tinygrad</div><div id='commit'> Commit Name: c4c2c28738c95929297bad30d4d277c677aef965</div><div id='time'> Time: 2023-02-22</div><div id='author'> Author: 72895+geohot@users.noreply.github.com</div><div id='file'> File Name: tinygrad/llops/ops_gpu.py</div><div id='m_class'> M Class Name: CLASTKernel</div><div id='n_method'> N Class Name: CLASTKernel</div><div id='m_method'> M Method Name: load(2)</div><div id='n_method'> N Method Name: load(2)</div><div id='m_parent_class'> M Parent Class: ASTKernel</div><div id='n_parent_class'> N Parent Class: ASTKernel</div><div id='m_file'> M File Name: tinygrad/llops/ops_gpu.py</div><div id='n_file'> N File Name: tinygrad/llops/ops_gpu.py</div><div id='m_start'> M Start Line: 81</div><div id='m_end'> M End Line: 103</div><div id='n_start'> N Start Line: 85</div><div id='n_end'> N End Line: 117</div><BR>

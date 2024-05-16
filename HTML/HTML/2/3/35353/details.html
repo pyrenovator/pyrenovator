@@ -1,0 +1,71 @@
+<html><h3>Pattern ID :35353
+</h3><img src='100425999.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        )
+        if cfg["USE_AMP"] == True and cfg["OPT_LEVEL"] == "O1":
+            final_target_logit = final_target_logit.half()
+        cos_theta.scatter_(1, <a id="change">label.view(-1, 1).long()</a>, final_target_logit)
+        output = cos_theta * self.s
+        return output
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        is_half = cos_theta.dtype == torch.float16
+
+        cos_theta_m = torch.where(
+            cos_theta &gt; self.min_cos_theta, cos_theta_m, <a id="change">cos_theta.float()</a> - self.m_am,
+        )
+        if is_half:
+            cos_theta_m = cos_theta_m.half()
+        index = torch.zeros_like(cos_theta)
+        index.scatter_(1, label.data.view(-1, 1), 1)
+        index = index.byte().bool()
+        output = cos_theta * 1.0
+        output[index]<a id="change"> = </a>cos_theta_m[index]
+        output *= self.s
+        return output
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/cavalleria/cavaface/commit/98a21048f5dce435a6639a288dafc4c6be61be05#diff-e54d97a982dbe26c94a83bf3dd7e2d279a6049044331caf1140127bc9afbb225L67' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 100425999</div><div id='project'> Project Name: cavalleria/cavaface</div><div id='commit'> Commit Name: 98a21048f5dce435a6639a288dafc4c6be61be05</div><div id='time'> Time: 2021-08-25</div><div id='author'> Author: 605370459@qq.com</div><div id='file'> File Name: head/metrics.py</div><div id='m_class'> M Class Name: ArcFace</div><div id='n_method'> N Class Name: ArcFace</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: head/metrics.py</div><div id='n_file'> N File Name: head/metrics.py</div><div id='m_start'> M Start Line: 81</div><div id='m_end'> M End Line: 103</div><div id='n_start'> N Start Line: 67</div><div id='n_end'> N End Line: 86</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            pos_discrete = pos_src.ceil().long()
+            pos_frac = pos_src - pos_src.floor()
+        else:
+            pos_discrete = <a id="change">pos_src.round().long()</a>
+            pos_frac = torch.ones_like(pos_src)
+
+        pad = kernel_size // 2
+        &#47&#47 (2, 1, HW)</code></pre><h3>After Change</h3><pre><code class='java'>
+    &#47&#47 The target coordinates do not require gradients
+    pos = torch.arange(sizes[0] * sizes[1], **dkwargs)
+    pos_i = (pos // sizes[1]).float()
+    pos_j = <a id="change">(pos % sizes[1]).float()</a>
+    &#47&#47 Map the target coordinates to the source coordinates
+    &#47&#47 This implements the backward warping
+    pos_tar = torch.stack([pos_j, pos_i, torch.ones_like(pos_i)], dim=0)
+    pos_src = torch.matmul(m.inverse(), pos_tar)
+    pos_src = pos_src[:2] / pos_src[-1, :]
+    &#47&#47 Out of the image
+    pos_bound = pos_src.new_tensor([x.size(-1), x.size(-2)]) - 0.5
+    pos_bound.unsqueeze_(-1)
+    pos_in = torch.logical_and(pos_src.ge(-0.5), pos_src.lt(pos_bound))
+    pos_in = pos_in.all(0)
+    &#47&#47 Remove the outside region and compensate subpixel shift
+    sub = (k % 2) / 2
+    pos_src = pos_src[..., pos_in]
+    pos_src_sub = pos_src - sub
+    pos_discrete<a id="change"> = </a>pos_src_sub.ceil().long()
+    pos_frac = pos_src_sub - pos_src.floor()
+    pos_frac.unsqueeze_(1)
+    &#47&#47 (2, 1, HW)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/thstkdgus35/bicubic_pytorch/commit/eb261bd72c7d717dab243fa09c6be01c8cdce6cb#diff-b450ef659f3c8d1a1deba7ce15262780c34c49f50a06e98c32aaafb14564c273L34' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 100425994</div><div id='project'> Project Name: thstkdgus35/bicubic_pytorch</div><div id='commit'> Commit Name: eb261bd72c7d717dab243fa09c6be01c8cdce6cb</div><div id='time'> Time: 2020-07-26</div><div id='author'> Author: sonsang35@gmail.com</div><div id='file'> File Name: core_warp.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: warp_by_size(6)</div><div id='n_method'> N Method Name: warp_by_size(6)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: core_warp.py</div><div id='n_file'> N File Name: core_warp.py</div><div id='m_start'> M Start Line: 38</div><div id='m_end'> M End Line: 104</div><div id='n_start'> N Start Line: 38</div><div id='n_end'> N End Line: 92</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            input_ids, targets = pandora_embeddings(datafile, tokenizer, token_length)
+
+        input_ids = torch.from_numpy(np.array(input_ids)).long().to(DEVICE)
+        targets = <a id="change">torch.from_numpy(np.array(targets)).long()</a>.to(DEVICE)
+
+        self.input_ids = input_ids
+        self.targets = targets</code></pre><h3>After Change</h3><pre><code class='java'>
+        input_ids = torch.from_numpy(np.array(input_ids)).long().to(DEVICE)
+        targets = torch.from_numpy(np.array(targets))
+        if dataset_type == &quotpandora&quot:
+            targets<a id="change"> = </a><a id="change">targets.float()</a>.to(DEVICE)
+        else:
+            targets = targets.long().to(DEVICE)
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/yashsmehta/personality-prediction/commit/53462ed81bba90c9deeb1ccb4ee3603d2c082c28#diff-468ad6407050b343091324e28064f8aace673b0594e208a6112b234b62bec833L185' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 100426001</div><div id='project'> Project Name: yashsmehta/personality-prediction</div><div id='commit'> Commit Name: 53462ed81bba90c9deeb1ccb4ee3603d2c082c28</div><div id='time'> Time: 2020-06-07</div><div id='author'> Author: amirmohammadkz@gmail.com</div><div id='file'> File Name: data_utils.py</div><div id='m_class'> M Class Name: MyMapDataset</div><div id='n_method'> N Class Name: MyMapDataset</div><div id='m_method'> M Method Name: __init__(6)</div><div id='n_method'> N Method Name: __init__(6)</div><div id='m_parent_class'> M Parent Class: Dataset</div><div id='n_parent_class'> N Parent Class: Dataset</div><div id='m_file'> M File Name: data_utils.py</div><div id='n_file'> N File Name: data_utils.py</div><div id='m_start'> M Start Line: 194</div><div id='m_end'> M End Line: 194</div><div id='n_start'> N Start Line: 194</div><div id='n_end'> N End Line: 200</div><BR>

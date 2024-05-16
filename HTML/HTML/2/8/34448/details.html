@@ -1,0 +1,75 @@
+<html><h3>Pattern ID :34448
+</h3><img src='98803859.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        mag = torch.sqrt(torch.sum(label ** 2, dim=1))
+
+        &#47&#47 Temp Fix
+        valid = (<a id="change">label[:, 0].abs()</a> &lt; 1000) & (label[:, 1].abs() &lt; 1000)
+        valid = valid.float()
+        valid = (valid &gt;= 0.5) & (mag &lt; self.max_flow)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        n_preds = len(pred)
+        flow_loss = 0.0
+
+        flow, valid = <a id="change">label[:, :2, :, :]</a>, <a id="change">label[:, 2:, :, :]</a>
+        valid = torch.squeeze(valid, dim=1)
+
+        mag = torch.sqrt(torch.sum(flow ** 2, dim=1))
+        valid = (valid &gt;= 0.5) & (mag &lt; self.max_flow)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 7</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/neu-vig/ezflow/commit/5069e90d057f999004885e269c9142bbef437c8f#diff-fd154c62d4484282e44475316c262ecdd4ad9466c4a8ee8c3a810803e11a55bfL34' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 98803859</div><div id='project'> Project Name: neu-vig/ezflow</div><div id='commit'> Commit Name: 5069e90d057f999004885e269c9142bbef437c8f</div><div id='time'> Time: 2022-01-11</div><div id='author'> Author: 89991031+prajnan93@users.noreply.github.com</div><div id='file'> File Name: ezflow/functional/criterion/sequence.py</div><div id='m_class'> M Class Name: SequenceLoss</div><div id='n_method'> N Class Name: SequenceLoss</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: ezflow/functional/criterion/sequence.py</div><div id='n_file'> N File Name: ezflow/functional/criterion/sequence.py</div><div id='m_start'> M Start Line: 38</div><div id='m_end'> M End Line: 42</div><div id='n_start'> N Start Line: 34</div><div id='n_end'> N End Line: 44</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        for step in range(time_steps):
+            &#47&#47 generate spikes
+            self.detect_spikes()
+            <a id="change">output_spikes[:, step]</a> = self.activations
+
+            &#47&#47 Reset membrane potential for neurons that spiked
+            self.update_state_after_spike()
+
+            &#47&#47 Decay the membrane potential
+            self.state = self.state * self.alpha_mem
+
+            &#47&#47 add recurrent input
+            rec_input = self.hidden_layer(self.activations.reshape(batch_size, -1)).reshape(input_current[:, step].shape)
+            total_input = input_current[:, step] + rec_input
+
+            &#47&#47 Add the input currents which are normalised by tau to membrane potential state
+            self.state = self.state + total_input * (1-self.alpha_mem)
+
+            &#47&#47 Clip membrane potential that is too low
+            if self.threshold_low: self.state = torch.clamp(self.state, min=self.threshold_low)
+
+        self.tw = time_steps
+        self.spikes_number = <a id="change">output_spikes.abs()</a>.sum()
+        return output_spikes
+
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        output_spikes = torch.zeros_like(input_current)
+        
+        for step in range(n_time_steps):
+            total_input = <a id="change">input_current[:, step:step+1]</a> + rec_out
+
+            &#47&#47 compute output spikes
+            output = self.lif(total_input)
+            output_spikes[:, step:step+1] = output
+            
+            &#47&#47 compute recurrent output that will be added to the input at the next time step
+            rec_out = self.rec_weights(output.reshape(batch_size, -1)).reshape(<a id="change">input_current[:, step:step+1]</a>.shape)
+
+        return output_spikes
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/synsense/sinabs/commit/8c263985e90ff782f31e98955f40fad6e906fdb7#diff-eb45a8f4acbdb2d113b025c3ff70f42dec74f5b5e4a6b38c0b1ce67c660da65fL150' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 98803858</div><div id='project'> Project Name: synsense/sinabs</div><div id='commit'> Commit Name: 8c263985e90ff782f31e98955f40fad6e906fdb7</div><div id='time'> Time: 2021-11-02</div><div id='author'> Author: gregor.lenz@synsense.ai</div><div id='file'> File Name: sinabs/layers/lif.py</div><div id='m_class'> M Class Name: LIFRecurrent</div><div id='n_method'> N Class Name: LIFRecurrent</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: torch.nn.Module</div><div id='n_parent_class'> N Parent Class: LIF</div><div id='m_file'> M File Name: sinabs/layers/lif.py</div><div id='n_file'> N File Name: sinabs/layers/lif.py</div><div id='m_start'> M Start Line: 165</div><div id='m_end'> M End Line: 192</div><div id='n_start'> N Start Line: 164</div><div id='n_end'> N End Line: 176</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        mag = torch.sqrt(torch.sum(label ** 2, dim=1))
+
+        &#47&#47 Temp Fix
+        valid = (label[:, 0].abs() &lt; 1000) & (<a id="change">label[:, 1].abs()</a> &lt; 1000)
+        valid = valid.float()
+        valid = (valid &gt;= 0.5) & (mag &lt; self.max_flow)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        n_preds = len(pred)
+        flow_loss = 0.0
+
+        flow, valid = <a id="change">label[:, :2, :, :]</a>, <a id="change">label[:, 2:, :, :]</a>
+        valid = torch.squeeze(valid, dim=1)
+
+        mag = torch.sqrt(torch.sum(flow ** 2, dim=1))
+        valid = (valid &gt;= 0.5) & (mag &lt; self.max_flow)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/neu-vi/ezflow/commit/5069e90d057f999004885e269c9142bbef437c8f#diff-fd154c62d4484282e44475316c262ecdd4ad9466c4a8ee8c3a810803e11a55bfL33' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 98803863</div><div id='project'> Project Name: neu-vi/ezflow</div><div id='commit'> Commit Name: 5069e90d057f999004885e269c9142bbef437c8f</div><div id='time'> Time: 2022-01-11</div><div id='author'> Author: 89991031+prajnan93@users.noreply.github.com</div><div id='file'> File Name: ezflow/functional/criterion/sequence.py</div><div id='m_class'> M Class Name: SequenceLoss</div><div id='n_method'> N Class Name: SequenceLoss</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: ezflow/functional/criterion/sequence.py</div><div id='n_file'> N File Name: ezflow/functional/criterion/sequence.py</div><div id='m_start'> M Start Line: 38</div><div id='m_end'> M End Line: 42</div><div id='n_start'> N Start Line: 34</div><div id='n_end'> N End Line: 44</div><BR>

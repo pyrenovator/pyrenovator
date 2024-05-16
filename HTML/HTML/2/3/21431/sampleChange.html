@@ -1,0 +1,20 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+        &#47&#47 Gpl: Apply path length regularization.
+        if do_Gpl:
+            <a id="change">print(&quot----------------- do_Gpl -----------------&quot</a><a id="change">)</a>
+            batch_size = gen_z.shape[0] // self.pl_batch_shrink
+            &#47&#47 with misc.ddp_sync(self.G_flownet, sync):
+            &#47&#47     flow = self.G_flownet(torch.cat((cloth[:batch_size], aff_pose[:batch_size]), dim=1))
+            &#47&#47 warp_cloth = F.grid_sample(cloth[:batch_size, :3, :, :], flow)</code></pre><h3>After Change</h3><pre><code class='java'>
+            pl_noise = torch.randn_like(gen_img) / np.sqrt(gen_img.shape[2] * gen_img.shape[3])
+            pl_grads = torch.autograd.grad(outputs=[(gen_img * pl_noise).sum()], inputs=[gen_ws], create_graph=True, only_inputs=True)[0]
+
+            pl_lengths = <a id="change">pl_grads.square().sum(2).mean(1).sqrt()</a>
+            if self.pl_mean is None:
+                self.pl_mean = torch.zeros([1, ], dtype=torch.float32, device=pl_lengths.device)
+            pl_mean = self.pl_mean.lerp(pl_lengths.mean(), self.pl_decay)
+            self.pl_mean.copy_(pl_mean.detach())</code></pre>

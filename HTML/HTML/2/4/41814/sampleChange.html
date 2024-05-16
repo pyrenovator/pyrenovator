@@ -1,0 +1,83 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                r = pad_sequence(r, padding_value=pad_val).squeeze()
+
+                mask = (q != pad_val)
+                q, r = q * <a id="change">mask.long()</a>, r * mask.long()
+
+                delta = one_hot(q[1:], self.num_q)
+                target = r[1:]</code></pre><h3>After Change</h3><pre><code class='java'>
+        print(len(responses[train_idx:]))
+        print(np.max([arr.shape for arr in responses[train_idx:]]))
+
+        test_masks = <a id="change">(test_questions != pad_val)</a>
+        test_questions, test_responses = \
+            test_questions * test_masks.long(), \
+            test_responses * test_masks.long()
+
+        test_delta = one_hot(test_questions[1:], self.num_q)
+        test_targets = test_responses[1:]
+
+        test_questions = test_questions[:-1]
+        test_responses = test_responses[:-1]
+        test_masks = test_masks[:-1]
+
+        test_targets = torch.masked_select(test_targets, test_masks)
+
+        opt = Adam(self.parameters(), learning_rate)
+
+        aucs = []
+        loss_means = []
+
+        for i in range(1, num_epochs):
+            loss_mean = []
+            for _ in range(train_idx // batch_size):
+                random_indices = np.random.choice(
+                    train_idx, batch_size, replace=False
+                )
+
+                q = train_questions[random_indices]
+                r = train_responses[random_indices]
+                m = train_masks[random_indices]
+                d = train_deltas[random_indices]
+                t = train_targets[random_indices]
+
+                &#47&#47 q = [LongTensor(arr).unsqueeze(-1) for arr in q]
+                &#47&#47 r = [LongTensor(arr).unsqueeze(-1) for arr in r]
+
+                &#47&#47 q = pad_sequence(q, padding_value=pad_val).squeeze()
+                &#47&#47 r = pad_sequence(r, padding_value=pad_val).squeeze()
+
+                &#47&#47 mask = (q != pad_val)
+                &#47&#47 q, r = q * mask.long(), r * mask.long()
+
+                &#47&#47 delta = one_hot(q[1:], self.num_q)
+                &#47&#47 target = r[1:]
+
+                &#47&#47 q = q[:-1]
+                &#47&#47 r = r[:-1]
+                &#47&#47 mask = mask[:-1]
+
+                self.train()
+
+                y = self(q, r)
+
+                opt.zero_grad()
+                loss = torch.masked_select(
+                    binary_cross_entropy((y * d).sum(-1), t.float()), m
+                ).mean()
+                loss.backward()
+                opt.step()
+
+                loss_mean.append(loss.detach().numpy())
+
+            self.eval()
+
+            test_y = (self(test_questions, test_responses) * test_delta)\
+                .sum(-1)
+            test_y<a id="change"> = </a><a id="change">torch.masked_select(</a>test_y, test_masks<a id="change">)</a>.detach()
+
+            fpr, tpr, thresholds = metrics.roc_curve(
+                test_targets.numpy(), test_y.numpy()</code></pre>

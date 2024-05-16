@@ -1,0 +1,22 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                valid_len = valid_len.reshape(-1)
+            &#47&#47 Fill masked elements with a large negative, whose exp is 0
+            X = X.view(-1, shape[-1])
+            <a id="change">for </a>count, <a id="change">row</a> in enumerate(X)<a id="change">:
+                </a>row[<a id="change">int(valid_len[count]):</a>] = -1e6
+            return F.softmax(X.reshape(shape), dim=-1)
+
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            else:
+                valid_len = valid_len.reshape(-1)
+            &#47&#47 Fill masked elements with a large negative, whose exp is 0
+            mask<a id="change"> = </a>torch.zeros_like(X, dtype=torch.bool)
+            <a id="change">for </a>batch_id, <a id="change">cnt</a> in enumerate(valid_len)<a id="change">:
+                </a>mask[batch_id, :, cnt:] = True
+                <a id="change">mask[batch_id, cnt:]</a> = True
+            X_masked = X.masked_fill(mask, -1e32)
+            return nn.functional.softmax(X_masked, dim=-1) * (1 - mask.float())
+</code></pre>

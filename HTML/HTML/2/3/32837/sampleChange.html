@@ -1,0 +1,17 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        self.neg_weight = neg_weight
+
+    def forward(self, label, pos_score, log_pos_prob, neg_score, log_neg_prob):
+        <a id="change">return </a>(1 - pos_score) + \
+            self.neg_weight * torch.sum(torch.relu(neg_score - self.margin), dim=1)
+        </code></pre><h3>After Change</h3><pre><code class='java'>
+        pos_score = torch.sigmoid(pos_score)
+        neg_score = torch.sigmoid(neg_score)
+        neg_score_mean = torch.mean(torch.relu(neg_score - self.margin), dim=-1)  &#47&#47 [B] or [B,N]
+        notpadnum<a id="change"> = </a><a id="change">torch.logical_not(</a>torch.isinf(pos_score)<a id="change">)</a>.float().sum()
+        loss = (1 - pos_score) + self.neg_weight * neg_score_mean
+        loss = torch.nan_to_num(loss, posinf=0.0)
+        return loss.sum() / notpadnum</code></pre>

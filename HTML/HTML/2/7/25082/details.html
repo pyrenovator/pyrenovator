@@ -1,0 +1,176 @@
+<html><h3>Pattern ID :25082
+</h3><img src='76874261.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        step_context=context,
+        running=config.running,
+    )
+    <a id="change">if </a>not service:
+        raise RuntimeError(
+            f"No Seldon prediction service deployed by the "
+            f"{config.step_name} step in the {config.pipeline_name} pipeline "
+            f"is currently running."
+        )
+    if not service.is_running:
+        raise RuntimeError(
+            f"The Seldon prediction service last deployed by the "
+            f"{config.step_name} step in the {config.pipeline_name} pipeline "
+            f"is not currently running."
+        )
+
+    <a id="change">return </a>service
+
+
+def get_data_from_api():</code></pre><h3>After Change</h3><pre><code class='java'>
+) -&gt; SeldonDeploymentService:
+    Get the prediction service started by the deployment pipeline
+
+    model_deployer<a id="change"> = </a><a id="change">SeldonModelDeployer.get_active_model_deployer()</a>
+
+    services = model_deployer.find_model_server(
+        pipeline_name=config.pipeline_name,
+        pipeline_step_name=config.step_name,
+        model_name=config.model_name,
+    )
+    if not services:
+        raise RuntimeError(
+            f"No Seldon Core prediction server deployed by the "
+            f"&quot{config.step_name}&quot step in the &quot{config.pipeline_name}&quot "
+            f"pipeline for the &quot{config.model_name}&quot model is currently "
+            f"running."
+        )
+
+    <a id="change">if </a>not <a id="change">services[0]</a>.is_running:
+        raise RuntimeError(
+            f"The Seldon Core prediction server last deployed by the "
+            f"&quot{config.step_name}&quot step in the &quot{config.pipeline_name}&quot "</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 6</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/maiot-io/zenml/commit/2adffc3846fb90d224c528e2bc1c03afc9771bd0#diff-9a0003867cdbf87ca29012ac95b9e60331020f9713b37bd1d9137e6f7e2742afL181' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 76874261</div><div id='project'> Project Name: maiot-io/zenml</div><div id='commit'> Commit Name: 2adffc3846fb90d224c528e2bc1c03afc9771bd0</div><div id='time'> Time: 2022-04-11</div><div id='author'> Author: stefan@zenml.io</div><div id='file'> File Name: examples/seldon_deployment/pipeline.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: prediction_service_loader(1)</div><div id='n_method'> N Method Name: prediction_service_loader(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples/seldon_deployment/pipeline.py</div><div id='n_file'> N File Name: examples/seldon_deployment/pipeline.py</div><div id='m_start'> M Start Line: 346</div><div id='m_end'> M End Line: 369</div><div id='n_start'> N Start Line: 181</div><div id='n_end'> N End Line: 204</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+def main(epochs: int, lr: float, min_accuracy: float, stop_service: bool):
+    Run the MLflow example pipeline
+
+    <a id="change">if </a>stop_service:
+        service = load_last_service_from_step(
+            pipeline_name="continuous_deployment_pipeline",
+            step_name="model_deployer",
+            running=True,
+        )
+        if service:
+            service.stop(timeout=10)
+        <a id="change">return</a>
+
+    &#47&#47 Initialize a continuous deployment pipeline run
+    deployment = continuous_deployment_pipeline(
+        importer=importer_mnist(),</code></pre><h3>After Change</h3><pre><code class='java'>
+    Run the MLflow example pipeline
+
+    &#47&#47 get the MLflow model deployer stack component
+    mlflow_model_deployer_component<a id="change"> = </a>(
+        <a id="change">MLFlowModelDeployer.get_active_model_deployer()
+    )</a>
+
+    if deploy:
+        &#47&#47 Initialize a continuous deployment pipeline run
+        deployment = continuous_deployment_pipeline(
+            importer=importer_mnist(),
+            normalizer=normalizer(),
+            trainer=tf_trainer(config=TrainerConfig(epochs=epochs, lr=lr)),
+            evaluator=tf_evaluator(),
+            deployment_trigger=deployment_trigger(
+                config=DeploymentTriggerConfig(
+                    min_accuracy=min_accuracy,
+                )
+            ),
+            model_deployer=model_deployer(
+                config=MLFlowDeployerConfig(workers=3, timeout=10)
+            ),
+        )
+
+        deployment.run()
+
+    if predict:
+        &#47&#47 Initialize an inference pipeline run
+        inference = inference_pipeline(
+            dynamic_importer=dynamic_importer(),
+            predict_preprocessor=tf_predict_preprocessor(),
+            prediction_service_loader=prediction_service_loader(
+                MLFlowDeploymentLoaderStepConfig(
+                    pipeline_name="continuous_deployment_pipeline",
+                    pipeline_step_name="mlflow_model_deployer_step",
+                )
+            ),
+            predictor=predictor(),
+        )
+
+        inference.run()
+
+    with global_mlflow_env() as mlflow_env:
+        print(
+            "You can run:\n "
+            f"[italic green]    mlflow ui --backend-store-uri {mlflow_env.tracking_uri}[/italic green]\n"
+            "...to inspect your experiment runs within the MLflow UI.\n"
+            "You can find your runs tracked within the `mlflow_example_pipeline`"
+            "experiment. There you&quotll also be able to compare two or more runs.\n\n"
+        )
+
+    &#47&#47 fetch existing services with same pipeline name, step name and model name
+    existing_services = mlflow_model_deployer_component.find_model_server(
+        pipeline_name="continuous_deployment_pipeline",
+        pipeline_step_name="mlflow_model_deployer_step",
+        model_name="model",
+    )
+
+    if existing_services:
+        service = cast(MLFlowDeploymentService, <a id="change">existing_services[0]</a>)
+        if service.is_running:
+            print(
+                f"The MLflow prediction server is running locally as a daemon "
+                f"process service and accepts inference requests at:\n"
+                f"    {service.prediction_uri}\n"
+                f"To stop the service, run "
+                f"[italic green]`zenml served-models delete "
+                f"{str(service.uuid)}`[/italic green]."
+            )
+        elif <a id="change"></a>service.is_failed:
+            print(
+                f"The MLflow prediction server is in a failed state:\n"
+                f" Last state: &quot{service.status.state.value}&quot\n"</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/maiot-io/zenml/commit/a9b4c19f4f649af40df9ce483d6160c2d128503f#diff-8e54b1492dc2e2d76ad9b2cc76387e7ceec4ed093eddb6d82d88564b4238a5b9L53' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 76874263</div><div id='project'> Project Name: maiot-io/zenml</div><div id='commit'> Commit Name: a9b4c19f4f649af40df9ce483d6160c2d128503f</div><div id='time'> Time: 2022-04-13</div><div id='author'> Author: wjayesh@outlook.com</div><div id='file'> File Name: examples/mlflow_deployment/run.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(5)</div><div id='n_method'> N Method Name: main(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples/mlflow_deployment/run.py</div><div id='n_file'> N File Name: examples/mlflow_deployment/run.py</div><div id='m_start'> M Start Line: 53</div><div id='m_end'> M End Line: 119</div><div id='n_start'> N Start Line: 66</div><div id='n_end'> N End Line: 150</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        step_context=context,
+        running=config.running,
+    )
+    <a id="change">if </a>not service:
+        raise RuntimeError(
+            f"No MLflow prediction service deployed by the "
+            f"{config.step_name} step in the {config.pipeline_name} pipeline "
+            f"is currently running."
+        )
+
+    <a id="change">return </a>service
+
+
+def get_data_from_api():</code></pre><h3>After Change</h3><pre><code class='java'>
+    Get the prediction service started by the deployment pipeline
+
+    &#47&#47 get the MLflow model deployer stack component
+    model_deployer<a id="change"> = </a><a id="change">MLFlowModelDeployer.get_active_model_deployer()</a>
+
+    &#47&#47 fetch existing services with same pipeline name, step name and model name
+    existing_services = model_deployer.find_model_server(
+        pipeline_name=config.pipeline_name,
+        pipeline_step_name=config.pipeline_step_name,
+        model_name=config.model_name,
+        running=config.running,
+    )
+
+    <a id="change">if </a>not existing_services:
+        raise RuntimeError(
+            f"No MLflow prediction service deployed by the "
+            f"{config.pipeline_step_name} step in the {config.pipeline_name} "
+            f"pipeline for the &quot{config.model_name}&quot model is currently "
+            f"running."
+        )
+
+    return <a id="change">existing_services[0]</a>
+
+
+def get_data_from_api():
+    url = (</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/maiot-io/zenml/commit/a9b4c19f4f649af40df9ce483d6160c2d128503f#diff-c32dfd5efc6785063548ef54b5f0fb0eced21e0adc7ef0b66629cea7fb81ff92L150' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 76874264</div><div id='project'> Project Name: maiot-io/zenml</div><div id='commit'> Commit Name: a9b4c19f4f649af40df9ce483d6160c2d128503f</div><div id='time'> Time: 2022-04-13</div><div id='author'> Author: wjayesh@outlook.com</div><div id='file'> File Name: examples/mlflow_deployment/pipeline.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: prediction_service_loader(1)</div><div id='n_method'> N Method Name: prediction_service_loader(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples/mlflow_deployment/pipeline.py</div><div id='n_file'> N File Name: examples/mlflow_deployment/pipeline.py</div><div id='m_start'> M Start Line: 151</div><div id='m_end'> M End Line: 168</div><div id='n_start'> N Start Line: 156</div><div id='n_end'> N End Line: 174</div><BR>

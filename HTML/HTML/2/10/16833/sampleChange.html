@@ -1,0 +1,24 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        zero_point = g.op("Cast", zero_point, to_i=torch.onnx.TensorProtoDataType.UINT8)
+    else:
+        zero_point = g.op("Cast", zero_point, to_i=torch.onnx.TensorProtoDataType.INT8)
+    <a id="change">return </a>g.op(
+        "DequantizeLinear",
+        <a id="change">g.op("QuantizeLinear"</a>, inputs, scale, zero_point<a id="change">, axis_i=axis)</a>,
+        scale, zero_point, axis_i=axis)
+
+@parse_args("v", "v", "v", "i", "i")</code></pre><h3>After Change</h3><pre><code class='java'>
+        zero_point = g.op("Cast", zero_point, to_i=torch.onnx.TensorProtoDataType.UINT8)
+    else:
+        zero_point = g.op("Cast", zero_point, to_i=torch.onnx.TensorProtoDataType.INT8)
+    quantized = <a id="change">g.op("QuantizeLinear"</a>, inputs, scale, zero_point<a id="change">, axis_i=axis)</a>
+    if (quant_min, quant_max) == (0, 127):
+        quantized<a id="change"> = </a>g.op("Clip", quantized, unused(g), g.op("Constant", value_t=torch.tensor(127, dtype=torch.uint8)))
+    <a id="change">return g</a><a id="change">.op("DequantizeLinear"</a>, quantized, scale, zero_point<a id="change">, axis_i=axis)</a>
+
+@parse_args("v", "v", "v", "i", "i")
+def fake_quantize_per_tensor_affine(g, inputs, scale, zero_point, quant_min=-128, quant_max=127):
+    &#47&#47 NOTE: (0, 127) is allowed as special case. PyTorch restricts activations to be in the range (0, 127).</code></pre>

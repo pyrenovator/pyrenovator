@@ -1,0 +1,82 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            steps_completed = epoch * len(train_loader)
+
+            &#47&#47 NEW: Pass op into train() and test().
+            <a id="change">train(</a>args, model, device, train_loader, optimizer, core_context, epoch, <a id="change">op</a><a id="change">)</a>
+            test_loss = test(args, model, device, test_loader, core_context, steps_completed, op)
+
+            scheduler.step()
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        epochs_completed = 0
+    else:
+        with core_context.checkpoint.restore_path(latest_checkpoint) as path:
+            model<a id="change">, epochs_completed</a> = load_state(path, info.trial.trial_id)
+
+    torch.manual_seed(args.seed)
+
+    if use_cuda:
+        device = torch.device("cuda")
+    elif use_mps:
+        device = torch.device("mps")
+    else:
+        device = torch.device("cpu")
+
+    train_kwargs = {"batch_size": args.batch_size}
+    test_kwargs = {"batch_size": args.test_batch_size}
+    if use_cuda:
+        cuda_kwargs = {"num_workers": 1, "pin_memory": True, "shuffle": True}
+        train_kwargs.update(cuda_kwargs)
+        test_kwargs.update(cuda_kwargs)
+
+    transform = transforms.Compose(
+        [transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))]
+    )
+    dataset1 = datasets.MNIST("../data", train=True, download=True, transform=transform)
+    dataset2 = datasets.MNIST("../data", train=False, transform=transform)
+    train_loader = torch.utils.data.DataLoader(dataset1, **train_kwargs)
+    test_loader = torch.utils.data.DataLoader(dataset2, **test_kwargs)
+
+    &#47&#47 NEW: Get hparams chosen for this trial from cluster info object.
+    hparams = info.trial.hparams
+
+    &#47&#47 NEW: Pass relevant hparams to model and optimizer.
+    model = Net(hparams).to(device)
+    optimizer = optim.Adadelta(model.parameters(), lr=hparams["learning_rate"])
+
+    scheduler = StepLR(optimizer, step_size=1, gamma=args.gamma)
+
+    &#47&#47 NEW: Iterate through the core_context.searcher.operations() to decide how long to train for.
+    &#47&#47 Start with the number of epochs completed, in case of pausing and resuming the experiment.
+    epoch_idx = epochs_completed
+    last_checkpoint_batch = None
+
+    for op in core_context.searcher.operations():
+
+        &#47&#47 NEW: Use a while loop for easier accounting of absolute lengths.
+        while epoch_idx &lt; op.length:
+
+            &#47&#47 NEW: Pass op into train() and test().
+            <a id="change">train(</a>args, model, device, train_loader, optimizer, core_context, epoch_idx, <a id="change">op</a><a id="change">)</a>
+            epochs_completed<a id="change"> = </a>epoch_idx + 1
+            steps_completed = epochs_completed * len(train_loader)
+            test_loss = test(args, model, device, test_loader, core_context, steps_completed, op)
+
+            scheduler.step()
+
+            checkpoint_metadata_dict = {
+                "steps_completed": steps_completed,
+            }
+
+            epoch_idx += 1
+
+            with core_context.checkpoint.store_path(checkpoint_metadata_dict) as (path, storage_id):
+                torch.save(model.state_dict(), path / "checkpoint.pt")
+                <a id="change">with path.joinpath("state").open("w"</a><a id="change">) as f:
+                    f.write(f"{epochs_completed},{info.trial.trial_id}"</a><a id="change">)</a>
+
+            if core_context.preempt.should_preempt():
+                return
+</code></pre>

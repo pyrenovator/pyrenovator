@@ -1,0 +1,50 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        obs(weights)
+        qparams = obs.calculate_qparams()
+        &#47&#47 Quantize the weights to 8bits
+        qweight<a id="change"> = </a>torch.quantize_per_channel(weights, qparams[0], qparams[1], axis=0, dtype=torch.quint8)
+        qemb<a id="change"> = </a>nnq.Embedding(num_embeddings=num_embeddings, embedding_dim=embedding_dim)
+        qemb.set_weight(qweight)
+        qemb(indices)
+
+        &#47&#47 Ensure the module has the correct weights
+        <a id="change">self.assertEqual(</a>qweight, qemb.weight()<a id="change">)</a>
+
+        w_packed<a id="change"> = </a>qemb._packed_params._packed_weight
+        module_out = qemb(indices)
+
+        &#47&#47 Call the qembedding operator directly
+        ref = torch.ops.quantized.embedding_byte(w_packed, indices, pruned_weights=False)
+        <a id="change">self.assertEqual(</a>module_out, ref<a id="change">)</a>
+        self.checkEmbeddingSerialization(qemb, num_embeddings, embedding_dim, indices, None, set_qconfig=False, is_emb_bag=False)
+
+
+    @given(</code></pre><h3>After Change</h3><pre><code class='java'>
+        obs(weights)
+        qparams = obs.calculate_qparams()
+
+        dtypes = <a id="change">[</a>torch.quint4x2, torch.quint8<a id="change"></a>]
+        embedding_funcs = [torch.ops.quantized.embedding_4bit, torch.ops.quantized.embedding_byte]
+
+        <a id="change">for </a>dtype, <a id="change">embedding_func</a> in zip(dtypes, embedding_funcs)<a id="change">:
+            &#47&#47 Quantize the weights
+            </a>qweight<a id="change"> = </a>torch.quantize_per_channel(weights, qparams[0], qparams[1], axis=0, dtype=dtype)
+            qemb<a id="change"> = </a>nnq.Embedding(num_embeddings=num_embeddings, embedding_dim=embedding_dim, dtype=dtype)
+            qemb.set_weight(qweight)
+            qemb(indices)
+
+            &#47&#47 Ensure the module has the correct weights
+            <a id="change">self.assertEqual(</a>qweight, qemb.weight()<a id="change">)</a>
+            w_packed<a id="change"> = </a>qemb._packed_params._packed_weight
+            module_out = qemb(indices)
+
+            &#47&#47 Call the bit qembedding operator directly
+            ref = embedding_func(w_packed, indices, pruned_weights=False)
+            <a id="change">self.assertEqual(</a>module_out, ref<a id="change">)</a>
+            self.checkEmbeddingSerialization(qemb, num_embeddings, embedding_dim, indices, None, set_qconfig=False,
+                                             is_emb_bag=False, dtype=dtype)
+
+    @given(</code></pre>

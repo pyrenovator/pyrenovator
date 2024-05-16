@@ -1,0 +1,70 @@
+<html><h3>Pattern ID :25983
+</h3><img src='78474973.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            out = torch.sigmoid(self.lr1 @ self.lr2 + self.init_bias)
+            &#47&#47 TODO: this could be more efficient
+            mask = torch.zeros_like(out)
+            <a id="change">for </a>i, (r, c) in <a id="change">enumerate(</a>self.full_idx<a id="change">):
+                </a>mask[..., r, c] = 1.
+            out = out * mask
+        else:
+            raise RuntimeError</code></pre><h3>After Change</h3><pre><code class='java'>
+            &#47&#47 so we want to instead constrain lr1 and lr2 themselves
+            &#47&#47 lr1: each row needs to sum to 0&lt;=sum(row)&lt;=1. softmax is traditionally overparameterized b/c sums to 1,
+            &#47&#47      but here it is not overparameterized b/c sums to &lt;=1 (`* torch.sigmoid(l1.sum)` part)
+            lr1<a id="change"> = </a><a id="change">torch.zeros(</a>(self.state_rank, self.lr1.shape[-1])<a id="change">, dtype=self.lr1.dtype, device=self.lr1.device)</a>
+            lr1[self.full_states] = sm(self.lr1) * torch.sigmoid(self.lr1.sum(-1, keepdim=True) + self.init_bias / 2)
+            &#47&#47 lr2: each element is 0&lt;=el&lt;=1
+            lr2 = torch.sigmoid(self.lr2 + self.init_bias / 2)
+            &#47&#47 currently not outputting lr1,lr2 separately, as overhead of of extra matmul calls is worse than reduced
+            &#47&#47 theoretical number of ops. but may re-examine in the future.
+            <a id="change">return </a>lr1 @ lr2
+        else:
+            raise RuntimeError
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 5</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/strongio/torchcast/commit/f47fb0ea7f8de78c4034c228363a96dc283c6d75#diff-a2f5a3ada061321f831ac60ebcad98aa787a94e1fbb5d031c635efd269a7d90fL99' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 78474973</div><div id='project'> Project Name: strongio/torchcast</div><div id='commit'> Commit Name: f47fb0ea7f8de78c4034c228363a96dc283c6d75</div><div id='time'> Time: 2021-06-28</div><div id='author'> Author: jacob.dink@strong.io</div><div id='file'> File Name: torchcast/exp_smooth/smoothing_matrix.py</div><div id='m_class'> M Class Name: SmoothingMatrix</div><div id='n_method'> N Class Name: SmoothingMatrix</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: torch.nn.Module</div><div id='n_parent_class'> N Parent Class: torch.nn.Module</div><div id='m_file'> M File Name: torchcast/exp_smooth/smoothing_matrix.py</div><div id='n_file'> N File Name: torchcast/exp_smooth/smoothing_matrix.py</div><div id='m_start'> M Start Line: 107</div><div id='m_end'> M End Line: 124</div><div id='n_start'> N Start Line: 99</div><div id='n_end'> N End Line: 119</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+        count = np.arange(x.shape[0]) + 1
+        self.c_t = torch.zeros_like(self.emb)  &#47&#47 shape=(seq_len, batch_size, day_dim)
+        <a id="change">for </a>i, att_timesteps in <a id="change">enumerate(</a>count<a id="change">):
+            &#47&#47 按时间步迭代，计算每个时间步的经attention的gru输出
+            </a>self.c_t[i] = self.attentionStep(first_h_a, first_h_b, att_timesteps)
+
+        if self.drop &lt; 1.0:
+            self.c_t = self.dropout(self.c_t)</code></pre><h3>After Change</h3><pre><code class='java'>
+        x = self.proj(x)
+        x = self.dropout(x)
+
+        out<a id="change"> = </a><a id="change">torch.zeros(</a>(batch_size, time_steps, self.hidden_dim)<a id="change">)</a>
+
+        for cur_time in range(time_steps):
+            cur_x = x[:, : cur_time + 1, :]
+            out[:, cur_time, :] = self.retain_encoder(cur_x)
+        <a id="change">return </a>out
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/yhzhu99/covid-ehr-benchmarks/commit/b3d4ba85ad8e8cfeb3e45e07e5fadfa3fd4a25fa#diff-77d2a7ae5e3183c97c4a93ec2d675da0a9f18941a477d8d2a5d9e1d496f4b387L63' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 78474975</div><div id='project'> Project Name: yhzhu99/covid-ehr-benchmarks</div><div id='commit'> Commit Name: b3d4ba85ad8e8cfeb3e45e07e5fadfa3fd4a25fa</div><div id='time'> Time: 2022-06-25</div><div id='author'> Author: yhzhu99@gmail.com</div><div id='file'> File Name: app/models/backbones/retain.py</div><div id='m_class'> M Class Name: RETAIN</div><div id='n_method'> N Class Name: RETAIN</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: app/models/backbones/retain.py</div><div id='n_file'> N File Name: app/models/backbones/retain.py</div><div id='m_start'> M Start Line: 64</div><div id='m_end'> M End Line: 83</div><div id='n_start'> N Start Line: 44</div><div id='n_end'> N End Line: 53</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        if self.hparams.use_speedperturb:
+            &#47&#47 Performing speed change (independently on each source)
+            recombine = True
+            <a id="change">for </a>i, target in <a id="change">enumerate(</a>targets<a id="change">):
+                </a>ids, targ, targ_lens = target
+                target[1] = target[1].to(self.device)
+                targ_lens = targ_lens.to(self.device)
+                target[1] = self.hparams.speedperturb(target[1], targ_lens)</code></pre><h3>After Change</h3><pre><code class='java'>
+            &#47&#47 Re-combination
+            if recombine:
+                if self.hparams.use_speedperturb:
+                    targets = <a id="change">torch.zeros(
+                        </a>targets.shape[0],
+                        min_len,
+                        targets.shape[-1]<a id="change">,
+                        device=targets.device,
+                        dtype=torch.float,
+                    )</a>
+                for i, new_target in enumerate(new_targets):
+                    targets[:, :, i] = new_targets[i][:, 0:min_len]
+        mix<a id="change"> = </a>targets.sum(-1)
+        <a id="change">return </a>mix, targets
+
+    def cut_signals(self, mixture, targets):
+        This function selects a random segment of a given length withing the mixture.</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/speechbrain/speechbrain/commit/8534c79a22138d90a7df3b6a93a785806e8c3cfd#diff-fd30eeb0106c30b554c4a7b9cb5d5bc3c272db2f77736588b90268bbbcded896L197' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 78474971</div><div id='project'> Project Name: speechbrain/speechbrain</div><div id='commit'> Commit Name: 8534c79a22138d90a7df3b6a93a785806e8c3cfd</div><div id='time'> Time: 2020-12-11</div><div id='author'> Author: ravanelm@cdr2596.int.cedar.computecanada.ca</div><div id='file'> File Name: recipes/WSJ2Mix/separation/train.py</div><div id='m_class'> M Class Name: Separation</div><div id='n_method'> N Class Name: Separation</div><div id='m_method'> M Method Name: add_speed_perturb(3)</div><div id='n_method'> N Method Name: add_speed_perturb(2)</div><div id='m_parent_class'> M Parent Class: sb.Brain</div><div id='n_parent_class'> N Parent Class: sb.Brain</div><div id='m_file'> M File Name: recipes/WSJ2Mix/separation/train.py</div><div id='n_file'> N File Name: recipes/WSJ2Mix/separation/train.py</div><div id='m_start'> M Start Line: 206</div><div id='m_end'> M End Line: 238</div><div id='n_start'> N Start Line: 198</div><div id='n_end'> N End Line: 245</div><BR>

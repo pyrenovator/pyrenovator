@@ -1,0 +1,52 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        For a single table with multiple shards (i.e CW) these are combined into one table/weight.
+        Used in composability.
+        
+        <a id="change">table_name_to_count = </a><a id="change">self.table_name_to_count.copy()</a>
+        emb_module = self._emb_module
+        &#47&#47 TODO: move logic to FBGEMM to avoid accessing fbgemm internals
+        <a id="change">for </a>t_idx, (rows, dim, location, _) in enumerate(emb_module.embedding_specs)<a id="change">:
+            table_name = </a><a id="change">self._config.embedding_tables[t_idx]</a>.name
+            <a id="change">if table_name not in table_name_to_count</a>:
+                <a id="change">continue</a>
+            table_count<a id="change"> = table_name_to_count</a><a id="change">.pop(table_name</a><a id="change">)</a>
+            if emb_module.weights_precision == SparseType.INT8:
+                dim += emb_module.int8_emb_row_dim_offset
+            &#47&#47 pyre-ignore[29]
+            offset<a id="change"> = </a><a id="change">emb_module.weights_physical_offsets[t_idx]</a>
+            weights: torch.Tensor
+            if location == EmbeddingLocation.DEVICE.value:
+                &#47&#47 pyre-ignore
+                weights = emb_module.weights_dev
+            elif location == EmbeddingLocation.HOST.value:
+                &#47&#47 pyre-ignore
+                weights = emb_module.weights_host
+            else:
+                &#47&#47 pyre-ignore
+                weights = emb_module.weights_uvm
+            weight<a id="change"> = </a><a id="change">TableBatchedEmbeddingSlice(
+                original_tensor=weights,
+                start_offset=offset,
+                end_offset=offset + table_count * rows * dim,
+                num_embeddings=-1,
+                embedding_dim=dim,
+            )</a>
+            &#47&#47 TODO: use InBackwardOptimizer
+            &#47&#47 pyre-ignore
+            weight._overlapped_optimizer = self._optim_per_table[table_name]
+            <a id="change">yield </a>(<a id="change">table_name</a><a id="change">, weight</a>)
+
+
+class BatchedDenseEmbeddingBag(BaseBatchedEmbeddingBag):</code></pre><h3>After Change</h3><pre><code class='java'>
+        For a single table with multiple shards (i.e CW) these are combined into one table/weight.
+        Used in composability.
+        
+        <a id="change">return </a>_named_parameters_by_table_fused(
+            self._emb_module,
+            <a id="change">self.table_name_to_count.copy()</a>,
+            self._config,
+            self._optim_per_table,
+        )</code></pre>

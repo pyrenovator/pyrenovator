@@ -1,0 +1,59 @@
+<html><h3>Pattern ID :37602
+</h3><img src='108138739.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            loss = loss.mean()
+        elif self.contrastive_loss_type == &quotsoftmax&quot:
+            distance_matrix /= self.temperature
+            loss = - <a id="change">F.log_softmax(</a>distance_matrix<a id="change">)</a>.sum()
+        else:
+            raise ValueError(f"Contrastive loss type {self.contrastive_loss_type} not supported")
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            positive_examples_1 = torch.diag(distance_matrix, self.batch_size)
+            positive_examples_2 = torch.diag(distance_matrix, -self.batch_size)
+            positive_examples = torch.cat([positive_examples_1, positive_examples_2], dim=0)
+            mask = <a id="change">(~torch.eye(self.batch_size * 2, self.batch_size * 2, dtype=torch.bool)).to(</a>self.device<a id="change">)</a>
+            numerator = torch.exp(positive_examples)
+            denominator<a id="change"> = </a>(mask * torch.exp(distance_matrix)).sum(dim=1)
+            softmax = numerator / denominator
+            loss<a id="change"> = </a>- torch.log(softmax)
+            loss = loss.mean()
+        else:
+            raise ValueError(f"Contrastive loss type {self.contrastive_loss_type} not supported")</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/aditeyabaral/calbert/commit/b2c6c9c898a60942ede94ec997b82d864b7fdabb#diff-c5d564f2cef1b4ccb616debc061094ec690897fab99bdb0052355dcd83f3ace6L153' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 108138739</div><div id='project'> Project Name: aditeyabaral/calbert</div><div id='commit'> Commit Name: b2c6c9c898a60942ede94ec997b82d864b7fdabb</div><div id='time'> Time: 2022-07-21</div><div id='author'> Author: aditeya.baral@gmail.com</div><div id='file'> File Name: calbert/SiamesePreTrainer.py</div><div id='m_class'> M Class Name: SiamesePreTrainer</div><div id='n_method'> N Class Name: SiamesePreTrainer</div><div id='m_method'> M Method Name: calculate_contrastive_loss(4)</div><div id='n_method'> N Method Name: calculate_contrastive_loss(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: calbert/SiamesePreTrainer.py</div><div id='n_file'> N File Name: calbert/SiamesePreTrainer.py</div><div id='m_start'> M Start Line: 153</div><div id='m_end'> M End Line: 157</div><div id='n_start'> N Start Line: 153</div><div id='n_end'> N End Line: 165</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            mel = batch[2].to(device)
+            mel_len = batch[3].to(device)
+
+            pred = <a id="change">asr_model(mel, mel_len).transpose(0, 1).log_softmax(</a>2<a id="change">)</a>
+
+            loss = ctc_loss(pred, tokens, mel_len, tokens_len)
+
+            optim_asr.zero_grad()</code></pre><h3>After Change</h3><pre><code class='java'>
+    asr_model = Aligner().to(device)
+    optim_asr = Adam(asr_model.parameters(), lr=0.0001)
+
+    tiny_tts<a id="change"> = </a><a id="change">TinyTTS().to(</a>device<a id="change">)</a>
+    optim_tts<a id="change"> = </a>Adam(tiny_tts.parameters(), lr=0.0001)
+
+
+    ctc_loss = CTCLoss(blank=144, zero_infinity=True)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/digitalphonetics/ims-toucan/commit/3dc1bc6ad611223abac5a2933450cc092c7121bc#diff-e6cd1067ba99736a1a1ed0e9527bbcf3f9d49c173bdb1cff665efad02400dde1L23' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 108138759</div><div id='project'> Project Name: digitalphonetics/ims-toucan</div><div id='commit'> Commit Name: 3dc1bc6ad611223abac5a2933450cc092c7121bc</div><div id='time'> Time: 2021-11-21</div><div id='author'> Author: florian.lux@ims.uni-stuttgart.de</div><div id='file'> File Name: TrainingInterfaces/Text_to_Spectrogram/AutoAligner/autoaligner_train_loop.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train_loop(9)</div><div id='n_method'> N Method Name: train_loop(9)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: TrainingInterfaces/Text_to_Spectrogram/AutoAligner/autoaligner_train_loop.py</div><div id='n_file'> N File Name: TrainingInterfaces/Text_to_Spectrogram/AutoAligner/autoaligner_train_loop.py</div><div id='m_start'> M Start Line: 82</div><div id='m_end'> M End Line: 109</div><div id='n_start'> N Start Line: 56</div><div id='n_end'> N End Line: 121</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        out = self.dropout(out)
+
+        y = self.fc(out)
+        score = <a id="change">F.log_softmax(</a>y<a id="change">, dim=2)</a>  &#47&#47 calculate loss by NLLoss
+        &#47&#47 因为是补齐了的，所以需要找到真正的 score
+        loc_len = batch.get_origin_len(&quotcurrent_loc&quot)
+        for i in range(score.shape[0]):</code></pre><h3>After Change</h3><pre><code class='java'>
+        origin_len = batch.get_origin_len(&quotcurrent_loc&quot)
+        final_out_index = torch.tensor(origin_len) - 1
+        final_out_index = final_out_index.reshape(final_out_index.shape[0], 1, -1)
+        final_out_index = <a id="change">final_out_index.repeat(1, 1, self.hidden_size).to(</a>self.device<a id="change">)</a>
+        out<a id="change"> = </a>torch.gather(out, 1, final_out_index).squeeze(1)  &#47&#47 batch_size * hidden_size
+        out = F.selu(out)
+        out = self.dropout(out)
+
+        y = self.fc(out)
+        score<a id="change"> = </a>F.log_softmax(y, dim=1)  &#47&#47 calculate loss by NLLoss
+        return score
+
+    def predict(self, batch):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/libcity/bigscity-libcity/commit/ec61c9cd984d1c86ee715380ed3b65b4222c8d1f#diff-f7e6a5cf5965e29788168874ecb4a6a81ecf849824f4f08f81428bfb514f6906L60' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 108138762</div><div id='project'> Project Name: libcity/bigscity-libcity</div><div id='commit'> Commit Name: ec61c9cd984d1c86ee715380ed3b65b4222c8d1f</div><div id='time'> Time: 2021-05-06</div><div id='author'> Author: 33283819+WenMellors@users.noreply.github.com</div><div id='file'> File Name: trafficdl/model/trajectory_loc_prediction/RNN.py</div><div id='m_class'> M Class Name: RNN</div><div id='n_method'> N Class Name: RNN</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: AbstractModel</div><div id='n_parent_class'> N Parent Class: AbstractModel</div><div id='m_file'> M File Name: trafficdl/model/trajectory_loc_prediction/RNN.py</div><div id='n_file'> N File Name: trafficdl/model/trajectory_loc_prediction/RNN.py</div><div id='m_start'> M Start Line: 87</div><div id='m_end'> M End Line: 97</div><div id='n_start'> N Start Line: 84</div><div id='n_end'> N End Line: 94</div><BR>

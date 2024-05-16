@@ -1,0 +1,65 @@
+<html><h3>Pattern ID :5990
+</h3><img src='20991350.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            (&quotsoftmax1&quot, nn.Softmax())
+        ]))
+
+        self.pool = nn.Sequential(OrderedDict(<a id="change">[</a>(&quotidentitypool&quot, nn.Identity())<a id="change"></a>]))
+
+
+class Trojan_Net_Model(ImageModel):</code></pre><h3>After Change</h3><pre><code class='java'>
+        self.relu4 = nn.ReLU()
+        self.ly4_bn = nn.BatchNorm1d(num_features=8)
+        self.output = nn.Linear(in_features=8, out_features=combination_number + 1)
+        self.softmax1<a id="change"> = </a><a id="change">nn.Softmax()</a>
+
+    def forward(self, inputs):
+        x = self.ly1_bn(self.relu1(self.ly1(inputs)))
+        x = self.ly2_bn(self.relu2(self.ly2(x)))</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/ain-soph/trojanzoo/commit/f0398df1250f8bc1b0536428e7530b3a5213ea03#diff-21d868da400aca306e1a3f5005c0fce9aa363ba44c6a592d01916f1a07879f0eL14' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 20991350</div><div id='project'> Project Name: ain-soph/trojanzoo</div><div id='commit'> Commit Name: f0398df1250f8bc1b0536428e7530b3a5213ea03</div><div id='time'> Time: 2020-08-11</div><div id='author'> Author: zxz147@psu.edu</div><div id='file'> File Name: trojanzoo/model/image/trojan_net_models.py</div><div id='m_class'> M Class Name: _Trojan_Net_Model</div><div id='n_method'> N Class Name: _Trojan_Net_Model</div><div id='m_method'> M Method Name: __init__(2)</div><div id='n_method'> N Method Name: __init__(2)</div><div id='m_parent_class'> M Parent Class: _ImageModel</div><div id='n_parent_class'> N Parent Class: _ImageModel</div><div id='m_file'> M File Name: trojanzoo/model/image/trojan_net_models.py</div><div id='n_file'> N File Name: trojanzoo/model/image/trojan_net_models.py</div><div id='m_start'> M Start Line: 14</div><div id='m_end'> M End Line: 31</div><div id='n_start'> N Start Line: 32</div><div id='n_end'> N End Line: 45</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+        C = torch.nn.Linear(128, 10)
+        models = Models({"G": torch.nn.Identity(), "C": C})
+        optimizers = Optimizers((torch.optim.Adam, <a id="change">{</a>"lr": 0<a id="change">}</a>))
+        adapter = Ignite(Finetuner(models=models, optimizers=optimizers))
+        score, _ = adapter.run(
+            {"train": train_dataset, "target_train": target_train},</code></pre><h3>After Change</h3><pre><code class='java'>
+
+            C = torch.nn.Linear(128, 10)
+            if wrapper_type is IgnitePredsAsFeatures:
+                C = torch.nn.Sequential(C, <a id="change">torch.nn.Softmax(dim=1)</a>)
+            models = Models({"G": C, "C": torch.nn.Identity()})
+            optimizers = Optimizers(
+                {"G": torch.optim.Adam(C.parameters(), lr=0), "C": DoNothingOptimizer()}
+            )
+            adapter = wrapper_type(Classifier(models=models, optimizers=optimizers))
+            score, _ = adapter.run(
+                {"train": train_dataset, "target_train": target_train},
+                validator=SNDValidator(),
+                epoch_length=1,
+            )
+
+            with torch.no_grad():
+                if wrapper_type is Ignite:
+                    logits = C(all_features[2].to(TEST_DEVICE))
+                else:
+                    logits<a id="change"> = </a>C[0](all_features[2].to(TEST_DEVICE))
+
+            correct_score = simple_compute_snd(logits, T=0.05)
+            self.assertTrue(np.isclose(score, correct_score))</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/kevinmusgrave/pytorch-adapt/commit/09cb84d22509276d40eb45781fa51801e4d02617#diff-06fc34810a7dc9c23c5eb4f53b373a906eb20973691b89f510f3712089292264L63' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 20991352</div><div id='project'> Project Name: kevinmusgrave/pytorch-adapt</div><div id='commit'> Commit Name: 09cb84d22509276d40eb45781fa51801e4d02617</div><div id='time'> Time: 2021-10-09</div><div id='author'> Author: tkm45@cornell.edu</div><div id='file'> File Name: tests/validators/test_snd_validator.py</div><div id='m_class'> M Class Name: TestSNDValidator</div><div id='n_method'> N Class Name: TestSNDValidator</div><div id='m_method'> M Method Name: test_snd_validator_with_framework(1)</div><div id='n_method'> N Method Name: test_snd_validator_with_framework(1)</div><div id='m_parent_class'> M Parent Class: unittest.TestCase</div><div id='n_parent_class'> N Parent Class: unittest.TestCase</div><div id='m_file'> M File Name: tests/validators/test_snd_validator.py</div><div id='n_file'> N File Name: tests/validators/test_snd_validator.py</div><div id='m_start'> M Start Line: 64</div><div id='m_end'> M End Line: 93</div><div id='n_start'> N Start Line: 65</div><div id='n_end'> N End Line: 102</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+        self.lagrange_threshold = 10
+        self.penalty_lr = lr
+        self.lamda = Variable(torch.log(torch.exp(torch.Tensor(<a id="change">[</a>5<a id="change"></a>]))-1), requires_grad=True)
+        self.lamda_optimizer = torch.optim.Adam([self.lamda],lr=self.penalty_lr)
+        self.tune_lambda = True if &quotlagrange&quot in self.algo else False
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        self.batch_size = batch_size
+        self.save_freq = save_freq
+        self.polyak = polyak
+        self.softmax<a id="change"> = </a><a id="change">torch.nn.Softmax(dim=1)</a>
+        self.softplus = torch.nn.Softplus(beta=1, threshold=20)
+        self.policy_eval_start=policy_eval_start
+        self._current_epoch=0
+        </code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/hari-sikchi/offline_rl/commit/bf9dfc7b6c75f6f21296e7f7e5190e5abb675603#diff-a198312cfba35007e403a8fa0bfe963689597155e00a327674eb23e7bc6352c4L57' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 20991354</div><div id='project'> Project Name: hari-sikchi/offline_rl</div><div id='commit'> Commit Name: bf9dfc7b6c75f6f21296e7f7e5190e5abb675603</div><div id='time'> Time: 2021-10-04</div><div id='author'> Author: harshitsikchi8@gmail.com</div><div id='file'> File Name: CQL/cql.py</div><div id='m_class'> M Class Name: CQL</div><div id='n_method'> N Class Name: CQL</div><div id='m_method'> M Method Name: __init__(25)</div><div id='n_method'> N Method Name: __init__(23)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: CQL/cql.py</div><div id='n_file'> N File Name: CQL/cql.py</div><div id='m_start'> M Start Line: 195</div><div id='m_end'> M End Line: 228</div><div id='n_start'> N Start Line: 62</div><div id='n_end'> N End Line: 236</div><BR>

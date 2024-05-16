@@ -1,0 +1,32 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    inp_weight, out_weight = feed_forward_features(ctx, ctx.dims.features_per_head, ctx.dims.intermediate_replicated,
+                                                   idx)
+
+    <a id="change">if ctx</a><a id="change">.is_initializing</a>:
+        <a id="change">return </a>inp
+
+    inp = normalize(ctx, inp)
+    mid = <a id="change">dot(</a>inp, inp_weight, <a id="change">-1</a>, <a id="change">0</a>, <a id="change">()</a>, <a id="change">())</a>
+    mid<a id="change"> = </a>lax.psum(mid, ParallelAxes.model)
+    mid = activate(ctx, mid)
+    mid = normalize(ctx, mid)
+    out<a id="change"> = </a><a id="change">dot(</a>mid, out_weight, <a id="change">-1</a>, <a id="change">0</a>, <a id="change">()</a>, <a id="change">()</a><a id="change">)</a>
+    return out
+
+
+def one_hot(inp: jnp.ndarray, size: int) -&gt; jnp.ndarray:</code></pre><h3>After Change</h3><pre><code class='java'>
+    inp_weight, out_weight = feed_forward_features(ctx, ctx.dims.features_per_head, ctx.dims.intermediate_replicated,
+                                                   idx)
+
+    inp<a id="change"> = normalize(ctx</a>, inp, <a id="change">idx</a><a id="change">)</a>
+    mid = mm(ctx, inp, inp_weight)
+    mid = psum(ctx, mid)
+    mid = activate(ctx, mid)
+    mid<a id="change"> = </a><a id="change">normalize(ctx</a>, mid, <a id="change">idx</a><a id="change">)</a>
+    out = mm(ctx, mid, out_weight)
+    return out
+
+</code></pre>

@@ -1,0 +1,81 @@
+<html><h3>Pattern ID :40574
+</h3><img src='114807511.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            Args:
+                input: N x T x D
+        
+        length = <a id="change">input.size(1</a><a id="change">)</a>
+
+        return self.pe[:, :length]
+
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 x = x + self.pe[:x.size(0), :]
+
+        &#47&#47 x is batch, channels, seq_len
+        x = x<a id="change"> + </a>self.pe[:, :, :x.size(2)]
+
+        x = self.dropout(x)
+
+        x<a id="change"> = </a><a id="change">x.permute(0, 2, 1).contiguous()</a>
+
+        return x
+
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/zhongyang-debug/attention-is-all-you-need-in-speech-separation/commit/361486e2e14685189e9a65a81fa779b4728c6e18#diff-7c8acbb8793a584bfe2ae80520bfb2e801e64479bf65e6f723edd575961f9c17L133' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 114807511</div><div id='project'> Project Name: zhongyang-debug/attention-is-all-you-need-in-speech-separation</div><div id='commit'> Commit Name: 361486e2e14685189e9a65a81fa779b4728c6e18</div><div id='time'> Time: 2022-08-16</div><div id='author'> Author: 68770882+Zhongyang-debug@users.noreply.github.com</div><div id='file'> File Name: model/sepformer.py</div><div id='m_class'> M Class Name: Positional_Encoding</div><div id='n_method'> N Class Name: Positional_Encoding</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: model/sepformer.py</div><div id='n_file'> N File Name: model/sepformer.py</div><div id='m_start'> M Start Line: 133</div><div id='m_end'> M End Line: 135</div><div id='n_start'> N Start Line: 143</div><div id='n_end'> N End Line: 155</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+        q = self.proj_q(q).view(-1, q.size(1), self._head_dims)
+        k = self.proj_k(k).view(-1, k.size(1), self._head_dims)
+        v = self.proj_v(v).view(-1, <a id="change">v.size(1</a><a id="change">)</a>, self._head_dims)
+
+        att = torch.bmm(q, k.transpose(1, 2)) / self._h_dims**0.5
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        k = k.transpose(0, 1).contiguous()
+        v = v.transpose(0, 1).contiguous()
+
+        b = q.size(1)<a id="change"> * </a>self._heads
+
+        q = self.q(q).view(-1, b, self._head_dims).transpose(0, 1)
+        k = self.k(k).view(-1, b, self._head_dims).transpose(0, 1)
+        v = self.v(v).view(-1, b, self._head_dims).transpose(0, 1)
+
+        att = torch.bmm(q, k.transpose(1, 2)) / self._h_dims**0.5
+
+        if mask is not None:
+            mask = torch.where(mask &gt; 0, .0, float(&quot-inf&quot))
+            mask = mask.repeat_interleave(self._heads, dim=0)
+            att += mask.unsqueeze(1).expand(-1, att.size(1), -1)
+
+        att = att.softmax(-1)
+
+        if self.dropout is not None:
+            att = self.dropout(att)
+
+        m<a id="change"> = </a><a id="change">torch.bmm(att, v).transpose(0, 1).contiguous()</a>
+        m = self.m(m).view(m.size(0), -1, self._h_dims).transpose(0, 1)
+
+        return m
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/yeliudev/nncore/commit/e58a22da4dce9778c38aae284b0c80d84937b04c#diff-b66764790ba7b310b71bcb990fc01ea802675de40cfbd1e8da361bbc4827b8c3L78' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 114807527</div><div id='project'> Project Name: yeliudev/nncore</div><div id='commit'> Commit Name: e58a22da4dce9778c38aae284b0c80d84937b04c</div><div id='time'> Time: 2021-11-05</div><div id='author'> Author: yeliudev@outlook.com</div><div id='file'> File Name: nncore/nn/blocks/transformer.py</div><div id='m_class'> M Class Name: MultiHeadAttention</div><div id='n_method'> N Class Name: MultiHeadAttention</div><div id='m_method'> M Method Name: forward(5)</div><div id='n_method'> N Method Name: forward(5)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: nncore/nn/blocks/transformer.py</div><div id='n_file'> N File Name: nncore/nn/blocks/transformer.py</div><div id='m_start'> M Start Line: 79</div><div id='m_end'> M End Line: 98</div><div id='n_start'> N Start Line: 79</div><div id='n_end'> N End Line: 105</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        g = weight_grad
+        s = g.shape
+
+        bs = <a id="change">self.state[mod][&quotx&quot].size(0</a><a id="change">)</a>
+
+        if bias_grad is not None:
+            gb = bias_grad.view(-1, 1, 1, 1).expand(-1, -1, s[2], s[3])
+            g = torch.cat([g, gb], dim=1)</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        N = state.x.size(0)
+        g_kfe = self.to_kfe_sua(g, state.kfe_x, state.kfe_gy)  &#47&#47 (out, in + 1, kh, kw)
+        m2 = self.alpha * state.m2 + (<a id="change">1 - self.alpha) * N * </a>(g_kfe.square())  &#47&#47 (out, in + 1, kh, kw)
+        g_nat_kfe = g_kfe / (m2 + self.eps)  &#47&#47 (out, in + 1, kh, kw)
+        g = self.to_kfe_sua(g_nat_kfe, state.kfe_x.t(), state.kfe_gy.t())  &#47&#47 (out, in + 1, kh, kw)
+
+        if gb is not None:
+            gb = g[:, -1, s[2] // 2, s[3] // 2].contiguous()  &#47&#47 (out)
+            g = g[:, :-1]  &#47&#47 (out, in, kh, kw)
+        g<a id="change"> = </a><a id="change">g.contiguous()</a>
+        return g, gb
+
+    def _precond_intra_sua(self, mod: nn.Conv2d, weight_grad: torch.Tensor,
+                           bias_grad: Optional[torch.Tensor]</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/ain-soph/trojanzoo/commit/6c7dbc51bfacdfb1fbe957a3544f7f6d1ae55bb4#diff-60d04c6f7847bd8fc01137e7634942a75744d0f87d0cab4a7f63e78dd3f54c2bL167' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 114807508</div><div id='project'> Project Name: ain-soph/trojanzoo</div><div id='commit'> Commit Name: 6c7dbc51bfacdfb1fbe957a3544f7f6d1ae55bb4</div><div id='time'> Time: 2021-09-24</div><div id='author'> Author: ain-soph@live.com</div><div id='file'> File Name: trojanzoo/utils/fim/ekfac.py</div><div id='m_class'> M Class Name: EKFAC</div><div id='n_method'> N Class Name: EKFAC</div><div id='m_method'> M Method Name: _precond_sua_ra(4)</div><div id='n_method'> N Method Name: _precond_sua_ra(4)</div><div id='m_parent_class'> M Parent Class: BaseKFAC</div><div id='n_parent_class'> N Parent Class: Optimizer</div><div id='m_file'> M File Name: trojanzoo/utils/fim/ekfac.py</div><div id='n_file'> N File Name: trojanzoo/utils/fim/ekfac.py</div><div id='m_start'> M Start Line: 167</div><div id='m_end'> M End Line: 196</div><div id='n_start'> N Start Line: 86</div><div id='n_end'> N End Line: 106</div><BR>

@@ -1,0 +1,93 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    config_name = _store_config(config, config_name)
+
+    if config_dir is not None:
+        config_dir = str(<a id="change">Path(config_dir).absolute()</a>)
+    search_path = create_config_search_path(config_dir)
+
+    hydra = Hydra.create_main_hydra2(task_name=job_name, config_search_path=search_path)</code></pre><h3>After Change</h3><pre><code class='java'>
+    
+
+    &#47&#47 used for check below
+    _num_dataclass_fields<a id="change"> = </a>0
+    if is_dataclass(config):
+        _num_dataclass_fields = len(fields(config))
+
+    &#47&#47 store config in ConfigStore
+    if to_dictconfig and is_dataclass(config):
+        &#47&#47 convert Dataclass to a DictConfig
+        dictconfig = OmegaConf.create(
+            OmegaConf.to_container(OmegaConf.structured(config))
+        )
+        config_name = _store_config(dictconfig, config_name)
+    else:
+        config_name = _store_config(config, config_name)
+
+    &#47&#47 Initializes Hydra and add the config_path to the config search path
+    with initialize(config_path=None, job_name=job_name):
+
+        &#47&#47 taken from hydra.compose with support for MULTIRUN
+        gh = GlobalHydra.instance()
+        assert gh.hydra is not None
+
+        &#47&#47 Load configuration
+        cfg = gh.hydra.compose_config(
+            config_name=config_name,
+            overrides=overrides if overrides is not None else [],
+            run_mode=RunMode.RUN if not multirun else RunMode.MULTIRUN,
+            from_shell=False,
+            with_log_configuration=with_log_configuration,
+        )
+
+        callbacks = Callbacks(cfg)
+        run_start = (
+            callbacks.on_run_start if not multirun else callbacks.on_multirun_start
+        )
+        run_start(config=cfg, config_name=config_name)
+
+        hydra_context = HydraContext(
+            config_loader=gh.config_loader(), callbacks=callbacks
+        )
+
+        if not multirun:
+            job = run_job(
+                hydra_context=hydra_context,
+                task_function=task_function,
+                config=cfg,
+                job_dir_key="hydra.run.dir",
+                job_subdir_key=None,
+                configure_logging=with_log_configuration,
+            )
+            callbacks.on_run_end(config=cfg, config_name=config_name, job_return=job)
+
+            &#47&#47 access the result to trigger an exception in case the job failed.
+            _ = job.return_value
+        else:
+            &#47&#47 Instantiate sweeper without using Hydra&quots Plugin discovery (Zen!)
+            sweeper = instantiate(cfg.hydra.sweeper)
+            assert isinstance(sweeper, Sweeper)
+            sweeper.setup(
+                config=cfg,
+                hydra_context=hydra_context,
+                task_function=task_function,
+            )
+
+            task_overrides = OmegaConf.to_container(
+                cfg.hydra.overrides.task, resolve=False
+            )
+            assert isinstance(task_overrides, list)
+            job = sweeper.sweep(arguments=task_overrides)
+            callbacks.on_multirun_end(config=cfg, config_name=config_name)
+
+    if is_dataclass(config):
+        _num_dataclass_fields_after = len(fields(config))
+        <a id="change">if </a>(
+            _num_dataclass_fields_after == 0
+            and <a id="change">_num_dataclass_fields_after &lt; _num_dataclass_fields</a>
+        ):
+            warnings.warn(
+                "Your dataclass-based config was mutated by this run. If you just executed with a "
+                "`hydra/launcher` that utilizes cloudpickle (e.g., hydra-submitit-launcher), there is a known "</code></pre>

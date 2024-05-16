@@ -1,0 +1,58 @@
+<html><h3>Pattern ID :5722
+</h3><img src='20057137.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            loss = loss.mean()
+        elif self.contrastive_loss_type == &quotsoftmax&quot:
+            distance_matrix /= self.temperature
+            loss = <a id="change">- F.log_softmax(distance_matrix).sum()</a>
+        else:
+            raise ValueError(f"Contrastive loss type {self.contrastive_loss_type} not supported")
+
+        return loss</code></pre><h3>After Change</h3><pre><code class='java'>
+            positive_examples_1 = torch.diag(distance_matrix, self.batch_size)
+            positive_examples_2 = torch.diag(distance_matrix, -self.batch_size)
+            positive_examples = torch.cat([positive_examples_1, positive_examples_2], dim=0)
+            mask = (~<a id="change">torch.eye(</a>self.batch_size * 2, self.batch_size * 2<a id="change">, dtype=torch.bool)</a>).to(self.device)
+            numerator = torch.exp(positive_examples)
+            denominator = (mask<a id="change"> * </a>torch.exp(distance_matrix)).sum(dim=1)
+            softmax = numerator<a id="change"> / </a>denominator
+            loss = - torch.log(softmax)
+            loss<a id="change"> = </a>loss.mean()
+        else:
+            raise ValueError(f"Contrastive loss type {self.contrastive_loss_type} not supported")
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 6</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/aditeyabaral/calbert/commit/b2c6c9c898a60942ede94ec997b82d864b7fdabb#diff-c5d564f2cef1b4ccb616debc061094ec690897fab99bdb0052355dcd83f3ace6L153' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 20057137</div><div id='project'> Project Name: aditeyabaral/calbert</div><div id='commit'> Commit Name: b2c6c9c898a60942ede94ec997b82d864b7fdabb</div><div id='time'> Time: 2022-07-21</div><div id='author'> Author: aditeya.baral@gmail.com</div><div id='file'> File Name: calbert/SiamesePreTrainer.py</div><div id='m_class'> M Class Name: SiamesePreTrainer</div><div id='n_method'> N Class Name: SiamesePreTrainer</div><div id='m_method'> M Method Name: calculate_contrastive_loss(4)</div><div id='n_method'> N Method Name: calculate_contrastive_loss(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: calbert/SiamesePreTrainer.py</div><div id='n_file'> N File Name: calbert/SiamesePreTrainer.py</div><div id='m_start'> M Start Line: 153</div><div id='m_end'> M End Line: 157</div><div id='n_start'> N Start Line: 153</div><div id='n_end'> N End Line: 165</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+  def _softmax(self, x):
+    np.fill_diagonal(x, -np.inf)
+    exp = np.exp(x)
+    return exp<a id="change"> / </a><a id="change">np.sum(</a>exp<a id="change">, axis=1)</a>
+
+  def _pairwise_l2_sq(self, X):
+    return squareform(pdist(X, &quotsqeuclidean&quot))
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    
+    exp = torch.exp(X)
+    &#47&#47 zero out diagonal
+    mask = <a id="change">torch.eye(</a>X.shape[0]<a id="change">, device=self.device)</a>.byte()
+    mask = <a id="change">(~mask)</a>.float()
+    exp<a id="change"> = </a>exp<a id="change"> * </a>mask
+    return exp / exp.sum(dim=1)
+
+  def loss(self, X, y_mask):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/kevinzakka/torchnca/commit/d75c799f6f7d67971f9dc674b20a390607892968#diff-b46cf3cd1147942ab77db5d7e1161ff1d5125e4dab0e7aa13cb519ade667c4c6L53' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 20057171</div><div id='project'> Project Name: kevinzakka/torchnca</div><div id='commit'> Commit Name: d75c799f6f7d67971f9dc674b20a390607892968</div><div id='time'> Time: 2020-01-27</div><div id='author'> Author: kevinarmandzakka@gmail.com</div><div id='file'> File Name: nca.py</div><div id='m_class'> M Class Name: NCA</div><div id='n_method'> N Class Name: NCA</div><div id='m_method'> M Method Name: _softmax(2)</div><div id='n_method'> N Method Name: _softmax(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: nca.py</div><div id='n_file'> N File Name: nca.py</div><div id='m_start'> M Start Line: 54</div><div id='m_end'> M End Line: 56</div><div id='n_start'> N Start Line: 71</div><div id='n_end'> N End Line: 76</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        d1 = torch.sum(A, 0)
+        d1 = 1 / torch.sqrt(d1 + 1e-10)
+        D1 = torch.diag_embed(d1)
+        d2 = <a id="change">torch.sum(</a>A, 1<a id="change">)</a>
+        d2 = 1<a id="change"> / </a>torch.sqrt(d2 + 1e-10)
+        D2 = torch.diag_embed(d2)
+        L = torch.matmul(torch.matmul(D1, A), D2)
+    return L</code></pre><h3>After Change</h3><pre><code class='java'>
+    d = torch.sum(A, 1)
+    d = 1 / torch.sqrt((d + 1e-10))
+    D = torch.diag_embed(d)
+    L = <a id="change">torch.eye(</a>N,N<a id="change">)</a>.cuda()-torch.matmul(torch.matmul(D, A), D)
+    Lnorm<a id="change">=</a>(2<a id="change">*</a>L/lmax)<a id="change">-</a>torch.eye(N,N).cuda()
+    return Lnorm
+
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/xueyunlong12589/dgcnn/commit/89b96e07c348bcd980fa5333702ccab46cc46ccb#diff-09d0cbaf891d623ac245ccf84485a687b554217349ca55557c60b33234b969aeL7' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 20057151</div><div id='project'> Project Name: xueyunlong12589/dgcnn</div><div id='commit'> Commit Name: 89b96e07c348bcd980fa5333702ccab46cc46ccb</div><div id='time'> Time: 2023-05-02</div><div id='author'> Author: 55629956+xueyunlong12589@users.noreply.github.com</div><div id='file'> File Name: utils.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: normalize_A(2)</div><div id='n_method'> N Method Name: normalize_A(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: utils.py</div><div id='n_file'> N File Name: utils.py</div><div id='m_start'> M Start Line: 10</div><div id='m_end'> M End Line: 25</div><div id='n_start'> N Start Line: 9</div><div id='n_end'> N End Line: 17</div><BR>

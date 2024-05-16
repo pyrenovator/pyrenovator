@@ -1,0 +1,51 @@
+<html><h3>Pattern ID :36284
+</h3><img src='102710014.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    if causal and q_start_index &lt; (k_start_index + k_chunk_size - 1):
+        q_range = torch.arange(q_start_index, q_start_index + q_chunk_size, device = device)
+        k_range = torch.arange(k_start_index, k_start_index + k_chunk_size, device = device)
+        causal_mask = rearrange(q_range, &quoti -&gt; i 1&quot) &lt; <a id="change">rearrange(</a>k_range, <a id="change">&quotj -&gt; 1 j&quot</a><a id="change">)</a>
+        weight = weight.masked_fill(causal_mask, mask_value)
+
+    exp_weight = weight.exp()
+    weighted_value = einsum(&quotb h i j, b h j d -&gt; b h i d&quot, exp_weight, v)</code></pre><h3>After Change</h3><pre><code class='java'>
+        weight = weight.masked_fill(~mask, mask_value)
+
+    if causal and q_start_index &lt; (k_start_index + k_chunk_size - 1):
+        causal_mask = <a id="change">torch.ones((q_chunk_size, k_chunk_size), dtype = torch.bool, device = device).triu(</a>q_start_index<a id="change"> - k_start_index + 1</a><a id="change">)</a>
+        weight = weight.masked_fill(causal_mask, mask_value)
+
+    exp_weight = weight.exp()
+    weighted_value = einsum(&quotb h i j, b h j d -&gt; b h i d&quot, exp_weight, v)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 5</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/lucidrains/memory-efficient-attention-pytorch/commit/e4d09988df0bc8bdfc32cfd2d7202d061a640052#diff-da6685a180d8c8c636b32d699e32ddc64180690f91b63dc75a91d3846cb1bb37L68' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 102710014</div><div id='project'> Project Name: lucidrains/memory-efficient-attention-pytorch</div><div id='commit'> Commit Name: e4d09988df0bc8bdfc32cfd2d7202d061a640052</div><div id='time'> Time: 2022-03-22</div><div id='author'> Author: lucidrains@gmail.com</div><div id='file'> File Name: memory_efficient_attention_pytorch/memory_efficient_cosine_sim_attention.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: summarize_qkv_chunk(7)</div><div id='n_method'> N Method Name: summarize_qkv_chunk(7)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: memory_efficient_attention_pytorch/memory_efficient_cosine_sim_attention.py</div><div id='n_file'> N File Name: memory_efficient_attention_pytorch/memory_efficient_cosine_sim_attention.py</div><div id='m_start'> M Start Line: 68</div><div id='m_end'> M End Line: 70</div><div id='n_start'> N Start Line: 68</div><div id='n_end'> N End Line: 68</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        k = self.k_proj(x_kv)
+        v = self.v_proj(x_kv)
+
+        q, k, v = (<a id="change">rearrange(</a>x, <a id="change">"b n (h c) -&gt; (b h) n c"</a><a id="change">, h=self.num_heads)</a> for x in [q, k, v])
+        attn = torch.einsum("b i c, b j c -&gt; b i j", q, k) * self.dp_scale
+
+        if pad_mask is not None:</code></pre><h3>After Change</h3><pre><code class='java'>
+            i = q.shape[2]
+            j = k.shape[2]
+
+            causal_mask = <a id="change">torch.ones((i, j), device=x_q.device, dtype=torch.bool).triu(</a>j<a id="change"> - i + 1</a><a id="change">)</a>
+            attn.masked_fill_(causal_mask, attn_max_neg)
+
+        attn = attn.softmax(dim=-1)
+        attn = self.dropout(attn)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/krasserm/perceiver-io/commit/c2b9af32775fd28f693dd1b572142935efd31b99#diff-866d7079788f8c2d5430c75794ec5cca33c737ad6524b8b4f98feb4650471239L64' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 102710012</div><div id='project'> Project Name: krasserm/perceiver-io</div><div id='commit'> Commit Name: c2b9af32775fd28f693dd1b572142935efd31b99</div><div id='time'> Time: 2022-09-25</div><div id='author'> Author: krasserm@googlemail.com</div><div id='file'> File Name: perceiver/model/core/modules.py</div><div id='m_class'> M Class Name: MultiHeadAttention</div><div id='n_method'> N Class Name: MultiHeadAttention</div><div id='m_method'> M Method Name: forward(6)</div><div id='n_method'> N Method Name: forward(5)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: perceiver/model/core/modules.py</div><div id='n_file'> N File Name: perceiver/model/core/modules.py</div><div id='m_start'> M Start Line: 64</div><div id='m_end'> M End Line: 93</div><div id='n_start'> N Start Line: 75</div><div id='n_end'> N End Line: 120</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    if causal and q_start_index &lt; (k_start_index + k_chunk_size - 1):
+        q_range = torch.arange(q_start_index, q_start_index + q_chunk_size, device = device)
+        k_range = torch.arange(k_start_index, k_start_index + k_chunk_size, device = device)
+        causal_mask = <a id="change">rearrange(</a>q_range, <a id="change">&quoti -&gt; i 1&quot</a><a id="change">)</a> &lt; rearrange(k_range, &quotj -&gt; 1 j&quot)
+        weight = weight.masked_fill(causal_mask, mask_value)
+
+    weight_max = weight.amax(dim = -1, keepdim = True).detach()</code></pre><h3>After Change</h3><pre><code class='java'>
+        weight = weight.masked_fill(~mask, mask_value)
+
+    if causal and q_start_index &lt; (k_start_index + k_chunk_size - 1):
+        causal_mask = <a id="change">torch.ones((q_chunk_size, k_chunk_size), dtype = torch.bool, device = device).triu(</a>q_start_index<a id="change"> - k_start_index + 1</a><a id="change">)</a>
+        weight = weight.masked_fill(causal_mask, mask_value)
+
+    weight_max = weight.amax(dim = -1, keepdim = True).detach()
+    weight = weight - weight_max</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lucidrains/memory-efficient-attention-pytorch/commit/e4d09988df0bc8bdfc32cfd2d7202d061a640052#diff-7de1bf8844a9aafc0b616bb3f7f2bc3701cbdab6390a8d8096e5dfea36da1708L52' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 102710010</div><div id='project'> Project Name: lucidrains/memory-efficient-attention-pytorch</div><div id='commit'> Commit Name: e4d09988df0bc8bdfc32cfd2d7202d061a640052</div><div id='time'> Time: 2022-03-22</div><div id='author'> Author: lucidrains@gmail.com</div><div id='file'> File Name: memory_efficient_attention_pytorch/memory_efficient_attention.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: summarize_qkv_chunk(7)</div><div id='n_method'> N Method Name: summarize_qkv_chunk(7)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: memory_efficient_attention_pytorch/memory_efficient_attention.py</div><div id='n_file'> N File Name: memory_efficient_attention_pytorch/memory_efficient_attention.py</div><div id='m_start'> M Start Line: 67</div><div id='m_end'> M End Line: 69</div><div id='n_start'> N Start Line: 67</div><div id='n_end'> N End Line: 67</div><BR>

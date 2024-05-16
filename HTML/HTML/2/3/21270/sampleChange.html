@@ -1,0 +1,19 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    return self.loaded_keys[buf_index]
+
+  def ast_parse(self, x:Union[GPUBuffer, LazyOp], reduce:Optional[Token]=None) -&gt; Token:
+    if not isinstance(x, LazyOp): return <a id="change">self.load(</a>self.bufs.index(x)<a id="change">)</a>
+    if isinstance(x.op, ReduceOps) and reduce is not None: return reduce
+    values = [self.ast_parse(v, reduce) for v in x.src]
+    code = GPUBuffer.code_for_op[x.op]  &#47&#47 TODO: replace this with a function
+    assert all_same([x.typ for x in values]), f"type mismatch in {values}"</code></pre><h3>After Change</h3><pre><code class='java'>
+    if isinstance(x.op, ReduceOps) and reduce is not None: return reduce
+    values = [self.ast_parse(v, offset, reduce) for v in x.src]
+    code = GPUBuffer.code_for_op[x.op]  &#47&#47 TODO: replace this with a function
+    <a id="change">if </a><a id="change">isinstance(</a>x.op, ReduceOps<a id="change">)</a> and values[0].typ != Types.FLOAT and not self.early_loads_are_non_reduce_float4:
+      self.prekernel.add("float clsum(float4 x) { return x.x + x.y + x.z + x.w; }\n")
+      return Token(code.replace("A", f"clsum({values[0].tok})").replace("acc", f"acc.s{offset}" if self.late_are_float4 else "acc"), Types.FLOAT)
+    assert all_same([x.typ for x in values]), f"type mismatch in {values}"</code></pre>

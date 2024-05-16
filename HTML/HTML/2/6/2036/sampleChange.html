@@ -1,0 +1,67 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                    trainer = Trainer(enable_logging=True, output_path="./output", device=device)
+
+                    start = time.time()
+                    <a id="change">trainer.fit(</a>model<a id="change">,
+                                train_loader=train_loader,
+                                epochs=50,
+                                val_loader=val_loader,
+                                val_metric=val_metric,
+                                show_progress_bar=False)</a>
+                    end = time.time()
+                    print(&quottraining time: &quot, end - start)
+
+                    y_gt, y_prob, y_pred = evaluate(model, test_loader, device)</code></pre><h3>After Change</h3><pre><code class='java'>
+                                break
+                            else:
+                                &#47&#47 split the dataset and create dataloaders
+                                <a id="change">train_loader</a><a id="change">, val_loader, test_loader</a> = \
+                                    split_dataset_and_get_dataloaders(dataset,
+                                                                      split_fn=split_by_patient,
+                                                                      ratio=[0.8, 0.1, 0.1],
+                                                                      collate_fn_dict=collate_fn_dict)
+                                continue
+
+                        end = time.time()
+
+                        print(&quottraining time: &quot, end - start)
+
+                        y_gt, y_prob, y_pred = evaluate(model, test_loader)
+
+                        jaccard, accuracy, f1, prauc = get_metrics_result(mode_, y_gt, y_pred, y_prob)
+
+                        &#47&#47 input leaderboard for each dataset-task-model
+                        dataset_task_model = dataset_task + &quot-&quot + model_name
+                        eval_data_model = [dataset_task_model, jaccard, accuracy, f1, prauc]
+                        eval_data_task.append(eval_data_model)
+
+                else:
+                    device = "cuda:0"
+                    print("current model: " + str(current_model))
+                    model_name = current_model.__name__
+                    model = current_model(
+                        dataset=dataset,
+                        tables=tables_,
+                        target="label",
+                        mode=mode_,
+                    )
+
+                    model.to(device)
+
+                    trainer = Trainer(enable_logging=True, output_path="./output", device=device)
+
+                    start = time.time()
+
+                    &#47&#47 in case there is only one class in the samples, the dataloader should be re-created
+                    while True:
+                        if train_process(trainer, model, train_loader, val_loader, val_metric):
+                            break
+                        else:
+                            &#47&#47 split the dataset and create dataloaders
+                            <a id="change">train_loader</a><a id="change">, val_loader, test_loader</a> = \
+                                split_dataset_and_get_dataloaders(dataset,
+                                                                  split_fn=split_by_patient,
+                                                                  ratio=[0.8, 0.1, 0.1],</code></pre>

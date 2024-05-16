@@ -1,0 +1,145 @@
+<html><h3>Pattern ID :28973
+</h3><img src='85372182.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    val_dataset = ConcatDataset(val_split_list)
+    all_dataset = ConcatDataset([train_dataset, val_dataset])
+
+    dataset_dict<a id="change"> = </a><a id="change">{
+        </a>&quottrain&quot: train_dataset,
+        &quotval&quot: val_dataset,
+        &quotall&quot: all_dataset<a id="change">
+    }</a>
+    return dataset_dict[split], num_classes
+
+
+def split_dataset(dataset, n, seed=0):</code></pre><h3>After Change</h3><pre><code class='java'>
+
+def get_dataset(dataset_name, root, task_list, split=&quottrain&quot, download=True, transform=None, seed=0):
+    assert split in [&quottrain&quot, &quotval&quot, &quottest&quot]
+    <a id="change">if dataset_name in datasets.__dict__</a>:
+        &#47&#47 load datasets from common.vision.datasets
+        &#47&#47 currently only PACS, OfficeHome and DomainNet are supported
+        supported_dataset = [&quotPACS&quot, &quotOfficeHome&quot, &quotDomainNet&quot]
+        assert dataset_name in supported_dataset
+
+        dataset = datasets.__dict__[dataset_name]
+
+        train_split_list = []
+        val_split_list = []
+        test_split_list = []
+        &#47&#47 we follow DomainBed and split each dataset randomly into two parts, with 80% samples and 20% samples
+        &#47&#47 respectively, the former (larger) will be used as training set, and the latter will be used as validation set.
+        split_ratio = 0.8
+        num_classes = 0
+
+        &#47&#47 under domain generalization setting, we use all samples in target domain as test set
+        for task in task_list:
+            if dataset_name == &quotPACS&quot:
+                all_split = dataset(root=root, task=task, split=&quotall&quot, download=download, transform=transform)
+                num_classes = all_split.num_classes
+            elif dataset_name == &quotOfficeHome&quot:
+                all_split = dataset(root=root, task=task, download=download, transform=transform)
+                num_classes = all_split.num_classes
+            elif dataset_name == &quotDomainNet&quot:
+                train_split = dataset(root=root, task=task, split=&quottrain&quot, download=download, transform=transform)
+                test_split = dataset(root=root, task=task, split=&quottest&quot, download=download, transform=transform)
+                num_classes = train_split.num_classes
+                all_split = ConcatDataset([train_split, test_split])
+
+            train_split, val_split = split_dataset(all_split, int(len(all_split) * split_ratio), seed)
+
+            train_split_list.append(train_split)
+            val_split_list.append(val_split)
+            test_split_list.append(all_split)
+
+        train_dataset = ConcatDatasetWithDomainLabel(train_split_list)
+        val_dataset<a id="change"> = </a>ConcatDatasetWithDomainLabel(val_split_list)
+        test_dataset<a id="change"> = </a>ConcatDatasetWithDomainLabel(test_split_list)
+
+        dataset_dict = {
+            &quottrain&quot: train_dataset,
+            &quotval&quot: val_dataset,
+            &quottest&quot: test_dataset
+        }
+        return dataset_dict[split], num_classes
+    else:
+        &#47&#47 load datasets from wilds
+        &#47&#47 currently only iwildcam, camelyon17 and fmow are supported
+        supported_dataset<a id="change"> = [</a>&quotiwildcam&quot, &quotcamelyon17&quot, &quotfmow&quot<a id="change"></a>]
+        <a id="change">assert </a>dataset_name in supported_dataset
+
+        dataset = wilds.get_dataset(dataset_name, root_dir=root, download=True)
+        num_classes = dataset.n_classes</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 9</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/thuml/transfer-learning-library/commit/babf26f7d7a9ee351c2a7f1bb35ae6f9a4e423be#diff-323d1853961b71b4c8510904156e6ccbe1f19b26fa835ced43abbaccfc437b90L55' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 85372182</div><div id='project'> Project Name: thuml/transfer-learning-library</div><div id='commit'> Commit Name: babf26f7d7a9ee351c2a7f1bb35ae6f9a4e423be</div><div id='time'> Time: 2021-08-24</div><div id='author'> Author: chenbx18@mails.tsinghua.edu.cn</div><div id='file'> File Name: examples/domain_generalization/classification/utils.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: get_dataset(7)</div><div id='n_method'> N Method Name: get_dataset(7)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples/domain_generalization/classification/utils.py</div><div id='n_file'> N File Name: examples/domain_generalization/classification/utils.py</div><div id='m_start'> M Start Line: 55</div><div id='m_end'> M End Line: 91</div><div id='n_start'> N Start Line: 107</div><div id='n_end'> N End Line: 165</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            files = []
+            labels = []
+            &#47&#47 for debugging
+            true_labels<a id="change"> = </a><a id="change">[]</a>
+
+            self.conversion_map = []
+            for file_idx, (file, label_idx) in enumerate(data):
+                files.append(file)</code></pre><h3>After Change</h3><pre><code class='java'>
+            ]
+            files, labels = map(list, zip(*data))
+
+        <a id="change">if data_fraction &gt; 0</a>:
+            <a id="change">assert </a>data_fraction &lt; 1, "Only use data_fraction for values smaller than 1."
+
+            if no_labels:
+                labels<a id="change"> = [</a>-1<a id="change"></a>] * len(files)
+            else:
+                labels<a id="change"> = </a>[l for _, l in data]
+
+            from sklearn.model_selection import train_test_split
+
+            files<a id="change">, _, labels, _ = </a>train_test_split(
+                files, labels, train_size=data_fraction, stratify=labels, random_state=42
+            )
+            self.reader = ops.readers.File(</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/vturrisi/contrastive-learning/commit/5a1c1e3e03b99bfedfc219fb6eed2b8661264aa3#diff-81ba21dc69a962eb663dea39a286c39f62d9fa16b21c6471b25eb7a7d42ad291L502' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 85372309</div><div id='project'> Project Name: vturrisi/contrastive-learning</div><div id='commit'> Commit Name: 5a1c1e3e03b99bfedfc219fb6eed2b8661264aa3</div><div id='time'> Time: 2022-04-12</div><div id='author'> Author: vt.turrisi@gmail.com</div><div id='file'> File Name: solo/utils/dali_dataloader.py</div><div id='m_class'> M Class Name: PretrainPipeline</div><div id='n_method'> N Class Name: PretrainPipeline</div><div id='m_method'> M Method Name: __init__(15)</div><div id='n_method'> N Method Name: __init__(14)</div><div id='m_parent_class'> M Parent Class: Pipeline</div><div id='n_parent_class'> N Parent Class: Pipeline</div><div id='m_file'> M File Name: solo/utils/dali_dataloader.py</div><div id='n_file'> N File Name: solo/utils/dali_dataloader.py</div><div id='m_start'> M Start Line: 554</div><div id='m_end'> M End Line: 598</div><div id='n_start'> N Start Line: 540</div><div id='n_end'> N End Line: 633</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        if self.season_dims is not None:
+            if self.season_mode not in [&quotadditive&quot, &quotmultiplicative&quot]:
+                raise NotImplementedError("Seasonality Mode {} not implemented".format(self.season_mode))
+            self.season_params<a id="change"> = </a>nn.ParameterDict(<a id="change">{}</a>)
+            for name, dim in self.season_dims.items():
+                self.season_params[name] = new_param(dims=[dim])
+            &#47&#47 self.season_params_vec = torch.cat([self.season_params[name] for name in self.season_params.keys()])</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        &#47&#47&#47&#47 Covariates
+        self.covariate_names = list(covar_config.keys())
+        <a id="change">if self.covariate_names is not None</a>:
+            <a id="change">assert </a>self.n_lags &gt; 0
+            self.covar_nets<a id="change"> = </a>nn.ModuleDict(<a id="change">{}</a>)
+            for covar in self.covariate_names:
+                &#47&#47 self.covariate_nets[covar] = new_param(dims=[self.n_forecasts, self.n_lags])
+                &#47&#47 self.covariate_nets[covar] = nn.Linear(self.n_lags, self.n_forecasts, bias=False)
+                covar_net<a id="change"> = </a>nn.ModuleList()
+                d_inputs<a id="change"> = </a>self.n_lags
+                for i in range(self.num_hidden_layers):
+                    covar_net.append(nn.Linear(d_inputs, self.d_hidden, bias=True))
+                    d_inputs = d_hidden</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/ourownstory/neural_prophet/commit/ae0ba720f438f8a50ffd5e397e3cde56a91a157b#diff-0de8813491ea3b065d703741fb108bf10c1d8d71d7ea683d07204576625d16b8L37' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 85372300</div><div id='project'> Project Name: ourownstory/neural_prophet</div><div id='commit'> Commit Name: ae0ba720f438f8a50ffd5e397e3cde56a91a157b</div><div id='time'> Time: 2020-06-22</div><div id='author'> Author: oskar.triebe@merantix.com</div><div id='file'> File Name: neuralprophet/time_net.py</div><div id='m_class'> M Class Name: TimeNet</div><div id='n_method'> N Class Name: TimeNet</div><div id='m_method'> M Method Name: __init__(10)</div><div id='n_method'> N Method Name: __init__(9)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: neuralprophet/time_net.py</div><div id='n_file'> N File Name: neuralprophet/time_net.py</div><div id='m_start'> M Start Line: 96</div><div id='m_end'> M End Line: 102</div><div id='n_start'> N Start Line: 46</div><div id='n_end'> N End Line: 138</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+	:return: None
+	
+	if dict_param_name is None:
+		dict_param_name<a id="change"> = </a><a id="change">{}</a>
+	if value_rename is None:
+		value_rename = {}
+	if dataset_name is None:
+		dataset_results = results</code></pre><h3>After Change</h3><pre><code class='java'>
+	
+	nrows = int(np.sqrt(len(columns)))
+	ncols = int(np.ceil(len(columns) / nrows))
+	<a id="change">if fig is None</a>:
+		assert axes is None, "If fig is None, axes must be None"
+		fig, axes_view = plt.subplots(nrows=nrows, ncols=ncols, figsize=(ncols*6, nrows*3))
+	else:
+		assert axes is not None, "If fig is not None, axes must be not None"
+		if isinstance(axes, plt.Axes):
+			axes_view<a id="change"> = [</a>axes<a id="change"></a>]
+		else:
+			axes_view<a id="change"> = </a>axes
+		axes_view<a id="change"> = </a>np.asarray(axes_view)
+		<a id="change">assert </a>axes_view.size == len(columns), "axes must have the same length as columns"
+	axes_view = np.ravel(axes)
+	index = 0
+	for i, col in enumerate(columns):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/neurotorch/neurotorch/commit/d061f9dec404e0ccc63c7b979bfd78742ec1e4b3#diff-740946c744accb55cb6f451c08bc797fd8dc86d1f963f46acd615116b20d7154L365' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 85372170</div><div id='project'> Project Name: neurotorch/neurotorch</div><div id='commit'> Commit Name: d061f9dec404e0ccc63c7b979bfd78742ec1e4b3</div><div id='time'> Time: 2022-08-30</div><div id='author'> Author: 50332514+JeremieGince@users.noreply.github.com</div><div id='file'> File Name: applications/figure_generation_util.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: metric_per_all_variable(0)</div><div id='n_method'> N Method Name: metric_per_all_variable(0)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: applications/figure_generation_util.py</div><div id='n_file'> N File Name: applications/figure_generation_util.py</div><div id='m_start'> M Start Line: 387</div><div id='m_end'> M End Line: 431</div><div id='n_start'> N Start Line: 391</div><div id='n_end'> N End Line: 457</div><BR>

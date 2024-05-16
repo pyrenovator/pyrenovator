@@ -1,0 +1,62 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    losses = AverageMeter(&quotLoss&quot, &quot:3.2f&quot)
+    trans_losses = AverageMeter(&quotTrans Loss&quot, &quot:5.4f&quot)
+    cls_accs = AverageMeter(&quotCls Acc&quot, &quot:3.1f&quot)
+    tgt_accs<a id="change"> = </a><a id="change">AverageMeter(&quotTgt Acc&quot</a>, <a id="change">&quot:3.1f&quot</a><a id="change">)</a>
+
+    progress = ProgressMeter(
+        args.iters_per_epoch,
+        [batch_time, data_time, losses, trans_losses, cls_accs, tgt_accs],
+        prefix="Epoch: [{}]".format(epoch))
+
+    &#47&#47 switch to train mode
+    model.train()
+    jmmd_loss.train()
+
+    end = time.time()
+    for i in range(args.iters_per_epoch):
+        x_s, labels_s = next(train_source_iter)
+        x_t, labels_t = next(train_target_iter)
+
+        x_s = x_s.to(device)
+        x_t = x_t.to(device)
+        labels_s = labels_s.to(device)
+        labels_t<a id="change"> = </a><a id="change">labels_t.to(</a>device<a id="change">)</a>
+
+        &#47&#47 measure data loading time
+        data_time.update(time.time() - end)
+
+        &#47&#47 compute output
+        x = torch.cat((x_s, x_t), dim=0)
+        y, f = model(x)
+        y_s, y_t = y.chunk(2, dim=0)
+        f_s, f_t = f.chunk(2, dim=0)
+
+        cls_loss = F.cross_entropy(y_s, labels_s)
+        transfer_loss = jmmd_loss(
+            (f_s, F.softmax(y_s, dim=1)),
+            (f_t, F.softmax(y_t, dim=1))
+        )
+        loss = cls_loss + transfer_loss * args.trade_off
+
+        cls_acc = accuracy(y_s, labels_s)[0]
+        tgt_acc<a id="change"> = </a><a id="change">accuracy(y_t, labels_t)[0]</a>
+
+        losses.update(loss.item(), x_s.size(0))
+        cls_accs.update(cls_acc.item(), x_s.size(0))
+        <a id="change">tgt_accs.update(tgt_acc.item()</a>, <a id="change">x_t.size(0</a><a id="change">))</a>
+        trans_losses.update(transfer_loss.item(), x_s.size(0))
+
+        &#47&#47 compute gradient and do SGD step
+        optimizer.zero_grad()</code></pre><h3>After Change</h3><pre><code class='java'>
+    end = time.time()
+    for i in range(args.iters_per_epoch):
+        x_s, labels_s = next(train_source_iter)[:2]
+        x_t, = <a id="change">next(train_target_iter)[:1]</a>
+
+        x_s = x_s.to(device)
+        x_t = x_t.to(device)
+        labels_s = labels_s.to(device)</code></pre>

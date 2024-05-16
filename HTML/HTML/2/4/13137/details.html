@@ -1,0 +1,57 @@
+<html><h3>Pattern ID :13137
+</h3><img src='44408964.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    out = fn_input
+    for idx in range(depth):
+        out = _single_calc(out, sequence_input, linear_param[idx])
+    <a id="change">return </a>out
+
+
+def _forward_pass(fn_input: torch.Tensor, sequence_input: torch.Tensor, linear_param0: torch.Tensor,</code></pre><h3>After Change</h3><pre><code class='java'>
+    batch = int(fn_input.size(0))
+    features = int(features_sqrt ** 2)
+    fn_input = fn_input.reshape(batch, features)
+    fn_input = <a id="change">_activate_norm(</a>fn_input<a id="change">)</a>
+    b = torch.mm(fn_input, linear_param_a)
+    c<a id="change"> = </a>torch.mm(sequence_input, linear_param_b)
+    o = _activate_norm(b * c)
+    o = torch.mm(o, linear_param_c)
+    o = o.reshape(batch, features_sqrt, features_sqrt)
+    <a id="change">return </a>o.qr().Q
+
+
+@torch.jit.script</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/homebrewnlp/homebrewnlp/commit/e1b260e4f3e6f7890e180ad3579dc16279f0e115#diff-c98bba8dbdd18eb4e9fa8ae11c28e350c08ee816fce50f9fb86d61cbcd345276L13' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 44408964</div><div id='project'> Project Name: homebrewnlp/homebrewnlp</div><div id='commit'> Commit Name: e1b260e4f3e6f7890e180ad3579dc16279f0e115</div><div id='time'> Time: 2021-08-09</div><div id='author'> Author: 39779310+ClashLuke@users.noreply.github.com</div><div id='file'> File Name: module.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: _calc(5)</div><div id='n_method'> N Method Name: _calc(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: module.py</div><div id='n_file'> N File Name: module.py</div><div id='m_start'> M Start Line: 23</div><div id='m_end'> M End Line: 26</div><div id='n_start'> N Start Line: 13</div><div id='n_end'> N End Line: 24</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+@torch.jit.script
+def feed_forward(inp: torch.Tensor, weight0: torch.Tensor, weight1: torch.Tensor, batch: int) -&gt; torch.Tensor:
+    out = inp.bmm(weight0.expand(batch, -1, -1))
+    out<a id="change"> = </a>_activate_norm(out)
+    <a id="change">return </a>out.bmm(weight1.expand(batch, -1, -1))
+
+
+class FeedForward(torch.jit.ScriptModule):</code></pre><h3>After Change</h3><pre><code class='java'>
+
+@torch.jit.script
+def feed_forward(inp: torch.Tensor, weight0: torch.Tensor, weight1: torch.Tensor, kernel_size: int) -&gt; torch.Tensor:
+    <a id="change">return </a>conv(<a id="change">_activate_norm(</a>conv(inp, weight0, kernel_size)<a id="change">)</a>, weight1, kernel_size)
+
+
+class FeedForward(torch.nn.Module):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/homebrewnlp/homebrewnlp/commit/007c929505d510af1b041da75b1dbfbcdc2f931f#diff-c98bba8dbdd18eb4e9fa8ae11c28e350c08ee816fce50f9fb86d61cbcd345276L202' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 44408960</div><div id='project'> Project Name: homebrewnlp/homebrewnlp</div><div id='commit'> Commit Name: 007c929505d510af1b041da75b1dbfbcdc2f931f</div><div id='time'> Time: 2021-08-27</div><div id='author'> Author: 39779310+ClashLuke@users.noreply.github.com</div><div id='file'> File Name: module.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: feed_forward(4)</div><div id='n_method'> N Method Name: feed_forward(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: module.py</div><div id='n_file'> N File Name: module.py</div><div id='m_start'> M Start Line: 203</div><div id='m_end'> M End Line: 205</div><div id='n_start'> N Start Line: 272</div><div id='n_end'> N End Line: 272</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        batch = inp.size(0)
+        out = inp + pos_embd
+        depthwise = feed_forward(out, self.pre_attn0, self.pre_attn1, batch).cumsum(1) / divisor
+        pointwise<a id="change"> = </a>feed_forward(out, self.pre_ff0, self.pre_ff1, batch)
+        summed = depthwise + pointwise
+        <a id="change">return </a>inp * (1 + summed) + summed
+
+
+class LinearAttention(torch.jit.ScriptModule):</code></pre><h3>After Change</h3><pre><code class='java'>
+    def forward(self, inp: torch.Tensor, pos_embd: torch.Tensor, divisor: torch.Tensor) -&gt; torch.Tensor:
+        out = inp + pos_embd
+        depthwise = self.depth(out).cumsum(1) / divisor
+        <a id="change">return </a><a id="change">_activate_norm(</a>inp * (1 + depthwise + self.point(out)) + self.shift(out)<a id="change">)</a>
+
+
+class LinearAttention(torch.jit.ScriptModule):
+    </code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/homebrewnlp/homebrewnlp/commit/bb1a4b218f5b46d1e95438698674d49d2826664e#diff-c98bba8dbdd18eb4e9fa8ae11c28e350c08ee816fce50f9fb86d61cbcd345276L221' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 44408973</div><div id='project'> Project Name: homebrewnlp/homebrewnlp</div><div id='commit'> Commit Name: bb1a4b218f5b46d1e95438698674d49d2826664e</div><div id='time'> Time: 2021-08-15</div><div id='author'> Author: 39779310+ClashLuke@users.noreply.github.com</div><div id='file'> File Name: module.py</div><div id='m_class'> M Class Name: LinearAttentionCell</div><div id='n_method'> N Class Name: LinearAttentionCell</div><div id='m_method'> M Method Name: forward(4)</div><div id='n_method'> N Method Name: forward(4)</div><div id='m_parent_class'> M Parent Class: torch.jit.ScriptModule</div><div id='n_parent_class'> N Parent Class: torch.jit.ScriptModule</div><div id='m_file'> M File Name: module.py</div><div id='n_file'> N File Name: module.py</div><div id='m_start'> M Start Line: 222</div><div id='m_end'> M End Line: 227</div><div id='n_start'> N Start Line: 232</div><div id='n_end'> N End Line: 234</div><BR>

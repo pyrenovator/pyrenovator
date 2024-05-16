@@ -1,0 +1,90 @@
+<html><h3>Pattern ID :12248
+</h3><img src='41530428.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    ml_runner_with_run_id.container.max_num_gpus = 0
+    ml_runner_with_run_id.container.max_epochs += 10
+    assert ml_runner_with_run_id.checkpoint_handler.trained_weights_path
+    <a id="change">with </a>patch<a id="change">.multiple(ml_runner_with_run_id, run_validation=mock.DEFAULT, run_inference=mock.DEFAULT) as mocks:
+        </a>ml_runner_with_run_id.run()
+        assert mocks["run_validation"].called == run_extra_val_epoch
+        <a id="change">mocks["run_inference"].assert_called_once()</a>
+
+
+def test_model_weights_when_resume_training() -&gt; None:
+    experiment_config = ExperimentConfig(model="HelloWorld")</code></pre><h3>After Change</h3><pre><code class='java'>
+    ml_runner_with_run_id.container.max_epochs += 10
+    assert ml_runner_with_run_id.checkpoint_handler.trained_weights_path
+    mock_trainer = MagicMock()
+    with <a id="change">patch</a>("health_ml.run_ml.create_lightning_trainer", return_value=(mock_trainer, MagicMock())):
+        with patch.object(ml_runner_with_run_id.container, "get_checkpoint_to_test") as mock_get_checkpoint_to_test:
+            with patch.object(ml_runner_with_run_id, "run_inference") as mock_run_inference:
+                with patch.object(ml_runner_with_run_id, "after_ddp_cleanup") as mock_after_ddp_cleanup:
+                    mock_get_checkpoint_to_test.return_value = <a id="change">MagicMock(is_file=MagicMock(return_value=True))</a>
+                    ml_runner_with_run_id.run()
+                    mock_after_ddp_cleanup.assert_called_once()
+                    mock_get_checkpoint_to_test.assert_called_once()
+                    <a id="change">assert </a>mock_trainer.validate.called == run_extra_val_epoch
+                    mock_run_inference.assert_called_once()
+
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 5</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/microsoft/hi-ml/commit/3d632766440a7856712cb0ba40ee6f5cac9fd5c1#diff-3b4894c4afbefd7f97a0680ccef8168f7d8cfd86f194ec05d95db6bec35bc1cdL352' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 41530428</div><div id='project'> Project Name: microsoft/hi-ml</div><div id='commit'> Commit Name: 3d632766440a7856712cb0ba40ee6f5cac9fd5c1</div><div id='time'> Time: 2023-01-18</div><div id='author'> Author: 37396332+kenza-bouzid@users.noreply.github.com</div><div id='file'> File Name: hi-ml/testhiml/testhiml/test_run_ml.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: test_resume_training_from_run_id(2)</div><div id='n_method'> N Method Name: test_resume_training_from_run_id(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: hi-ml/testhiml/testhiml/test_run_ml.py</div><div id='n_file'> N File Name: hi-ml/testhiml/testhiml/test_run_ml.py</div><div id='m_start'> M Start Line: 352</div><div id='m_end'> M End Line: 357</div><div id='n_start'> N Start Line: 414</div><div id='n_end'> N End Line: 426</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                runner.setup()
+                mock_create_trainer.return_value = MagicMock(), MagicMock()
+                runner.init_training()
+                <a id="change">with </a>patch<a id="change">.object(runner, "validate_model_weights") as mock_validate_model_weights:
+                    </a>runner.run_validation()
+                    <a id="change">mock_validate_model_weights.assert_called_once()</a>
+                latest_message = caplog.records[-1].getMessage()
+                assert "Hook `on_run_extra_validation_epoch` is not implemented by lightning module." in latest_message
+
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        runner.checkpoint_handler.additional_training_done()
+        runner.container.outputs_folder.mkdir(parents=True, exist_ok=True)
+        with patch.object(container, "get_data_module"):
+            with <a id="change">patch</a>("health_ml.run_ml.create_lightning_trainer", return_value=(MagicMock(), MagicMock())):
+                with patch.object(runner.container, "get_checkpoint_to_test") as mock_get_checkpoint_to_test:
+                    mock_get_checkpoint_to_test.return_value = <a id="change">MagicMock(is_file=MagicMock(return_value=True))</a>
+                    runner.init_inference()
+                    runner.run_validation()
+                    latest_message = caplog.records[-1].getMessage()
+                    <a id="change">assert </a>"Hook `on_run_extra_validation_epoch` is not implemented" in latest_message
+
+
+def test_run_inference(ml_runner_with_container: MLRunner, regression_datadir: Path) -&gt; None:</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/microsoft/hi-ml/commit/3d632766440a7856712cb0ba40ee6f5cac9fd5c1#diff-3b4894c4afbefd7f97a0680ccef8168f7d8cfd86f194ec05d95db6bec35bc1cdL222' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 41530431</div><div id='project'> Project Name: microsoft/hi-ml</div><div id='commit'> Commit Name: 3d632766440a7856712cb0ba40ee6f5cac9fd5c1</div><div id='time'> Time: 2023-01-18</div><div id='author'> Author: 37396332+kenza-bouzid@users.noreply.github.com</div><div id='file'> File Name: hi-ml/testhiml/testhiml/test_run_ml.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: test_model_extra_val_epoch_missing_hook(1)</div><div id='n_method'> N Method Name: test_model_extra_val_epoch_missing_hook(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: hi-ml/testhiml/testhiml/test_run_ml.py</div><div id='n_file'> N File Name: hi-ml/testhiml/testhiml/test_run_ml.py</div><div id='m_start'> M Start Line: 232</div><div id='m_end'> M End Line: 244</div><div id='n_start'> N Start Line: 303</div><div id='n_end'> N End Line: 316</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    container.run_extra_val_epoch = run_extra_val_epoch
+    runner = MLRunner(experiment_config=experiment_config, container=container)
+
+    <a id="change">with </a>patch<a id="change">.object(container, "get_data_module"):
+        </a>with patch.object(container, "on_run_extra_validation_epoch") as mock_on_run_extra_validation_epoch:
+            with patch("health_ml.run_ml.create_lightning_trainer") as mock_create_trainer:
+                runner.setup()
+                mock_trainer = MagicMock()
+                mock_storing_logger = MagicMock()
+                mock_create_trainer.return_value = mock_trainer, mock_storing_logger
+                runner.init_training()
+
+                assert runner.trainer == mock_trainer
+                assert runner.storing_logger == mock_storing_logger
+
+                mock_trainer.validate = Mock()
+
+                if run_extra_val_epoch:
+                    with patch.object(runner, "validate_model_weights") as mock_validate_model_weights:
+                        runner.run_validation()
+                        <a id="change">mock_validate_model_weights.assert_called_once()</a>
+
+                assert mock_on_run_extra_validation_epoch.called == run_extra_val_epoch
+                assert hasattr(container.model, "on_run_extra_validation_epoch")
+                assert mock_trainer.validate.called == run_extra_val_epoch</code></pre><h3>After Change</h3><pre><code class='java'>
+    ml_runner_with_run_id.init_training()
+    mock_datamodule = MagicMock()
+    with patch("health_ml.run_ml.create_lightning_trainer") as mock_create_trainer:
+        with <a id="change">patch</a>.object(ml_runner_with_run_id.container, "get_data_module", return_value=mock_datamodule):
+            mock_trainer = MagicMock()
+            mock_create_trainer.return_value = mock_trainer, <a id="change">MagicMock()</a>
+            ml_runner_with_run_id.init_inference()
+            <a id="change">assert </a>ml_runner_with_run_id.trainer == mock_trainer
+            mock_trainer.validate = Mock()
+            ml_runner_with_run_id.run_validation()
+            if run_extra_val_epoch or run_inference_only:</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/microsoft/hi-ml/commit/3d632766440a7856712cb0ba40ee6f5cac9fd5c1#diff-3b4894c4afbefd7f97a0680ccef8168f7d8cfd86f194ec05d95db6bec35bc1cdL165' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 41530419</div><div id='project'> Project Name: microsoft/hi-ml</div><div id='commit'> Commit Name: 3d632766440a7856712cb0ba40ee6f5cac9fd5c1</div><div id='time'> Time: 2023-01-18</div><div id='author'> Author: 37396332+kenza-bouzid@users.noreply.github.com</div><div id='file'> File Name: hi-ml/testhiml/testhiml/test_run_ml.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: test_run_validation(4)</div><div id='n_method'> N Method Name: test_run_validation(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: hi-ml/testhiml/testhiml/test_run_ml.py</div><div id='n_file'> N File Name: hi-ml/testhiml/testhiml/test_run_ml.py</div><div id='m_start'> M Start Line: 165</div><div id='m_end'> M End Line: 195</div><div id='n_start'> N Start Line: 270</div><div id='n_end'> N End Line: 292</div><BR>

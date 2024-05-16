@@ -1,0 +1,18 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        xs = []
+        for i, patch_embed in enumerate(self.patch_embed):
+            ss = self.img_size_scaled[i]
+            x_ = torch.nn.functional.interpolate(x, size=ss, mode=&quotbicubic&quot, align_corners=False)<a id="change"> if </a>H != ss[0]<a id="change"> else </a>x
+            tmp = patch_embed(x_)
+            cls_tokens = self.cls_token_0 if i == 0 else self.cls_token_1  &#47&#47 hard-coded for torch jit script
+            cls_tokens = cls_tokens.expand(B, -1, -1)</code></pre><h3>After Change</h3><pre><code class='java'>
+            ss = self.img_size_scaled[i]
+            if H != ss[0] or W != ss[1]:
+                if self.crop_scale and ss[0] &lt;= H and ss[1] &lt;= W:
+                    cu, cl = int(round((H - ss[0]) / 2.)), int(<a id="change">round(</a>(W<a id="change"> - </a>ss[1]) / 2.<a id="change">)</a>)
+                    x_ = x_[:, :, cu:cu + ss[0], cl:cl + ss[1]]
+                else:
+                    x_ = torch.nn.functional.interpolate(x_, size=ss, mode=&quotbicubic&quot, align_corners=False)</code></pre>

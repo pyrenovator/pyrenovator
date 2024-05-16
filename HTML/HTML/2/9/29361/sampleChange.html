@@ -1,0 +1,46 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            &#47&#47 初始化一个用于存放模型翻译结果句子单词的列表
+            translation = []
+            &#47&#47 遍历翻译输出字符的下标（注意：开始符"BOS"的索引0不遍历）
+            <a id="change">for j</a> in <a id="change">range(</a>1, out.size(1)<a id="change">):
+                &#47&#47 获取当前下标的输出字符
+                </a>sym<a id="change"> = </a>data.cn_index_dict[out[0, j].item()]
+                &#47&#47 如果输出字符不为&quotEOS&quot终止符，则添加到当前句子的翻译结果列表
+                if sym != &quotEOS&quot:
+                    translation.append(sym)</code></pre><h3>After Change</h3><pre><code class='java'>
+def evaluate(data, model):
+    在data上用训练好的模型进行预测，打印模型翻译结果
+    sp_chn = chinese_tokenizer_load()
+    trg<a id="change"> = []</a>
+    res = []
+    with torch.no_grad():
+        &#47&#47 在data的英文数据长度上遍历下标
+        for batch in tqdm(data):
+            &#47&#47 待翻译的英文句子
+            en_sent = batch.src_text
+            &#47&#47 对应的中文句子
+            cn_sent = batch.trg_text
+            &#47&#47 打印模型翻译输出的中文句子结果
+            for i in range(len(en_sent)):
+                src = batch.src[i]
+                &#47&#47 增加一维
+                src = src.unsqueeze(0)
+                &#47&#47 设置attention mask
+                src_mask = (src != 0).unsqueeze(-2)
+                &#47&#47 用训练好的模型进行decode预测
+                decode_result = greedy_decode(model, src, src_mask,
+                                              max_len=config.max_len).squeeze().tolist()
+                &#47&#47 模型翻译结果解码
+                translation = sp_chn.decode_ids(decode_result)
+                trg.append(cn_sent[i])
+                res.append(translation)
+                if i == 3:
+                    break
+    res<a id="change"> = </a><a id="change">[</a>res<a id="change"></a>]
+    bleu<a id="change"> = </a>sacrebleu.corpus_bleu(trg, res)
+    return float(bleu.score)
+
+</code></pre>

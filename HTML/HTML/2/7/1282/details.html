@@ -1,0 +1,101 @@
+<html><h3>Pattern ID :1282
+</h3><img src='6328448.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            &#47&#47 get per sample grads with a for loop, running over the input twice
+            expected_grads = []
+            for i in range(batch_size):
+                res = <a id="change">module(input[i].unsqueeze(0)).sum()</a>
+                expected_grads.append(torch.autograd.grad(res, module.parameters(), torch.ones_like(res)))
+            expected_grads = tuple(torch.stack(grad) for grad in zip(*expected_grads))
+        assert [self.assertEqual(actual, 2 * expected) for (actual, expected) in zip(actual_grads, expected_grads)]
+</code></pre><h3>After Change</h3><pre><code class='java'>
+                return self.module(input) + self.module(input)
+
+        batch_size = input.shape[0]
+        diff_input = <a id="change">input.dtype == torch.float or input.dtype == torch.double</a>
+        if diff_input:
+            input.requires_grad_()
+        with freeze_rng_state():
+            &#47&#47 get per sample grads with ExpandedWeights context manager, calling .backward() twice
+            test_module = TestModule(module)
+            actual_res = call_for_per_sample_grads(test_module, batch_size, input).sum()
+            actual_res.backward()
+            actual_grads = []
+            for param in module.parameters():
+                actual_grads.append(param.grad_sample)
+                del param.grad_sample
+            if diff_input:
+                actual_grads.append(input.grad.clone())
+                input.grad = torch.zeros_like(input.grad)
+
+
+            &#47&#47 get per sample grads with a for loop, running over the input twice
+            expected_grads = []
+            for i in range(batch_size):
+                input_slice = input[i]
+                diff_params = module.parameters()
+                <a id="change">if </a>diff_input:
+                    diff_params<a id="change"> = </a>chain(diff_params, (input_slice<a id="change"></a>,))
+                res = module(input_slice.unsqueeze(0)).sum()
+                out_grads = torch.autograd.grad(res, diff_params, torch.ones_like(res), allow_unused=True)
+                expected_grads.append(out_grads)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 7</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/pytorch/pytorch/commit/8b8f3e836b80d9f5f7fc3c865cefdfd9d1dcb0b4#diff-79c838607df182fe7fbd14bb4c3aee276e798cd68fac56931485103c6877fe5cL283' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 6328448</div><div id='project'> Project Name: pytorch/pytorch</div><div id='commit'> Commit Name: 8b8f3e836b80d9f5f7fc3c865cefdfd9d1dcb0b4</div><div id='time'> Time: 2022-03-31</div><div id='author'> Author: samdow@fb.com</div><div id='file'> File Name: test/test_expanded_weights.py</div><div id='m_class'> M Class Name: TestExpandedWeightModule</div><div id='n_method'> N Class Name: TestExpandedWeightModule</div><div id='m_method'> M Method Name: _do_test_multi_input(3)</div><div id='n_method'> N Method Name: _do_test_multi_input(3)</div><div id='m_parent_class'> M Parent Class: TestCase</div><div id='n_parent_class'> N Parent Class: TestCase</div><div id='m_file'> M File Name: test/test_expanded_weights.py</div><div id='n_file'> N File Name: test/test_expanded_weights.py</div><div id='m_start'> M Start Line: 283</div><div id='m_end'> M End Line: 299</div><div id='n_start'> N Start Line: 294</div><div id='n_end'> N End Line: 323</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            expected_res = torch.tensor(0., device=input.device, dtype=torch.double)
+            expected_grads = []
+            for i in range(batch_size):
+                res = <a id="change">module(input[i].unsqueeze(0)).sum()</a>
+                expected_grads.append(torch.autograd.grad(res, module.parameters(), torch.ones_like(res)))
+                expected_res += res
+            expected_grads = tuple(torch.stack(grad) for grad in zip(*expected_grads))
+        self.assertEqual(actual_res, expected_res)</code></pre><h3>After Change</h3><pre><code class='java'>
+class TestExpandedWeightModule(TestCase):
+    def _do_test(self, module, input):
+        batch_size = input.shape[0]
+        diff_input = <a id="change">input.dtype == torch.float or input.dtype == torch.double</a>
+        if diff_input:
+            input.requires_grad_()
+        with freeze_rng_state():
+            &#47&#47 get per sample grads with ExpandedWeights context manager
+            actual_res = call_for_per_sample_grads(module, batch_size, input).sum()
+            actual_res.backward()
+            actual_grads = []
+            for param in module.parameters():
+                actual_grads.append(param.grad_sample)
+                del param.grad_sample
+            if diff_input:
+                actual_grads.append(input.grad.clone())
+                input.grad = torch.zeros_like(input.grad)
+
+            &#47&#47 get per sample grads with a for loop
+            expected_res = torch.tensor(0., device=input.device, dtype=torch.double)
+            expected_grads = []
+            for i in range(batch_size):
+                input_slice = input[i]
+                diff_params = module.parameters()
+                <a id="change">if </a>diff_input:
+                    diff_params<a id="change"> = </a>chain(diff_params, (input_slice<a id="change"></a>,))
+                res = module(input_slice.unsqueeze(0)).sum()
+                out_grads = torch.autograd.grad(res, diff_params, torch.ones_like(res), allow_unused=True)
+                expected_grads.append(out_grads)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/pytorch/pytorch/commit/8b8f3e836b80d9f5f7fc3c865cefdfd9d1dcb0b4#diff-79c838607df182fe7fbd14bb4c3aee276e798cd68fac56931485103c6877fe5cL252' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 6328449</div><div id='project'> Project Name: pytorch/pytorch</div><div id='commit'> Commit Name: 8b8f3e836b80d9f5f7fc3c865cefdfd9d1dcb0b4</div><div id='time'> Time: 2022-03-31</div><div id='author'> Author: samdow@fb.com</div><div id='file'> File Name: test/test_expanded_weights.py</div><div id='m_class'> M Class Name: TestExpandedWeightModule</div><div id='n_method'> N Class Name: TestExpandedWeightModule</div><div id='m_method'> M Method Name: _do_test(3)</div><div id='n_method'> N Method Name: _do_test(3)</div><div id='m_parent_class'> M Parent Class: TestCase</div><div id='n_parent_class'> N Parent Class: TestCase</div><div id='m_file'> M File Name: test/test_expanded_weights.py</div><div id='n_file'> N File Name: test/test_expanded_weights.py</div><div id='m_start'> M Start Line: 265</div><div id='m_end'> M End Line: 268</div><div id='n_start'> N Start Line: 254</div><div id='n_end'> N End Line: 279</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            &#47&#47 restore angle from augmented points
+            delta = points[1] - points[0]
+
+            w = np.sqrt(<a id="change">((points[1] - points[0]) ** 2).sum()</a>)
+            h = np.sqrt(((points[3] - points[0]) ** 2).sum())
+            ct = points.mean(axis=0)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            points = np.array(points).astype(np.float32)
+            cv_ct, cv_wh, cv_angle = cv2.minAreaRect(points)
+
+            <a id="change">if </a><a id="change">cv_wh[0] == 0 or cv_wh[1] == 0</a>:
+                continue
+
+            box = dict(anns[k])
+            box[&quotrbbox&quot] = np.array(
+                [cv_ct[0], cv_ct[1], cv_wh[0], cv_wh[1], cv_angle])
+            cx, cy, w, h, angle = get_annotation_with_angle(box)
+            ct<a id="change"> = </a>np.array((cx<a id="change">, cy</a>))
+
+            cls_id = int(self.cat_mapping[ann[&quotcategory_id&quot]])
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/scheckmedia/centernet-uda/commit/fc74afb36733ef7201421748c4dc4e1a35f939ee#diff-666eaef5e9690ccb0e5866a98cdfbeef0b60cc8f3292d864be5e92692140b9f5L190' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 6328433</div><div id='project'> Project Name: scheckmedia/centernet-uda</div><div id='commit'> Commit Name: fc74afb36733ef7201421748c4dc4e1a35f939ee</div><div id='time'> Time: 2020-10-03</div><div id='author'> Author: tobias.scheck@etit.tu-chemnitz.de</div><div id='file'> File Name: datasets/coco.py</div><div id='m_class'> M Class Name: Dataset</div><div id='n_method'> N Class Name: Dataset</div><div id='m_method'> M Method Name: __get_rotated_coco(4)</div><div id='n_method'> N Method Name: __get_rotated_coco(4)</div><div id='m_parent_class'> M Parent Class: data.Dataset</div><div id='n_parent_class'> N Parent Class: data.Dataset</div><div id='m_file'> M File Name: datasets/coco.py</div><div id='n_file'> N File Name: datasets/coco.py</div><div id='m_start'> M Start Line: 231</div><div id='m_end'> M End Line: 253</div><div id='n_start'> N Start Line: 229</div><div id='n_end'> N End Line: 247</div><BR>

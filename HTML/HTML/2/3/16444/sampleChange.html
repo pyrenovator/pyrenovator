@@ -1,0 +1,19 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    for i in range(n_samples):
+        res.append(simple_returns[i] @ weights[i])  &#47&#47 (horizon, n_assets)x(n_assets)=(horizon,)
+
+    out = <a id="change">torch.stack(</a>res<a id="change">, dim=0)</a>
+
+    if output_type == &quotlog&quot:
+        return simple2log(out)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    weights_ = weights.view(n_samples, 1, n_assets).repeat(1, horizon, 1)  &#47&#47 (n_samples, horizon, n_assets)
+
+    if not rebalance:
+        weights_unscaled = (1 + simple_returns).cumprod(1)[:, :-1, :] * weights_[:, <a id="change">1</a>:, :]
+        weights_[:, 1:, :] = weights_unscaled / weights_unscaled.sum(2, keepdim=True)
+
+    out = (simple_returns * weights_).sum(-1)</code></pre>

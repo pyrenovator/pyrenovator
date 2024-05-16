@@ -1,0 +1,79 @@
+<html><h3>Pattern ID :2508
+</h3><img src='10480190.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    T_tgt_src = T_21[kp_inds]
+    R_tgt_src = T_tgt_src[:, :3, :3]
+    t_tgt_src = T_tgt_src[:, :3, 3].unsqueeze(-1)
+    svd_loss<a id="change">, R_loss, t_loss</a> = SVD_loss(R_tgt_src, R_tgt_src_pred, t_tgt_src, t_tgt_src_pred, config[&quotgpuid&quot])
+    dict_loss = {&quotR_loss&quot: R_loss, &quott_loss&quot: t_loss}
+    return svd_loss, dict_loss
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    R_tgt_src = T_tgt_src[:, :3, :3]
+    t_tgt_src = T_tgt_src[:, :3, 3].unsqueeze(-1)
+    batch_size = R_tgt_src.size(0)
+    identity = <a id="change">torch.eye(3).unsqueeze(0).repeat(batch_size, 1, 1).to(</a>config[&quotgpuid&quot]<a id="change">)</a>
+    loss_fn = torch.nn.L1Loss()
+    R_loss<a id="change"> = </a>loss_fn(torch.matmul(R_tgt_src_pred.transpose(2, 1), R_tgt_src), identity)
+    t_loss = loss_fn(t_tgt_src_pred, t_tgt_src)
+    svd_loss<a id="change"> = </a>t_loss<a id="change"> + </a>alpha * R_loss
+    dict_loss = {&quotR_loss&quot: R_loss, &quott_loss&quot: t_loss}
+    return svd_loss, dict_loss
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 6</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/utiasasrl/hero_radar_odometry/commit/6743b462d049c6197bb526b488f76355d1bba825#diff-398000df2b6d6378b8d9a548745ebe3aaececba8113d07b75eaa56c45c371cbcL4' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 10480190</div><div id='project'> Project Name: utiasasrl/hero_radar_odometry</div><div id='commit'> Commit Name: 6743b462d049c6197bb526b488f76355d1bba825</div><div id='time'> Time: 2021-05-30</div><div id='author'> Author: keenburn2004@gmail.com</div><div id='file'> File Name: utils/losses.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: supervised_loss(5)</div><div id='n_method'> N Method Name: supervised_loss(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: utils/losses.py</div><div id='n_file'> N File Name: utils/losses.py</div><div id='m_start'> M Start Line: 10</div><div id='m_end'> M End Line: 12</div><div id='n_start'> N Start Line: 4</div><div id='n_end'> N End Line: 27</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            z_all = torch.cat([z_i, z_j], 0)
+            z_j = z_j[:num_contexts]
+        else:
+            z_all = torch.cat((z_i<a id="change">, z_j</a>), 0)
+
+        &#47&#47 zi and zj are both matrices of dim (n x c), since they are z vectors of dim c for every element in the batch
+        &#47&#47 This einsum is constructing a vector of size n, where the nth element is a sum over C of the NCth elements</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        &#47&#47 I think if we include z_i here, we should use a mask (as in SymmetricContrastiveLoss) to subtract the column
+        &#47&#47 on which the similarity is calculated with an image itself?
+        mask<a id="change"> = torch.eye(num_contexts).to(</a>self.device<a id="change">)</a>
+
+        &#47&#47 Simplify the code
+        z_all = torch.cat([z_i, z_j], 0)
+        if num_targets &gt; num_contexts:
+            z_j = z_j[:num_contexts]
+
+        &#47&#47 zi and zj are both matrices of dim (n x c), since they are z vectors of dim c for every element in the batch
+        &#47&#47 This einsum is constructing a vector of size n, where the nth element is a sum over C of the NCth elements
+        &#47&#47 That is to say, the nth element is a dot product between the Nth C-dim vector of each matrix
+        sim_ij = torch.einsum(&quotnc,nc-&gt;n&quot, [z_i, z_j]).unsqueeze(-1)  &#47&#47 Nx1
+
+        &#47&#47 Calculate similarity of current batch&quots images and other images.
+        sim_ik = torch.einsum(&quotnc,ck-&gt;nk&quot, [z_i, z_all.T])
+        sim_ik<a id="change"> = </a>sim_ik<a id="change"> - </a>mask  &#47&#47 TODO: Check if the diagonal line are all 1s.
+
+        logits = torch.cat((sim_ij, sim_ik), 1)
+        logits /= self.temp</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/humancompatibleai/eirli/commit/77be42e07c4a5f10559685813b6d0d778577eb1a#diff-094460a9fbb96d5a5e5e0ff351a3d7aaa4cc4fae9d4c22cbb890b6d29832d85eL33' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 10480188</div><div id='project'> Project Name: humancompatibleai/eirli</div><div id='commit'> Commit Name: 77be42e07c4a5f10559685813b6d0d778577eb1a</div><div id='time'> Time: 2020-08-05</div><div id='author'> Author: RPC2@users.noreply.github.com</div><div id='file'> File Name: algos/losses.py</div><div id='m_class'> M Class Name: AsymmetricContrastiveLoss</div><div id='n_method'> N Class Name: AsymmetricContrastiveLoss</div><div id='m_method'> M Method Name: __call__(4)</div><div id='n_method'> N Method Name: __call__(4)</div><div id='m_parent_class'> M Parent Class: RepresentationLoss</div><div id='n_parent_class'> N Parent Class: RepresentationLoss</div><div id='m_file'> M File Name: algos/losses.py</div><div id='n_file'> N File Name: algos/losses.py</div><div id='m_start'> M Start Line: 42</div><div id='m_end'> M End Line: 61</div><div id='n_start'> N Start Line: 46</div><div id='n_end'> N End Line: 65</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            z_all = torch.cat([z_i, z_j], 0)
+            z_j = z_j[:num_contexts]
+        else:
+            z_all = torch.cat((z_i<a id="change">, z_j</a>), 0)
+
+        &#47&#47 zi and zj are both matrices of dim (n x c), since they are z vectors of dim c for every element in the batch
+        &#47&#47 This einsum is constructing a vector of size n, where the nth element is a sum over C of the NCth elements</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        &#47&#47 I think if we include z_i here, we should use a mask (as in SymmetricContrastiveLoss) to subtract the column
+        &#47&#47 on which the similarity is calculated with an image itself?
+        mask<a id="change"> = torch.eye(num_contexts).to(</a>self.device<a id="change">)</a>
+
+        &#47&#47 Simplify the code
+        z_all = torch.cat([z_i, z_j], 0)
+        if num_targets &gt; num_contexts:
+            z_j = z_j[:num_contexts]
+
+        &#47&#47 zi and zj are both matrices of dim (n x c), since they are z vectors of dim c for every element in the batch
+        &#47&#47 This einsum is constructing a vector of size n, where the nth element is a sum over C of the NCth elements
+        &#47&#47 That is to say, the nth element is a dot product between the Nth C-dim vector of each matrix
+        sim_ij = torch.einsum(&quotnc,nc-&gt;n&quot, [z_i, z_j]).unsqueeze(-1)  &#47&#47 Nx1
+
+        &#47&#47 Calculate similarity of current batch&quots images and other images.
+        sim_ik = torch.einsum(&quotnc,ck-&gt;nk&quot, [z_i, z_all.T])
+        sim_ik<a id="change"> = </a>sim_ik<a id="change"> - </a>mask  &#47&#47 TODO: Check if the diagonal line are all 1s.
+
+        logits = torch.cat((sim_ij, sim_ik), 1)
+        logits /= self.temp</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/humancompatibleai/eirli/commit/bf00e1e7db5d222ce7aa4e79f95a499b0c235cfa#diff-094460a9fbb96d5a5e5e0ff351a3d7aaa4cc4fae9d4c22cbb890b6d29832d85eL33' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 10480184</div><div id='project'> Project Name: humancompatibleai/eirli</div><div id='commit'> Commit Name: bf00e1e7db5d222ce7aa4e79f95a499b0c235cfa</div><div id='time'> Time: 2020-08-05</div><div id='author'> Author: RPC2@users.noreply.github.com</div><div id='file'> File Name: algos/losses.py</div><div id='m_class'> M Class Name: AsymmetricContrastiveLoss</div><div id='n_method'> N Class Name: AsymmetricContrastiveLoss</div><div id='m_method'> M Method Name: __call__(4)</div><div id='n_method'> N Method Name: __call__(4)</div><div id='m_parent_class'> M Parent Class: RepresentationLoss</div><div id='n_parent_class'> N Parent Class: RepresentationLoss</div><div id='m_file'> M File Name: algos/losses.py</div><div id='n_file'> N File Name: algos/losses.py</div><div id='m_start'> M Start Line: 42</div><div id='m_end'> M End Line: 61</div><div id='n_start'> N Start Line: 46</div><div id='n_end'> N End Line: 65</div><BR>

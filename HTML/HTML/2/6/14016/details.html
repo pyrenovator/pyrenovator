@@ -1,0 +1,86 @@
+<html><h3>Pattern ID :14016
+</h3><img src='46500420.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    S[:,0,1], S[:,0,2] = -v[:,2],  v[:,1]
+    S[:,1,0], S[:,1,2] =  v[:,2], -v[:,0]
+    S[:,2,0], S[:,2,1] = -v[:,1],  v[:,0]
+    return S.view(<a id="change">shape[:-1]</a>+(3,3))
+
+
+def cumops_(input, dim, ops):</code></pre><h3>After Change</h3><pre><code class='java'>
+    v = input.tensor() if hasattr(input, &quotltype&quot) else input
+    assert v.shape[-1] == 3, "Last dim should be 3"
+    O = torch.zeros(v.shape[:-1], device=v.device, dtype=v.dtype, requires_grad=v.requires_grad)
+    <a id="change">return </a><a id="change">torch.stack(</a>[torch.stack(<a id="change">[      </a>O, -v[:,2],  v[:,1]<a id="change"></a>], dim=-1),
+                        torch.stack([ v[:,2],       O, -v[:,0]], dim=-1),
+                        torch.stack([-v[:,1],  v[:,0],       O], dim=-1)]<a id="change">, dim=-1)</a>
+
+
+def cumops_(input, dim, ops):
+    r&quot&quot&quot</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 5</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/pypose/pypose/commit/b99366ff08a6f114feec3211f2bd893fd6c1824e#diff-83e26a92a31e3e9c3d48db629294d2aaad4d866d65afbd0f364da440c6e4d9aeL34' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 46500420</div><div id='project'> Project Name: pypose/pypose</div><div id='commit'> Commit Name: b99366ff08a6f114feec3211f2bd893fd6c1824e</div><div id='time'> Time: 2022-05-03</div><div id='author'> Author: jeffsan@gmx.com</div><div id='file'> File Name: pypose/lietensor/basics.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: vec2skew(1)</div><div id='n_method'> N Method Name: vec2skew(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: pypose/lietensor/basics.py</div><div id='n_file'> N File Name: pypose/lietensor/basics.py</div><div id='m_start'> M Start Line: 35</div><div id='m_end'> M End Line: 40</div><div id='n_start'> N Start Line: 34</div><div id='n_end'> N End Line: 39</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            &#47&#47 get per-coordinate sum of edges endpoints of each panel
+            &#47&#47 should be close to sum of the equvalent number of pading values (since all of coords are shifted due to normalization\standardization)
+            &#47&#47 (in case of panels, padding for edge coords should be zero, but I&quotm using a more generic solution here JIC)
+            panel_coords_sum = (predicted_panels[el_id][:seq_len, :2] - <a id="change">self.pad_tenzor[:2]</a>).sum(axis=0)
+
+
+        &#47&#47 batch mean of squared norms of per-panel final points:</code></pre><h3>After Change</h3><pre><code class='java'>
+        self.empty_panel_template = self.empty_panel_template.to(predicted_panels.device)
+        self.pad_vector = self.pad_vector.to(predicted_panels.device)
+        
+        chosen_panels = <a id="change">[]</a>
+        &#47&#47 choose the closest version of original panel for each predicted panel
+        with torch.no_grad():
+            for el_id in range(predicted_panels.shape[0]):
+                num_edges = panel_len_from_padded(gt_panels[el_id], empty_template=self.empty_panel_template)
+
+                &#47&#47 all rotations of GT
+                &#47&#47 TODO Faster version? -- I think I already did smth like this somewhere
+                shifted_gt_panel = gt_panels[el_id]
+                min_dist = ((predicted_panels[el_id] - shifted_gt_panel) ** 2).sum()
+                chosen_panel = shifted_gt_panel
+                for i in range(1, num_edges):
+                    shifted_gt_panel = self._rotate_edges(shifted_gt_panel, num_edges)
+                    dist = ((predicted_panels[el_id] - shifted_gt_panel) ** 2).sum()
+                    if dist &lt; min_dist:
+                        min_dist = dist
+                        chosen_panel = shifted_gt_panel
+                        print(min_dist, i)
+
+            &#47&#47 update choice
+            chosen_panels.append(chosen_panel)
+
+        chosen_panels = <a id="change">torch.stack(</a>chosen_panels<a id="change">)</a>.to(predicted_panels.device)
+
+        &#47&#47 batch mean of squared norms of per-panel final points:
+        <a id="change">return </a>nn.functional.mse_loss(predicted_panels, chosen_panels)
+        
+    def _rotate_edges(self, panel, num_edges):
+        </code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/maria-korosteleva/garment-pattern-estimation/commit/d5249e2d1149a36a28f875d31d10930c53b178d0#diff-66aae7ec57f079963bb4847ebb79bfda4004ba832ee23e11911a14908193967cL222' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 46500425</div><div id='project'> Project Name: maria-korosteleva/garment-pattern-estimation</div><div id='commit'> Commit Name: d5249e2d1149a36a28f875d31d10930c53b178d0</div><div id='time'> Time: 2021-04-13</div><div id='author'> Author: mariako@kaist.ac.kr</div><div id='file'> File Name: nn/metrics.py</div><div id='m_class'> M Class Name: PanelShapeOriginAgnosticLoss</div><div id='n_method'> N Class Name: PanelShapeOriginAgnosticLoss</div><div id='m_method'> M Method Name: __call__(3)</div><div id='n_method'> N Method Name: __call__(3)</div><div id='m_parent_class'> M Parent Class: PanelLoopLoss</div><div id='n_parent_class'> N Parent Class: PanelLoopLoss</div><div id='m_file'> M File Name: nn/metrics.py</div><div id='n_file'> N File Name: nn/metrics.py</div><div id='m_start'> M Start Line: 229</div><div id='m_end'> M End Line: 245</div><div id='n_start'> N Start Line: 228</div><div id='n_end'> N End Line: 261</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        if self.training and self.layer_dropout &gt; 0:
+            to_drop = torch.empty(len(self.blocks)).uniform_(0, 1) &lt; self.layer_dropout
+            blocks = [block for block, drop in zip(self.blocks, to_drop) if not drop]
+            blocks = <a id="change">self.blocks[:1]</a> if len(blocks) == 0 else blocks
+
+        block_args = list(map(lambda x: {&quotf_args&quot: x[0], &quotg_args&quot: x[1]}, block_args))
+        return _ReversibleFunction.apply(x, blocks, block_args)</code></pre><h3>After Change</h3><pre><code class='java'>
+        self.blocks = nn.ModuleList([ReversibleBlock(f=f, g=g) for f, g in blocks])
+
+    def forward(self, x, **kwargs):
+        x = torch.cat(<a id="change">[</a>x, x<a id="change"></a>], dim=-1)
+
+        blocks = self.blocks
+        args = route_args(self.args_route, kwargs, len(blocks))
+        args = list(map(lambda x: {&quotf_args&quot: x[0], &quotg_args&quot: x[1]}, args))
+
+        layers_and_args = list(zip(blocks, args))
+
+        if self.training and self.layer_dropout &gt; 0:
+            layers_and_args = layer_drop(layers_and_args, self.layer_dropout)
+            blocks, args = map(lambda ind: list(map(itemgetter(ind), layers_and_args)), (0, 1))
+
+        out =  _ReversibleFunction.apply(x, blocks, args)
+        <a id="change">return </a><a id="change">torch.stack(</a>out.chunk(2, dim=-1)<a id="change">)</a>.sum(dim=0)
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lucidrains/sinkhorn-transformer/commit/d5b9c649e59290b15c15f85d0bb182cb20b699fb#diff-27d52caf7b4f725ff9fe7d9e57172c62a7c8744ebafb23663512e7990a5ed131L132' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 46500411</div><div id='project'> Project Name: lucidrains/sinkhorn-transformer</div><div id='commit'> Commit Name: d5b9c649e59290b15c15f85d0bb182cb20b699fb</div><div id='time'> Time: 2020-04-15</div><div id='author'> Author: lucidrains@gmail.com</div><div id='file'> File Name: sinkhorn_transformer/reversible.py</div><div id='m_class'> M Class Name: ReversibleSequence</div><div id='n_method'> N Class Name: ReversibleSequence</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: sinkhorn_transformer/reversible.py</div><div id='n_file'> N File Name: sinkhorn_transformer/reversible.py</div><div id='m_start'> M Start Line: 133</div><div id='m_end'> M End Line: 142</div><div id='n_start'> N Start Line: 161</div><div id='n_end'> N End Line: 174</div><BR>

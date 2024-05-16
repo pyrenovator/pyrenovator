@@ -1,0 +1,979 @@
+<html><h3>Pattern ID :563
+</h3><img src='2863803.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+def main(args):
+    logger = CompleteLogger(args.log, args.phase)
+    writer<a id="change"> = </a>SummaryWriter(args.log)
+    pprint.pprint(args)
+
+    print("opt_level = {}".format(args.opt_level))
+    print("keep_batchnorm_fp32 = {}".format(args.keep_batchnorm_fp32), type(args.keep_batchnorm_fp32))
+    print("loss_scale = {}".format(args.loss_scale), type(args.loss_scale))
+
+    print("\nCUDNN VERSION: {}\n".format(torch.backends.cudnn.version()))
+
+    cudnn.benchmark = True
+    best_prec1 = 0
+    if args.deterministic:
+        cudnn.benchmark = False
+        cudnn.deterministic = True
+        torch.manual_seed(args.seed)
+        torch.set_printoptions(precision=10)
+
+    args.distributed = False
+    if &quotWORLD_SIZE&quot in os.environ:
+        args.distributed = int(os.environ[&quotWORLD_SIZE&quot]) &gt; 1
+
+    args.gpu = 0
+    args.world_size = 1
+
+    if args.distributed:
+        args.gpu = args.local_rank
+        torch.cuda.set_device(args.gpu)
+        torch.distributed.init_process_group(backend=&quotnccl&quot,
+                                             init_method=&quotenv://&quot)
+        args.world_size = torch.distributed.get_world_size()
+
+    assert torch.backends.cudnn.enabled, "Amp requires cudnn backend to be enabled."
+
+    if args.channels_last:
+        memory_format = torch.channels_last
+    else:
+        memory_format = torch.contiguous_format
+
+    &#47&#47 Data loading code
+    train_transform = utils.get_train_transform(
+        img_size=args.img_size,
+        scale=args.scale,
+        ratio=args.ratio,
+        hflip=args.hflip,
+        vflip=args.vflip,
+        color_jitter=args.color_jitter,
+        auto_augment=args.aa,
+        interpolation=args.interpolation,
+    )
+    val_transform = utils.get_val_transform(
+        img_size=args.img_size,
+        crop_pct=args.crop_pct,
+        interpolation=args.interpolation,
+    )
+    if args.local_rank == 0:
+        print("train_transform: ", train_transform)
+        print("val_transform: ", val_transform)
+
+    train_labeled_dataset, train_unlabeled_dataset, test_datasets, args.num_classes, args.class_names = \
+        utils.get_dataset(args.data, args.data_dir, args.unlabeled_list, args.test_list,
+                          train_transform, val_transform, verbose=args.local_rank == 0)
+
+    &#47&#47 create model
+    if args.local_rank == 0:
+        if not args.scratch:
+            print("=&gt; using pre-trained model &quot{}&quot".format(args.arch))
+        else:
+            print("=&gt; creating model &quot{}&quot".format(args.arch))
+    backbone = utils.get_model(args.arch, pretrain=not args.scratch)
+    pool_layer = nn.Identity() if args.no_pool else None
+    model = Classifier(backbone, args.num_classes, bottleneck_dim=args.bottleneck_dim,
+                       pool_layer=pool_layer, finetune=not args.scratch)
+
+    if args.sync_bn:
+        import apex
+        if args.local_rank == 0:
+            print("using apex synced BN")
+        model = apex.parallel.convert_syncbn_model(model)
+
+    model = model.cuda().to(memory_format=memory_format)
+
+    &#47&#47 Scale learning rate based on global batch size
+    args.lr = args.lr * float(args.batch_size[0] * args.world_size) / 256.
+    optimizer = torch.optim.SGD(
+        model.get_parameters(), args.lr, momentum=args.momentum,
+        weight_decay=args.weight_decay, nesterov=True)
+
+    &#47&#47 Initialize Amp.  Amp accepts either values or strings for the optional override arguments,
+    &#47&#47 for convenient interoperation with argparse.
+    model, optimizer = amp.initialize(model, optimizer,
+                                      opt_level=args.opt_level,
+                                      keep_batchnorm_fp32=args.keep_batchnorm_fp32,
+                                      loss_scale=args.loss_scale
+                                      )
+
+    &#47&#47 Use cosine annealing learning rate strategy
+    lr_scheduler = torch.optim.lr_scheduler.LambdaLR(
+        optimizer,
+        lambda x: max((math.cos(float(x) / args.epochs * math.pi) * 0.5 + 0.5) * args.lr, args.min_lr)
+    )
+
+    &#47&#47 For distributed training, wrap the model with apex.parallel.DistributedDataParallel.
+    &#47&#47 This must be done AFTER the call to amp.initialize.  If model = DDP(model) is called
+    &#47&#47 before model, ... = amp.initialize(model, ...), the call to amp.initialize may alter
+    &#47&#47 the types of model&quots parameters in a way that disrupts or destroys DDP&quots allreduce hooks.
+    if args.distributed:
+        &#47&#47 By default, apex.parallel.DistributedDataParallel overlaps communication with
+        &#47&#47 computation in the backward pass.
+        &#47&#47 model = DDP(model)
+        &#47&#47 delay_allreduce delays all communication to the end of the backward pass.
+        model = DDP(model, delay_allreduce=True)
+
+    &#47&#47 define loss function (criterion)
+    if args.smoothing:
+        criterion = LabelSmoothingCrossEntropy(args.smoothing).cuda()
+    else:
+        criterion = nn.CrossEntropyLoss().cuda()
+
+    &#47&#47 Data loading code
+    train_labeled_sampler = None
+    train_unlabeled_sampler = None
+    if args.distributed:
+        train_labeled_sampler = DistributedSampler(train_labeled_dataset)
+        train_unlabeled_sampler = DistributedSampler(train_unlabeled_dataset)
+
+    train_labeled_loader = DataLoader(
+        train_labeled_dataset, batch_size=args.batch_size[0], shuffle=(train_labeled_sampler is None),
+        num_workers=args.workers, pin_memory=True, sampler=train_labeled_sampler, drop_last=True)
+    train_unlabeled_loader = DataLoader(
+        train_unlabeled_dataset, batch_size=args.batch_size[1], shuffle=(train_unlabeled_sampler is None),
+        num_workers=args.workers, pin_memory=True, sampler=train_unlabeled_sampler, drop_last=True)
+
+    if args.phase == &quottest&quot:
+        &#47&#47 resume from the latest checkpoint
+        checkpoint = torch.load(logger.get_checkpoint_path(&quotbest&quot), map_location=&quotcpu&quot)
+        model.load_state_dict(checkpoint)
+        for n, d in zip(args.test_list, test_datasets):
+            if args.local_rank == 0:
+                print(n)
+            utils.validate(d, model, -1, writer, args)
+        return
+
+    &#47&#47 define loss function
+    jmmd_loss = JointMultipleKernelMaximumMeanDiscrepancy(
+        kernels=(
+            [GaussianKernel(alpha=2 ** k) for k in range(-3, 2)],
+            (GaussianKernel(sigma=0.92, track_running_stats=False),)
+        ),
+        linear=args.linear
+    )
+
+    for epoch in range(args.epochs):
+        if args.distributed:
+            train_labeled_sampler.set_epoch(epoch)
+            train_unlabeled_sampler.set_epoch(epoch)
+
+        lr_scheduler.step(epoch)
+        if args.local_rank == 0:
+            print(lr_scheduler.get_last_lr())
+            writer.add_scalar("train/lr", lr_scheduler.get_last_lr()[-1], epoch)
+        &#47&#47 train for one epoch
+        train(train_labeled_loader, train_unlabeled_loader, model, criterion, jmmd_loss, optimizer, epoch, writer, args)
+
+        &#47&#47 evaluate on validation set
+        for n, d in zip(args.test_list, test_datasets):
+            if args.local_rank == 0:
+                print(n)
+            prec1 = utils.validate(d, model, epoch, writer, args)
+
+        &#47&#47 remember best prec@1 and save checkpoint
+        if args.local_rank == 0:
+            is_best = prec1 &gt; best_prec1
+            best_prec1 = max(prec1, best_prec1)
+            torch.save(model.state_dict(), logger.get_checkpoint_path(&quotlatest&quot))
+            if is_best:
+                shutil.copy(logger.get_checkpoint_path(&quotlatest&quot), logger.get_checkpoint_path(&quotbest&quot))
+
+    logger.close()
+    <a id="change">writer.close()</a>
+
+
+def train(train_labeled_loader, train_unlabeled_loader, model, criterion, jmmd_loss, optimizer, epoch, writer, args):
+    batch_time = AverageMeter(&quotTime&quot, &quot:3.1f&quot)</code></pre><h3>After Change</h3><pre><code class='java'>
+
+def main(args):
+    writer = None
+    <a id="change">if args.local_rank == 0</a>:
+        logger = CompleteLogger(args.log, args.phase)
+        <a id="change">if args.phase == &quottrain&quot</a>:
+            writer<a id="change"> = </a>SummaryWriter(args.log)
+        pprint.pprint(args)
+        print("opt_level = {}".format(args.opt_level))
+        print("keep_batchnorm_fp32 = {}".format(args.keep_batchnorm_fp32), type(args.keep_batchnorm_fp32))</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 5</div><BR><div id='size'>Non-data size: 7</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/thuml/transfer-learning-library/commit/271dad7071425d5ed40ad02fc72cfef11d663dcd#diff-9a376563be9428ec9acb29334cfaba55f5c85f8e4dfb1fee5cd39ba6a8d25cf5L44' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 2863803</div><div id='project'> Project Name: thuml/transfer-learning-library</div><div id='commit'> Commit Name: 271dad7071425d5ed40ad02fc72cfef11d663dcd</div><div id='time'> Time: 2022-07-08</div><div id='author'> Author: 57670068+tsingcbx99@users.noreply.github.com</div><div id='file'> File Name: examples/domain_adaptation/wilds_image_classification/jan.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(1)</div><div id='n_method'> N Method Name: main(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples/domain_adaptation/wilds_image_classification/jan.py</div><div id='n_file'> N File Name: examples/domain_adaptation/wilds_image_classification/jan.py</div><div id='m_start'> M Start Line: 44</div><div id='m_end'> M End Line: 223</div><div id='n_start'> N Start Line: 44</div><div id='n_end'> N End Line: 56</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+def main(args):
+    logger = CompleteLogger(args.log, args.phase)
+    writer<a id="change"> = </a>SummaryWriter(args.log)
+    pprint.pprint(args)
+
+    print("opt_level = {}".format(args.opt_level))
+    print("keep_batchnorm_fp32 = {}".format(args.keep_batchnorm_fp32), type(args.keep_batchnorm_fp32))
+    print("loss_scale = {}".format(args.loss_scale), type(args.loss_scale))
+
+    print("\nCUDNN VERSION: {}\n".format(torch.backends.cudnn.version()))
+
+    cudnn.benchmark = True
+    best_prec1 = 0
+    if args.deterministic:
+        cudnn.benchmark = False
+        cudnn.deterministic = True
+        torch.manual_seed(args.seed)
+        torch.set_printoptions(precision=10)
+
+    args.distributed = False
+    if &quotWORLD_SIZE&quot in os.environ:
+        args.distributed = int(os.environ[&quotWORLD_SIZE&quot]) &gt; 1
+
+    args.gpu = 0
+    args.world_size = 1
+
+    if args.distributed:
+        args.gpu = args.local_rank
+        torch.cuda.set_device(args.gpu)
+        torch.distributed.init_process_group(backend=&quotnccl&quot,
+                                             init_method=&quotenv://&quot)
+        args.world_size = torch.distributed.get_world_size()
+
+    assert torch.backends.cudnn.enabled, "Amp requires cudnn backend to be enabled."
+
+    if args.channels_last:
+        memory_format = torch.channels_last
+    else:
+        memory_format = torch.contiguous_format
+
+    &#47&#47 Data loading code
+    train_transform = utils.get_train_transform(
+        img_size=args.img_size,
+        scale=args.scale,
+        ratio=args.ratio,
+        hflip=args.hflip,
+        vflip=args.vflip,
+        color_jitter=args.color_jitter,
+        auto_augment=args.aa,
+        interpolation=args.interpolation,
+    )
+    val_transform = utils.get_val_transform(
+        img_size=args.img_size,
+        crop_pct=args.crop_pct,
+        interpolation=args.interpolation,
+    )
+    if args.local_rank == 0:
+        print("train_transform: ", train_transform)
+        print("val_transform: ", val_transform)
+
+    train_labeled_dataset, train_unlabeled_dataset, test_datasets, args.num_classes, args.class_names = \
+        utils.get_dataset(args.data, args.data_dir, args.unlabeled_list, args.test_list,
+                          train_transform, val_transform, verbose=args.local_rank == 0)
+
+    &#47&#47 create model
+    if args.local_rank == 0:
+        if not args.scratch:
+            print("=&gt; using pre-trained model &quot{}&quot".format(args.arch))
+        else:
+            print("=&gt; creating model &quot{}&quot".format(args.arch))
+    backbone = utils.get_model(args.arch, pretrain=not args.scratch)
+    pool_layer = nn.Identity() if args.no_pool else None
+    model = Classifier(backbone, args.num_classes, bottleneck_dim=args.bottleneck_dim,
+                       pool_layer=pool_layer, finetune=not args.scratch)
+
+    if args.sync_bn:
+        import apex
+        if args.local_rank == 0:
+            print("using apex synced BN")
+        model = apex.parallel.convert_syncbn_model(model)
+
+    model = model.cuda().to(memory_format=memory_format)
+
+    &#47&#47 Scale learning rate based on global batch size
+    args.lr = args.lr * float(args.batch_size[0] * args.world_size) / 256.
+    optimizer = torch.optim.SGD(
+        model.get_parameters(), args.lr, momentum=args.momentum,
+        weight_decay=args.weight_decay, nesterov=True)
+
+    &#47&#47 Initialize Amp.  Amp accepts either values or strings for the optional override arguments,
+    &#47&#47 for convenient interoperation with argparse.
+    model, optimizer = amp.initialize(model, optimizer,
+                                      opt_level=args.opt_level,
+                                      keep_batchnorm_fp32=args.keep_batchnorm_fp32,
+                                      loss_scale=args.loss_scale
+                                      )
+
+    &#47&#47 Use cosine annealing learning rate strategy
+    lr_scheduler = torch.optim.lr_scheduler.LambdaLR(
+        optimizer,
+        lambda x: max((math.cos(float(x) / args.epochs * math.pi) * 0.5 + 0.5) * args.lr, args.min_lr)
+    )
+
+    &#47&#47 For distributed training, wrap the model with apex.parallel.DistributedDataParallel.
+    &#47&#47 This must be done AFTER the call to amp.initialize.  If model = DDP(model) is called
+    &#47&#47 before model, ... = amp.initialize(model, ...), the call to amp.initialize may alter
+    &#47&#47 the types of model&quots parameters in a way that disrupts or destroys DDP&quots allreduce hooks.
+    if args.distributed:
+        &#47&#47 By default, apex.parallel.DistributedDataParallel overlaps communication with
+        &#47&#47 computation in the backward pass.
+        &#47&#47 model = DDP(model)
+        &#47&#47 delay_allreduce delays all communication to the end of the backward pass.
+        model = DDP(model, delay_allreduce=True)
+
+    &#47&#47 define loss function (criterion)
+    if args.smoothing:
+        criterion = LabelSmoothingCrossEntropy(args.smoothing).cuda()
+    else:
+        criterion = nn.CrossEntropyLoss().cuda()
+
+    &#47&#47 Data loading code
+    train_labeled_sampler = None
+    train_unlabeled_sampler = None
+    if args.distributed:
+        train_labeled_sampler = DistributedSampler(train_labeled_dataset)
+        train_unlabeled_sampler = DistributedSampler(train_unlabeled_dataset)
+
+    train_labeled_loader = DataLoader(
+        train_labeled_dataset, batch_size=args.batch_size[0], shuffle=(train_labeled_sampler is None),
+        num_workers=args.workers, pin_memory=True, sampler=train_labeled_sampler, drop_last=True)
+    train_unlabeled_loader = DataLoader(
+        train_unlabeled_dataset, batch_size=args.batch_size[1], shuffle=(train_unlabeled_sampler is None),
+        num_workers=args.workers, pin_memory=True, sampler=train_unlabeled_sampler, drop_last=True)
+
+    if args.phase == &quottest&quot:
+        &#47&#47 resume from the latest checkpoint
+        checkpoint = torch.load(logger.get_checkpoint_path(&quotbest&quot), map_location=&quotcpu&quot)
+        model.load_state_dict(checkpoint)
+        for n, d in zip(args.test_list, test_datasets):
+            if args.local_rank == 0:
+                print(n)
+            utils.validate(d, model, -1, writer, args)
+        return
+
+    &#47&#47 define loss function
+    mkmmd_loss = MultipleKernelMaximumMeanDiscrepancy(
+        kernels=[GaussianKernel(alpha=2 ** k) for k in range(-3, 2)],
+        linear=not args.non_linear
+    )
+
+    for epoch in range(args.epochs):
+        if args.distributed:
+            train_labeled_sampler.set_epoch(epoch)
+            train_unlabeled_sampler.set_epoch(epoch)
+
+        lr_scheduler.step(epoch)
+        print(lr_scheduler.get_last_lr())
+        writer.add_scalar("train/lr", lr_scheduler.get_last_lr()[-1], epoch)
+        &#47&#47 train for one epoch
+        train(train_labeled_loader, train_unlabeled_loader, model, criterion, mkmmd_loss, optimizer, epoch, writer,
+              args)
+
+        &#47&#47 evaluate on validation set
+        for n, d in zip(args.test_list, test_datasets):
+            if args.local_rank == 0:
+                print(n)
+            prec1 = utils.validate(d, model, epoch, writer, args)
+
+        &#47&#47 remember best prec@1 and save checkpoint
+        if args.local_rank == 0:
+            is_best = prec1 &gt; best_prec1
+            best_prec1 = max(prec1, best_prec1)
+            torch.save(model.state_dict(), logger.get_checkpoint_path(&quotlatest&quot))
+            if is_best:
+                shutil.copy(logger.get_checkpoint_path(&quotlatest&quot), logger.get_checkpoint_path(&quotbest&quot))
+
+    logger.close()
+    <a id="change">writer.close()</a>
+
+
+def train(train_labeled_loader, train_unlabeled_loader, model, criterion, mkmmd_loss, optimizer, epoch, writer, args):
+    batch_time = AverageMeter(&quotTime&quot, &quot:3.1f&quot)</code></pre><h3>After Change</h3><pre><code class='java'>
+
+def main(args):
+    writer = None
+    <a id="change">if args.local_rank == 0</a>:
+        logger = CompleteLogger(args.log, args.phase)
+        <a id="change">if args.phase == &quottrain&quot</a>:
+            writer<a id="change"> = </a>SummaryWriter(args.log)
+        pprint.pprint(args)
+        print("opt_level = {}".format(args.opt_level))
+        print("keep_batchnorm_fp32 = {}".format(args.keep_batchnorm_fp32), type(args.keep_batchnorm_fp32))</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/thuml/transfer-learning-library/commit/271dad7071425d5ed40ad02fc72cfef11d663dcd#diff-d84654d33d2d2d3e36a224bf1325d9cd26bf81713d812f1e1ca19f7fd98dbf69L42' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 2863802</div><div id='project'> Project Name: thuml/transfer-learning-library</div><div id='commit'> Commit Name: 271dad7071425d5ed40ad02fc72cfef11d663dcd</div><div id='time'> Time: 2022-07-08</div><div id='author'> Author: 57670068+tsingcbx99@users.noreply.github.com</div><div id='file'> File Name: examples/domain_adaptation/wilds_image_classification/dan.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(1)</div><div id='n_method'> N Method Name: main(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples/domain_adaptation/wilds_image_classification/dan.py</div><div id='n_file'> N File Name: examples/domain_adaptation/wilds_image_classification/dan.py</div><div id='m_start'> M Start Line: 43</div><div id='m_end'> M End Line: 219</div><div id='n_start'> N Start Line: 43</div><div id='n_end'> N End Line: 55</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+def main(args):
+    logger = CompleteLogger(args.log, args.phase)
+    writer<a id="change"> = </a>SummaryWriter(args.log)
+    pprint.pprint(args)
+
+    print("opt_level = {}".format(args.opt_level))
+    print("keep_batchnorm_fp32 = {}".format(args.keep_batchnorm_fp32), type(args.keep_batchnorm_fp32))
+    print("loss_scale = {}".format(args.loss_scale), type(args.loss_scale))
+
+    print("\nCUDNN VERSION: {}\n".format(torch.backends.cudnn.version()))
+
+    cudnn.benchmark = True
+    best_prec1 = 0
+    if args.deterministic:
+        cudnn.benchmark = False
+        cudnn.deterministic = True
+        torch.manual_seed(args.seed)
+        torch.set_printoptions(precision=10)
+
+    args.distributed = False
+    if &quotWORLD_SIZE&quot in os.environ:
+        args.distributed = int(os.environ[&quotWORLD_SIZE&quot]) &gt; 1
+
+    args.gpu = 0
+    args.world_size = 1
+
+    if args.distributed:
+        args.gpu = args.local_rank
+        torch.cuda.set_device(args.gpu)
+        torch.distributed.init_process_group(backend=&quotnccl&quot,
+                                             init_method=&quotenv://&quot)
+        args.world_size = torch.distributed.get_world_size()
+
+    assert torch.backends.cudnn.enabled, "Amp requires cudnn backend to be enabled."
+
+    if args.channels_last:
+        memory_format = torch.channels_last
+    else:
+        memory_format = torch.contiguous_format
+
+    &#47&#47 Data loading code
+    train_transform = utils.get_train_transform(
+        img_size=args.img_size,
+        scale=args.scale,
+        ratio=args.ratio,
+        hflip=args.hflip,
+        vflip=args.vflip,
+        color_jitter=args.color_jitter,
+        auto_augment=args.aa,
+        interpolation=args.interpolation,
+    )
+    val_transform = utils.get_val_transform(
+        img_size=args.img_size,
+        crop_pct=args.crop_pct,
+        interpolation=args.interpolation,
+    )
+    if args.local_rank == 0:
+        print("train_transform: ", train_transform)
+        print("val_transform: ", val_transform)
+
+    train_labeled_dataset, train_unlabeled_dataset, test_datasets, args.num_classes, args.class_names = \
+        utils.get_dataset(args.data, args.data_dir, args.unlabeled_list, args.test_list,
+                          train_transform, val_transform, verbose=args.local_rank == 0)
+
+    &#47&#47 create model
+    if args.local_rank == 0:
+        if not args.scratch:
+            print("=&gt; using pre-trained model &quot{}&quot".format(args.arch))
+        else:
+            print("=&gt; creating model &quot{}&quot".format(args.arch))
+    backbone = utils.get_model(args.arch, pretrain=not args.scratch)
+    pool_layer = nn.Identity() if args.no_pool else None
+    model = Classifier(backbone, args.num_classes, bottleneck_dim=args.bottleneck_dim,
+                       pool_layer=pool_layer, finetune=not args.scratch)
+    features_dim = model.features_dim
+
+    if args.randomized:
+        domain_discri = DomainDiscriminator(args.randomized_dim, hidden_size=1024, sigmoid=False)
+    else:
+        domain_discri = DomainDiscriminator(features_dim * args.num_classes, hidden_size=1024, sigmoid=False)
+
+    if args.sync_bn:
+        import apex
+        if args.local_rank == 0:
+            print("using apex synced BN")
+        model = apex.parallel.convert_syncbn_model(model)
+
+    model = model.cuda().to(memory_format=memory_format)
+    domain_discri = domain_discri.cuda().to(memory_format=memory_format)
+
+    &#47&#47 Scale learning rate based on global batch size
+    args.lr = args.lr * float(args.batch_size[0] * args.world_size) / 256.
+    optimizer = torch.optim.SGD(
+        model.get_parameters() + domain_discri.get_parameters(), args.lr, momentum=args.momentum,
+        weight_decay=args.weight_decay, nesterov=True)
+
+    &#47&#47 Initialize Amp.  Amp accepts either values or strings for the optional override arguments,
+    &#47&#47 for convenient interoperation with argparse.
+    (model, domain_discri), optimizer = amp.initialize([model, domain_discri], optimizer,
+                                                       opt_level=args.opt_level,
+                                                       keep_batchnorm_fp32=args.keep_batchnorm_fp32,
+                                                       loss_scale=args.loss_scale
+                                                       )
+
+    &#47&#47 Use cosine annealing learning rate strategy
+    lr_scheduler = torch.optim.lr_scheduler.LambdaLR(
+        optimizer,
+        lambda x: max((math.cos(float(x) / args.epochs * math.pi) * 0.5 + 0.5) * args.lr, args.min_lr)
+    )
+
+    &#47&#47 define loss function
+    domain_adv = ConditionalDomainAdversarialLoss(
+        domain_discri, num_classes=args.num_classes, features_dim=features_dim, randomized=args.randomized,
+        randomized_dim=args.randomized_dim, sigmoid=False
+    )
+
+    &#47&#47 For distributed training, wrap the model with apex.parallel.DistributedDataParallel.
+    &#47&#47 This must be done AFTER the call to amp.initialize.  If model = DDP(model) is called
+    &#47&#47 before model, ... = amp.initialize(model, ...), the call to amp.initialize may alter
+    &#47&#47 the types of model&quots parameters in a way that disrupts or destroys DDP&quots allreduce hooks.
+    if args.distributed:
+        &#47&#47 By default, apex.parallel.DistributedDataParallel overlaps communication with
+        &#47&#47 computation in the backward pass.
+        &#47&#47 model = DDP(model)
+        &#47&#47 delay_allreduce delays all communication to the end of the backward pass.
+        model = DDP(model, delay_allreduce=True)
+        domain_adv = DDP(domain_adv, delay_allreduce=True)
+
+    &#47&#47 define loss function (criterion)
+    if args.smoothing:
+        criterion = LabelSmoothingCrossEntropy(args.smoothing).cuda()
+    else:
+        criterion = nn.CrossEntropyLoss().cuda()
+
+    &#47&#47 Data loading code
+    train_labeled_sampler = None
+    train_unlabeled_sampler = None
+    if args.distributed:
+        train_labeled_sampler = DistributedSampler(train_labeled_dataset)
+        train_unlabeled_sampler = DistributedSampler(train_unlabeled_dataset)
+
+    train_labeled_loader = DataLoader(
+        train_labeled_dataset, batch_size=args.batch_size[0], shuffle=(train_labeled_sampler is None),
+        num_workers=args.workers, pin_memory=True, sampler=train_labeled_sampler, drop_last=True)
+    train_unlabeled_loader = DataLoader(
+        train_unlabeled_dataset, batch_size=args.batch_size[1], shuffle=(train_unlabeled_sampler is None),
+        num_workers=args.workers, pin_memory=True, sampler=train_unlabeled_sampler, drop_last=True)
+
+    if args.phase == &quottest&quot:
+        &#47&#47 resume from the latest checkpoint
+        checkpoint = torch.load(logger.get_checkpoint_path(&quotbest&quot), map_location=&quotcpu&quot)
+        model.load_state_dict(checkpoint)
+        for n, d in zip(args.test_list, test_datasets):
+            if args.local_rank == 0:
+                print(n)
+            utils.validate(d, model, -1, writer, args)
+        return
+
+    for epoch in range(args.epochs):
+        if args.distributed:
+            train_labeled_sampler.set_epoch(epoch)
+            train_unlabeled_sampler.set_epoch(epoch)
+
+        lr_scheduler.step(epoch)
+        if args.local_rank == 0:
+            print(lr_scheduler.get_last_lr())
+            writer.add_scalar("train/lr", lr_scheduler.get_last_lr()[-1], epoch)
+        &#47&#47 train for one epoch
+        train(train_labeled_loader, train_unlabeled_loader, model, criterion, domain_adv, optimizer, epoch, writer,
+              args)
+
+        &#47&#47 evaluate on validation set
+        for n, d in zip(args.test_list, test_datasets):
+            if args.local_rank == 0:
+                print(n)
+            prec1 = utils.validate(d, model, epoch, writer, args)
+
+        &#47&#47 remember best prec@1 and save checkpoint
+        if args.local_rank == 0:
+            is_best = prec1 &gt; best_prec1
+            best_prec1 = max(prec1, best_prec1)
+            torch.save(model.state_dict(), logger.get_checkpoint_path(&quotlatest&quot))
+            if is_best:
+                shutil.copy(logger.get_checkpoint_path(&quotlatest&quot), logger.get_checkpoint_path(&quotbest&quot))
+
+    logger.close()
+    <a id="change">writer.close()</a>
+
+
+def train(train_labeled_loader, train_unlabeled_loader, model, criterion, domain_adv,
+          optimizer, epoch, writer, args):</code></pre><h3>After Change</h3><pre><code class='java'>
+
+def main(args):
+    writer = None
+    <a id="change">if args.local_rank == 0</a>:
+        logger = CompleteLogger(args.log, args.phase)
+        <a id="change">if args.phase == &quottrain&quot</a>:
+            writer<a id="change"> = </a>SummaryWriter(args.log)
+        pprint.pprint(args)
+        print("opt_level = {}".format(args.opt_level))
+        print("keep_batchnorm_fp32 = {}".format(args.keep_batchnorm_fp32), type(args.keep_batchnorm_fp32))</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/thuml/transfer-learning-library/commit/271dad7071425d5ed40ad02fc72cfef11d663dcd#diff-cee80b89d660d53bae1ecceb20f6189092398e492a1535b89f05ef6aadaaec5eL42' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 2863806</div><div id='project'> Project Name: thuml/transfer-learning-library</div><div id='commit'> Commit Name: 271dad7071425d5ed40ad02fc72cfef11d663dcd</div><div id='time'> Time: 2022-07-08</div><div id='author'> Author: 57670068+tsingcbx99@users.noreply.github.com</div><div id='file'> File Name: examples/domain_adaptation/wilds_image_classification/cdan.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(1)</div><div id='n_method'> N Method Name: main(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples/domain_adaptation/wilds_image_classification/cdan.py</div><div id='n_file'> N File Name: examples/domain_adaptation/wilds_image_classification/cdan.py</div><div id='m_start'> M Start Line: 43</div><div id='m_end'> M End Line: 228</div><div id='n_start'> N Start Line: 43</div><div id='n_end'> N End Line: 55</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+def main(args):
+    logger = CompleteLogger(args.log, args.phase)
+    writer<a id="change"> = </a>SummaryWriter(args.log)
+    pprint.pprint(args)
+
+    print("opt_level = {}".format(args.opt_level))
+    print("keep_batchnorm_fp32 = {}".format(args.keep_batchnorm_fp32), type(args.keep_batchnorm_fp32))
+    print("loss_scale = {}".format(args.loss_scale), type(args.loss_scale))
+
+    print("\nCUDNN VERSION: {}\n".format(torch.backends.cudnn.version()))
+
+    cudnn.benchmark = True
+    best_prec1 = 0
+    if args.deterministic:
+        cudnn.benchmark = False
+        cudnn.deterministic = True
+        torch.manual_seed(args.seed)
+        torch.set_printoptions(precision=10)
+
+    args.distributed = False
+    if &quotWORLD_SIZE&quot in os.environ:
+        args.distributed = int(os.environ[&quotWORLD_SIZE&quot]) &gt; 1
+
+    args.gpu = 0
+    args.world_size = 1
+
+    if args.distributed:
+        args.gpu = args.local_rank
+        torch.cuda.set_device(args.gpu)
+        torch.distributed.init_process_group(backend=&quotnccl&quot,
+                                             init_method=&quotenv://&quot)
+        args.world_size = torch.distributed.get_world_size()
+
+    assert torch.backends.cudnn.enabled, "Amp requires cudnn backend to be enabled."
+
+    if args.channels_last:
+        memory_format = torch.channels_last
+    else:
+        memory_format = torch.contiguous_format
+
+    &#47&#47 Data loading code
+    train_transform = utils.get_train_transform(
+        img_size=args.img_size,
+        scale=args.scale,
+        ratio=args.ratio,
+        hflip=args.hflip,
+        vflip=args.vflip,
+        color_jitter=args.color_jitter,
+        auto_augment=args.aa,
+        interpolation=args.interpolation,
+    )
+    val_transform = utils.get_val_transform(
+        img_size=args.img_size,
+        crop_pct=args.crop_pct,
+        interpolation=args.interpolation,
+    )
+    if args.local_rank == 0:
+        print("train_transform: ", train_transform)
+        print("val_transform: ", val_transform)
+
+    train_labeled_dataset, train_unlabeled_dataset, test_datasets, args.num_classes, args.class_names = \
+        utils.get_dataset(args.data, args.data_dir, args.unlabeled_list, args.test_list,
+                          train_transform, val_transform, verbose=args.local_rank == 0)
+
+    &#47&#47 create model
+    if args.local_rank == 0:
+        if not args.scratch:
+            print("=&gt; using pre-trained model &quot{}&quot".format(args.arch))
+        else:
+            print("=&gt; creating model &quot{}&quot".format(args.arch))
+    backbone = utils.get_model(args.arch, pretrain=not args.scratch)
+    pool_layer = nn.Identity() if args.no_pool else None
+    model = Classifier(backbone, args.num_classes, bottleneck_dim=args.bottleneck_dim,
+                       pool_layer=pool_layer, finetune=not args.scratch)
+    features_dim = model.features_dim
+    domain_discri = DomainDiscriminator(features_dim, hidden_size=1024, sigmoid=False)
+
+    if args.sync_bn:
+        import apex
+        if args.local_rank == 0:
+            print("using apex synced BN")
+        model = apex.parallel.convert_syncbn_model(model)
+
+    model = model.cuda().to(memory_format=memory_format)
+    domain_discri = domain_discri.cuda().to(memory_format=memory_format)
+
+    &#47&#47 Scale learning rate based on global batch size
+    args.lr = args.lr * float(args.batch_size[0] * args.world_size) / 256.
+    optimizer = torch.optim.SGD(
+        model.get_parameters() + domain_discri.get_parameters(), args.lr, momentum=args.momentum,
+        weight_decay=args.weight_decay, nesterov=True)
+
+    &#47&#47 Initialize Amp.  Amp accepts either values or strings for the optional override arguments,
+    &#47&#47 for convenient interoperation with argparse.
+    (model, domain_discri), optimizer = amp.initialize([model, domain_discri], optimizer,
+                                                       opt_level=args.opt_level,
+                                                       keep_batchnorm_fp32=args.keep_batchnorm_fp32,
+                                                       loss_scale=args.loss_scale
+                                                       )
+
+    &#47&#47 Use cosine annealing learning rate strategy
+    lr_scheduler = torch.optim.lr_scheduler.LambdaLR(
+        optimizer,
+        lambda x: max((math.cos(float(x) / args.epochs * math.pi) * 0.5 + 0.5) * args.lr, args.min_lr)
+    )
+
+    &#47&#47 define loss function
+    domain_adv = DomainAdversarialLoss(domain_discri, sigmoid=False)
+
+    &#47&#47 For distributed training, wrap the model with apex.parallel.DistributedDataParallel.
+    &#47&#47 This must be done AFTER the call to amp.initialize.  If model = DDP(model) is called
+    &#47&#47 before model, ... = amp.initialize(model, ...), the call to amp.initialize may alter
+    &#47&#47 the types of model&quots parameters in a way that disrupts or destroys DDP&quots allreduce hooks.
+    if args.distributed:
+        &#47&#47 By default, apex.parallel.DistributedDataParallel overlaps communication with
+        &#47&#47 computation in the backward pass.
+        &#47&#47 model = DDP(model)
+        &#47&#47 delay_allreduce delays all communication to the end of the backward pass.
+        model = DDP(model, delay_allreduce=True)
+        domain_adv = DDP(domain_adv, delay_allreduce=True)
+
+    &#47&#47 define loss function (criterion)
+    if args.smoothing:
+        criterion = LabelSmoothingCrossEntropy(args.smoothing).cuda()
+    else:
+        criterion = nn.CrossEntropyLoss().cuda()
+
+    &#47&#47 Data loading code
+    train_labeled_sampler = None
+    train_unlabeled_sampler = None
+    if args.distributed:
+        train_labeled_sampler = DistributedSampler(train_labeled_dataset)
+        train_unlabeled_sampler = DistributedSampler(train_unlabeled_dataset)
+
+    train_labeled_loader = DataLoader(
+        train_labeled_dataset, batch_size=args.batch_size[0], shuffle=(train_labeled_sampler is None),
+        num_workers=args.workers, pin_memory=True, sampler=train_labeled_sampler, drop_last=True)
+    train_unlabeled_loader = DataLoader(
+        train_unlabeled_dataset, batch_size=args.batch_size[1], shuffle=(train_unlabeled_sampler is None),
+        num_workers=args.workers, pin_memory=True, sampler=train_unlabeled_sampler, drop_last=True)
+
+    if args.phase == &quottest&quot:
+        &#47&#47 resume from the latest checkpoint
+        checkpoint = torch.load(logger.get_checkpoint_path(&quotbest&quot), map_location=&quotcpu&quot)
+        model.load_state_dict(checkpoint)
+        for n, d in zip(args.test_list, test_datasets):
+            if args.local_rank == 0:
+                print(n)
+            utils.validate(d, model, -1, writer, args)
+        return
+
+    for epoch in range(args.epochs):
+        if args.distributed:
+            train_labeled_sampler.set_epoch(epoch)
+            train_unlabeled_sampler.set_epoch(epoch)
+
+        lr_scheduler.step(epoch)
+        if args.local_rank == 0:
+            print(lr_scheduler.get_last_lr())
+            writer.add_scalar("train/lr", lr_scheduler.get_last_lr()[-1], epoch)
+        &#47&#47 train for one epoch
+        train(train_labeled_loader, train_unlabeled_loader, model, criterion, domain_adv, optimizer, epoch, writer,
+              args)
+
+        &#47&#47 evaluate on validation set
+        for n, d in zip(args.test_list, test_datasets):
+            if args.local_rank == 0:
+                print(n)
+            prec1 = utils.validate(d, model, epoch, writer, args)
+
+        &#47&#47 remember best prec@1 and save checkpoint
+        if args.local_rank == 0:
+            is_best = prec1 &gt; best_prec1
+            best_prec1 = max(prec1, best_prec1)
+            torch.save(model.state_dict(), logger.get_checkpoint_path(&quotlatest&quot))
+            if is_best:
+                shutil.copy(logger.get_checkpoint_path(&quotlatest&quot), logger.get_checkpoint_path(&quotbest&quot))
+
+    logger.close()
+    <a id="change">writer.close()</a>
+
+
+def train(train_labeled_loader, train_unlabeled_loader, model, criterion, domain_adv,
+          optimizer, epoch, writer, args):</code></pre><h3>After Change</h3><pre><code class='java'>
+
+def main(args):
+    writer = None
+    <a id="change">if args.local_rank == 0</a>:
+        logger = CompleteLogger(args.log, args.phase)
+        <a id="change">if args.phase == &quottrain&quot</a>:
+            writer<a id="change"> = </a>SummaryWriter(args.log)
+        pprint.pprint(args)
+        print("opt_level = {}".format(args.opt_level))
+        print("keep_batchnorm_fp32 = {}".format(args.keep_batchnorm_fp32), type(args.keep_batchnorm_fp32))</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/thuml/transfer-learning-library/commit/271dad7071425d5ed40ad02fc72cfef11d663dcd#diff-4f7cbf422253b721975d3f91191d8d1daabb3911fb116dec984df71d59bc48e9L42' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 2863805</div><div id='project'> Project Name: thuml/transfer-learning-library</div><div id='commit'> Commit Name: 271dad7071425d5ed40ad02fc72cfef11d663dcd</div><div id='time'> Time: 2022-07-08</div><div id='author'> Author: 57670068+tsingcbx99@users.noreply.github.com</div><div id='file'> File Name: examples/domain_adaptation/wilds_image_classification/dann.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(1)</div><div id='n_method'> N Method Name: main(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples/domain_adaptation/wilds_image_classification/dann.py</div><div id='n_file'> N File Name: examples/domain_adaptation/wilds_image_classification/dann.py</div><div id='m_start'> M Start Line: 43</div><div id='m_end'> M End Line: 221</div><div id='n_start'> N Start Line: 43</div><div id='n_end'> N End Line: 55</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+def main(args):
+    logger = CompleteLogger(args.log, args.phase)
+    writer<a id="change"> = </a>SummaryWriter(args.log)
+    pprint.pprint(args)
+
+    print("opt_level = {}".format(args.opt_level))
+    print("keep_batchnorm_fp32 = {}".format(args.keep_batchnorm_fp32), type(args.keep_batchnorm_fp32))
+    print("loss_scale = {}".format(args.loss_scale), type(args.loss_scale))
+
+    print("\nCUDNN VERSION: {}\n".format(torch.backends.cudnn.version()))
+
+    cudnn.benchmark = True
+    best_prec1 = 0
+    if args.deterministic:
+        cudnn.benchmark = False
+        cudnn.deterministic = True
+        torch.manual_seed(args.seed)
+        torch.set_printoptions(precision=10)
+
+    args.distributed = False
+    if &quotWORLD_SIZE&quot in os.environ:
+        args.distributed = int(os.environ[&quotWORLD_SIZE&quot]) &gt; 1
+
+    args.gpu = 0
+    args.world_size = 1
+
+    if args.distributed:
+        args.gpu = args.local_rank
+        torch.cuda.set_device(args.gpu)
+        torch.distributed.init_process_group(backend=&quotnccl&quot,
+                                             init_method=&quotenv://&quot)
+        args.world_size = torch.distributed.get_world_size()
+
+    assert torch.backends.cudnn.enabled, "Amp requires cudnn backend to be enabled."
+
+    if args.channels_last:
+        memory_format = torch.channels_last
+    else:
+        memory_format = torch.contiguous_format
+
+    &#47&#47 Data loading code
+    train_transform = utils.get_train_transform(
+        img_size=args.img_size,
+        scale=args.scale,
+        ratio=args.ratio,
+        hflip=args.hflip,
+        vflip=args.vflip,
+        color_jitter=args.color_jitter,
+        auto_augment=args.aa,
+        interpolation=args.interpolation,
+    )
+    val_transform = utils.get_val_transform(
+        img_size=args.img_size,
+        crop_pct=args.crop_pct,
+        interpolation=args.interpolation,
+    )
+    if args.local_rank == 0:
+        print("train_transform: ", train_transform)
+        print("val_transform: ", val_transform)
+
+    train_labeled_dataset, train_unlabeled_dataset, test_datasets, args.num_classes, args.class_names = \
+        utils.get_dataset(args.data, args.data_dir, args.unlabeled_list, args.test_list,
+                          train_transform, val_transform, verbose=args.local_rank == 0)
+
+    &#47&#47 create model
+    if args.local_rank == 0:
+        if not args.scratch:
+            print("=&gt; using pre-trained model &quot{}&quot".format(args.arch))
+        else:
+            print("=&gt; creating model &quot{}&quot".format(args.arch))
+    backbone = utils.get_model(args.arch, pretrain=not args.scratch)
+    pool_layer = nn.Identity() if args.no_pool else None
+    model = Classifier(backbone, args.num_classes, bottleneck_dim=args.bottleneck_dim,
+                       width=args.bottleneck_dim, pool_layer=pool_layer, finetune=not args.scratch)
+    mdd = MarginDisparityDiscrepancy(args.margin)
+
+    if args.sync_bn:
+        import apex
+        if args.local_rank == 0:
+            print("using apex synced BN")
+        model = apex.parallel.convert_syncbn_model(model)
+
+    model = model.cuda().to(memory_format=memory_format)
+
+    &#47&#47 Scale learning rate based on global batch size
+    args.lr = args.lr * float(args.batch_size[0] * args.world_size) / 256.
+    optimizer = torch.optim.SGD(
+        model.get_parameters(), args.lr, momentum=args.momentum,
+        weight_decay=args.weight_decay, nesterov=True)
+
+    &#47&#47 Initialize Amp.  Amp accepts either values or strings for the optional override arguments,
+    &#47&#47 for convenient interoperation with argparse.
+    model, optimizer = amp.initialize(model, optimizer,
+                                      opt_level=args.opt_level,
+                                      keep_batchnorm_fp32=args.keep_batchnorm_fp32,
+                                      loss_scale=args.loss_scale
+                                      )
+
+    &#47&#47 Use cosine annealing learning rate strategy
+    lr_scheduler = torch.optim.lr_scheduler.LambdaLR(
+        optimizer,
+        lambda x: max((math.cos(float(x) / args.epochs * math.pi) * 0.5 + 0.5) * args.lr, args.min_lr)
+    )
+
+    &#47&#47 For distributed training, wrap the model with apex.parallel.DistributedDataParallel.
+    &#47&#47 This must be done AFTER the call to amp.initialize.  If model = DDP(model) is called
+    &#47&#47 before model, ... = amp.initialize(model, ...), the call to amp.initialize may alter
+    &#47&#47 the types of model&quots parameters in a way that disrupts or destroys DDP&quots allreduce hooks.
+    if args.distributed:
+        &#47&#47 By default, apex.parallel.DistributedDataParallel overlaps communication with
+        &#47&#47 computation in the backward pass.
+        &#47&#47 model = DDP(model)
+        &#47&#47 delay_allreduce delays all communication to the end of the backward pass.
+        model = DDP(model, delay_allreduce=True)
+
+    &#47&#47 define loss function (criterion)
+    if args.smoothing:
+        criterion = LabelSmoothingCrossEntropy(args.smoothing).cuda()
+    else:
+        criterion = nn.CrossEntropyLoss().cuda()
+
+    &#47&#47 Data loading code
+    train_labeled_sampler = None
+    train_unlabeled_sampler = None
+    if args.distributed:
+        train_labeled_sampler = DistributedSampler(train_labeled_dataset)
+        train_unlabeled_sampler = DistributedSampler(train_unlabeled_dataset)
+
+    train_labeled_loader = DataLoader(
+        train_labeled_dataset, batch_size=args.batch_size[0], shuffle=(train_labeled_sampler is None),
+        num_workers=args.workers, pin_memory=True, sampler=train_labeled_sampler, drop_last=True)
+    train_unlabeled_loader = DataLoader(
+        train_unlabeled_dataset, batch_size=args.batch_size[1], shuffle=(train_unlabeled_sampler is None),
+        num_workers=args.workers, pin_memory=True, sampler=train_unlabeled_sampler, drop_last=True)
+
+    if args.phase == &quottest&quot:
+        &#47&#47 resume from the latest checkpoint
+        checkpoint = torch.load(logger.get_checkpoint_path(&quotbest&quot), map_location=&quotcpu&quot)
+        model.load_state_dict(checkpoint)
+        for n, d in zip(args.test_list, test_datasets):
+            if args.local_rank == 0:
+                print(n)
+            utils.validate(d, model, -1, writer, args)
+        return
+
+    for epoch in range(args.epochs):
+        if args.distributed:
+            train_labeled_sampler.set_epoch(epoch)
+            train_unlabeled_sampler.set_epoch(epoch)
+
+        lr_scheduler.step(epoch)
+        if args.local_rank == 0:
+            print(lr_scheduler.get_last_lr())
+            writer.add_scalar("train/lr", lr_scheduler.get_last_lr()[-1], epoch)
+        &#47&#47 train for one epoch
+        train(train_labeled_loader, train_unlabeled_loader, model, criterion, mdd, optimizer, epoch, writer, args)
+
+        &#47&#47 evaluate on validation set
+        for n, d in zip(args.test_list, test_datasets):
+            if args.local_rank == 0:
+                print(n)
+            prec1 = utils.validate(d, model, epoch, writer, args)
+
+        &#47&#47 remember best prec@1 and save checkpoint
+        if args.local_rank == 0:
+            is_best = prec1 &gt; best_prec1
+            best_prec1 = max(prec1, best_prec1)
+            torch.save(model.state_dict(), logger.get_checkpoint_path(&quotlatest&quot))
+            if is_best:
+                shutil.copy(logger.get_checkpoint_path(&quotlatest&quot), logger.get_checkpoint_path(&quotbest&quot))
+
+    logger.close()
+    <a id="change">writer.close()</a>
+
+
+def train(train_labeled_loader, train_unlabeled_loader, model, criterion, mdd,
+          optimizer, epoch, writer, args):</code></pre><h3>After Change</h3><pre><code class='java'>
+
+def main(args):
+    writer = None
+    <a id="change">if args.local_rank == 0</a>:
+        logger = CompleteLogger(args.log, args.phase)
+        <a id="change">if args.phase == &quottrain&quot</a>:
+            writer<a id="change"> = </a>SummaryWriter(args.log)
+        pprint.pprint(args)
+        print("opt_level = {}".format(args.opt_level))
+        print("keep_batchnorm_fp32 = {}".format(args.keep_batchnorm_fp32), type(args.keep_batchnorm_fp32))</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/thuml/transfer-learning-library/commit/271dad7071425d5ed40ad02fc72cfef11d663dcd#diff-d8b32b5c57bbde3f55fad07f4544d02de663ff3814c2df6243140de28a654540L42' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 2863804</div><div id='project'> Project Name: thuml/transfer-learning-library</div><div id='commit'> Commit Name: 271dad7071425d5ed40ad02fc72cfef11d663dcd</div><div id='time'> Time: 2022-07-08</div><div id='author'> Author: 57670068+tsingcbx99@users.noreply.github.com</div><div id='file'> File Name: examples/domain_adaptation/wilds_image_classification/mdd.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(1)</div><div id='n_method'> N Method Name: main(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples/domain_adaptation/wilds_image_classification/mdd.py</div><div id='n_file'> N File Name: examples/domain_adaptation/wilds_image_classification/mdd.py</div><div id='m_start'> M Start Line: 43</div><div id='m_end'> M End Line: 214</div><div id='n_start'> N Start Line: 43</div><div id='n_end'> N End Line: 55</div><BR>

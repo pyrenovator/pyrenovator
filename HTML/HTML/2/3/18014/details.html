@@ -1,0 +1,59 @@
+<html><h3>Pattern ID :18014
+</h3><img src='59117602.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                                    index=index.view(student_scores.size(0), -1), 
+                                    src=teacher_scores)
+        student_scores = nn.functional.log_softmax(student_scores / self.args.student_temp, dim=1)
+        loss = <a id="change">nn.functional.kl_div(</a>student_scores, teacher_mat<a id="change">, reduction=&quotbatchmean&quot)</a>
+        return loss
+
+
+    def training_step(self, *args):</code></pre><h3>After Change</h3><pre><code class='java'>
+                                    index=index.view(student_scores.size(0), -1), 
+                                    src=teacher_scores)
+        student_scores = nn.functional.log_softmax(student_scores / self.args.student_temp, dim=1)
+        loss = <a id="change">nn.functional.kl_div(</a>student_scores, teacher_mat<a id="change">, reduction=&quotbatchmean&quot) * </a>self._dist_loss_scale_factor
+        return loss
+
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/texttron/tevatron/commit/82e03a3fd588308ea76d39dc2a162f82d9e294cd#diff-ba614ddb1a2e6166f2504bcea0325392e2d1cd1d4d8d82a7e52a878893bd4e40L63' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 59117602</div><div id='project'> Project Name: texttron/tevatron</div><div id='commit'> Commit Name: 82e03a3fd588308ea76d39dc2a162f82d9e294cd</div><div id='time'> Time: 2023-02-27</div><div id='author'> Author: x93ma@edu.uwaterloo.ca</div><div id='file'> File Name: src/tevatron/distillation/trainer.py</div><div id='m_class'> M Class Name: DistilTrainer</div><div id='n_method'> N Class Name: DistilTrainer</div><div id='m_method'> M Method Name: compute_loss(3)</div><div id='n_method'> N Method Name: compute_loss(3)</div><div id='m_parent_class'> M Parent Class: Trainer</div><div id='n_parent_class'> N Parent Class: Trainer</div><div id='m_file'> M File Name: src/tevatron/distillation/trainer.py</div><div id='n_file'> N File Name: src/tevatron/distillation/trainer.py</div><div id='m_start'> M Start Line: 63</div><div id='m_end'> M End Line: 68</div><div id='n_start'> N Start Line: 66</div><div id='n_end'> N End Line: 71</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    def _calc_distill_loss(self, student_val: Tensor, teacher_val: Tensor) -&gt; Tensor:
+        return (
+            <a id="change">TF.kl_div(
+                input=TF.log_softmax(student_val / self._temperature, dim=-1),
+                target=TF.softmax(teacher_val / self._temperature, dim=-1),
+                reduction="batchmean",
+            )</a>
+            * (self._temperature ** 2)
+        )
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    def _calc_distill_loss(self, student_val: Tensor, teacher_val: Tensor) -&gt; Tensor:
+        return (
+            <a id="change">TF.kl_div(
+                input=TF.log_softmax(student_val / self._temperature, dim=-1),
+                target=TF.softmax(teacher_val / self._temperature, dim=-1),
+                reduction="sum",
+            )
+            / </a>(student_val.numel() / student_val.shape[-1])  &#47&#47 scale "sum" w/ batchsize
+            * (self._temperature ** 2)
+        )
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/neuralmagic/sparseml/commit/4383650328e58220a0527186a31f0576e8b564e5#diff-37a1d70c58e00289a182955989f1d34a7b14be0cae1ced43409e44cb36926904L386' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 59117603</div><div id='project'> Project Name: neuralmagic/sparseml</div><div id='commit'> Commit Name: 4383650328e58220a0527186a31f0576e8b564e5</div><div id='time'> Time: 2022-04-07</div><div id='author'> Author: eldar.ciki@gmail.com</div><div id='file'> File Name: src/sparseml/pytorch/optim/modifier_distillation.py</div><div id='m_class'> M Class Name: DistillationModifier</div><div id='n_method'> N Class Name: DistillationModifier</div><div id='m_method'> M Method Name: _calc_distill_loss(3)</div><div id='n_method'> N Method Name: _calc_distill_loss(3)</div><div id='m_parent_class'> M Parent Class: ScheduledUpdateModifier</div><div id='n_parent_class'> N Parent Class: ScheduledUpdateModifier</div><div id='m_file'> M File Name: src/sparseml/pytorch/optim/modifier_distillation.py</div><div id='n_file'> N File Name: src/sparseml/pytorch/optim/modifier_distillation.py</div><div id='m_start'> M Start Line: 388</div><div id='m_end'> M End Line: 392</div><div id='n_start'> N Start Line: 388</div><div id='n_end'> N End Line: 393</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            action_probs, policy_values = self.actor(states)
+            action_logprobs = action_probs.log()
+            aux_loss = 0.5 * F.mse_loss(policy_values.flatten(), rewards)
+            policy_loss = aux_loss + <a id="change">F.kl_div(</a>action_logprobs, old_action_logprobs<a id="change">, log_target = True, reduction = &quotbatchmean&quot)</a>
+
+            update_network_(policy_loss, self.opt_actor)
+
+            values = self.critic(states)</code></pre><h3>After Change</h3><pre><code class='java'>
+
+                &#47&#47 policy network loss copmoses of both the kl div loss as well as the auxiliary loss
+                aux_loss = 0.5 * F.mse_loss(policy_values.flatten(), rewards)
+                loss_kl = <a id="change">F.kl_div(</a>action_logprobs, old_action_logprobs<a id="change">, log_target = True, reduction = &quotbatchmean&quot)</a>
+                policy_loss = aux_loss<a id="change"> + </a>loss_kl
+
+                update_network_(policy_loss, self.opt_actor)
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lucidrains/phasic-policy-gradient/commit/2ef00955b78d96b5a02e9f07d04c352e4acda719#diff-ed183d67207df065a11e1289f19d34cc2abbc5448dea952683cfe9728c342b95L100' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 59117600</div><div id='project'> Project Name: lucidrains/phasic-policy-gradient</div><div id='commit'> Commit Name: 2ef00955b78d96b5a02e9f07d04c352e4acda719</div><div id='time'> Time: 2020-09-28</div><div id='author'> Author: lucidrains@gmail.com</div><div id='file'> File Name: train.py</div><div id='m_class'> M Class Name: PPG</div><div id='n_method'> N Class Name: PPG</div><div id='m_method'> M Method Name: learn(2)</div><div id='n_method'> N Method Name: learn(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: train.py</div><div id='n_file'> N File Name: train.py</div><div id='m_start'> M Start Line: 123</div><div id='m_end'> M End Line: 160</div><div id='n_start'> N Start Line: 149</div><div id='n_end'> N End Line: 213</div><BR>

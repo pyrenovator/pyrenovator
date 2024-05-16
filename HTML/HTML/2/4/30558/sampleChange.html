@@ -1,0 +1,93 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 IterableDataset that joins several individual datasets by taking a
+        &#47&#47 random number of samples from each. (or we could just have tiny,
+        &#47&#47 one-trajectory shards)
+        dataloader<a id="change"> = </a><a id="change">DataLoader(</a>dataset<a id="change">, num_workers=wds_workers,
+                                batch_size=None)</a>
+
+        loss_record = []
+
+        if self.scheduler_cls is not None:</code></pre><h3>After Change</h3><pre><code class='java'>
+            f"Training for {n_epochs} epochs, each of {batches_per_epoch} "
+            f"batches (batch size {self.batch_size})")
+
+        for epoch_num in <a id="change">range(</a>1, n_epochs + 1<a id="change">)</a>:
+            loss_meter = AverageMeter()
+            &#47&#47 Set encoder and decoder to be in training mode
+
+            for step, batch in enumerate(dataloader):
+                &#47&#47 Construct batch (currently just using Torch&quots default batch-creator)
+                contexts, targets, traj_ts_info, extra_context = self.unpack_batch(batch)
+
+                &#47&#47 Use an algorithm-specific augmentation strategy to augment either
+                &#47&#47 just context, or both context and targets
+                contexts, targets = self._prep_tensors(contexts), self._prep_tensors(targets)
+                extra_context = self._prep_tensors(extra_context)
+                traj_ts_info = self._prep_tensors(traj_ts_info)
+                &#47&#47 Note: preprocessing might be better to do on CPU if, in future, we can parallelize doing so
+                contexts = self._preprocess(contexts)
+                if self.preprocess_target:
+                    targets = self._preprocess(targets)
+                contexts, targets = self.augmenter(contexts, targets)
+                extra_context = self._preprocess_extra_context(extra_context)
+
+
+                &#47&#47 These will typically just use the forward() function for the encoder, but can optionally
+                &#47&#47 use a specific encode_context and encode_target if one is implemented
+                encoded_contexts = self.encoder.encode_context(contexts, traj_ts_info)
+                encoded_targets = self.encoder.encode_target(targets, traj_ts_info)
+                &#47&#47 Typically the identity function
+                extra_context = self.encoder.encode_extra_context(extra_context, traj_ts_info)
+
+                &#47&#47 Use an algorithm-specific decoder to "decode" the representations into a loss-compatible tensor
+                &#47&#47 As with encode, these will typically just use forward()
+                decoded_contexts = self.decoder.decode_context(encoded_contexts, traj_ts_info, extra_context)
+                decoded_targets = self.decoder.decode_target(encoded_targets, traj_ts_info, extra_context)
+
+                &#47&#47 Optionally add to the batch before loss. By default, this is an identity operation, but
+                &#47&#47 can also implement momentum queue logic
+                decoded_contexts, decoded_targets = self.batch_extender(decoded_contexts, decoded_targets)
+
+                &#47&#47 Use an algorithm-specific loss function. Typically this only requires decoded_contexts and
+                &#47&#47 decoded_targets, but VAE requires encoded_contexts, so we pass it in here
+
+                loss = self.loss_calculator(decoded_contexts, decoded_targets, encoded_contexts)
+                loss_item = loss.item()
+                assert not np.isnan(loss_item), "Loss is not NAN"
+                loss_meter.update(loss_item)
+
+                self.optimizer.zero_grad()
+                loss.backward()
+                self.optimizer.step()
+                del loss  &#47&#47 so we don&quott use again
+
+                gradient_norm, weight_norm = self._calculate_norms()
+
+                &#47&#47 FIXME(sam): don&quott plot this every batch, plot it every k
+                &#47&#47 batches (will make log files much smaller & let us stream
+                &#47&#47 them to head node on Ray cluster)
+                loss_meter.update(loss_item)
+                logger.record(&quotloss&quot, loss_item)
+                logger.record(&quotgradient_norm&quot, gradient_norm.item())
+                logger.record(&quotweight_norm&quot, weight_norm.item())
+                logger.record(&quotepoch&quot, epoch_num)
+                logger.record(&quotwithin_epoch_step&quot, step)
+                logger.record(&quotbatches_trained&quot, batches_trained)
+                logger.dump(step=batches_trained)
+                batches_trained += 1
+
+            assert batches_trained &gt; 0, \
+                "went through training loop with no batches---empty dataset?"
+
+            if self.scheduler is not None:
+                self.scheduler.step()
+            loss_record.append(loss_meter.avg)
+
+            &#47&#47 save checkpoint on last epoch, or at regular interval
+            should_save_checkpoint = (<a id="change">epoch_num == n_epochs</a> or
+                                      epoch_num % self.save_interval == 0)
+            if should_save_checkpoint:
+                most_recent_encoder_checkpoint_path = os.path.join(</code></pre>

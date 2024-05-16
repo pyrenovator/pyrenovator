@@ -1,0 +1,74 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        baselines = estimated_values
+
+        &#47&#47&#47&#47 Calculate the Advantages, A(s,a) = Q(s,a) - \hat{V}(s).
+        <a id="change">advantages</a> = <a id="change">[]</a>
+        final_gen_objective = torch.zeros([batch_size, 1]).cuda(self.device)
+        for t in range(seq_len):
+            log_probability = log_probs[:, t].unsqueeze(dim=1)
+            cum_advantage = torch.zeros((batch_size, 1))
+            cum_advantage = cum_advantage.cuda(self.device)
+            for s in range(t, seq_len):
+                cum_advantage_tmp = missing[:, s] * np.power(self.gamma, (s - t)) * rewards[:, s]
+                cum_advantage_tmp = cum_advantage_tmp.unsqueeze(dim=1)
+                cum_advantage += cum_advantage_tmp
+            cum_advantage<a id="change"> -= </a>baselines[:, t].unsqueeze(dim=1)
+            &#47&#47 Clip advantages.
+            cum_advantage = torch.clamp(cum_advantage, -self.advantage_clipping, self.advantage_clipping)
+            advantage = missing[:, t].unsqueeze(dim=1) * cum_advantage
+            <a id="change">advantages.append(</a>advantage<a id="change">)</a>
+            &#47&#47 cum_advantage.detach()
+            final_gen_objective<a id="change"> += </a>torch.mul(log_probability, missing[:, t].unsqueeze(dim=1) * cum_advantage)
+        final_gen_objective = -torch.sum(final_gen_objective) / batch_size  &#47&#47 max the reward
+        maintain_averages_op = None
+        advantages<a id="change"> = </a><a id="change">torch.stack(advantages</a><a id="change">, dim=1)</a>
+
+        &#47&#47 return [
+        &#47&#47     final_gen_objective, log_probs, rewards, advantages, baselines,
+        &#47&#47     maintain_averages_op, critic_loss, cumulative_rewards</code></pre><h3>After Change</h3><pre><code class='java'>
+        rewards = rewards.detach()
+
+        &#47&#47 Unstack Tensors into lists.
+        missing = 1. - <a id="change">mask_present.float()</a>
+
+        &#47&#47 Cumulative Discounted Returns.  The true value function V*(s).
+        cumulative_rewards = []
+        batch_size, seq_len = dis_predictions.size()
+        for t in range(seq_len):
+            cum_value = torch.zeros((batch_size, 1))
+            cum_value = cum_value.cuda(device)
+            for s in range(t, seq_len):
+                cum_value_tmp = missing[:, s] * np.power(self.gamma, (s - t)) * rewards[:, s]
+                cum_value_tmp = cum_value_tmp.unsqueeze(dim=1)
+                cum_value += cum_value_tmp
+            cumulative_rewards.append(cum_value)  &#47&#47 bs*1
+        cumulative_rewards = torch.stack(cumulative_rewards, dim=1).squeeze()
+
+        &#47&#47 REINFORCE with different baselines.
+        &#47&#47 We create a separate critic functionality for the Discriminator.  This
+        &#47&#47 will need to operate unidirectionally and it may take in the past context.
+        &#47&#47 Critic loss calculated from the estimated value function \hat{V}(s)
+        &#47&#47 versus the true value function V*(s).
+        cumulative_rewards = cumulative_rewards.detach()
+        critic_loss = self.create_critic_loss(cumulative_rewards, estimated_values, mask_present)
+
+        &#47&#47 Baselines are coming from the critic&quots estimated state values.
+        baselines = estimated_values
+        baselines = baselines.detach()
+
+        &#47&#47&#47&#47 Calculate the Advantages, A(s,a) = Q(s,a) - \hat{V}(s).
+        final_gen_objective = torch.zeros([batch_size, 1]).cuda(self.device)
+        for t in range(seq_len):
+            log_probability = log_probs[:, t].unsqueeze(dim=1)  &#47&#47 bs*1
+            cum_advantage = torch.zeros((batch_size, 1))  &#47&#47 bs*1
+            cum_advantage = cum_advantage.cuda(self.device)
+            for s in range(t, seq_len):
+                cum_advantage_tmp = missing[:, s] * np.power(self.gamma, (s - t)) * rewards[:, s]
+                cum_advantage_tmp = cum_advantage_tmp.unsqueeze(dim=1)
+                cum_advantage = cum_advantage<a id="change"> + </a>cum_advantage_tmp
+            cum_advantage = cum_advantage - baselines[:, t].unsqueeze(dim=1)
+            &#47&#47 Clip advantages.
+            cum_advantage = torch.clamp(cum_advantage, -self.advantage_clipping, self.advantage_clipping)</code></pre>

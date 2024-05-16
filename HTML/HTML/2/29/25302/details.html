@@ -1,0 +1,189 @@
+<html><h3>Pattern ID :25302
+</h3><img src='77310825.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    cotrans.eval()
+
+    &#47&#47 Forward through models
+    target = <a id="change">trans([example_clip])[0]</a>
+
+    outputs = <a id="change">[]</a>
+    <a id="change">for i</a> in <a id="change">range(example_clip.shape[2]</a><a id="change">):
+        outputs.append(</a>cotrans.forward(<a id="change">[example_clip</a><a id="change">[:, :, i]</a>])<a id="change">)</a>
+
+    &#47&#47 For debugging:
+    &#47&#47 close = []
+    &#47&#47 for i in range(len(outputs)):</code></pre><h3>After Change</h3><pre><code class='java'>
+    trans.eval()
+    cotrans.eval()
+
+    sample = <a id="change">torch.randn(</a>(<a id="change">1</a><a id="change">, 2, 4, 4, 4</a>)<a id="change">)</a>
+
+    &#47&#47 Forward through models
+    target = trans.forward([sample])[0]  &#47&#47 needs to be packed due to multi-path support
+
+    &#47&#47 forward
+    output<a id="change"> = </a>cotrans.forward(sample)
+    assert torch.allclose(target, output)
+
+    &#47&#47 Broken up
+    cotrans.clean_state()
+    nothing<a id="change"> = </a>cotrans.forward_steps(sample[:, :, :-1], pad_end=False)  &#47&#47 init
+    assert isinstance(nothing, TensorPlaceholder)
+
+    lasts<a id="change"> = </a><a id="change">cotrans.forward_steps(sample[:, :, -1:]</a><a id="change">, pad_end=True)</a>
+    assert torch.allclose(lasts, target)
+
+
+example_clip = torch.normal(mean=torch.zeros(2 * 4 * 4 * 4)).reshape((1, 2, 4, 4, 4))</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 19</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/lukashedegaard/co3d/commit/5b6d9b75f5289b3e6df6df0762dfe2ea50bfa0fa#diff-81ebfd3b7da0e2057c99c1622bd2ed14cb38bdb040741812bc0eb3de8e60005eL433' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 77310825</div><div id='project'> Project Name: lukashedegaard/co3d</div><div id='commit'> Commit Name: 5b6d9b75f5289b3e6df6df0762dfe2ea50bfa0fa</div><div id='time'> Time: 2021-08-30</div><div id='author'> Author: lh@eng.au.dk</div><div id='file'> File Name: tests/cox3d/test_x3d.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: test_CoX3DHead(0)</div><div id='n_method'> N Method Name: test_CoX3DHead(0)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: tests/cox3d/test_x3d.py</div><div id='n_file'> N File Name: tests/cox3d/test_x3d.py</div><div id='m_start'> M Start Line: 662</div><div id='m_end'> M End Line: 696</div><div id='n_start'> N Start Line: 433</div><div id='n_end'> N End Line: 476</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    &#47&#47 Forward through models
+    target = trans([example_clip])[0]
+
+    outputs = <a id="change">[]</a>
+    &#47&#47 Manual zero pad (due to padding=1 in trans.b Conv3d)
+    zeros = torch.zeros_like(example_clip[:, :, 0])
+    outputs.append(cotrans.forward([zeros])[0])
+    outputs.append(cotrans.forward([zeros])[0])
+    <a id="change">for i</a> in <a id="change">range(example_clip.shape[2]</a><a id="change">):
+        outputs.append(</a>cotrans.forward(<a id="change">[</a><a id="change">example_clip[:, :, i]</a>])[0]<a id="change">)</a>
+    outputs.append(cotrans.forward([zeros])[0])
+    outputs.append(cotrans.forward([zeros])[0])
+
+    &#47&#47 For debugging:
+    &#47&#47 close = []
+    &#47&#47 for t in range(target.shape[2]):
+    &#47&#47     for i in range(len(outputs)):
+    &#47&#47         if torch.allclose(target[:, :, t], outputs[i], atol=5e-4):
+    &#47&#47             close.append(f"t = {t}, o = {i}")
+
+    shift = 4  &#47&#47 kernel[0] - 1
+
+    for t in range(1, target.shape[2]):
+        assert torch.allclose(target[:, :, t], outputs[t + shift])
+
+    &#47&#47 forward_steps also works
+    outputs2 = <a id="change">cotrans.forward_steps([example_clip])[0]</a>
+    assert torch.allclose(target, outputs2)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    trans.eval()
+    cotrans.eval()
+
+    sample = <a id="change">torch.randn(</a>(<a id="change">1</a><a id="change">, 2, 4, 4, 4</a>)<a id="change">)</a>
+
+    &#47&#47 Forward through models
+    target = trans.forward([sample])[0]
+
+    &#47&#47 forward
+    output<a id="change"> = </a>cotrans.forward(sample)
+    assert torch.allclose(target, output)
+
+    &#47&#47 forward_steps
+    output = cotrans.forward_steps(sample, pad_end=True)
+    assert torch.allclose(target, output)
+
+    &#47&#47 forward_steps - broken up
+    cotrans.clean_state()
+    nothing = cotrans.forward_steps(sample[:, :, :-2], pad_end=False)  &#47&#47 init
+    assert isinstance(nothing, TensorPlaceholder)
+
+    mid<a id="change"> = </a>cotrans.forward_step(sample[:, :, -2])
+    assert torch.allclose(mid, target[:, :, 0])
+
+    lasts<a id="change"> = </a><a id="change">cotrans.forward_steps(sample[:, :, -1:]</a><a id="change">, pad_end=True)</a>
+    assert torch.allclose(lasts, target[:, :, 1:])
+
+
+def test_CoX3DTransform():</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lukashedegaard/co3d/commit/24480f6c659a3758910b24e4a64782780e294c90#diff-81ebfd3b7da0e2057c99c1622bd2ed14cb38bdb040741812bc0eb3de8e60005eL640' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 77310823</div><div id='project'> Project Name: lukashedegaard/co3d</div><div id='commit'> Commit Name: 24480f6c659a3758910b24e4a64782780e294c90</div><div id='time'> Time: 2021-08-31</div><div id='author'> Author: lh@eng.au.dk</div><div id='file'> File Name: tests/cox3d/test_x3d.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: test_VideoModelStem(0)</div><div id='n_method'> N Method Name: test_VideoModelStem(0)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: tests/cox3d/test_x3d.py</div><div id='n_file'> N File Name: tests/cox3d/test_x3d.py</div><div id='m_start'> M Start Line: 651</div><div id='m_end'> M End Line: 694</div><div id='n_start'> N Start Line: 84</div><div id='n_end'> N End Line: 133</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    cotrans.eval()
+
+    &#47&#47 Forward through models
+    target = <a id="change">trans([example_clip])[0]</a>
+
+    outputs = <a id="change">[]</a>
+    <a id="change">for i</a> in <a id="change">range(example_clip.shape[2]</a><a id="change">):
+        outputs.append(</a>cotrans.forward(<a id="change">[</a><a id="change">example_clip[:, :, i]</a>])<a id="change">)</a>
+
+    &#47&#47 For debugging:
+    &#47&#47 close = []
+    &#47&#47 for i in range(len(outputs)):</code></pre><h3>After Change</h3><pre><code class='java'>
+    trans.eval()
+    cotrans.eval()
+
+    sample = <a id="change">torch.randn(</a>(<a id="change">1</a><a id="change">, 2, 4, 4, 4</a>)<a id="change">)</a>
+
+    &#47&#47 Forward through models
+    target = trans.forward([sample])[0]  &#47&#47 needs to be packed due to multi-path support
+
+    &#47&#47 forward
+    output<a id="change"> = </a>cotrans.forward(sample)
+    assert torch.allclose(target, output)
+
+    &#47&#47 Broken up
+    cotrans.clean_state()
+    nothing<a id="change"> = </a>cotrans.forward_steps(sample[:, :, :-1], pad_end=False)  &#47&#47 init
+    assert isinstance(nothing, TensorPlaceholder)
+
+    lasts<a id="change"> = </a><a id="change">cotrans.forward_steps(sample[:, :, -1:]</a><a id="change">, pad_end=True)</a>
+    assert torch.allclose(lasts, target)
+
+
+example_clip = torch.normal(mean=torch.zeros(2 * 4 * 4 * 4)).reshape((1, 2, 4, 4, 4))</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lukashedegaard/co3d/commit/ee43087e37e97c7637d54346fd4955f25a580d8b#diff-81ebfd3b7da0e2057c99c1622bd2ed14cb38bdb040741812bc0eb3de8e60005eL650' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 77310822</div><div id='project'> Project Name: lukashedegaard/co3d</div><div id='commit'> Commit Name: ee43087e37e97c7637d54346fd4955f25a580d8b</div><div id='time'> Time: 2021-09-10</div><div id='author'> Author: lh@eng.au.dk</div><div id='file'> File Name: tests/cox3d/test_x3d.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: test_CoX3DHead(0)</div><div id='n_method'> N Method Name: test_CoX3DHead(0)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: tests/cox3d/test_x3d.py</div><div id='n_file'> N File Name: tests/cox3d/test_x3d.py</div><div id='m_start'> M Start Line: 662</div><div id='m_end'> M End Line: 696</div><div id='n_start'> N Start Line: 433</div><div id='n_end'> N End Line: 476</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    &#47&#47 Forward through models
+    target = trans([example_clip])[0]
+
+    outputs = <a id="change">[]</a>
+    &#47&#47 Manual zero pad (due to padding=1 in trans.b Conv3d)
+    zeros = torch.zeros_like(example_clip[:, :, 0])
+    outputs.append(cotrans.forward([zeros])[0])
+    outputs.append(cotrans.forward([zeros])[0])
+    <a id="change">for i</a> in <a id="change">range(example_clip.shape[2]</a><a id="change">):
+        outputs.append(</a>cotrans.forward(<a id="change">[</a><a id="change">example_clip[:, :, i]</a>])[0]<a id="change">)</a>
+    outputs.append(cotrans.forward([zeros])[0])
+    outputs.append(cotrans.forward([zeros])[0])
+
+    &#47&#47 For debugging:
+    &#47&#47 close = []
+    &#47&#47 for t in range(target.shape[2]):
+    &#47&#47     for i in range(len(outputs)):
+    &#47&#47         if torch.allclose(target[:, :, t], outputs[i], atol=5e-4):
+    &#47&#47             close.append(f"t = {t}, o = {i}")
+
+    shift = 4  &#47&#47 kernel[0] - 1
+
+    for t in range(1, target.shape[2]):
+        assert torch.allclose(target[:, :, t], outputs[t + shift])
+
+    &#47&#47 forward_steps also works
+    outputs2 = <a id="change">cotrans.forward_steps([example_clip])[0]</a>
+    assert torch.allclose(target, outputs2)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    trans.eval()
+    cotrans.eval()
+
+    sample = <a id="change">torch.randn(</a>(<a id="change">1</a><a id="change">, 2, 4, 4, 4</a>)<a id="change">)</a>
+
+    &#47&#47 Forward through models
+    target = trans.forward([sample])[0]
+
+    &#47&#47 forward
+    output<a id="change"> = </a>cotrans.forward(sample)
+    assert torch.allclose(target, output)
+
+    &#47&#47 forward_steps
+    output = cotrans.forward_steps(sample, pad_end=True)
+    assert torch.allclose(target, output)
+
+    &#47&#47 forward_steps - broken up
+    cotrans.clean_state()
+    nothing = cotrans.forward_steps(sample[:, :, :-2], pad_end=False)  &#47&#47 init
+    assert isinstance(nothing, TensorPlaceholder)
+
+    mid<a id="change"> = </a>cotrans.forward_step(sample[:, :, -2])
+    assert torch.allclose(mid, target[:, :, 0])
+
+    lasts<a id="change"> = </a><a id="change">cotrans.forward_steps(sample[:, :, -1:]</a><a id="change">, pad_end=True)</a>
+    assert torch.allclose(lasts, target[:, :, 1:])
+
+
+def test_CoX3DTransform():</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lukashedegaard/co3d/commit/6f21aa05a02b4da9bc04a9da72466d99be8a9046#diff-81ebfd3b7da0e2057c99c1622bd2ed14cb38bdb040741812bc0eb3de8e60005eL640' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 77310820</div><div id='project'> Project Name: lukashedegaard/co3d</div><div id='commit'> Commit Name: 6f21aa05a02b4da9bc04a9da72466d99be8a9046</div><div id='time'> Time: 2021-09-10</div><div id='author'> Author: lh@eng.au.dk</div><div id='file'> File Name: tests/cox3d/test_x3d.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: test_VideoModelStem(0)</div><div id='n_method'> N Method Name: test_VideoModelStem(0)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: tests/cox3d/test_x3d.py</div><div id='n_file'> N File Name: tests/cox3d/test_x3d.py</div><div id='m_start'> M Start Line: 651</div><div id='m_end'> M End Line: 694</div><div id='n_start'> N Start Line: 84</div><div id='n_end'> N End Line: 133</div><BR>

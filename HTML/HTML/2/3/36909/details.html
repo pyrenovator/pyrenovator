@@ -1,0 +1,82 @@
+<html><h3>Pattern ID :36909
+</h3><img src='105062375.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        else:
+            import scipy.sparse as sp
+
+            if sp.issparse(<a id="change">darray[0]</a>.embedding):
+                x_mat = sp.vstack(self.get_attributes(&quotembedding&quot))
+                y_mat = sp.vstack(darray.get_attributes(&quotembedding&quot))
+                is_sparse = True</code></pre><h3>After Change</h3><pre><code class='java'>
+
+            x_mat = sp.vstack(self.get_attributes(&quotembedding&quot))
+            y_mat = sp.vstack(darray.get_attributes(&quotembedding&quot))
+            dists<a id="change"> = </a><a id="change">cdist(</a>x_mat, y_mat, metric_name<a id="change">, is_sparse=True)</a>
+        else:
+            x_mat = self.embeddings
+            y_mat = darray.embeddings
+            dists = cdist(x_mat, y_mat, metric_name)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/jina-ai/jina/commit/19f31c0aa35276bab7daf47b147b0a16277cd2c0#diff-0f9b5cdc7560c5f53ae28daa201efd41371ff58e80340df23991ad2d27bb9f84L126' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 105062375</div><div id='project'> Project Name: jina-ai/jina</div><div id='commit'> Commit Name: 19f31c0aa35276bab7daf47b147b0a16277cd2c0</div><div id='time'> Time: 2021-09-20</div><div id='author'> Author: artex.xh@gmail.com</div><div id='file'> File Name: jina/types/arrays/neural_ops.py</div><div id='m_class'> M Class Name: DocumentArrayNeuralOpsMixin</div><div id='n_method'> N Class Name: DocumentArrayNeuralOpsMixin</div><div id='m_method'> M Method Name: _match(7)</div><div id='n_method'> N Method Name: _match(6)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: jina/types/arrays/neural_ops.py</div><div id='n_file'> N File Name: jina/types/arrays/neural_ops.py</div><div id='m_start'> M Start Line: 126</div><div id='m_end'> M End Line: 145</div><div id='n_start'> N Start Line: 127</div><div id='n_end'> N End Line: 151</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+
+        &#47&#47 pos = dists + 1e5 * (~pos_mask).float()
+        pos = <a id="change">furthest_positive[:, None]</a>
+        pos_weight = (self.pos_optimal - pos).detach()
+        pos_weight = torch.max(torch.zeros_like(pos_weight), pos_weight)
+        lse_positive = torch.logsumexp(-self.log_scale * (pos - self.pos_margin) * pos_weight, dim=-1)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    def forward(self, anchor, positive, dist_keypts):
+        pids = torch.FloatTensor(np.arange(len(anchor))).to(anchor.device)
+        dists = <a id="change">cdist(</a>anchor, positive<a id="change">, metric=&quoteuclidean&quot)</a>
+        &#47&#47 build false negative 
+        false_negative = dist_keypts &lt; self.safe_radius
+
+        pos_mask = torch.eq(torch.unsqueeze(pids, dim=1), torch.unsqueeze(pids, dim=0))
+        neg_mask = torch.logical_not(pos_mask | false_negative)
+
+        &#47&#47 dists * pos_mask get the distance of each valid anchor-positive pair.
+        furthest_positive, _ = torch.max(dists * pos_mask.float(), dim=1)
+        &#47&#47 here we use "dists +  10000*pos_mask" to avoid the anchor-positive pair been selected.
+        closest_negative, _ = torch.min(dists + 1e5 * pos_mask.float(), dim=1)
+        &#47&#47 closest_negative_row, _ = torch.min(dists + 1e5 * pos_mask.float(), dim=0)
+        &#47&#47 closest_negative = torch.min(closest_negative_col, closest_negative_row)
+        average_negative = (torch.sum(dists, dim=-1) - furthest_positive) / (dists.shape[0] - 1)
+        diff = furthest_positive - closest_negative
+        accuracy = (diff &lt; 0).sum() * 100.0 / diff.shape[0]
+
+        pos = dists - 1e5 * neg_mask.float()
+        pos_weight = (pos - self.pos_optimal).detach()
+        pos_weight = torch.max(torch.zeros_like(pos_weight), pos_weight)
+        lse_positive = torch.logsumexp(self.log_scale * (pos - self.pos_margin) * pos_weight, dim=-1)
+
+        
+        neg = dists + 1e5 * (~neg_mask).float()
+        neg_weight =  (self.neg_optimal - neg).detach()
+        neg_weight = torch.max(torch.zeros_like(neg_weight), neg_weight)
+        lse_negative_row = torch.logsumexp(self.log_scale * (self.neg_margin - neg) * neg_weight, dim=-1)
+        lse_negative_col = torch.logsumexp(self.log_scale * (self.neg_margin - neg) * neg_weight, dim=-2)
+
+        loss_col = F.softplus(lse_positive + lse_negative_row) / self.log_scale
+        loss_row = F.softplus(lse_positive + lse_negative_col) / self.log_scale
+        loss<a id="change"> = </a>loss_col + loss_row
+
+        return torch.mean(loss), accuracy, furthest_positive.tolist(), average_negative.tolist(), 0, dists
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/xuyangbai/d3feat.pytorch/commit/f47b90c1a30103d37497f6614f6e7d59f20d7399#diff-afc9c0f856a1fa54a2d35dfcd375a176b7b736953195238a3a51870eef4314bbL122' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 105062374</div><div id='project'> Project Name: xuyangbai/d3feat.pytorch</div><div id='commit'> Commit Name: f47b90c1a30103d37497f6614f6e7d59f20d7399</div><div id='time'> Time: 2020-07-21</div><div id='author'> Author: 653823597@qq.com</div><div id='file'> File Name: utils/loss.py</div><div id='m_class'> M Class Name: CircleLoss</div><div id='n_method'> N Class Name: CircleLoss</div><div id='m_method'> M Method Name: forward(4)</div><div id='n_method'> N Method Name: forward(4)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: utils/loss.py</div><div id='n_file'> N File Name: utils/loss.py</div><div id='m_start'> M Start Line: 125</div><div id='m_end'> M End Line: 161</div><div id='n_start'> N Start Line: 124</div><div id='n_end'> N End Line: 155</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        res = cd_(ds[ds.sa.chunks == 1, ])
+        &#47&#47 Check to make sure the pdist results are close to CDist results
+        assert_array_almost_equal(res.samples.ravel(),
+                                  <a id="change">squareform(pd_)[:3, 3:]</a>.ravel())
+
+    &#47&#47 check it doesn&quott blow up without mean group samples
+    for metric in metrics:</code></pre><h3>After Change</h3><pre><code class='java'>
+        for metric in metrics:
+            metric_kwargs = {&quotVI&quot: VI_mahalanobis} if metric == &quotmahalanobis&quot \
+                else {}
+            scipy_cdist<a id="change"> = </a><a id="change">cdist(</a>train_data.samples, test_data.samples,
+                        metric<a id="change">, **metric_kwargs)</a>
+            pymvpa_cdist = CDist(pairwise_metric=metric,
+                        pairwise_metric_kwargs=metric_kwargs,
+                        sattr=sattr)
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/PyMVPA/PyMVPA/commit/a243ad678a264c898e133bb1f97efed72703ee06#diff-bb98a17644462e8a72b15ac374b816e4939981f51f0fbc728b95f583b0abc8e6L78' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 105062378</div><div id='project'> Project Name: PyMVPA/PyMVPA</div><div id='commit'> Commit Name: a243ad678a264c898e133bb1f97efed72703ee06</div><div id='time'> Time: 2016-10-02</div><div id='author'> Author: matteo.visconti.gr@dartmouth.edu</div><div id='file'> File Name: mvpa2/tests/test_rsa.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: test_CDist(0)</div><div id='n_method'> N Method Name: test_CDist(0)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: mvpa2/tests/test_rsa.py</div><div id='n_file'> N File Name: mvpa2/tests/test_rsa.py</div><div id='m_start'> M Start Line: 81</div><div id='m_end'> M End Line: 109</div><div id='n_start'> N Start Line: 81</div><div id='n_end'> N End Line: 105</div><BR>

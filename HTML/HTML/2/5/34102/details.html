@@ -1,0 +1,131 @@
+<html><h3>Pattern ID :34102
+</h3><img src='97455581.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        original_predictions = self._original_predictions
+
+        &#47&#47 handle only first image (batch=1)
+        predictions_in_xyxy_format<a id="change"> = </a><a id="change">original_predictions.xyxy[0].cpu().detach()</a>.numpy()
+
+        object_prediction_list = []
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            full_shape_list = [full_shape_list]
+
+        &#47&#47 handle all predictions
+        object_prediction_list_per_image<a id="change"> = </a><a id="change">[]</a>
+        for image_ind, image_predictions_in_xyxy_format in enumerate(original_predictions.xyxy):
+            shift_amount = shift_amount_list[image_ind]
+            full_shape = None if full_shape_list is None else full_shape_list[image_ind]
+            object_prediction_list = []
+
+            &#47&#47 process predictions
+            for prediction in image_predictions_in_xyxy_format.cpu().detach().numpy():
+                x1 = int(prediction[0])
+                y1 = int(prediction[1])
+                x2 = int(prediction[2])
+                y2 = int(prediction[3])
+                bbox = [x1, y1, x2, y2]
+                score = prediction[4]
+                category_id = int(prediction[5])
+                category_name = self.category_mapping[str(category_id)]
+
+                &#47&#47 ignore invalid predictions
+                if bbox[0] &gt; bbox[2] or bbox[1] &gt; bbox[3] or bbox[0] &lt; 0 or bbox[1] &lt; 0 or bbox[2] &lt; 0 or bbox[3] &lt; 0:
+                    logger.warning(f"ignoring invalid prediction with bbox: {bbox}")
+                    continue
+                if full_shape is not None and (
+                    bbox[1] &gt; full_shape[0]
+                    or bbox[3] &gt; full_shape[0]
+                    or bbox[0] &gt; full_shape[1]
+                    or bbox[2] &gt; full_shape[1]
+                ):
+                    logger.warning(f"ignoring invalid prediction with bbox: {bbox}")
+                    continue
+
+                object_prediction = ObjectPrediction(
+                    bbox=bbox,
+                    category_id=category_id,
+                    score=score,
+                    bool_mask=None,
+                    category_name=category_name,
+                    shift_amount=shift_amount,
+                    full_shape=full_shape,
+                )
+                object_prediction_list.append(object_prediction)
+            <a id="change">object_prediction_list_per_image.append(</a>object_prediction_list<a id="change">)</a>
+
+        self._object_prediction_list_per_image = object_prediction_list_per_image
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 5</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/obss/sahi/commit/248cd2df7d3450eea48c0f03b75d1b7d0111dcf4#diff-34fb6fd3619110ee74df2d3aafa1b22f7cf122b36a43ec080f4dde16059022a3L433' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 97455581</div><div id='project'> Project Name: obss/sahi</div><div id='commit'> Commit Name: 248cd2df7d3450eea48c0f03b75d1b7d0111dcf4</div><div id='time'> Time: 2021-12-19</div><div id='author'> Author: 34196005+fcakyon@users.noreply.github.com</div><div id='file'> File Name: sahi/model.py</div><div id='m_class'> M Class Name: Yolov5DetectionModel</div><div id='n_method'> N Class Name: Yolov5DetectionModel</div><div id='m_method'> M Method Name: _create_object_prediction_list_from_original_predictions(3)</div><div id='n_method'> N Method Name: _create_object_prediction_list_from_original_predictions(3)</div><div id='m_parent_class'> M Parent Class: DetectionModel</div><div id='n_parent_class'> N Parent Class: DetectionModel</div><div id='m_file'> M File Name: sahi/model.py</div><div id='n_file'> N File Name: sahi/model.py</div><div id='m_start'> M Start Line: 470</div><div id='m_end'> M End Line: 509</div><div id='n_start'> N Start Line: 433</div><div id='n_end'> N End Line: 484</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                if momentum != 0:
+                    param_state = self.state[p]
+                    if &quotmomentum_buffer&quot not in param_state:
+                        buf = param_state[&quotmomentum_buffer&quot]<a id="change"> = </a><a id="change">torch.clone(d_p).detach()</a>
+                    else:
+                        buf = param_state[&quotmomentum_buffer&quot]
+                        buf.mul_(momentum).add_(d_p, alpha=1 - dampening)
+                    if nesterov:</code></pre><h3>After Change</h3><pre><code class='java'>
+        for group in self.param_groups:
+            params_with_grad = []
+            d_p_list = []
+            momentum_buffer_list<a id="change"> = </a><a id="change">[]</a>
+            weight_decay = group[&quotweight_decay&quot]
+            momentum = group[&quotmomentum&quot]
+            dampening = group[&quotdampening&quot]
+            nesterov = group[&quotnesterov&quot]
+            lr = group[&quotlr&quot]
+
+            for p in group[&quotparams&quot]:
+                if p.grad is not None:
+                    params_with_grad.append(p)
+                    d_p_list.append(p.grad)
+
+                    state = self.state[p]
+                    if &quotmomentum_buffer&quot not in state:
+                        momentum_buffer_list.append(None)
+                    else:
+                        <a id="change">momentum_buffer_list.append(</a>state[&quotmomentum_buffer&quot]<a id="change">)</a>
+
+            F.sgd(params_with_grad,
+                  d_p_list,
+                  momentum_buffer_list,</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/pytorch/pytorch/commit/a0cf5566d88533c5caa7a490beb6eb0760eee9b4#diff-e5ea47a2193f1cfb039210c5c0ff83e8175739afc0551866052f6ad31bb91482L76' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 97455594</div><div id='project'> Project Name: pytorch/pytorch</div><div id='commit'> Commit Name: a0cf5566d88533c5caa7a490beb6eb0760eee9b4</div><div id='time'> Time: 2021-01-21</div><div id='author'> Author: wanchaol@users.noreply.github.com</div><div id='file'> File Name: torch/optim/sgd.py</div><div id='m_class'> M Class Name: SGD</div><div id='n_method'> N Class Name: SGD</div><div id='m_method'> M Method Name: step(2)</div><div id='n_method'> N Method Name: step(2)</div><div id='m_parent_class'> M Parent Class: Optimizer</div><div id='n_parent_class'> N Parent Class: Optimizer</div><div id='m_file'> M File Name: torch/optim/sgd.py</div><div id='n_file'> N File Name: torch/optim/sgd.py</div><div id='m_start'> M Start Line: 88</div><div id='m_end'> M End Line: 114</div><div id='n_start'> N Start Line: 89</div><div id='n_end'> N End Line: 124</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        old_action_probs, _ = self.actor(states)
+        old_action_probs.detach_()
+
+        old_values<a id="change"> = </a><a id="change">self.critic(states).detach()</a>
+
+        &#47&#47 prepared dataloader for auxiliary phase training
+        dl = create_shuffled_dataloader([states, old_action_probs, rewards, old_values], self.minibatch_size)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 gather states and target values into one tensor
+        states = []
+        rewards = []
+        old_values<a id="change"> = </a><a id="change">[]</a>
+        for state, reward, old_value in aux_memories:
+            states.append(state)
+            rewards.append(reward)
+            <a id="change">old_values.append(</a>old_value<a id="change">)</a>
+
+        states = torch.cat(states)
+        rewards = torch.cat(rewards)
+        old_values = torch.cat(old_values)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lucidrains/phasic-policy-gradient/commit/d9741893dd66c02702e9640bd3d12b5bd68aaf4b#diff-ed183d67207df065a11e1289f19d34cc2abbc5448dea952683cfe9728c342b95L217' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 97455591</div><div id='project'> Project Name: lucidrains/phasic-policy-gradient</div><div id='commit'> Commit Name: d9741893dd66c02702e9640bd3d12b5bd68aaf4b</div><div id='time'> Time: 2020-09-29</div><div id='author'> Author: lucidrains@gmail.com</div><div id='file'> File Name: train.py</div><div id='m_class'> M Class Name: PPG</div><div id='n_method'> N Class Name: PPG</div><div id='m_method'> M Method Name: learn_aux(2)</div><div id='n_method'> N Method Name: learn_aux(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: train.py</div><div id='n_file'> N File Name: train.py</div><div id='m_start'> M Start Line: 225</div><div id='m_end'> M End Line: 245</div><div id='n_start'> N Start Line: 221</div><div id='n_end'> N End Line: 246</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+        for i in range(len(target)):
+            target[i][&quotbboxes&quot] = target[i][&quotbboxes&quot].detach().cpu().numpy()
+            target[i][&quotlabels&quot]<a id="change"> = </a><a id="change">target[i][&quotlabels&quot].detach()</a>.cpu().numpy()
+
+        self.targets += target
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        self.preds += mmdet_format_pred
+
+        np_target<a id="change"> = </a><a id="change">[]</a>
+        for targ in target:
+            <a id="change">np_target.append(</a>dict(
+                bboxes=targ[&quotbboxes&quot].detach().cpu().numpy(),
+                labels=targ[&quotlabels&quot].detach().cpu().numpy()
+            )<a id="change">)</a>
+
+        self.targets += np_target
+
+    def compute(self):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/eora-ai/torchok/commit/9512027f7af4b02472766878d1af3cb582ac0dc0#diff-0d7a2c5ac1a56e9de4ee08ab61e65504c512fc6d2dd8218587ff2ffabc9ec815L26' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 97455584</div><div id='project'> Project Name: eora-ai/torchok</div><div id='commit'> Commit Name: 9512027f7af4b02472766878d1af3cb582ac0dc0</div><div id='time'> Time: 2022-09-12</div><div id='author'> Author: shulz134700@gmail.com</div><div id='file'> File Name: torchok/metrics/detection.py</div><div id='m_class'> M Class Name: MMDetectionMAP</div><div id='n_method'> N Class Name: MMDetectionMAP</div><div id='m_method'> M Method Name: update(3)</div><div id='n_method'> N Method Name: update(3)</div><div id='m_parent_class'> M Parent Class: Metric</div><div id='n_parent_class'> N Parent Class: Metric</div><div id='m_file'> M File Name: torchok/metrics/detection.py</div><div id='n_file'> N File Name: torchok/metrics/detection.py</div><div id='m_start'> M Start Line: 51</div><div id='m_end'> M End Line: 55</div><div id='n_start'> N Start Line: 51</div><div id='n_end'> N End Line: 58</div><BR>

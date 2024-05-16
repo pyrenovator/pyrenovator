@@ -1,0 +1,33 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    def update_client_temp(self):
+        weights = [weight_flatten(mw) for mw in self.client_ws]
+
+        w_params<a id="change"> = []</a>
+        <a id="change">for </a>mw in self.client_ws<a id="change">:
+            </a><a id="change">w_params.append(</a>list(mw.parameters())<a id="change">)</a>
+        w_params = list(zip(*w_params))
+
+        for i, mu in enumerate(self.client_us):
+            for param, params in zip(mu.parameters(), w_params):</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        for i, mu in enumerate(self.client_us):
+            for param in mu.parameters():
+                param.data<a id="change"> = </a><a id="change">torch.zeros_like(</a>param.data<a id="change">)</a>
+
+            coef = torch.zeros(self.num_clients)
+            for j, mw in enumerate(self.client_ws):
+                if i != j:
+                    sub = (weights[i] - weights[j]).view(-1)
+                    sub = torch.dot(sub, sub)
+                    coef[j]<a id="change"> = </a>self.alphaK * self.e(sub)
+            coef[i] = 1 - torch.sum(coef)
+
+            for j, mw in enumerate(self.client_ws):
+                <a id="change">for </a>param, param_j in zip(mu.parameters(), mw.parameters())<a id="change">:
+                    </a>param.data<a id="change"> += </a>coef[j] * param_j
+
+    def e(self, x):
+        return math.exp(-x/self.sigma)/self.sigma</code></pre>

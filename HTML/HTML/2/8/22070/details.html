@@ -1,0 +1,105 @@
+<html><h3>Pattern ID :22070
+</h3><img src='70014509.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            logits_adv = self._adversary.forward(
+                observation, deterministic, return_log_prob=True
+            )[-1]
+            logits_pi<a id="change"> = </a>logits_pi.detach().cpu().numpy().flatten()
+            logits_adv = logits_adv.detach().cpu().numpy().flatten()
+            <a id="change">return </a>action<a id="change">, log_pi, adv_log_pi, logits_pi, logits_adv</a>
+        return action, log_pi, adv_log_pi
+
+    def compute_values(self, observations: Observation) -&gt; np.ndarray:
+        </code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 compute additional distribution information
+        actor_distrib = self._actor.compute_distribution(observation)
+        adversary_distrib = self._adversary.compute_distribution(observation)
+        <a id="change">if </a>self._discrete:
+            params_pi = outs[-1]
+            params_adv = adversary_distrib.logits
+            params_pi = params_pi.detach().cpu().numpy().flatten()
+            params_adv = params_adv.detach().cpu().numpy().flatten()
+        else:
+            mean = actor_distrib.mean.detach().cpu().numpy().flatten()
+            scale = <a id="change">actor_distrib.scale.detach().cpu().numpy()</a>.flatten()
+            params_pi<a id="change"> = </a>np.concatenate([mean, scale], -1)
+            mean = adversary_distrib.mean.detach().cpu().numpy().flatten()
+            scale = adversary_distrib.scale.detach().cpu().numpy().flatten()
+            params_adv = np.concatenate([mean, scale], -1)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 8</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/yfletberliac/adversarially-guided-actor-critic/commit/4958ecb8ca6e7e344852f7aa9fc8668cd8cd074b#diff-513f475959da3d0565e9ebe8fc9a9ab196187c5415b4d26445a650fd2fae785cL115' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 70014509</div><div id='project'> Project Name: yfletberliac/adversarially-guided-actor-critic</div><div id='commit'> Commit Name: 4958ecb8ca6e7e344852f7aa9fc8668cd8cd074b</div><div id='time'> Time: 2021-07-07</div><div id='author'> Author: cibeah.cb@gmail.com</div><div id='file'> File Name: agac_torch/agac/agac_ppo.py</div><div id='m_class'> M Class Name: PPO</div><div id='n_method'> N Class Name: PPO</div><div id='m_method'> M Method Name: select_action(3)</div><div id='n_method'> N Method Name: select_action(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: agac_torch/agac/agac_ppo.py</div><div id='n_file'> N File Name: agac_torch/agac/agac_ppo.py</div><div id='m_start'> M Start Line: 115</div><div id='m_end'> M End Line: 138</div><div id='n_start'> N Start Line: 121</div><div id='n_end'> N End Line: 146</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        image = letterbox(image, input_shape, stride=32, auto=False)[0]
+        image = image.transpose((2, 0, 1))[::-1]
+        image = np.ascontiguousarray(image, dtype=np.float32)
+        image<a id="change"> = </a>image
+        image /= 255
+        if len(image.shape) == 3:
+            image = image[None]  &#47&#47 expand for batch dim
+
+        input_name = self.model.get_inputs()[0].name
+        pred = self.model.run([self.model.get_outputs()[0].name],
+                              {input_name: image})[0]
+        if isinstance(pred, np.ndarray):
+            pred = torch.tensor(pred, device=self.device)
+        pred = non_max_suppression(
+                                pred, conf_thres, 
+                                iou_thres, classes, 
+                                agnostic_nms, 
+                                max_det=max_det)
+
+        for i, det in enumerate(pred):  &#47&#47 per image
+            if len(det):
+                det[:, :4] = scale_coords(
+                    image.shape[2:], det[:, :4], image0.shape).round()
+                pred[i] = det
+        dets = pred[0].cpu().numpy()
+        image_info = {
+            &quotwidth&quot: image0.shape[1],
+            &quotheight&quot: image0.shape[0],
+        }
+        self.boxes = dets[:, :4]
+        self.scores = dets[:, 4:5]
+        self.class_ids = dets[:, 5:6]
+        
+        <a id="change">return </a>dets<a id="change">, image_info</a>
+
+    def draw_detections(self, image, draw_scores=True, mask_alpha=0.4):
+        return draw_detections(image, self.boxes, self.scores,
+                               self.class_ids, mask_alpha)</code></pre><h3>After Change</h3><pre><code class='java'>
+        original_image, processed_image = self.image_preprocessing(image, input_shape)
+        
+        &#47&#47 Inference
+        <a id="change">if </a>self.use_onnx:
+            &#47&#47 Input names of ONNX model on which it is exported   
+            input_name = self.model.get_inputs()[0].name
+            &#47&#47 Run onnx model 
+            pred = self.model.run([self.model.get_outputs()[0].name], {input_name: processed_image})[0]
+            &#47&#47 Run Pytorch model        
+        else:
+            processed_image = torch.from_numpy(processed_image).to(self.device)
+            &#47&#47 Change image floating point precision if fp16 set to true
+            processed_image = processed_image.half() if self.fp16 else processed_image.float() 
+            pred = self.model(processed_image, augment=False)[0]
+            pred<a id="change"> = pred.detach()</a><a id="change">.cpu().numpy()</a>
+        
+        if isinstance(pred, np.ndarray):
+            pred = torch.tensor(pred, device=self.device)
+        predictions = non_max_suppression(</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/augmentedstartups/as-one/commit/79f3ea97d63f873008f3ad548f1428f07f4d9dae#diff-9154a085fa2fce4c0495a4fe364b1cba4be28cc642d14f5b5b8eb80e737ae200L30' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 70014524</div><div id='project'> Project Name: augmentedstartups/as-one</div><div id='commit'> Commit Name: 79f3ea97d63f873008f3ad548f1428f07f4d9dae</div><div id='time'> Time: 2022-09-07</div><div id='author'> Author: ajmair.kashif@axcelerate.ai</div><div id='file'> File Name: asone-linux/code/asone/detectors/yolor/yolor_detector.py</div><div id='m_class'> M Class Name: YOLOrDetector</div><div id='n_method'> N Class Name: YOLOrDetector</div><div id='m_method'> M Method Name: detect(8)</div><div id='n_method'> N Method Name: detect(8)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: asone-linux/code/asone/detectors/yolor/yolor_detector.py</div><div id='n_file'> N File Name: asone-linux/code/asone/detectors/yolor/yolor_detector.py</div><div id='m_start'> M Start Line: 38</div><div id='m_end'> M End Line: 72</div><div id='n_start'> N Start Line: 70</div><div id='n_end'> N End Line: 109</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            attention_map_GCAM = model_GCAM.generate(target_layer=layer, dim=2)[0]
+
+        if is_ok[0]:
+            image_GCAM<a id="change"> = </a>save_gcam(gcam=attention_map_GCAM, filepath=batch["filepath"])
+            image_GGCAM = save_guided_gcam(guided_gcam=torch.mul(attention_map_GCAM, attention_map_GBP))
+            <a id="change">return </a>image_GCAM<a id="change">, image_GGCAM</a>
+        else:
+            return batch["img"], batch["img"]</code></pre><h3>After Change</h3><pre><code class='java'>
+        image_GGCAM = []
+        batch_size = batch["img"].shape[0]
+        for j in range(batch_size):
+            <a id="change">if </a>is_ok[j]:
+                map_GCAM_j = attention_map_GCAM[j].squeeze().cpu().numpy()
+                map_GBP_j = attention_map_GBP[j].squeeze().cpu().numpy()
+                img<a id="change"> = batch["img"][j].squeeze().detach()</a><a id="change">.cpu().numpy()</a>.transpose(1, 2, 0)
+                image_GCAM.append(generate_gcam(gcam=map_GCAM_j, raw_image=img))
+                image_GGCAM.append(generate_guided_gcam(gcam=map_GCAM_j, guided_bp=map_GBP_j))
+            else:</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/karol-g/gcam/commit/24c529378b313c36b05e02e53741fc5cc84d9b88#diff-a8ea5d16155c88b9fb0db839af82eaf5c0514a99dd4def6a5dbdd2ca0483f506L6' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 70014527</div><div id='project'> Project Name: karol-g/gcam</div><div id='commit'> Commit Name: 24c529378b313c36b05e02e53741fc5cc84d9b88</div><div id='time'> Time: 2020-02-24</div><div id='author'> Author: KarolGotkowski@gmx.de</div><div id='file'> File Name: gcam/run_grad_cam.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: run(3)</div><div id='n_method'> N Method Name: run(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: gcam/run_grad_cam.py</div><div id='n_file'> N File Name: gcam/run_grad_cam.py</div><div id='m_start'> M Start Line: 8</div><div id='m_end'> M End Line: 30</div><div id='n_start'> N Start Line: 6</div><div id='n_end'> N End Line: 37</div><BR>

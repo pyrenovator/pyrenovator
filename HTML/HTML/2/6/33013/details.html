@@ -1,0 +1,64 @@
+<html><h3>Pattern ID :33013
+</h3><img src='95486045.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+        &#47&#47 input should be (seq_len, batch, input_size)
+        output, h_n = self.rnn(x.unsqueeze(1))
+        output<a id="change"> = </a>self.fc(<a id="change">output.flatten()</a>)
+        &#47&#47 print(output)
+        &#47&#47 return torch.mean(output, dim=0)
+        return output</code></pre><h3>After Change</h3><pre><code class='java'>
+        output_per_clip = []
+        &#47&#47 so as to reflect a batch_size = 1
+        st_maps = st_maps.unsqueeze(0)
+        <a id="change">for t</a> in <a id="change">range(</a>st_maps.size(1)<a id="change">):
+            </a>with torch.no_grad():
+                x = self.resnet18(st_maps[:, t, :, :, :])
+                &#47&#47 collapse dimensions to BSx512 (resnet o/p)
+                x = x.view(x.size(0), -1)
+            &#47&#47 output dim: BSx1
+            x<a id="change"> = </a>self.fc_resnet(x)
+            &#47&#47 For now since we&quotre working with BS = 1, lets collapse that dimension
+            output_per_clip.append(x.squeeze(0))
+            &#47&#47 input should be (seq_len, batch, input_size)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 5</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/anweshcr7/rhythmnet/commit/5486b317570359a6ab1971196350ee70894b19db#diff-3fc5bf831ef8bd1cc5d50189ec691215fb3d3ae0cbb974e736200edc7f8c65cdL25' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 95486045</div><div id='project'> Project Name: anweshcr7/rhythmnet</div><div id='commit'> Commit Name: 5486b317570359a6ab1971196350ee70894b19db</div><div id='time'> Time: 2021-02-02</div><div id='author'> Author: anwesh.marwade@beyondsports.nl</div><div id='file'> File Name: src/models/rhythmNet.py</div><div id='m_class'> M Class Name: RhythmNet</div><div id='n_method'> N Class Name: RhythmNet</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: src/models/rhythmNet.py</div><div id='n_file'> N File Name: src/models/rhythmNet.py</div><div id='m_start'> M Start Line: 25</div><div id='m_end'> M End Line: 32</div><div id='n_start'> N Start Line: 32</div><div id='n_end'> N End Line: 48</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            valid = valids[i].bool()  &#47&#47 [P]
+            pred, gt = pred_pcs[i], gt_pcs[i]  &#47&#47 [P, N, 3]
+            pred = pred[valid].flatten(0, 1).cpu().numpy()
+            gt<a id="change"> = </a><a id="change">gt[valid].flatten(</a>0, 1<a id="change">)</a>.cpu().numpy()  &#47&#47 [n*N, 3]
+            pred_pcs_lst.append(pred)
+            gt_pcs_lst.append(gt)
+        return gt_pcs_lst, pred_pcs_lst</code></pre><h3>After Change</h3><pre><code class='java'>
+        colors = np.array(self.cfg.data.colors)
+        B = part_pcs.shape[0]
+        pred_pcs_lst, gt_pcs_lst = [[] for _ in range(B)], []
+        <a id="change">for i</a> in <a id="change">range(</a>self.sample_iter<a id="change">):
+            </a>pred_pcs = sample_pred_pcs[i]  &#47&#47 [B, P, N, 3]
+            for j in range(B):
+                valid = valids[j].bool()  &#47&#47 [P]
+                pred = pred_pcs[j][valid].cpu().numpy()  &#47&#47 [p, N, 3]
+                pred = colorize_part_pc(pred, colors).reshape(-1, 6)
+                pred_pcs_lst[j].append(pred)  &#47&#47 [p*N, 6]
+                &#47&#47 only append GT once
+                if i == 0:
+                    gt<a id="change"> = </a>gt_pcs[j][valid].cpu().numpy()
+                    gt = colorize_part_pc(gt, colors).reshape(-1, 6)
+                    gt_pcs_lst.append(gt)
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/wuziyi616/multi_part_assembly/commit/0148c98759e6c3ff6b944136ebc93aeb67f0d421#diff-a3ad4747602b92d4c95922c1168436b29f062f2b231f1c5c31a818c978e6bc4dL369' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 95486047</div><div id='project'> Project Name: wuziyi616/multi_part_assembly</div><div id='commit'> Commit Name: 0148c98759e6c3ff6b944136ebc93aeb67f0d421</div><div id='time'> Time: 2022-03-08</div><div id='author'> Author: dazitu616@gmail.com</div><div id='file'> File Name: multi_part_assembly/models/pn_transformer/network.py</div><div id='m_class'> M Class Name: PNTransformer</div><div id='n_method'> N Class Name: PNTransformer</div><div id='m_method'> M Method Name: sample_assembly(2)</div><div id='n_method'> N Method Name: sample_assembly(2)</div><div id='m_parent_class'> M Parent Class: pl.LightningModule</div><div id='n_parent_class'> N Parent Class: pl.LightningModule</div><div id='m_file'> M File Name: multi_part_assembly/models/pn_transformer/network.py</div><div id='n_file'> N File Name: multi_part_assembly/models/pn_transformer/network.py</div><div id='m_start'> M Start Line: 372</div><div id='m_end'> M End Line: 387</div><div id='n_start'> N Start Line: 404</div><div id='n_end'> N End Line: 430</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    def get_logits(self, _input: torch.Tensor, randomized_smooth=False, sigma=0.1, n=100, **kwargs):
+        if randomized_smooth:
+            _input_noise<a id="change"> = </a><a id="change">add_noise(repeat_to_batch(_input, batch_size=n), std=sigma).flatten(end_dim=1)</a>
+            return self.model(_input_noise, **kwargs).view(n, len(_input), self.num_classes).mean(dim=0)
+        else:
+            return self.model(_input, **kwargs)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    def get_logits(self, _input: torch.Tensor, randomized_smooth=False, sigma=0.1, n=100, **kwargs):
+        if randomized_smooth:
+            _list = []
+            <a id="change">for _</a> in <a id="change">range(</a>n<a id="change">):
+                </a>_input_noise<a id="change"> = </a>add_noise(_input, std=sigma)
+                _list.append(self.model(_input_noise, **kwargs))
+            return torch.stack(_list).mean(dim=0)
+            &#47&#47 _input_noise = add_noise(repeat_to_batch(_input, batch_size=n), std=sigma).flatten(end_dim=1)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/ain-soph/trojanzoo/commit/c27bc51ba9150d882f240c599f52c8c475844eb8#diff-88a9308c080a187aa3abb15d0ec02fe23bfe1233b6bb835d8df8f09b21091877L157' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 95486046</div><div id='project'> Project Name: ain-soph/trojanzoo</div><div id='commit'> Commit Name: c27bc51ba9150d882f240c599f52c8c475844eb8</div><div id='time'> Time: 2020-08-24</div><div id='author'> Author: ain-soph@live.com</div><div id='file'> File Name: trojanzoo/model/model.py</div><div id='m_class'> M Class Name: Model</div><div id='n_method'> N Class Name: Model</div><div id='m_method'> M Method Name: get_logits(5)</div><div id='n_method'> N Method Name: get_logits(5)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: trojanzoo/model/model.py</div><div id='n_file'> N File Name: trojanzoo/model/model.py</div><div id='m_start'> M Start Line: 159</div><div id='m_end'> M End Line: 160</div><div id='n_start'> N Start Line: 159</div><div id='n_end'> N End Line: 163</div><BR>

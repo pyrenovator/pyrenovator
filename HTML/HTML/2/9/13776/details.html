@@ -1,0 +1,70 @@
+<html><h3>Pattern ID :13776
+</h3><img src='46022591.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                / beta_prod_t_sqrt
+                * eta
+            )
+            coeff_2 = <a id="change">((1 - alpha_prod_t_prev) - coeff_1**2).sqrt()</a>
+
+            &#47&#47 model forward
+            with torch.no_grad():
+                noise_residual = self.unet(image, train_step)
+
+            &#47&#47 predict mean of prev image
+            pred_mean = alpha_prod_t_rsqrt * (image - beta_prod_t_sqrt * noise_residual)
+            pred_mean = torch.clamp(pred_mean, -1, 1)
+            pred_mean<a id="change"> = </a>(<a id="change">1 / alpha_prod_t_prev_rsqrt) * pred_mean + </a>coeff_2 * noise_residual
+
+            &#47&#47 if eta &gt; 0.0 add noise. Note eta = 1.0 essentially corresponds to DDPM
+            if eta &gt; 0.0:</code></pre><h3>After Change</h3><pre><code class='java'>
+
+            &#47&#47 Third: Compute variance: "sigma_t(η)" -&gt; see formula (16)
+            &#47&#47 σ_t = sqrt((1 − α_t−1)/(1 − α_t)) * sqrt(1 − α_t/α_t−1)
+            std_dev_t = (beta_prod_t_prev<a id="change"> / </a>beta_prod_t).sqrt()<a id="change"> * </a><a id="change">(1 - alpha_prod_t / alpha_prod_t_prev).sqrt()</a>
+            std_dev_t<a id="change"> = </a>eta<a id="change"> * </a>std_dev_t
+
+            &#47&#47 Fourth: Compute "direction pointing to x_t" of formula (12) from https://arxiv.org/pdf/2010.02502.pdf
+            pred_image_direction = (1 - alpha_prod_t_prev - std_dev_t**2).sqrt() * pred_noise_t</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 9</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/huggingface/diffusers/commit/8841d0d1a9e63bda03e36c072d9d3d0692f07be4#diff-b1438e8e61a5346c0e148a693d7895e08915234306df8c2f156b6837fe70d984L34' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 46022591</div><div id='project'> Project Name: huggingface/diffusers</div><div id='commit'> Commit Name: 8841d0d1a9e63bda03e36c072d9d3d0692f07be4</div><div id='time'> Time: 2022-06-09</div><div id='author'> Author: patrick.v.platen@gmail.com</div><div id='file'> File Name: models/vision/ddim/modeling_ddim.py</div><div id='m_class'> M Class Name: DDIM</div><div id='n_method'> N Class Name: DDIM</div><div id='m_method'> M Method Name: __call__(6)</div><div id='n_method'> N Method Name: __call__(6)</div><div id='m_parent_class'> M Parent Class: DiffusionPipeline</div><div id='n_parent_class'> N Parent Class: DiffusionPipeline</div><div id='m_file'> M File Name: models/vision/ddim/modeling_ddim.py</div><div id='n_file'> N File Name: models/vision/ddim/modeling_ddim.py</div><div id='m_start'> M Start Line: 37</div><div id='m_end'> M End Line: 80</div><div id='n_start'> N Start Line: 34</div><div id='n_end'> N End Line: 99</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    for i in range(predictions.shape[0]):
+        &#47&#47 sum_x = torch.sum(predictions[i]-torch.mean(predictions[i]))
+        &#47&#47 sum_y = torch.sum(targets[i]-torch.mean(targets[i]))
+        sum_xy = torch.sum((predictions[i]-torch.mean(predictions[i]))<a id="change"> * </a>(targets[i]-torch.mean(targets[i])))
+        pow_x = torch.sum(torch.pow(predictions[i]-torch.mean(predictions[i]), 2))
+        pow_y = torch.sum(torch.pow(targets[i]-torch.mean(targets[i]), 2))
+        pearson = (sum_xy<a id="change"> / </a><a id="change">torch.sqrt(</a>pow_x * pow_y<a id="change">)</a> + eps).float()
+
+        rst<a id="change"> += </a>pearson
+
+    rst = rst / predictions.shape[0]
+    return rst</code></pre><h3>After Change</h3><pre><code class='java'>
+        sum_x2 = torch.sum(torch.pow(predictions[i], 2))  &#47&#47 x^2
+        sum_y2 = torch.sum(torch.pow(targets[i], 2))  &#47&#47 y^2
+        N = predictions.shape[1]
+        pearson = (N<a id="change"> * sum_xy - </a>sum_x * sum_y)<a id="change"> / </a>(
+            <a id="change">torch.sqrt(</a>(N * sum_x2 - torch.pow(sum_x, 2)) * (N * sum_y2 - torch.pow(sum_y, 2))<a id="change">))</a> + eps
+        if torch.isnan(pearson):
+            print(&quotpearson is nan&quot)
+            print(&quotN :&quot, N, &quotsum_xy :&quot, sum_xy, &quotsum_x :&quot, sum_x, &quotsum_y :&quot, sum_y, &quotsum_x2 :&quot, sum_x2, &quotsum_y2 :&quot, sum_y2)
+            pearson = 0
+        rst<a id="change"> += </a>1<a id="change"> - </a>pearson
+    &#47&#47 n = predictions.shape[0]
+    &#47&#47 sum_x = torch.sum(predictions, dim=1)
+    &#47&#47 sum_y = torch.sum(targets, dim=1)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/tvs-ai/pytorch_rppgs/commit/79fa5ea2fc22ff76197fc5272382574b54608880#diff-a24b5f75761b5d976f344bc6b98403f93be7fb1a429f480c3433456d7008e23eL107' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 46022460</div><div id='project'> Project Name: tvs-ai/pytorch_rppgs</div><div id='commit'> Commit Name: 79fa5ea2fc22ff76197fc5272382574b54608880</div><div id='time'> Time: 2023-01-02</div><div id='author'> Author: forownsake@gmail.com</div><div id='file'> File Name: vid2bp/nets/loss/loss.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: Neg_Pearson_Loss(2)</div><div id='n_method'> N Method Name: Neg_Pearson_Loss(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: vid2bp/nets/loss/loss.py</div><div id='n_file'> N File Name: vid2bp/nets/loss/loss.py</div><div id='m_start'> M Start Line: 114</div><div id='m_end'> M End Line: 173</div><div id='n_start'> N Start Line: 114</div><div id='n_end'> N End Line: 191</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            exp_avg_sq = state.get("exp_avg_sq", torch.zeros_like(vector))
+            beta2 = param_group["betas"][1]
+            eps = param_group["eps"]
+            denom<a id="change"> = </a>torch.add(
+                <a id="change">torch.sqrt(</a>torch.mean(beta2 * exp_avg_sq)<a id="change">)</a>, eps
+            )<a id="change"> / </a>math.sqrt(1<a id="change"> - </a>beta2<a id="change">**</a>step)
+
+            outputs.append(vector / denom)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+                scale = (1 - beta1) * beta2 * exp_avg_sq_old - beta1 * (
+                    1 - beta2
+                ) * last_grad * exp_avg_old
+                scale<a id="change"> /= </a>(<a id="change">torch.sqrt(</a>exp_avg_sq<a id="change">) + </a>eps)<a id="change"> ** </a>3
+            out = vector * scale * param_group["lr"]
+            outputs.append(out)
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/leopard-ai/betty/commit/831b8d6a8444a2c09aae0a7d37bb280b7b52ca55#diff-43116a88fc3a7de425c9e2a3a73878231946a17ff7331ac2a5c240f7c3688080L12' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 46022535</div><div id='project'> Project Name: leopard-ai/betty</div><div id='commit'> Commit Name: 831b8d6a8444a2c09aae0a7d37bb280b7b52ca55</div><div id='time'> Time: 2023-04-06</div><div id='author'> Author: sangkeuc@andrew.cmu.edu</div><div id='file'> File Name: betty/hypergradient/utils.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: precondition(2)</div><div id='n_method'> N Method Name: precondition(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: betty/hypergradient/utils.py</div><div id='n_file'> N File Name: betty/hypergradient/utils.py</div><div id='m_start'> M Start Line: 22</div><div id='m_end'> M End Line: 34</div><div id='n_start'> N Start Line: 21</div><div id='n_end'> N End Line: 41</div><BR>

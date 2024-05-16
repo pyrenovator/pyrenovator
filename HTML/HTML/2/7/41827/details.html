@@ -1,0 +1,157 @@
+<html><h3>Pattern ID :41827
+</h3><img src='117236264.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+    def __call__(self, decoded_context_dist, target_dist, encoded_context_dist=None):
+        ground_truth_pixels = self.get_vector_forms(target_dist)[0]
+        log_prob_x_given_z = <a id="change">decoded_context_dist.log_prob(</a>ground_truth_pixels<a id="change">)</a>
+
+        prior = torch.distributions.Normal(torch.zeros(encoded_context_dist.batch_shape +
+                                                       encoded_context_dist.event_shape).to(self.device),
+                                           self.prior_scale)
+        independent_prior = torch.distributions.Independent(prior,
+                                                            len(encoded_context_dist.event_shape))
+        kld = torch.distributions.kl.kl_divergence(encoded_context_dist, independent_prior)
+        &#47&#47 KL divergence of z dist from prior contributes to loss,
+        &#47&#47 log probability of ground truth pixels subtracts from it
+        loss = self.beta*kld - log_prob_x_given_z
+        <a id="change">return torch.mean(</a>loss<a id="change">)</a>
+
+
+class CEBLoss(RepresentationLoss):
+    </code></pre><h3>After Change</h3><pre><code class='java'>
+    def __call__(self, decoded_context_dist, target_dist, encoded_context_dist=None):
+        ground_truth_pixels = self.get_vector_forms(target_dist)[0]
+        predicted_pixels = decoded_context_dist.mean
+        recon_loss<a id="change"> = </a><a id="change">F.mse_loss(</a>predicted_pixels, ground_truth_pixels<a id="change">)</a>
+
+        prior = torch.distributions.Normal(torch.zeros(encoded_context_dist.batch_shape +
+                                                       encoded_context_dist.event_shape).to(self.device),
+                                           self.prior_scale)
+        independent_prior = torch.distributions.Independent(prior,
+                                                            len(encoded_context_dist.event_shape))
+        kld = torch.distributions.kl.kl_divergence(encoded_context_dist, independent_prior)
+
+        logger.record(&quotloss_recon&quot, recon_loss.item())
+        logger.record(&quotloss_kld&quot, torch.mean(kld).item())
+
+        loss = recon_loss + self.beta * <a id="change">torch.mean(</a>kld<a id="change">)</a>
+        <a id="change">return </a>loss
+
+
+class CEBLoss(RepresentationLoss):</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 7</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/humancompatibleai/eirli/commit/ef99c67ec70a98024755e6bc13b7ba2849a33a3c#diff-630165dcddbc9dc7afb566dd6e867798b362df0cda60ca3c0b63403ec387cfcaL277' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 117236264</div><div id='project'> Project Name: humancompatibleai/eirli</div><div id='commit'> Commit Name: ef99c67ec70a98024755e6bc13b7ba2849a33a3c</div><div id='time'> Time: 2020-09-29</div><div id='author'> Author: neel@perceptron.bair.berkeley.edu</div><div id='file'> File Name: src/il_representations/algos/losses.py</div><div id='m_class'> M Class Name: VAELoss</div><div id='n_method'> N Class Name: VAELoss</div><div id='m_method'> M Method Name: __call__(4)</div><div id='n_method'> N Method Name: __call__(4)</div><div id='m_parent_class'> M Parent Class: RepresentationLoss</div><div id='n_parent_class'> N Parent Class: RepresentationLoss</div><div id='m_file'> M File Name: src/il_representations/algos/losses.py</div><div id='n_file'> N File Name: src/il_representations/algos/losses.py</div><div id='m_start'> M Start Line: 277</div><div id='m_end'> M End Line: 289</div><div id='n_start'> N Start Line: 279</div><div id='n_end'> N End Line: 294</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    def __call__(self, decoded_context_dist, target_dist, encoded_context_dist=None):
+        ground_truth_pixels = self.get_vector_forms(target_dist)[0]
+        log_prob_x_given_z = <a id="change">decoded_context_dist.log_prob(</a>ground_truth_pixels<a id="change">)</a>
+
+        prior = torch.distributions.Normal(torch.zeros(encoded_context_dist.batch_shape +
+                                                       encoded_context_dist.event_shape),
+                                           self.prior_scale)
+        independent_prior = torch.distributions.Independent(prior,
+                                                            len(encoded_context_dist.event_shape))
+        kld = torch.distributions.kl.kl_divergence(encoded_context_dist, independent_prior)
+        &#47&#47 KL divergence of z dist from prior contributes to loss,
+        &#47&#47 log probability of ground truth pixels subtracts from it
+        loss = self.beta*kld - log_prob_x_given_z
+        <a id="change">return torch.mean(</a>loss<a id="change">)</a>
+
+
+class CEBLoss(RepresentationLoss):
+    </code></pre><h3>After Change</h3><pre><code class='java'>
+    def __call__(self, decoded_context_dist, target_dist, encoded_context_dist=None):
+        ground_truth_pixels = self.get_vector_forms(target_dist)[0]
+        predicted_pixels = decoded_context_dist.mean
+        reconstruction_loss<a id="change"> = </a><a id="change">F.mse_loss(</a>predicted_pixels, ground_truth_pixels<a id="change">)</a>
+
+        prior = torch.distributions.Normal(torch.zeros(encoded_context_dist.batch_shape +
+                                                       encoded_context_dist.event_shape),
+                                           self.prior_scale)
+        independent_prior = torch.distributions.Independent(prior,
+                                                            len(encoded_context_dist.event_shape))
+        kld = <a id="change">torch.mean(</a>torch.distributions.kl.kl_divergence(encoded_context_dist, independent_prior)<a id="change">)</a>
+        &#47&#47 KL divergence of z dist from prior contributes to loss,
+        &#47&#47 log probability of ground truth pixels subtracts from it
+        loss = self.beta*kld + reconstruction_loss
+        <a id="change">return </a>loss
+
+
+class CEBLoss(RepresentationLoss):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/humancompatibleai/eirli/commit/526ed37432589c7398dff008882062df99c8ac19#diff-630165dcddbc9dc7afb566dd6e867798b362df0cda60ca3c0b63403ec387cfcaL276' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 117236266</div><div id='project'> Project Name: humancompatibleai/eirli</div><div id='commit'> Commit Name: 526ed37432589c7398dff008882062df99c8ac19</div><div id='time'> Time: 2020-09-29</div><div id='author'> Author: codywild@berkeley.edu</div><div id='file'> File Name: src/il_representations/algos/losses.py</div><div id='m_class'> M Class Name: VAELoss</div><div id='n_method'> N Class Name: VAELoss</div><div id='m_method'> M Method Name: __call__(4)</div><div id='n_method'> N Method Name: __call__(4)</div><div id='m_parent_class'> M Parent Class: RepresentationLoss</div><div id='n_parent_class'> N Parent Class: RepresentationLoss</div><div id='m_file'> M File Name: src/il_representations/algos/losses.py</div><div id='n_file'> N File Name: src/il_representations/algos/losses.py</div><div id='m_start'> M Start Line: 277</div><div id='m_end'> M End Line: 289</div><div id='n_start'> N Start Line: 278</div><div id='n_end'> N End Line: 291</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    def __call__(self, decoded_context_dist, target_dist, encoded_context_dist=None):
+        ground_truth_pixels = self.get_vector_forms(target_dist)[0]
+        log_prob_x_given_z = <a id="change">decoded_context_dist.log_prob(</a>ground_truth_pixels<a id="change">)</a>
+
+        prior = torch.distributions.Normal(torch.zeros(encoded_context_dist.batch_shape +
+                                                       encoded_context_dist.event_shape),
+                                           self.prior_scale)
+        independent_prior = torch.distributions.Independent(prior,
+                                                            len(encoded_context_dist.event_shape))
+        kld = torch.distributions.kl.kl_divergence(encoded_context_dist, independent_prior)
+        &#47&#47 KL divergence of z dist from prior contributes to loss,
+        &#47&#47 log probability of ground truth pixels subtracts from it
+        loss = self.beta*kld - log_prob_x_given_z
+        <a id="change">return torch.mean(</a>loss<a id="change">)</a>
+
+
+class CEBLoss(RepresentationLoss):
+    </code></pre><h3>After Change</h3><pre><code class='java'>
+    def __call__(self, decoded_context_dist, target_dist, encoded_context_dist=None):
+        ground_truth_pixels = self.get_vector_forms(target_dist)[0]
+        predicted_pixels = decoded_context_dist.mean
+        reconstruction_loss<a id="change"> = </a><a id="change">F.mse_loss(</a>predicted_pixels, ground_truth_pixels<a id="change">)</a>
+
+        prior = torch.distributions.Normal(torch.zeros(encoded_context_dist.batch_shape +
+                                                       encoded_context_dist.event_shape),
+                                           self.prior_scale)
+        independent_prior = torch.distributions.Independent(prior,
+                                                            len(encoded_context_dist.event_shape))
+        kld = <a id="change">torch.mean(</a>torch.distributions.kl.kl_divergence(encoded_context_dist, independent_prior)<a id="change">)</a>
+        &#47&#47 KL divergence of z dist from prior contributes to loss,
+        &#47&#47 log probability of ground truth pixels subtracts from it
+        loss = self.beta*kld + reconstruction_loss
+        <a id="change">return </a>loss
+
+
+class CEBLoss(RepresentationLoss):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/humancompatibleai/eirli/commit/bc57b7b0bd22fe12b588a65ee6b6893ca7abc47f#diff-630165dcddbc9dc7afb566dd6e867798b362df0cda60ca3c0b63403ec387cfcaL276' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 117236267</div><div id='project'> Project Name: humancompatibleai/eirli</div><div id='commit'> Commit Name: bc57b7b0bd22fe12b588a65ee6b6893ca7abc47f</div><div id='time'> Time: 2020-09-29</div><div id='author'> Author: codywild@berkeley.edu</div><div id='file'> File Name: src/il_representations/algos/losses.py</div><div id='m_class'> M Class Name: VAELoss</div><div id='n_method'> N Class Name: VAELoss</div><div id='m_method'> M Method Name: __call__(4)</div><div id='n_method'> N Method Name: __call__(4)</div><div id='m_parent_class'> M Parent Class: RepresentationLoss</div><div id='n_parent_class'> N Parent Class: RepresentationLoss</div><div id='m_file'> M File Name: src/il_representations/algos/losses.py</div><div id='n_file'> N File Name: src/il_representations/algos/losses.py</div><div id='m_start'> M Start Line: 277</div><div id='m_end'> M End Line: 289</div><div id='n_start'> N Start Line: 278</div><div id='n_end'> N End Line: 291</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    def __call__(self, decoded_context_dist, target_dist, encoded_context_dist=None):
+        ground_truth_pixels = self.get_vector_forms(target_dist)[0]
+        log_prob_x_given_z = <a id="change">decoded_context_dist.log_prob(</a>ground_truth_pixels<a id="change">)</a>
+
+        prior = torch.distributions.Normal(torch.zeros(encoded_context_dist.batch_shape +
+                                                       encoded_context_dist.event_shape).to(self.device),
+                                           self.prior_scale)
+        independent_prior = torch.distributions.Independent(prior,
+                                                            len(encoded_context_dist.event_shape))
+        kld = torch.distributions.kl.kl_divergence(encoded_context_dist, independent_prior)
+        &#47&#47 KL divergence of z dist from prior contributes to loss,
+        &#47&#47 log probability of ground truth pixels subtracts from it
+        loss = self.beta*kld - log_prob_x_given_z
+        <a id="change">return torch.mean(</a>loss<a id="change">)</a>
+
+
+class CEBLoss(RepresentationLoss):
+    </code></pre><h3>After Change</h3><pre><code class='java'>
+    def __call__(self, decoded_context_dist, target_dist, encoded_context_dist=None):
+        ground_truth_pixels = self.get_vector_forms(target_dist)[0]
+        predicted_pixels = decoded_context_dist.mean
+        recon_loss<a id="change"> = </a><a id="change">F.mse_loss(</a>predicted_pixels, ground_truth_pixels<a id="change">)</a>
+
+        prior = torch.distributions.Normal(torch.zeros(encoded_context_dist.batch_shape +
+                                                       encoded_context_dist.event_shape).to(self.device),
+                                           self.prior_scale)
+        independent_prior = torch.distributions.Independent(prior,
+                                                            len(encoded_context_dist.event_shape))
+        kld = torch.distributions.kl.kl_divergence(encoded_context_dist, independent_prior)
+
+        logger.record(&quotloss_recon&quot, recon_loss.item())
+        logger.record(&quotloss_kld&quot, torch.mean(kld).item())
+
+        loss = recon_loss + self.beta * <a id="change">torch.mean(</a>kld<a id="change">)</a>
+        <a id="change">return </a>loss
+
+
+class CEBLoss(RepresentationLoss):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/humancompatibleai/eirli/commit/06057ce66166cfbbf7126e17fbc47a969e16aabf#diff-630165dcddbc9dc7afb566dd6e867798b362df0cda60ca3c0b63403ec387cfcaL276' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 117236262</div><div id='project'> Project Name: humancompatibleai/eirli</div><div id='commit'> Commit Name: 06057ce66166cfbbf7126e17fbc47a969e16aabf</div><div id='time'> Time: 2020-09-29</div><div id='author'> Author: neel@perceptron.bair.berkeley.edu</div><div id='file'> File Name: src/il_representations/algos/losses.py</div><div id='m_class'> M Class Name: VAELoss</div><div id='n_method'> N Class Name: VAELoss</div><div id='m_method'> M Method Name: __call__(4)</div><div id='n_method'> N Method Name: __call__(4)</div><div id='m_parent_class'> M Parent Class: RepresentationLoss</div><div id='n_parent_class'> N Parent Class: RepresentationLoss</div><div id='m_file'> M File Name: src/il_representations/algos/losses.py</div><div id='n_file'> N File Name: src/il_representations/algos/losses.py</div><div id='m_start'> M Start Line: 277</div><div id='m_end'> M End Line: 289</div><div id='n_start'> N Start Line: 279</div><div id='n_end'> N End Line: 294</div><BR>

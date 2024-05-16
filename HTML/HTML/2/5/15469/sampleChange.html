@@ -1,0 +1,50 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                index = indices[start:]
+                start = buffer_size
+            batch_rnn = (dones[index],) if self.chunk_len else None
+            yield <a id="change">(arr[index] for arr in (observations, actions, advantages, log_probs_old, returns))</a>, batch_rnn
+
+    def clear(self):
+        self.step = 0</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    def generator(self, batch_size: int, ks):
+        env_num = self.observations_next.shape[0]
+        data = <a id="change">{
+            </a>&quotobservations&quot: self.observations,
+            &quotactions&quot: self.actions,
+            &quotadvantages&quot: self.advantages,
+            &quotlog_probs_old&quot: self.log_probs_old,
+            &quotreturns&quot: self.returns,
+            &quotdones&quot: self.dones<a id="change">
+        }</a>
+        if self.chunk_len:
+            assert self.step % self.chunk_len == 0
+            assert batch_size % self.chunk_len == 0
+            chunk_size = self.step // self.chunk_len
+            buffer_size = chunk_size * env_num
+            batch_size = batch_size // self.chunk_len
+
+            &#47&#47 process RNN chunk
+            def to_rnn_chunk(arr):
+                &#47&#47 arr&quots shape is (chunk_size * chunk_len, env_num, ...)
+                &#47&#47 because chunk_size * chunk_len = step_num
+                &#47&#47 reshape to (env_num, chunk_size * chunk_len, ...)
+                arr = np.stack(arr, axis=1)
+                &#47&#47 reshape to (env_num, chunk_size, chunk_len, ...)
+                &#47&#47 len(arr.shape) may more than 2, use * operator
+                arr = arr.reshape((env_num, chunk_size, self.chunk_len, *arr.shape[2:]))
+                &#47&#47 reshape to (batch_size, chunk_len, ...)
+                &#47&#47 because batch_size = env_num * chunk_size
+                arr = np.concatenate(arr)
+                return arr
+
+            batch = {k: to_rnn_chunk(data[k]) for k in ks}
+        else:
+            buffer_size = self.step * env_num
+            batch<a id="change"> = </a>{key: np.concatenate(data[key]) for key in ks}
+
+        indices = np.arange(buffer_size)
+        np.random.shuffle(indices)</code></pre>

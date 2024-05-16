@@ -1,0 +1,59 @@
+<html><h3>Pattern ID :18205
+</h3><img src='59850519.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    acts[-1] = output_activation
+
+    &#47&#47 Create a torch sequential container
+    layers = [<a id="change">[</a>torch.nn.Linear(layer_sizes[i],
+                               layer_sizes[i + 1]), acts[i]()<a id="change"></a>]
+              for i in range(nlayers)]
+    return torch.nn.Sequential(*layers)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    &#47&#47 Create a torch sequential container
+    mlp = nn.Sequential()
+    <a id="change">for </a>i in range(nlayers)<a id="change">:
+        </a>mlp.add_module("NN-" + str(i), nn.Linear(layer_sizes[i],
+                                                 layer_sizes[i + 1]))
+        <a id="change">mlp.add_module(</a>"Act-" + str(i), act[i]()<a id="change">)</a>
+    return mlp
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/geoelements/gns/commit/7b389624997bcce30b23c08d53d06111b1ec7fbe#diff-e5ca06b48ff3679bea886890a08e2fb63597c60a3cd00587eff0c1b1c5dd9506L24' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 59850519</div><div id='project'> Project Name: geoelements/gns</div><div id='commit'> Commit Name: 7b389624997bcce30b23c08d53d06111b1ec7fbe</div><div id='time'> Time: 2021-11-12</div><div id='author'> Author: krishnak@utexas.edu</div><div id='file'> File Name: gns.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: build_mlp(5)</div><div id='n_method'> N Method Name: build_mlp(5)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: gns.py</div><div id='n_file'> N File Name: gns.py</div><div id='m_start'> M Start Line: 26</div><div id='m_end'> M End Line: 42</div><div id='n_start'> N Start Line: 24</div><div id='n_end'> N End Line: 42</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+class Sequential(Module):
+    def __init__(self, *args):
+        self.layers = <a id="change">[]</a>
+        for mod in args:
+            self.append(mod)
+    def __getitem__(self, idx):
+        return self.layers[idx]</code></pre><h3>After Change</h3><pre><code class='java'>
+        self.layers = collections.OrderedDict()
+        for mod in args:
+            if isinstance(mod, collections.OrderedDict):
+                <a id="change">for </a>k, m in mod.items()<a id="change">:
+                    </a><a id="change">self.add_module(</a>k, m<a id="change">)</a>
+            else:
+                self.append(mod)
+    def __getitem__(self, idx):
+        return self.layers[idx]</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/jittor/jittor/commit/7b41ab678ffd1e44708fcd972f3b43a3e1294ac5#diff-6be45073120e073e8b70d1326cf824cd933530478c88feb0997a32f723da35f1L782' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 59850522</div><div id='project'> Project Name: jittor/jittor</div><div id='commit'> Commit Name: 7b41ab678ffd1e44708fcd972f3b43a3e1294ac5</div><div id='time'> Time: 2020-08-28</div><div id='author'> Author: 471184555@qq.com</div><div id='file'> File Name: python/jittor/nn.py</div><div id='m_class'> M Class Name: Sequential</div><div id='n_method'> N Class Name: Sequential</div><div id='m_method'> M Method Name: __init__(1)</div><div id='n_method'> N Method Name: __init__(1)</div><div id='m_parent_class'> M Parent Class: Module</div><div id='n_parent_class'> N Parent Class: Module</div><div id='m_file'> M File Name: python/jittor/nn.py</div><div id='n_file'> N File Name: python/jittor/nn.py</div><div id='m_start'> M Start Line: 783</div><div id='m_end'> M End Line: 785</div><div id='n_start'> N Start Line: 784</div><div id='n_end'> N End Line: 791</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 Exclude inputs, as we don&quott launch any layers in input nodes
+        used_nodes_excl_inputs = self._used_nodes - set(self.inputs)
+        self._execution_order_nodes = topological_sort(used_nodes_excl_inputs)
+        self._execution_order_layers = <a id="change">[]</a>
+
+        for node in self._execution_order_nodes:
+            self._decide_name_for_node(node)
+            self._execution_order_layers.append(node.layer)</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        num_layers = len(self._execution_order_nodes)
+        str_length = len(str(num_layers))
+        <a id="change">for </a>idx, node in enumerate(self._execution_order_nodes)<a id="change">:
+            </a>name = f"module{str(idx).zfill(str_length)}_depth{str(node.depth).zfill(str_length)}"
+            self._layer_name_to_node[name] = node
+            self._node_to_layer_name[node] = name
+            <a id="change">self.add_module(name=name, module=node.layer)</a>
+
+    def __deepcopy__(self, memo):
+        This copies a working Module, but the underlying graph structure is not copied!
+        obj = self.detach_from_graph()</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/gahaalt/pytorch-functional/commit/de0871ad3d92d5ad8d5976bef734838dc9ea9c65#diff-9a64a4d0b586687c0725b6a65e51f1b122d3a8e12fed8c20ea0d9326fdd2499cL215' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 59850524</div><div id='project'> Project Name: gahaalt/pytorch-functional</div><div id='commit'> Commit Name: de0871ad3d92d5ad8d5976bef734838dc9ea9c65</div><div id='time'> Time: 2022-10-20</div><div id='author'> Author: sjmikler@gmail.com</div><div id='file'> File Name: pytorch_functional/functional_model.py</div><div id='m_class'> M Class Name: FunctionalModel</div><div id='n_method'> N Class Name: FunctionalModel</div><div id='m_method'> M Method Name: _figure_out_execution_order(1)</div><div id='n_method'> N Method Name: _figure_out_execution_order(1)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: pytorch_functional/functional_model.py</div><div id='n_file'> N File Name: pytorch_functional/functional_model.py</div><div id='m_start'> M Start Line: 218</div><div id='m_end'> M End Line: 225</div><div id='n_start'> N Start Line: 198</div><div id='n_end'> N End Line: 209</div><BR>

@@ -1,0 +1,56 @@
+<html><h3>Pattern ID :34060
+</h3><img src='97406494.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                    f"After Flattening and after emptying param group {i} cache")
+
+            &#47&#47 set model fp16 weight to slices of flattened buffer
+            updated_params = <a id="change">self.unflatten(</a>self.fp16_groups_flat[i],
+                                            self.fp16_groups[i]<a id="change">)</a>
+            for p, q in zip(self.fp16_groups[i], updated_params):
+                p.data = q.data
+
+            &#47&#47divide the flat weights into near equal partition equal to the data parallel degree</code></pre><h3>After Change</h3><pre><code class='java'>
+        self.dtype = self.optimizer.param_groups[0][&quotparams&quot][0].dtype
+
+        self.round_robin_fp16_groups = []
+        self.round_robin_fp6_indices<a id="change"> = </a><a id="change">[]</a>
+
+        &#47&#47 padding on each partition for alignment purposes
+        self.groups_padding = []
+        &#47&#47 loop to deal with groups</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/microsoft/deepspeed/commit/ee4deabd75331e9c1bb1383b2068fdebcb33ed08#diff-7fcd356717f706c544a469feeba2e0f7471e39499ff6a9cb05940ce490fa06fbL161' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 97406494</div><div id='project'> Project Name: microsoft/deepspeed</div><div id='commit'> Commit Name: ee4deabd75331e9c1bb1383b2068fdebcb33ed08</div><div id='time'> Time: 2021-05-15</div><div id='author'> Author: olruwase@microsoft.com</div><div id='file'> File Name: deepspeed/runtime/zero/stage2.py</div><div id='m_class'> M Class Name: FP16_DeepSpeedZeroOptimizer</div><div id='n_method'> N Class Name: FP16_DeepSpeedZeroOptimizer</div><div id='m_method'> M Method Name: __init__(21)</div><div id='n_method'> N Method Name: __init__(21)</div><div id='m_parent_class'> M Parent Class: object</div><div id='n_parent_class'> N Parent Class: object</div><div id='m_file'> M File Name: deepspeed/runtime/zero/stage2.py</div><div id='n_file'> N File Name: deepspeed/runtime/zero/stage2.py</div><div id='m_start'> M Start Line: 161</div><div id='m_end'> M End Line: 236</div><div id='n_start'> N Start Line: 161</div><div id='n_end'> N End Line: 282</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    def forward(self, x: Tensor) -&gt; Tensor:
+        &#47&#47 x: [..., I]
+        x = <a id="change">x.unflatten(</a>-1, (self.groups, self.ws)<a id="change">)</a>  &#47&#47 [..., G, I/G]
+        x = torch.einsum("...gi,...gih-&gt;...gh", x, self.weight)  &#47&#47 [..., G, H/G]
+        x = x.flatten(2, 3)  &#47&#47 [B, T, H]
+        return x</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    def forward(self, x: Tensor) -&gt; Tensor:
+        &#47&#47 x: [..., I]
+        new_shape = list(x.shape)[:-1] + <a id="change">[</a>self.groups, self.ws<a id="change"></a>]
+        x<a id="change"> = </a>x.view(new_shape)
+        &#47&#47 The better way, but not supported by torchscript
+        &#47&#47 x = x.unflatten(-1, (self.groups, self.ws))  &#47&#47 [..., G, I/G]
+        x = torch.einsum("...gi,...gih-&gt;...gh", x, self.weight)  &#47&#47 [..., G, H/G]</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/rikorose/deepfilternet/commit/5d06603252b187a1f1c1c56859bb945ca3a16603#diff-569ca7fdf94305f7a2fca088c4421d6a6d7147f193f64bb99c3653029cc16004L722' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 97406493</div><div id='project'> Project Name: rikorose/deepfilternet</div><div id='commit'> Commit Name: 5d06603252b187a1f1c1c56859bb945ca3a16603</div><div id='time'> Time: 2022-10-18</div><div id='author'> Author: Rikorose@users.noreply.github.com</div><div id='file'> File Name: DeepFilterNet/df/modules.py</div><div id='m_class'> M Class Name: GroupedLinearEinsum</div><div id='n_method'> N Class Name: GroupedLinearEinsum</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: DeepFilterNet/df/modules.py</div><div id='n_file'> N File Name: DeepFilterNet/df/modules.py</div><div id='m_start'> M Start Line: 724</div><div id='m_end'> M End Line: 724</div><div id='n_start'> N Start Line: 724</div><div id='n_end'> N End Line: 725</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        B, P, N, _ = part_pcs.shape
+        &#47&#47 shared-weight encoder
+        pcs = part_pcs.flatten(0, 1)  &#47&#47 [B*P, N, 3]
+        pc_feats = <a id="change">self.encoder(pcs).unflatten(</a>0, (B, P)<a id="change">)</a>  &#47&#47 [B, P, C]
+        &#47&#47 transformer feature fusion
+        pc_feats = self.corr_module(pc_feats, part_valids)  &#47&#47 [B, P, C]
+        &#47&#47 MLP predict poses</code></pre><h3>After Change</h3><pre><code class='java'>
+            feats = torch.cat([pc_feats, inst_label], dim=-1)  &#47&#47 [B, P, C&quot]
+        quat, trans = self.pose_predictor(feats)
+
+        pred_dict<a id="change"> = </a><a id="change">{
+            </a>&quotquat&quot: quat,  &#47&#47 [B, P, 4]
+            &quottrans&quot: trans,  &#47&#47 [B, P, 3]
+            &quotpre_pose_feats&quot: feats<a id="change">,  &#47&#47 [B, P, C&quot]
+        }</a>
+        return pred_dict
+
+    def training_step(self, data_dict, batch_idx):
+        loss_dict = self.forward_pass(data_dict, mode=&quottrain&quot)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/wuziyi616/multi_part_assembly/commit/cb586c4febe6508914e90c32a5b69e70aecbbc4e#diff-a3ad4747602b92d4c95922c1168436b29f062f2b231f1c5c31a818c978e6bc4dL71' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 97406497</div><div id='project'> Project Name: wuziyi616/multi_part_assembly</div><div id='commit'> Commit Name: cb586c4febe6508914e90c32a5b69e70aecbbc4e</div><div id='time'> Time: 2022-03-07</div><div id='author'> Author: dazitu616@gmail.com</div><div id='file'> File Name: multi_part_assembly/models/pn_transformer/network.py</div><div id='m_class'> M Class Name: PNTransformer</div><div id='n_method'> N Class Name: PNTransformer</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(4)</div><div id='m_parent_class'> M Parent Class: pl.LightningModule</div><div id='n_parent_class'> N Parent Class: pl.LightningModule</div><div id='m_file'> M File Name: multi_part_assembly/models/pn_transformer/network.py</div><div id='n_file'> N File Name: multi_part_assembly/models/pn_transformer/network.py</div><div id='m_start'> M Start Line: 71</div><div id='m_end'> M End Line: 93</div><div id='n_start'> N Start Line: 83</div><div id='n_end'> N End Line: 107</div><BR>

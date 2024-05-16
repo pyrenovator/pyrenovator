@@ -1,0 +1,20 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+  def backward(ctx, grad_output):
+    x,y = ctx.saved_tensors
+    grad_x_inter = <a id="change">binary_op(&quotb * pow(a, b-1.0)&quot</a>, x, y, Buffer(grad_output.shape)<a id="change">)</a>
+    grad_y_inter = <a id="change">binary_op(&quotlog(a) * pow(a, b)&quot</a>, x, y, Buffer(grad_output.shape)<a id="change">)</a>
+    <a id="change">return </a>unbroadcast(binary_op(&quota*b&quot, grad_output, grad_x_inter, grad_x_inter), x.shape), \
+           unbroadcast(binary_op(&quota*b&quot, grad_output, grad_y_inter, grad_y_inter), y.shape)
+
+&#47&#47 ************* movement ops *************</code></pre><h3>After Change</h3><pre><code class='java'>
+    tmp = Buffer(grad_output.shape)
+    grad_x = unbroadcast(binary_op(&quota*b&quot, grad_output, binary_op(&quotb * pow(a, b-1.0)&quot, x, y, tmp), tmp), x.shape) if ctx.needs_input_grad[0] else None
+    grad_y = unbroadcast(binary_op(&quota*b&quot, grad_output, binary_op(&quotlog(a) * pow(a, b)&quot, x, y, tmp), tmp), y.shape) if ctx.needs_input_grad[1] else None
+    <a id="change">return </a>grad_x, grad_y
+
+&#47&#47 ************* movement ops *************
+</code></pre>

@@ -1,0 +1,58 @@
+<html><h3>Pattern ID :8463
+</h3><img src='29436416.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            if args.no_prefetcher:
+                target = target.cuda()
+                input = input.cuda()
+                <a id="change">if </a>args.fp16:
+                    input = <a id="change">input.half()</a>
+
+            &#47&#47 compute output
+            output = model(input)
+            if valid_labels is not None:</code></pre><h3>After Change</h3><pre><code class='java'>
+        model = amp.initialize(model, opt_level=&quotO1&quot)
+
+    if args.channels_last:
+        model = <a id="change">model.to(memory_format=torch.channels_last)</a>
+
+    if args.num_gpu &gt; 1:
+        model = torch.nn.DataParallel(model, device_ids=list(range(args.num_gpu)))
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/feng-lab/pytorch-image-models/commit/c2cd1a332eca0f109b7fb357aa98eb7a7bfabc11#diff-58b7fc05c0526d9a9b3c0b50dda416fcbf0a654e696da4b6df82cbb5a6b2dcfcL111' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 29436416</div><div id='project'> Project Name: feng-lab/pytorch-image-models</div><div id='commit'> Commit Name: c2cd1a332eca0f109b7fb357aa98eb7a7bfabc11</div><div id='time'> Time: 2020-08-31</div><div id='author'> Author: rwightman@gmail.com</div><div id='file'> File Name: validate.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: validate(1)</div><div id='n_method'> N Method Name: validate(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: validate.py</div><div id='n_file'> N File Name: validate.py</div><div id='m_start'> M Start Line: 111</div><div id='m_end'> M End Line: 200</div><div id='n_start'> N Start Line: 122</div><div id='n_end'> N End Line: 233</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        
+        num_classes = int(sequence.shape[1])
+        one_hot_positions = F.one_hot(positions, num_classes)
+        <a id="change">if </a>self._is_half:
+            one_hot_positions = <a id="change">one_hot_positions.half()</a>
+        else:
+            one_hot_positions = one_hot_positions.float()
+        return torch.matmul(one_hot_positions.detach(), sequence)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        Gather the vectors at the specific positions over a batch.
+        
+        num_classes = int(sequence.shape[1])
+        one_hot_positions = <a id="change">F.one_hot(positions, num_classes).to(dtype=sequence.dtype)</a>
+        return torch.matmul(one_hot_positions.detach(), sequence)
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/huggingface/optimum-graphcore/commit/14c3842bd5a259b70093f647a77e7e765687a6c0#diff-a0003aad39f81b5fca3daef203e850d0ede6fb80bd54f3ca662e4ba96101a78dL410' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 29436418</div><div id='project'> Project Name: huggingface/optimum-graphcore</div><div id='commit'> Commit Name: 14c3842bd5a259b70093f647a77e7e765687a6c0</div><div id='time'> Time: 2022-10-06</div><div id='author'> Author: jamesbr@graphcore.ai</div><div id='file'> File Name: optimum/graphcore/modeling_utils.py</div><div id='m_class'> M Class Name: OnehotGather</div><div id='n_method'> N Class Name: OnehotGather</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: optimum/graphcore/modeling_utils.py</div><div id='n_file'> N File Name: optimum/graphcore/modeling_utils.py</div><div id='m_start'> M Start Line: 414</div><div id='m_end'> M End Line: 420</div><div id='n_start'> N Start Line: 401</div><div id='n_end'> N End Line: 402</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        model, task = model_w_task
+        local_rank = int(os.getenv("LOCAL_RANK", "0"))
+
+        <a id="change">if </a>"gpt-j-6B" in model and dtype == torch.half:
+            _model = AutoModelForCausalLM.from_pretrained(model,
+                                                          revision="float16",
+                                                          torch_dtype=torch.float16)
+            tokenizer = AutoTokenizer.from_pretrained(model)
+            <a id="change">_model.half()</a>
+            pipe = pipeline(
+                task,
+                model=_model,
+                tokenizer=tokenizer,</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 Switch device to GPU after converting to half
+        device = torch.device(f"cuda:{local_rank}")
+        pipe.device = device
+        <a id="change">pipe.model.to(</a>device<a id="change">)</a>
+
+        &#47&#47 Warm-up queries for perf measurement
+        &#47&#47for i in range(10):
+        &#47&#47    _ = pipe(query, **inf_kwargs)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/microsoft/deepspeed/commit/34fb6d198056fe169d6fca6d6c45f66d0264fe08#diff-a105f1b7f250498b602329397d909d4716714ad26b0624dd3a9f93ae618ec430L212' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 29436415</div><div id='project'> Project Name: microsoft/deepspeed</div><div id='commit'> Commit Name: 34fb6d198056fe169d6fca6d6c45f66d0264fe08</div><div id='time'> Time: 2022-10-17</div><div id='author'> Author: michaelwyatt@microsoft.com</div><div id='file'> File Name: tests/unit/inference/test_inference.py</div><div id='m_class'> M Class Name: TestModelTask</div><div id='n_method'> N Class Name: TestModelTask</div><div id='m_method'> M Method Name: test(8)</div><div id='n_method'> N Method Name: test(8)</div><div id='m_parent_class'> M Parent Class: DistributedTest</div><div id='n_parent_class'> N Parent Class: DistributedTest</div><div id='m_file'> M File Name: tests/unit/inference/test_inference.py</div><div id='n_file'> N File Name: tests/unit/inference/test_inference.py</div><div id='m_start'> M Start Line: 228</div><div id='m_end'> M End Line: 249</div><div id='n_start'> N Start Line: 232</div><div id='n_end'> N End Line: 239</div><BR>

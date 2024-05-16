@@ -1,0 +1,120 @@
+<html><h3>Pattern ID :17296
+</h3><img src='57496109.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            z_all = torch.cat([z_i, z_j], 0)
+            z_j = z_j[:num_contexts]
+        else:
+            z_all<a id="change"> = </a><a id="change">torch.cat(</a>(z_i<a id="change">, z_j</a>), <a id="change">0</a><a id="change">)</a>
+
+        &#47&#47 zi and zj are both matrices of dim (n x c), since they are z vectors of dim c for every element in the batch
+        &#47&#47 This einsum is constructing a vector of size n, where the nth element is a sum over C of the NCth elements
+        &#47&#47 That is to say, the nth element is a dot product between the Nth C-dim vector of each matrix</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        &#47&#47 I think if we include z_i here, we should use a mask (as in SymmetricContrastiveLoss) to subtract the column
+        &#47&#47 on which the similarity is calculated with an image itself?
+        mask<a id="change"> = </a><a id="change">torch.eye(num_contexts).to(</a>self.device<a id="change">)</a>
+
+        &#47&#47 Simplify the code
+        z_all = torch.cat([z_i, z_j], 0)
+        if num_targets &gt; num_contexts:
+            z_j = z_j[:num_contexts]
+
+        &#47&#47 zi and zj are both matrices of dim (n x c), since they are z vectors of dim c for every element in the batch
+        &#47&#47 This einsum is constructing a vector of size n, where the nth element is a sum over C of the NCth elements
+        &#47&#47 That is to say, the nth element is a dot product between the Nth C-dim vector of each matrix
+        sim_ij = torch.einsum(&quotnc,nc-&gt;n&quot, [z_i, z_j]).unsqueeze(-1)  &#47&#47 Nx1
+
+        &#47&#47 Calculate similarity of current batch&quots images and other images.
+        sim_ik = torch.einsum(&quotnc,ck-&gt;nk&quot, [z_i, z_all.T])
+        sim_ik<a id="change"> = </a>sim_ik - mask  &#47&#47 TODO: Check if the diagonal line are all 1s.
+
+        logits = torch.cat((sim_ij, sim_ik), 1)
+        logits /= self.temp</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 5</div><BR><div id='size'>Non-data size: 6</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/humancompatibleai/eirli/commit/77be42e07c4a5f10559685813b6d0d778577eb1a#diff-094460a9fbb96d5a5e5e0ff351a3d7aaa4cc4fae9d4c22cbb890b6d29832d85eL42' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 57496109</div><div id='project'> Project Name: humancompatibleai/eirli</div><div id='commit'> Commit Name: 77be42e07c4a5f10559685813b6d0d778577eb1a</div><div id='time'> Time: 2020-08-05</div><div id='author'> Author: RPC2@users.noreply.github.com</div><div id='file'> File Name: algos/losses.py</div><div id='m_class'> M Class Name: AsymmetricContrastiveLoss</div><div id='n_method'> N Class Name: AsymmetricContrastiveLoss</div><div id='m_method'> M Method Name: __call__(4)</div><div id='n_method'> N Method Name: __call__(4)</div><div id='m_parent_class'> M Parent Class: RepresentationLoss</div><div id='n_parent_class'> N Parent Class: RepresentationLoss</div><div id='m_file'> M File Name: algos/losses.py</div><div id='n_file'> N File Name: algos/losses.py</div><div id='m_start'> M Start Line: 42</div><div id='m_end'> M End Line: 61</div><div id='n_start'> N Start Line: 46</div><div id='n_end'> N End Line: 65</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            if i == 0:
+                true_scores = score[i][loc_len[i] - 1].reshape(1, -1)
+            else:
+                true_scores<a id="change"> = </a><a id="change">torch.cat(
+                    </a>(true_scores<a id="change">, score[i][loc_len[i] - 1].reshape(1, -1)</a>), <a id="change">0</a><a id="change">)</a>
+        return true_scores
+
+    def predict(self, batch):
+        return self.forward(batch)</code></pre><h3>After Change</h3><pre><code class='java'>
+        origin_len = batch.get_origin_len(&quotcurrent_loc&quot)
+        final_out_index = torch.tensor(origin_len) - 1
+        final_out_index = final_out_index.reshape(final_out_index.shape[0], 1, -1)
+        final_out_index = <a id="change">final_out_index.repeat(1, 1, self.hidden_size).to(</a>self.device<a id="change">)</a>
+        out<a id="change"> = </a>torch.gather(out, 1, final_out_index).squeeze(1)  &#47&#47 batch_size * hidden_size
+        out = F.selu(out)
+        out = self.dropout(out)
+
+        y = self.fc(out)
+        score<a id="change"> = </a>F.log_softmax(y, dim=1)  &#47&#47 calculate loss by NLLoss
+        return score
+
+    def predict(self, batch):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/libcity/bigscity-libcity/commit/ec61c9cd984d1c86ee715380ed3b65b4222c8d1f#diff-f7e6a5cf5965e29788168874ecb4a6a81ecf849824f4f08f81428bfb514f6906L60' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 57496106</div><div id='project'> Project Name: libcity/bigscity-libcity</div><div id='commit'> Commit Name: ec61c9cd984d1c86ee715380ed3b65b4222c8d1f</div><div id='time'> Time: 2021-05-06</div><div id='author'> Author: 33283819+WenMellors@users.noreply.github.com</div><div id='file'> File Name: trafficdl/model/trajectory_loc_prediction/RNN.py</div><div id='m_class'> M Class Name: RNN</div><div id='n_method'> N Class Name: RNN</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: AbstractModel</div><div id='n_parent_class'> N Parent Class: AbstractModel</div><div id='m_file'> M File Name: trafficdl/model/trajectory_loc_prediction/RNN.py</div><div id='n_file'> N File Name: trafficdl/model/trajectory_loc_prediction/RNN.py</div><div id='m_start'> M Start Line: 87</div><div id='m_end'> M End Line: 97</div><div id='n_start'> N Start Line: 84</div><div id='n_end'> N End Line: 94</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            if i == 0:
+                true_scores = score[i][loc_len[i] - 1].reshape(1, -1)
+            else:
+                true_scores<a id="change"> = </a><a id="change">torch.cat(
+                    </a>(true_scores<a id="change">, score[i][loc_len[i] - 1].reshape(1, -1)</a>), <a id="change">0</a><a id="change">)</a>
+        return true_scores
+
+    def predict(self, batch):
+        return self.forward(batch)</code></pre><h3>After Change</h3><pre><code class='java'>
+        origin_len = batch.get_origin_len(&quotcurrent_loc&quot)
+        final_out_index = torch.tensor(origin_len) - 1
+        final_out_index = final_out_index.reshape(final_out_index.shape[0], 1, -1)
+        final_out_index<a id="change"> = </a><a id="change">final_out_index.repeat(1, 1, 2*self.hidden_size).to(</a>self.device<a id="change">)</a>
+        out<a id="change"> = </a>torch.gather(out, 1, final_out_index).squeeze(1)  &#47&#47 batch_size * (2*hidden_size)
+        out = self.dropout(out)
+
+        y = self.fc_final(out)  &#47&#47 batch_size * loc_size</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/libcity/bigscity-libcity/commit/ec61c9cd984d1c86ee715380ed3b65b4222c8d1f#diff-e952722699ca3186325fca5947706a0f1eb9b447d1d51063beaddb3480efa998L117' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 57496101</div><div id='project'> Project Name: libcity/bigscity-libcity</div><div id='commit'> Commit Name: ec61c9cd984d1c86ee715380ed3b65b4222c8d1f</div><div id='time'> Time: 2021-05-06</div><div id='author'> Author: 33283819+WenMellors@users.noreply.github.com</div><div id='file'> File Name: trafficdl/model/trajectory_loc_prediction/DeepMove.py</div><div id='m_class'> M Class Name: DeepMove</div><div id='n_method'> N Class Name: DeepMove</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: AbstractModel</div><div id='n_parent_class'> N Parent Class: AbstractModel</div><div id='m_file'> M File Name: trafficdl/model/trajectory_loc_prediction/DeepMove.py</div><div id='n_file'> N File Name: trafficdl/model/trajectory_loc_prediction/DeepMove.py</div><div id='m_start'> M Start Line: 122</div><div id='m_end'> M End Line: 175</div><div id='n_start'> N Start Line: 152</div><div id='n_end'> N End Line: 163</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        
+        print(zero_plane.shape)
+        print(emission_pred_acc_x_length.shape)
+        emiss_pred_with_zeros<a id="change"> = </a><a id="change">torch.cat(</a>(zero_plane<a id="change">, emission_pred_acc_x_length</a>), <a id="change">2</a><a id="change">)</a>
+
+        phns = phns.to(device)
+        &#47&#47 manipulate y tensor, and then &quottorch.gather&quot
+        phns_copied = phns.unsqueeze(1).expand(-1, fb_max_length, -1)&#47&#47.to(device)</code></pre><h3>After Change</h3><pre><code class='java'>
+        emiss_pred_useful = torch.gather(emiss_pred_acc_lens, 2, phns_copied)
+
+        &#47&#47 apply mask based on phn_lens_abs
+        mask_phn_lens<a id="change"> = </a>(
+            <a id="change">torch.arange(U_max).to(</a>device<a id="change">)</a>[None, :] &lt; phn_lens_abs[:, None]
+        )
+        emiss_pred_useful<a id="change"> = </a>torch.where(
+            mask_phn_lens[:, None, :],
+            emiss_pred_useful,
+            torch.tensor([1e-38]).to(device),</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/speechbrain/speechbrain/commit/cc600a8d98ce0d7f63e3ceef4dce88dbd7928a63#diff-5998bf9afa99b8b276f0e74798ed1f028f51712bbe36e0601d8362e6909aeb9cL99' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 57496096</div><div id='project'> Project Name: speechbrain/speechbrain</div><div id='commit'> Commit Name: cc600a8d98ce0d7f63e3ceef4dce88dbd7928a63</div><div id='time'> Time: 2020-06-01</div><div id='author'> Author: rastorge@eos18.server.mila.quebec</div><div id='file'> File Name: speechbrain/alignment/aligner.py</div><div id='m_class'> M Class Name: ViterbiAligner</div><div id='n_method'> N Class Name: ViterbiAligner</div><div id='m_method'> M Method Name: make_emiss_pred_useful(5)</div><div id='n_method'> N Method Name: make_emiss_pred_useful(5)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: speechbrain/alignment/aligner.py</div><div id='n_file'> N File Name: speechbrain/alignment/aligner.py</div><div id='m_start'> M Start Line: 104</div><div id='m_end'> M End Line: 123</div><div id='n_start'> N Start Line: 104</div><div id='n_end'> N End Line: 133</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            z_all = torch.cat([z_i, z_j], 0)
+            z_j = z_j[:num_contexts]
+        else:
+            z_all<a id="change"> = </a><a id="change">torch.cat(</a>(z_i<a id="change">, z_j</a>), <a id="change">0</a><a id="change">)</a>
+
+        &#47&#47 zi and zj are both matrices of dim (n x c), since they are z vectors of dim c for every element in the batch
+        &#47&#47 This einsum is constructing a vector of size n, where the nth element is a sum over C of the NCth elements
+        &#47&#47 That is to say, the nth element is a dot product between the Nth C-dim vector of each matrix</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        &#47&#47 I think if we include z_i here, we should use a mask (as in SymmetricContrastiveLoss) to subtract the column
+        &#47&#47 on which the similarity is calculated with an image itself?
+        mask<a id="change"> = </a><a id="change">torch.eye(num_contexts).to(</a>self.device<a id="change">)</a>
+
+        &#47&#47 Simplify the code
+        z_all = torch.cat([z_i, z_j], 0)
+        if num_targets &gt; num_contexts:
+            z_j = z_j[:num_contexts]
+
+        &#47&#47 zi and zj are both matrices of dim (n x c), since they are z vectors of dim c for every element in the batch
+        &#47&#47 This einsum is constructing a vector of size n, where the nth element is a sum over C of the NCth elements
+        &#47&#47 That is to say, the nth element is a dot product between the Nth C-dim vector of each matrix
+        sim_ij = torch.einsum(&quotnc,nc-&gt;n&quot, [z_i, z_j]).unsqueeze(-1)  &#47&#47 Nx1
+
+        &#47&#47 Calculate similarity of current batch&quots images and other images.
+        sim_ik = torch.einsum(&quotnc,ck-&gt;nk&quot, [z_i, z_all.T])
+        sim_ik<a id="change"> = </a>sim_ik - mask  &#47&#47 TODO: Check if the diagonal line are all 1s.
+
+        logits = torch.cat((sim_ij, sim_ik), 1)
+        logits /= self.temp</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/humancompatibleai/eirli/commit/bf00e1e7db5d222ce7aa4e79f95a499b0c235cfa#diff-094460a9fbb96d5a5e5e0ff351a3d7aaa4cc4fae9d4c22cbb890b6d29832d85eL33' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 57496080</div><div id='project'> Project Name: humancompatibleai/eirli</div><div id='commit'> Commit Name: bf00e1e7db5d222ce7aa4e79f95a499b0c235cfa</div><div id='time'> Time: 2020-08-05</div><div id='author'> Author: RPC2@users.noreply.github.com</div><div id='file'> File Name: algos/losses.py</div><div id='m_class'> M Class Name: AsymmetricContrastiveLoss</div><div id='n_method'> N Class Name: AsymmetricContrastiveLoss</div><div id='m_method'> M Method Name: __call__(4)</div><div id='n_method'> N Method Name: __call__(4)</div><div id='m_parent_class'> M Parent Class: RepresentationLoss</div><div id='n_parent_class'> N Parent Class: RepresentationLoss</div><div id='m_file'> M File Name: algos/losses.py</div><div id='n_file'> N File Name: algos/losses.py</div><div id='m_start'> M Start Line: 42</div><div id='m_end'> M End Line: 61</div><div id='n_start'> N Start Line: 46</div><div id='n_end'> N End Line: 65</div><BR>

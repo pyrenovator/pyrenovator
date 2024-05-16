@@ -1,0 +1,321 @@
+<html><h3>Pattern ID :1081
+</h3><img src='5434864.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                    ideal_mask = ideal_mask.cuda()
+                    threshold_weight = threshold_weight.cuda()
+                
+                real, imag = <a id="change">mixture[:,:,:F_bin], mixture[:,:,F_bin:]</a>
+                mixture_amplitude = torch.sqrt(real**2+imag**2) &#47&#47 -&gt; (1, 1, F_bin, T_bin)
+                real, imag = <a id="change">sources[:,:,:F_bin], sources[:,:,F_bin:]</a>
+                sources_amplitude = torch.sqrt(real**2+imag**2)
+                
+                output = self.model(mixture_amplitude, assignment=None, threshold_weight=threshold_weight, n_sources=n_sources)
+                loss, perm_idx = self.pit_criterion(output, sources_amplitude, batch_mean=False)
+                loss = loss.sum(dim=0)
+                
+                mixture = mixture[0].cpu()
+                sources = sources[0].cpu()
+    
+                mixture_amplitude = mixture_amplitude[0].cpu() &#47&#47 -&gt; (1, F_bin, T_bin)
+                estimated_sources_amplitude = output[0].cpu() &#47&#47 -&gt; (n_sources, F_bin, T_bin)
+                ratio = estimated_sources_amplitude / mixture_amplitude
+                real, imag = <a id="change">mixture[:,:F_bin]</a><a id="change">, mixture[:,F_bin:]</a> &#47&#47 -&gt; (1, F_bin, T_bin), (1, F_bin, T_bin)
+                real, imag = ratio * real, ratio * imag &#47&#47 -&gt; (n_sources, F_bin, T_bin), (n_sources, F_bin, T_bin)
+                estimated_sources = torch.cat([real, imag], dim=1) &#47&#47 -&gt; (n_sources, 2*F_bin, T_bin)
+                </code></pre><h3>After Change</h3><pre><code class='java'>
+                    ideal_mask = ideal_mask.cuda()
+                    threshold_weight = threshold_weight.cuda()
+                
+                real, imag = <a id="change">mixture[...,0]</a>, <a id="change">mixture[...,1]</a>
+                mixture_amplitude = torch.sqrt(real**2+imag**2) &#47&#47 -&gt; (1, 1, F_bin, T_bin)
+                real, imag = <a id="change">sources[...,0], sources[...,1]</a>
+                sources_amplitude = torch.sqrt(real**2+imag**2)
+                
+                output = self.model(mixture_amplitude, assignment=None, threshold_weight=threshold_weight, n_sources=n_sources)
+                loss, perm_idx = self.pit_criterion(output, sources_amplitude, batch_mean=False)
+                loss = loss.sum(dim=0)
+                
+                mixture = mixture[0].cpu()
+                sources = sources[0].cpu()
+    
+                mixture_amplitude = mixture_amplitude[0].cpu() &#47&#47 -&gt; (1, F_bin, T_bin)
+                estimated_sources_amplitude = output[0].cpu() &#47&#47 -&gt; (n_sources, F_bin, T_bin)
+                ratio = estimated_sources_amplitude / mixture_amplitude
+                real, imag = <a id="change">mixture[...,0], mixture[...,1]</a> &#47&#47 -&gt; (1, F_bin, T_bin), (1, F_bin, T_bin)
+                real, imag = ratio * real, ratio * imag &#47&#47 -&gt; (n_sources, F_bin, T_bin), (n_sources, F_bin, T_bin)
+                estimated_sources = torch.cat([real.unsqueeze(dim=3), imag.unsqueeze(dim=3)], dim=3) &#47&#47 -&gt; (n_sources, F_bin, T_bin, 2)
+                </code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 38</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/tky823/dnn-based_source_separation/commit/53189e867864946472ffa6057e156b6902f2a7b9#diff-b61b98e7733d0396b3b1f77244617744f6ae8cc0f81d894ba9279b12993aed7aL480' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 5434864</div><div id='project'> Project Name: tky823/dnn-based_source_separation</div><div id='commit'> Commit Name: 53189e867864946472ffa6057e156b6902f2a7b9</div><div id='time'> Time: 2020-12-27</div><div id='author'> Author: 40362510+tky823@users.noreply.github.com</div><div id='file'> File Name: egs/librispeech/common/src/driver.py</div><div id='m_class'> M Class Name: AttractorTester</div><div id='n_method'> N Class Name: AttractorTester</div><div id='m_method'> M Method Name: run(1)</div><div id='n_method'> N Method Name: run(1)</div><div id='m_parent_class'> M Parent Class: Tester</div><div id='n_parent_class'> N Parent Class: Tester</div><div id='m_file'> M File Name: egs/librispeech/common/src/driver.py</div><div id='n_file'> N File Name: egs/librispeech/common/src/driver.py</div><div id='m_start'> M Start Line: 480</div><div id='m_end'> M End Line: 520</div><div id='n_start'> N Start Line: 503</div><div id='n_end'> N End Line: 520</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        Validation
+        
+        n_sources = self.n_sources
+        <a id="change">F_bin</a> = self.F_bin
+        
+        self.model.eval()
+        
+        valid_loss = 0
+        n_valid = len(self.valid_loader.dataset)
+        
+        with torch.no_grad():
+            for idx, (mixture, sources, threshold_weight) in enumerate(self.valid_loader):
+                
+                mixture (batch_size, 1, 2*F_bin, T_bin)
+                sources (batch_size, n_sources, 2*F_bin, T_bin)
+                threshold_weight (batch_size, F_bin, T_bin)
+                
+                if self.use_cuda:
+                    mixture = mixture.cuda()
+                    sources = sources.cuda()
+                    threshold_weight = threshold_weight.cuda()
+                
+                real, imag = <a id="change">mixture[:,:,:F_bin], mixture[:,:,F_bin:]</a>
+                mixture_amplitude = torch.sqrt(real**2+imag**2)
+                real, imag = <a id="change">sources[:,:,:F_bin], sources[:,:,F_bin:]</a>
+                sources_amplitude = torch.sqrt(real**2+imag**2)
+                
+                output = self.model(mixture_amplitude, threshold_weight=threshold_weight, n_sources=n_sources)
+                &#47&#47 At the test phase, assignment may be unknown.
+                loss, _ = pit(self.criterion, output, sources_amplitude, batch_mean=False)
+                loss = loss.sum(dim=0)
+                valid_loss += loss.item()
+                
+                if idx &lt; 5:
+                    <a id="change">mixture</a> = mixture[0].cpu() &#47&#47 -&gt; (1, 2*F_bin, T_bin)
+                    mixture_amplitude = mixture_amplitude[0].cpu() &#47&#47 -&gt; (1, F_bin, T_bin)
+                    estimated_sources_amplitude = output[0].cpu() &#47&#47 -&gt; (n_sources, F_bin, T_bin)
+                    ratio = estimated_sources_amplitude / mixture_amplitude
+                    real, imag = <a id="change">mixture[:,:F_bin]</a><a id="change">, mixture[:,F_bin:]</a>
+                    real, imag = ratio * real, ratio * imag
+                    estimated_sources = torch.cat([real, imag], dim=1) &#47&#47 -&gt; (n_sources, 2*F_bin, T_bin)
+                    estimated_sources = self.istft(estimated_sources) &#47&#47 -&gt; (n_sources, T)
+                    estimated_sources = estimated_sources.cpu().numpy()</code></pre><h3>After Change</h3><pre><code class='java'>
+                    sources = sources.cuda()
+                    threshold_weight = threshold_weight.cuda()
+                
+                real, imag = <a id="change">mixture[...,0]</a>, <a id="change">mixture[...,1]</a>
+                mixture_amplitude = torch.sqrt(real**2+imag**2)
+                real, imag = <a id="change">sources[...,0], sources[...,1]</a>
+                sources_amplitude = torch.sqrt(real**2+imag**2)
+                
+                output = self.model(mixture_amplitude, threshold_weight=threshold_weight, n_sources=n_sources)
+                &#47&#47 At the test phase, assignment may be unknown.
+                loss, _ = pit(self.criterion, output, sources_amplitude, batch_mean=False)
+                loss = loss.sum(dim=0)
+                valid_loss += loss.item()
+                
+                if idx &lt; 5:
+                    <a id="change">mixture</a> = mixture[0].cpu() &#47&#47 -&gt; (1, 2*F_bin, T_bin)
+                    mixture_amplitude = mixture_amplitude[0].cpu() &#47&#47 -&gt; (1, F_bin, T_bin)
+                    estimated_sources_amplitude = output[0].cpu() &#47&#47 -&gt; (n_sources, F_bin, T_bin)
+                    ratio = estimated_sources_amplitude / mixture_amplitude
+                    real, imag = <a id="change">mixture[...,0], mixture[...,1]</a>
+                    real, imag = ratio * real, ratio * imag
+                    estimated_sources = torch.cat([real.unsqueeze(dim=3), imag.unsqueeze(dim=3)], dim=3) &#47&#47 -&gt; (n_sources, F_bin, T_bin, 2)
+                    estimated_sources = self.istft(estimated_sources) &#47&#47 -&gt; (n_sources, T)
+                    estimated_sources = estimated_sources.cpu().numpy()</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/tky823/dnn-based_source_separation/commit/328469f20f39ffea9ea0848919041edc1f3b0e7c#diff-47c38fce77be05cf4a67f90056420b26047f29fa2d0ea83a1ef017da62eec095L641' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 5434850</div><div id='project'> Project Name: tky823/dnn-based_source_separation</div><div id='commit'> Commit Name: 328469f20f39ffea9ea0848919041edc1f3b0e7c</div><div id='time'> Time: 2020-12-27</div><div id='author'> Author: 40362510+tky823@users.noreply.github.com</div><div id='file'> File Name: egs/wsj0/common/src/driver.py</div><div id='m_class'> M Class Name: AnchoredAttractorTrainer</div><div id='n_method'> N Class Name: AnchoredAttractorTrainer</div><div id='m_method'> M Method Name: run_one_epoch_eval(2)</div><div id='n_method'> N Method Name: run_one_epoch_eval(2)</div><div id='m_parent_class'> M Parent Class: AttractorTrainer</div><div id='n_parent_class'> N Parent Class: AttractorTrainer</div><div id='m_file'> M File Name: egs/wsj0/common/src/driver.py</div><div id='n_file'> N File Name: egs/wsj0/common/src/driver.py</div><div id='m_start'> M Start Line: 647</div><div id='m_end'> M End Line: 684</div><div id='n_start'> N Start Line: 666</div><div id='n_end'> N End Line: 684</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    
+    def run(self):
+        n_sources = self.n_sources
+        <a id="change">F_bin</a> = self.F_bin
+        
+        self.model.eval()
+        
+        test_loss = 0
+        test_pesq = 0
+        n_test = len(self.loader.dataset)
+        
+        with torch.no_grad():
+            for idx, (mixture, sources, ideal_mask, threshold_weight, T, segment_IDs) in enumerate(self.loader):
+                
+                mixture (1, 1, 2*F_bin, T_bin)
+                sources (1, n_sources, 2*F_bin, T_bin)
+                assignment (1, n_sources, F_bin, T_bin)
+                threshold_weight (1, F_bin, T_bin)
+                T (1,)
+                
+                if self.use_cuda:
+                    mixture = mixture.cuda()
+                    sources = sources.cuda()
+                    ideal_mask = ideal_mask.cuda()
+                    threshold_weight = threshold_weight.cuda()
+                
+                real, imag = <a id="change">mixture[:,:,:F_bin], mixture[:,:,F_bin:]</a>
+                mixture_amplitude = torch.sqrt(real**2+imag**2) &#47&#47 -&gt; (1, 1, F_bin, T_bin)
+                real, imag = <a id="change">sources[:,:,:F_bin], sources[:,:,F_bin:]</a>
+                sources_amplitude = torch.sqrt(real**2+imag**2)
+                
+                output = self.model(mixture_amplitude, assignment=None, threshold_weight=threshold_weight, n_sources=n_sources)
+                loss, perm_idx = self.pit_criterion(output, sources_amplitude, batch_mean=False)
+                loss = loss.sum(dim=0)
+                
+                <a id="change">mixture</a> = mixture[0].cpu()
+                sources = sources[0].cpu()
+    
+                mixture_amplitude = mixture_amplitude[0].cpu() &#47&#47 -&gt; (1, F_bin, T_bin)
+                estimated_sources_amplitude = output[0].cpu() &#47&#47 -&gt; (n_sources, F_bin, T_bin)
+                ratio = estimated_sources_amplitude / mixture_amplitude
+                real, imag = <a id="change">mixture[:,:F_bin]</a><a id="change">, mixture[:,F_bin:]</a> &#47&#47 -&gt; (1, F_bin, T_bin), (1, F_bin, T_bin)
+                real, imag = ratio * real, ratio * imag &#47&#47 -&gt; (n_sources, F_bin, T_bin), (n_sources, F_bin, T_bin)
+                estimated_sources = torch.cat([real, imag], dim=1) &#47&#47 -&gt; (n_sources, 2*F_bin, T_bin)
+                </code></pre><h3>After Change</h3><pre><code class='java'>
+                    ideal_mask = ideal_mask.cuda()
+                    threshold_weight = threshold_weight.cuda()
+                
+                real, imag = <a id="change">mixture[...,0]</a>, <a id="change">mixture[...,1]</a>
+                mixture_amplitude = torch.sqrt(real**2+imag**2) &#47&#47 -&gt; (1, 1, F_bin, T_bin)
+                real, imag = <a id="change">sources[...,0], sources[...,1]</a>
+                sources_amplitude = torch.sqrt(real**2+imag**2)
+                
+                output = self.model(mixture_amplitude, assignment=None, threshold_weight=threshold_weight, n_sources=n_sources)
+                loss, perm_idx = self.pit_criterion(output, sources_amplitude, batch_mean=False)
+                loss = loss.sum(dim=0)
+                
+                <a id="change">mixture</a> = mixture[0].cpu()
+                sources = sources[0].cpu()
+    
+                mixture_amplitude = mixture_amplitude[0].cpu() &#47&#47 -&gt; (1, F_bin, T_bin)
+                estimated_sources_amplitude = output[0].cpu() &#47&#47 -&gt; (n_sources, F_bin, T_bin)
+                ratio = estimated_sources_amplitude / mixture_amplitude
+                real, imag = <a id="change">mixture[...,0], mixture[...,1]</a> &#47&#47 -&gt; (1, F_bin, T_bin), (1, F_bin, T_bin)
+                real, imag = ratio * real, ratio * imag &#47&#47 -&gt; (n_sources, F_bin, T_bin), (n_sources, F_bin, T_bin)
+                estimated_sources = torch.cat([real.unsqueeze(dim=3), imag.unsqueeze(dim=3)], dim=3) &#47&#47 -&gt; (n_sources, F_bin, T_bin, 2)
+                </code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/tky823/dnn-based_source_separation/commit/53189e867864946472ffa6057e156b6902f2a7b9#diff-b61b98e7733d0396b3b1f77244617744f6ae8cc0f81d894ba9279b12993aed7aL478' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 5434851</div><div id='project'> Project Name: tky823/dnn-based_source_separation</div><div id='commit'> Commit Name: 53189e867864946472ffa6057e156b6902f2a7b9</div><div id='time'> Time: 2020-12-27</div><div id='author'> Author: 40362510+tky823@users.noreply.github.com</div><div id='file'> File Name: egs/librispeech/common/src/driver.py</div><div id='m_class'> M Class Name: AttractorTester</div><div id='n_method'> N Class Name: AttractorTester</div><div id='m_method'> M Method Name: run(1)</div><div id='n_method'> N Method Name: run(1)</div><div id='m_parent_class'> M Parent Class: Tester</div><div id='n_parent_class'> N Parent Class: Tester</div><div id='m_file'> M File Name: egs/librispeech/common/src/driver.py</div><div id='n_file'> N File Name: egs/librispeech/common/src/driver.py</div><div id='m_start'> M Start Line: 480</div><div id='m_end'> M End Line: 520</div><div id='n_start'> N Start Line: 503</div><div id='n_end'> N End Line: 520</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        Validation
+        
+        n_sources = self.n_sources
+        <a id="change">F_bin</a> = self.F_bin
+        
+        self.model.eval()
+        
+        valid_loss = 0
+        n_valid = len(self.valid_loader.dataset)
+        
+        with torch.no_grad():
+            for idx, (mixture, sources, assignment, threshold_weight) in enumerate(self.valid_loader):
+                
+                mixture (batch_size, 1, 2*F_bin, T_bin)
+                sources (batch_size, n_sources, 2*F_bin, T_bin)
+                assignment (batch_size, n_sources, F_bin, T_bin)
+                threshold_weight (batch_size, F_bin, T_bin)
+                
+                if self.use_cuda:
+                    mixture = mixture.cuda()
+                    sources = sources.cuda()
+                    threshold_weight = threshold_weight.cuda()
+                    assignment = assignment.cuda()
+                
+                real, imag = <a id="change">mixture[:,:,:F_bin], mixture[:,:,F_bin:]</a>
+                mixture_amplitude = torch.sqrt(real**2+imag**2)
+                real, imag = <a id="change">sources[:,:,:F_bin], sources[:,:,F_bin:]</a>
+                sources_amplitude = torch.sqrt(real**2+imag**2)
+                
+                output = self.model(mixture_amplitude, assignment=None, threshold_weight=threshold_weight, n_sources=n_sources)
+                &#47&#47 At the test phase, assignment may be unknown.
+                loss, _ = pit(self.criterion, output, sources_amplitude, batch_mean=False)
+                loss = loss.sum(dim=0)
+                valid_loss += loss.item()
+                
+                if idx &lt; 5:
+                    <a id="change">mixture</a> = mixture[0].cpu() &#47&#47 -&gt; (1, 2*F_bin, T_bin)
+                    mixture_amplitude = mixture_amplitude[0].cpu() &#47&#47 -&gt; (1, F_bin, T_bin)
+                    estimated_sources_amplitude = output[0].cpu() &#47&#47 -&gt; (n_sources, F_bin, T_bin)
+                    ratio = estimated_sources_amplitude / mixture_amplitude
+                    real, imag = <a id="change">mixture[:,:F_bin]</a><a id="change">, mixture[:,F_bin:]</a>
+                    real, imag = ratio * real, ratio * imag
+                    estimated_sources = torch.cat([real, imag], dim=1) &#47&#47 -&gt; (n_sources, 2*F_bin, T_bin)
+                    estimated_sources = self.istft(estimated_sources) &#47&#47 -&gt; (n_sources, T)
+                    estimated_sources = estimated_sources.cpu().numpy()</code></pre><h3>After Change</h3><pre><code class='java'>
+                    threshold_weight = threshold_weight.cuda()
+                    assignment = assignment.cuda()
+                
+                real, imag = <a id="change">mixture[...,0]</a>, <a id="change">mixture[...,1]</a>
+                mixture_amplitude = torch.sqrt(real**2+imag**2)
+                real, imag = <a id="change">sources[...,0], sources[...,1]</a>
+                sources_amplitude = torch.sqrt(real**2+imag**2)
+                
+                output = self.model(mixture_amplitude, assignment=None, threshold_weight=threshold_weight, n_sources=n_sources)
+                &#47&#47 At the test phase, assignment may be unknown.
+                loss, _ = pit(self.criterion, output, sources_amplitude, batch_mean=False)
+                loss = loss.sum(dim=0)
+                valid_loss += loss.item()
+                
+                if idx &lt; 5:
+                    <a id="change">mixture</a> = mixture[0].cpu() &#47&#47 -&gt; (1, F_bin, T_bin, 2)
+                    mixture_amplitude = mixture_amplitude[0].cpu() &#47&#47 -&gt; (1, F_bin, T_bin)
+                    estimated_sources_amplitude = output[0].cpu() &#47&#47 -&gt; (n_sources, F_bin, T_bin)
+                    ratio = estimated_sources_amplitude / mixture_amplitude
+                    real, imag = <a id="change">mixture[...,0], mixture[...,1]</a>
+                    real, imag = ratio * real, ratio * imag
+                    estimated_sources = torch.cat([real.unsqueeze(dim=3), imag.unsqueeze(dim=3)], dim=3) &#47&#47 -&gt; (n_sources, F_bin, T_bin, 2)
+                    estimated_sources = self.istft(estimated_sources) &#47&#47 -&gt; (n_sources, T)
+                    estimated_sources = estimated_sources.cpu().numpy()</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/tky823/dnn-based_source_separation/commit/328469f20f39ffea9ea0848919041edc1f3b0e7c#diff-47c38fce77be05cf4a67f90056420b26047f29fa2d0ea83a1ef017da62eec095L398' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 5434854</div><div id='project'> Project Name: tky823/dnn-based_source_separation</div><div id='commit'> Commit Name: 328469f20f39ffea9ea0848919041edc1f3b0e7c</div><div id='time'> Time: 2020-12-27</div><div id='author'> Author: 40362510+tky823@users.noreply.github.com</div><div id='file'> File Name: egs/wsj0/common/src/driver.py</div><div id='m_class'> M Class Name: AttractorTrainer</div><div id='n_method'> N Class Name: AttractorTrainer</div><div id='m_method'> M Method Name: run_one_epoch_eval(2)</div><div id='n_method'> N Method Name: run_one_epoch_eval(2)</div><div id='m_parent_class'> M Parent Class: Trainer</div><div id='n_parent_class'> N Parent Class: Trainer</div><div id='m_file'> M File Name: egs/wsj0/common/src/driver.py</div><div id='n_file'> N File Name: egs/wsj0/common/src/driver.py</div><div id='m_start'> M Start Line: 404</div><div id='m_end'> M End Line: 443</div><div id='n_start'> N Start Line: 425</div><div id='n_end'> N End Line: 443</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        Validation
+        
+        n_sources = self.n_sources
+        <a id="change">F_bin</a> = self.F_bin
+        
+        self.model.eval()
+        
+        valid_loss = 0
+        n_valid = len(self.valid_loader.dataset)
+        
+        with torch.no_grad():
+            for idx, (mixture, sources, assignment, threshold_weight) in enumerate(self.valid_loader):
+                
+                mixture (batch_size, 1, 2*F_bin, T_bin)
+                sources (batch_size, n_sources, 2*F_bin, T_bin)
+                assignment (batch_size, n_sources, F_bin, T_bin)
+                threshold_weight (batch_size, F_bin, T_bin)
+                
+                if self.use_cuda:
+                    mixture = mixture.cuda()
+                    sources = sources.cuda()
+                    threshold_weight = threshold_weight.cuda()
+                    assignment = assignment.cuda()
+                
+                real, imag = <a id="change">mixture[:,:,:F_bin], mixture[:,:,F_bin:]</a>
+                mixture_amplitude = torch.sqrt(real**2+imag**2)
+                real, imag = <a id="change">sources[:,:,:F_bin], sources[:,:,F_bin:]</a>
+                sources_amplitude = torch.sqrt(real**2+imag**2)
+                
+                output = self.model(mixture_amplitude, assignment=None, threshold_weight=threshold_weight, n_sources=n_sources)
+                &#47&#47 At the test phase, assignment may be unknown.
+                loss, _ = pit(self.criterion, output, sources_amplitude, batch_mean=False)
+                loss = loss.sum(dim=0)
+                valid_loss += loss.item()
+                
+                if idx &lt; 5:
+                    <a id="change">mixture</a> = mixture[0].cpu() &#47&#47 -&gt; (1, 2*F_bin, T_bin)
+                    mixture_amplitude = mixture_amplitude[0].cpu() &#47&#47 -&gt; (1, F_bin, T_bin)
+                    estimated_sources_amplitude = output[0].cpu() &#47&#47 -&gt; (n_sources, F_bin, T_bin)
+                    ratio = estimated_sources_amplitude / mixture_amplitude
+                    real, imag = <a id="change">mixture[:,:F_bin]</a><a id="change">, mixture[:,F_bin:]</a>
+                    real, imag = ratio * real, ratio * imag
+                    estimated_sources = torch.cat([real, imag], dim=1) &#47&#47 -&gt; (n_sources, 2*F_bin, T_bin)
+                    estimated_sources = self.istft(estimated_sources) &#47&#47 -&gt; (n_sources, T)
+                    estimated_sources = estimated_sources.cpu().numpy()</code></pre><h3>After Change</h3><pre><code class='java'>
+                    threshold_weight = threshold_weight.cuda()
+                    assignment = assignment.cuda()
+                
+                real, imag = <a id="change">mixture[...,0], mixture[...,1]</a>
+                mixture_amplitude = torch.sqrt(real**2+imag**2)
+                real, imag = <a id="change">sources[...,0]</a>, <a id="change">sources[...,1]</a>
+                sources_amplitude = torch.sqrt(real**2+imag**2)
+                
+                output = self.model(mixture_amplitude, assignment=None, threshold_weight=threshold_weight, n_sources=n_sources)
+                &#47&#47 At the test phase, assignment may be unknown.
+                loss, _ = pit(self.criterion, output, sources_amplitude, batch_mean=False)
+                loss = loss.sum(dim=0)
+                valid_loss += loss.item()
+                
+                if idx &lt; 5:
+                    <a id="change">mixture</a> = mixture[0].cpu() &#47&#47 -&gt; (1, 2*F_bin, T_bin)
+                    mixture_amplitude = mixture_amplitude[0].cpu() &#47&#47 -&gt; (1, F_bin, T_bin)
+                    estimated_sources_amplitude = output[0].cpu() &#47&#47 -&gt; (n_sources, F_bin, T_bin)
+                    ratio = estimated_sources_amplitude / mixture_amplitude
+                    real, imag = <a id="change">mixture[...,0], mixture[...,1]</a>
+                    real, imag = ratio * real, ratio * imag
+                    estimated_sources = torch.cat([real.unsqueeze(dim=3), imag.unsqueeze(dim=3)], dim=3) &#47&#47 -&gt; (n_sources, F_bin, T_bin, 2)
+                    estimated_sources = self.istft(estimated_sources) &#47&#47 -&gt; (n_sources, T)
+                    estimated_sources = estimated_sources.cpu().numpy()</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/tky823/dnn-based_source_separation/commit/53189e867864946472ffa6057e156b6902f2a7b9#diff-b61b98e7733d0396b3b1f77244617744f6ae8cc0f81d894ba9279b12993aed7aL392' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 5434856</div><div id='project'> Project Name: tky823/dnn-based_source_separation</div><div id='commit'> Commit Name: 53189e867864946472ffa6057e156b6902f2a7b9</div><div id='time'> Time: 2020-12-27</div><div id='author'> Author: 40362510+tky823@users.noreply.github.com</div><div id='file'> File Name: egs/librispeech/common/src/driver.py</div><div id='m_class'> M Class Name: AttractorTrainer</div><div id='n_method'> N Class Name: AttractorTrainer</div><div id='m_method'> M Method Name: run_one_epoch_eval(2)</div><div id='n_method'> N Method Name: run_one_epoch_eval(2)</div><div id='m_parent_class'> M Parent Class: Trainer</div><div id='n_parent_class'> N Parent Class: Trainer</div><div id='m_file'> M File Name: egs/librispeech/common/src/driver.py</div><div id='n_file'> N File Name: egs/librispeech/common/src/driver.py</div><div id='m_start'> M Start Line: 398</div><div id='m_end'> M End Line: 437</div><div id='n_start'> N Start Line: 419</div><div id='n_end'> N End Line: 437</div><BR>

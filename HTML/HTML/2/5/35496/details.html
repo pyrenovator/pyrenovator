@@ -1,0 +1,63 @@
+<html><h3>Pattern ID :35496
+</h3><img src='101388890.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                       deterministic: bool = False) -&gt; ActionType:
+        implementation of :class:`~maze.core.agent.policy.Policy`
+        
+        action<a id="change">, _</a> = self.compute_action_with_logits(observation, actor_id, deterministic)
+        return action
+
+    @override(Policy)</code></pre><h3>After Change</h3><pre><code class='java'>
+        
+        with torch.no_grad():
+            policy_out = self.compute_substep_policy_output(observation, actor_id)
+            <a id="change">if </a><a id="change">deterministic</a>:
+                action = policy_out.prob_dist.deterministic_sample()
+            else:
+                action<a id="change"> = </a><a id="change">policy_out.prob_dist.sample()</a>
+        return convert_to_numpy(action, cast=None, in_place=False)
+
+    @override(Policy)
+    def compute_top_action_candidates(self,</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/enlite-ai/maze/commit/53f2ea0b5fb4905306f4410f61af75372256fbcc#diff-92e333a960bae1a2574e681e1f527176c05f76baf245e1d51d25a0d85a9ce865L179' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 101388890</div><div id='project'> Project Name: enlite-ai/maze</div><div id='commit'> Commit Name: 53f2ea0b5fb4905306f4410f61af75372256fbcc</div><div id='time'> Time: 2021-06-24</div><div id='author'> Author: office@enlite.ai</div><div id='file'> File Name: maze/core/agent/torch_policy.py</div><div id='m_class'> M Class Name: TorchPolicy</div><div id='n_method'> N Class Name: TorchPolicy</div><div id='m_method'> M Method Name: compute_action(6)</div><div id='n_method'> N Method Name: compute_action(6)</div><div id='m_parent_class'> M Parent Class: TorchModel,Policy</div><div id='n_parent_class'> N Parent Class: TorchModel,Policy</div><div id='m_file'> M File Name: maze/core/agent/torch_policy.py</div><div id='n_file'> N File Name: maze/core/agent/torch_policy.py</div><div id='m_start'> M Start Line: 197</div><div id='m_end'> M End Line: 198</div><div id='n_start'> N Start Line: 179</div><div id='n_end'> N End Line: 185</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+        log_std = self.std_clamp(log_std)
+
+        return mean<a id="change">, log_std</a>
+
+
+if __name__ == &quot__main__&quot:
+    use_cuda = torch.cuda.is_available()</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        mean, log_std = torch.split(x, x.shape[1] // 2, dim=1)
+
+        <a id="change">if </a><a id="change">deterministic</a>:
+            action = mean
+            std = torch.zeros_like(log_std)
+        else:
+            &#47&#47 todo: is clamp really necessary?
+            log_std = self.std_clamp(log_std)
+            std = log_std.exp()
+            m = MultivariateNormal(mean.reshape(-1), torch.diag(std.reshape(-1)))
+            action = <a id="change">m.sample()</a>
+            action<a id="change"> = </a>action.reshape(mean.shape)
+
+        action = action.tanh()
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/tmdt-buw/karolos/commit/39ca64b6106c80c48f0605a15cde575769fad233#diff-29037086e0dfbb6a2262a556dce65661316ec86ddf4f52bf9de230586208ab9dL93' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 101388879</div><div id='project'> Project Name: tmdt-buw/karolos</div><div id='commit'> Commit Name: 39ca64b6106c80c48f0605a15cde575769fad233</div><div id='time'> Time: 2020-04-23</div><div id='author'> Author: scheiderer@uni-wuppertal.de</div><div id='file'> File Name: agents/nnfactory/sac.py</div><div id='m_class'> M Class Name: Policy</div><div id='n_method'> N Class Name: Policy</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: agents/nnfactory/sac.py</div><div id='n_file'> N File Name: agents/nnfactory/sac.py</div><div id='m_start'> M Start Line: 100</div><div id='m_end'> M End Line: 102</div><div id='n_start'> N Start Line: 95</div><div id='n_end'> N End Line: 115</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        npsamples = self._buffer.sample(batch_size)
+        samples = self.samples_from_cpprb(npsamples)
+        weights = torch.ones(batch_size, device=self.device)
+        return (*samples<a id="change">, weights</a>)
+
+    def update_priorities(self, indexes, td_errors):
+        &quot&quot&quotUpdate priorities based on the TD error&quot&quot&quot</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    def sample(self, batch_size):
+        &quot&quot&quotSample from the stored transitions&quot&quot&quot
+        <a id="change">if </a><a id="change">self._prioritized</a>:
+            npsamples<a id="change"> = </a><a id="change">self._buffer.sample(</a>batch_size<a id="change">, beta=self._beta)</a>
+        else:
+            npsamples = self._buffer.sample(batch_size)
+        samples = self.samples_from_cpprb(npsamples)
+        return samples</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/syuntoku14/pytorch-rl-il/commit/e04bcf297330858ceb59b30c7aab0cbbed4f30e4#diff-6e3b4179d8384bf7498fb7b8c2751a86b949ebc0f79163b8af4e56c3c27be20fL81' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 101388883</div><div id='project'> Project Name: syuntoku14/pytorch-rl-il</div><div id='commit'> Commit Name: e04bcf297330858ceb59b30c7aab0cbbed4f30e4</div><div id='time'> Time: 2020-05-26</div><div id='author'> Author: syuntoku14@gmail.com</div><div id='file'> File Name: rlil/memory/replay_buffer.py</div><div id='m_class'> M Class Name: ExperienceReplayBuffer</div><div id='n_method'> N Class Name: ExperienceReplayBuffer</div><div id='m_method'> M Method Name: sample(2)</div><div id='n_method'> N Method Name: sample(2)</div><div id='m_parent_class'> M Parent Class: BaseReplayBuffer</div><div id='n_parent_class'> N Parent Class: BaseReplayBuffer</div><div id='m_file'> M File Name: rlil/memory/replay_buffer.py</div><div id='n_file'> N File Name: rlil/memory/replay_buffer.py</div><div id='m_start'> M Start Line: 83</div><div id='m_end'> M End Line: 86</div><div id='n_start'> N Start Line: 119</div><div id='n_end'> N End Line: 124</div><BR>

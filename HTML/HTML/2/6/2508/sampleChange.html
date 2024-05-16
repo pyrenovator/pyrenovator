@@ -1,0 +1,22 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    T_tgt_src = T_21[kp_inds]
+    R_tgt_src = T_tgt_src[:, :3, :3]
+    t_tgt_src = T_tgt_src[:, :3, 3].unsqueeze(-1)
+    svd_loss<a id="change">, R_loss, t_loss</a> = SVD_loss(R_tgt_src, R_tgt_src_pred, t_tgt_src, t_tgt_src_pred, config[&quotgpuid&quot])
+    dict_loss = {&quotR_loss&quot: R_loss, &quott_loss&quot: t_loss}
+    return svd_loss, dict_loss
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    R_tgt_src = T_tgt_src[:, :3, :3]
+    t_tgt_src = T_tgt_src[:, :3, 3].unsqueeze(-1)
+    batch_size = R_tgt_src.size(0)
+    identity = <a id="change">torch.eye(3).unsqueeze(0).repeat(batch_size, 1, 1).to(</a>config[&quotgpuid&quot]<a id="change">)</a>
+    loss_fn = torch.nn.L1Loss()
+    R_loss<a id="change"> = </a>loss_fn(torch.matmul(R_tgt_src_pred.transpose(2, 1), R_tgt_src), identity)
+    t_loss = loss_fn(t_tgt_src_pred, t_tgt_src)
+    svd_loss<a id="change"> = </a>t_loss<a id="change"> + </a>alpha * R_loss
+    dict_loss = {&quotR_loss&quot: R_loss, &quott_loss&quot: t_loss}
+    return svd_loss, dict_loss
+</code></pre>

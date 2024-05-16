@@ -1,0 +1,33 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    loader = get_loader(config[&quotdata&quot], &quottrain&quot)
+
+    model = TransoarNet(config[&quotmodel&quot], config[&quotdata&quot][&quotnum_classes&quot]).to(device=device)
+    <a id="change">model.train()</a>
+
+    criterion = build_criterion(config[&quottraining&quot]).to(device=device)
+    
+    for data, mask, bboxes, _ in tqdm(loader):</code></pre><h3>After Change</h3><pre><code class='java'>
+    model = TransoarNet(config[&quotmodel&quot], config[&quotdata&quot][&quotnum_classes&quot]).to(device=device)
+    criterion = build_criterion(config[&quottraining&quot]).to(device=device)
+
+    param_dicts<a id="change"> = </a><a id="change">[
+        </a>{"params": [p for n, p in model.named_parameters() if "backbone" not in n and p.requires_grad]},
+        {
+            "params": [p for n, p in model.named_parameters() if "backbone" in n and p.requires_grad],
+            "lr": float(config[&quottraining&quot][&quotlr_backbone&quot])
+        }<a id="change"></a>,
+    ]
+
+    optim = torch.optim.AdamW(
+        param_dicts, lr=float(config[&quottraining&quot][&quotlr&quot]), weight_decay=float(config[&quottraining&quot][&quotweight_decay&quot])
+    )
+    scheduler = torch.optim.lr_scheduler.StepLR(optim, config[&quottraining&quot][&quotlr_drop&quot])
+
+    &#47&#47 Build trainer and start training
+    trainer<a id="change"> = </a>Trainer(
+        train_loader, val_loader, model, criterion, optim, scheduler, device, config
+    )
+    trainer.run()</code></pre>

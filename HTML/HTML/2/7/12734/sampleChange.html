@@ -1,0 +1,27 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        _output = self._model.pool(feats)
+        _output = self._model.flatten(_output)
+        _output = self._model.classifier(_output)
+        grad: torch.FloatTensor = <a id="change">list(</a>torch.autograd.grad(_output[:, _class], feats)<a id="change">)</a>[0]   &#47&#47 (N,C,H,W)
+        feats.requires_grad_(False)
+
+        weights: torch.FloatTensor = grad.mean(axis=-1, keepdim=True).mean(axis=-1, keepdim=True)    &#47&#47 (N,C,1,1)
+        heatmap: torch.FloatTensor = (feats * weights).sum(dim=1).clamp(0)  &#47&#47 (N,H,W)
+        heatmap = np.array(heatmap.cpu())
+        heatmap = cv2.resize(heatmap[0], _input.shape[2:])
+
+        heatmap<a id="change"> = </a>heatmap - np.min(heatmap)
+        heatmap = heatmap / np.max(heatmap)
+        return heatmap
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        heatmap = (to_numpy(heatmap).transpose(1, 2, 0) * 255).astype(np.uint8)
+
+        heatmap = cv2.resize(heatmap, dsize=_input.shape[-2:], interpolation=cv2.INTER_CUBIC)
+        <a id="change">if </a><a id="change">len(heatmap.shape) == 2</a>:
+            heatmap<a id="change"> = </a>heatmap.reshape(heatmap.shape[0], heatmap.shape[1], 1)
+        heatmap = heatmap.transpose(2, 0, 1).astype(float) / 255    &#47&#47 (N, H, W)
+        return heatmap
+</code></pre>

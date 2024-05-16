@@ -1,0 +1,39 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            executor = self.executor
+        else:
+            &#47&#47 use passed in executor
+            executor = <a id="change">kwargs.pop("executor"</a><a id="change">)</a>
+
+        return (
+            executor.submit(self._run, *args, **kwargs)  &#47&#47 Non-Blocking call
+            if executor and not self.use_dynamic_batch()</code></pre><h3>After Change</h3><pre><code class='java'>
+        self._batch_size = self._batch_size or 1
+
+    def __call__(self, *args, **kwargs) -&gt; BaseModel:
+        <a id="change">if "engine_inputs" in kwargs</a>:
+            raise ValueError(
+                "invalid kwarg engine_inputs. engine inputs determined "
+                f"by {self.__class__.__qualname__}.parse_inputs"
+            )
+
+        &#47&#47 parse inputs into input_schema
+        pipeline_inputs = self.parse_inputs(*args, **kwargs)
+        if not isinstance(pipeline_inputs, self.input_schema):
+            raise RuntimeError(
+                f"Unable to parse {self.__class__} inputs into a "
+                f"{self.input_schema} object. Inputs parsed to {type(pipeline_inputs)}"
+            )
+
+        &#47&#47 batch size of the inputs may be `&gt; self._batch_size` at this point
+        engine_inputs: List[numpy.ndarray] = self.process_inputs(pipeline_inputs)
+        if isinstance(engine_inputs, tuple):
+            engine_inputs, postprocess_kwargs = engine_inputs
+        else:
+            postprocess_kwargs<a id="change"> = </a><a id="change">{}</a>
+
+        &#47&#47 split inputs into batches of size `self._batch_size`
+        batches = self.split_engine_inputs(engine_inputs, self._batch_size)
+</code></pre>

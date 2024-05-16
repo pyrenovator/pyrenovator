@@ -1,0 +1,44 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            bucketed_tensors[Lg].append(c)
+
+        &#47&#47 bucket-wise ifft
+        <a id="change">for </a>b, v in <a id="change">bucketed_tensors.items():
+            </a>ret[b] = ifft(torch.cat(v, dim=2))
+
+        return ret
+        </code></pre><h3>After Change</h3><pre><code class='java'>
+    else:
+        block_ptr = -1
+        bucketed_tensors = []
+        ret<a id="change"> = </a><a id="change">[]</a>
+
+        for j, (mii,win_range,Lg,col) in enumerate(loopparams):
+            
+            c = torch.zeros(*f_slices.shape[:2], 1, Lg, dtype=ft.dtype, device=torch.device(device))
+
+            t = ft[:, :, win_range]*torch.fft.fftshift(giis[j, :Lg])
+
+            sl1 = slice(None,(Lg+1)//2)
+            sl2 = slice(-(Lg//2),None)
+
+            c[:, :, 0, sl1] = t[:, :, Lg//2:]  &#47&#47 if mii is odd, this is of length mii-mii//2
+            c[:, :, 0, sl2] = t[:, :, :Lg//2]  &#47&#47 if mii is odd, this is of length mii//2
+
+            &#47&#47 start a new block
+            if block_ptr == -1 or bucketed_tensors[block_ptr][0].shape[-1] != Lg:
+                bucketed_tensors.append(c)
+                block_ptr += 1
+            else:
+                &#47&#47 concat block to previous contiguous frequency block with same time resolution
+                bucketed_tensors[block_ptr] = torch.cat([bucketed_tensors[block_ptr], c], dim=2)
+
+        &#47&#47 bucket-wise ifft
+        <a id="change">for </a>bucketed_tensor in bucketed_tensors<a id="change">:
+            </a><a id="change">ret.append(</a>ifft(bucketed_tensor)<a id="change">)</a>
+
+        return ret
+        
+</code></pre>

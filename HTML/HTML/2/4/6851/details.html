@@ -1,0 +1,73 @@
+<html><h3>Pattern ID :6851
+</h3><img src='23216310.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            y = y.to(self.device).int()
+            pred = self.model(X)
+            [fn(pred, y) for fn in self.metric_fns]
+        result = <a id="change">{type(fn).__name__: fn.compute().item() for fn in self.metric_fns}</a>
+        [fn.reset() for fn in self.metric_fns]
+        return result
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        num_batches = 0
+        sklearn_intermediates = dict()
+        results = dict()
+        <a id="change">with torch</a><a id="change">.no_grad():
+            </a>for _, (X, y) in enumerate(test_iterable_ds):
+                X = X.to(self.device)
+                y = y.to(self.device)
+                num_batches += 1
+                pred = self.model(X)
+                for fn in self.metric_fns:
+                    if get_package_name(fn) == "torchmetrics":
+                        fn(pred, y.int())
+                    elif get_package_name(fn) == "sklearn":
+                        if type(fn).__name__ not in sklearn_intermediates:
+                            sklearn_intermediates[fn.__name__]<a id="change"> = </a>0
+                        sklearn_intermediates[fn.__name__] += fn(
+                            y.cpu().data.numpy(), pred.cpu().data.numpy())
+        &#47&#47 torchmetrics compute and reset</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/ryantd/veloce/commit/aca7bbb15fbcbae885dd418e7ff969ad4828703e#diff-10a63a56f6f260c3a8cc88a30331e16de36e33f42ccd316cb27d96f83f790d53L126' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 23216310</div><div id='project'> Project Name: ryantd/veloce</div><div id='commit'> Commit Name: aca7bbb15fbcbae885dd418e7ff969ad4828703e</div><div id='time'> Time: 2022-01-04</div><div id='author'> Author: xiaoyu.zhai@hotmail.com</div><div id='file'> File Name: phetware/epochvisor.py</div><div id='m_class'> M Class Name: Epochvisor</div><div id='n_method'> N Class Name: Epochvisor</div><div id='m_method'> M Method Name: test_epoch(2)</div><div id='n_method'> N Method Name: test_epoch(2)</div><div id='m_parent_class'> M Parent Class: object</div><div id='n_parent_class'> N Parent Class: object</div><div id='m_file'> M File Name: phetware/epochvisor.py</div><div id='n_file'> N File Name: phetware/epochvisor.py</div><div id='m_start'> M Start Line: 126</div><div id='m_end'> M End Line: 133</div><div id='n_start'> N Start Line: 128</div><div id='n_end'> N End Line: 154</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    def __post_init__(self):
+        self.coco = COCO(self.file_name)
+        self.vector_dict = <a id="change">{
+            image_id: COCOMemoryGeoDF(
+                map(
+                    _build_polygon_from_annotation,
+                    self.coco.loadAnns(ids=self.coco.getAnnIds(imgIds=image_id))
+                )
+            ) for image_id in self.coco.getImgIds(catIds=self.coco.getCatIds())
+        }</a>
+    
+    def get_geodf_item(self, key: str) -&gt; GeoDataFrame:
+        return self.vector_dict[int(key)]
+</code></pre><h3>After Change</h3><pre><code class='java'>
+                    )
+                )
+            }
+        <a id="change">with concurrent</a><a id="change">.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+            </a>futures = set(
+                executor.submit(build_coco_memory_geodf_item, image_id) \
+                    for image_id in self.coco.getImgIds(catIds=self.coco.getCatIds())
+            )
+            kwargs<a id="change"> = </a>{
+                &quottotal&quot: len(futures),
+                &quotunit&quot: &quotimages&quot,
+                &quotunit_scale&quot: True,</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/dsgoficial/pytorch_segmentation_models_trainer/commit/02a7330e66a9e41796b1299fc6cefc90a1c39a0a#diff-715681fc8249afb8920fca34e2021c7456a0da7f46e0327d678e70adcb28264dL173' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 23216314</div><div id='project'> Project Name: dsgoficial/pytorch_segmentation_models_trainer</div><div id='commit'> Commit Name: 02a7330e66a9e41796b1299fc6cefc90a1c39a0a</div><div id='time'> Time: 2021-07-20</div><div id='author'> Author: philipeborba@gmail.com</div><div id='file'> File Name: pytorch_segmentation_models_trainer/tools/data_handlers/vector_reader.py</div><div id='m_class'> M Class Name: COCOGeoDF</div><div id='n_method'> N Class Name: COCOGeoDF</div><div id='m_method'> M Method Name: __post_init__(1)</div><div id='n_method'> N Method Name: __post_init__(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: pytorch_segmentation_models_trainer/tools/data_handlers/vector_reader.py</div><div id='n_file'> N File Name: pytorch_segmentation_models_trainer/tools/data_handlers/vector_reader.py</div><div id='m_start'> M Start Line: 175</div><div id='m_end'> M End Line: 182</div><div id='n_start'> N Start Line: 180</div><div id='n_end'> N End Line: 206</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                if isinstance(output, (list, tuple)) and isinstance(output[0], torch.Tensor):
+                    output = [to_numpy(tensor, framework) for tensor in output]
+                elif isinstance(output, dict):
+                    output = <a id="change">{name: to_numpy(tensor, framework) for name, tensor in output.items()}</a>
+                elif isinstance(output, torch.Tensor):
+                    output = to_numpy(output, framework)
+                outputs.append(output)
+            else:</code></pre><h3>After Change</h3><pre><code class='java'>
+
+                runner = TFRunner(model, input_metadata, output_names)
+
+            <a id="change">with runner</a><a id="change">:
+                </a>output<a id="change"> = </a>runner.infer(sample)
+                outputs.append(output)
+
+        for i, output in enumerate(outputs):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/triton-inference-server/model_navigator/commit/3d1dcb4d73be04622ab7d541ea506a54557d95e5#diff-07d1ffbcd50b3be7d332154f15cef02ed90d24d60918110cd75b477786d4d4c7L128' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 23216316</div><div id='project'> Project Name: triton-inference-server/model_navigator</div><div id='commit'> Commit Name: 3d1dcb4d73be04622ab7d541ea506a54557d95e5</div><div id='time'> Time: 2022-02-22</div><div id='author'> Author: ptarasiewicz@nvidia.com</div><div id='file'> File Name: model_navigator/framework_api/commands/data_dump/samples.py</div><div id='m_class'> M Class Name: DumpOutputModelData</div><div id='n_method'> N Class Name: DumpOutputModelData</div><div id='m_method'> M Method Name: __call__(10)</div><div id='n_method'> N Method Name: __call__(7)</div><div id='m_parent_class'> M Parent Class: Command</div><div id='n_parent_class'> N Parent Class: Command</div><div id='m_file'> M File Name: model_navigator/framework_api/commands/data_dump/samples.py</div><div id='n_file'> N File Name: model_navigator/framework_api/commands/data_dump/samples.py</div><div id='m_start'> M Start Line: 138</div><div id='m_end'> M End Line: 166</div><div id='n_start'> N Start Line: 130</div><div id='n_end'> N End Line: 157</div><BR>

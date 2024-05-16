@@ -1,0 +1,21 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        if i &gt; 0:
+            inp = activate(inp)
+        inp = jnp.einsum(f"{original_dims},{reduced_dim}z,{reduced_dim}z-&gt;{new_dims}", inp, wgt, mask)
+    return <a id="change">inp.reshape(</a>original_shape<a id="change">)</a>
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    original_shape = inp.shape
+    max_dims = math.floor(math.log(ctx.dims.sequence, ctx.dims.spatial_mixing_kernel))
+    batch = <a id="change">lax.max(</a>ctx.dims.sequence // ctx.dims.spatial_mixing_kernel ** (depth % max_dims + 1), 1<a id="change">)</a>
+
+    mask = jnp.logical_not(jnp.tri(ctx.dims.spatial_mixing_kernel, k=-1)) if ctx.model.autoregressive else 1
+    out = inp.reshape(ctx.dims.batch * batch, ctx.dims.spatial_mixing_kernel, -1, ctx.dims.features)
+    out = jnp.einsum("bkrf,kg,kg-&gt;bgrf", out, wgt0, mask)
+    out<a id="change"> = </a>activate(ctx, out)
+    out<a id="change"> = </a>jnp.einsum("bkrf,kg,kg-&gt;bgrf", out, wgt1, mask)
+    return out.reshape(original_shape)
+</code></pre>

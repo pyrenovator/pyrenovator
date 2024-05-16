@@ -1,0 +1,29 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                        &#47&#47 scale == 2 * sqrt(3) / 1024
+                        sigmas *= self.density_scale * 0.003383
+                        &#47&#47 assign 
+                        tmp_grid[cas, <a id="change">xi * S</a>: xi<a id="change"> * S + </a>lx, yi * S: yi * S + ly, zi * S: zi * S + lz] = sigmas
+        
+        
+        &#47&#47 ema update</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        tmp_grid = torch.zeros_like(self.density_grid)
+
+        X = <a id="change">torch.arange(</a>self.grid_size<a id="change">, dtype=torch.int32, device=self.density_grid.device)</a>.split(S)
+        Y = torch.arange(self.grid_size, dtype=torch.int32, device=self.density_grid.device).split(S)
+        Z = torch.arange(self.grid_size, dtype=torch.int32, device=self.density_grid.device).split(S)
+        for xs in X:
+            for ys in Y:
+                for zs in Z:
+                    
+                    &#47&#47 construct points
+                    xx, yy, zz = custom_meshgrid(xs, ys, zs)
+                    coords = torch.cat([xx.reshape(-1, 1), yy.reshape(-1, 1), zz.reshape(-1, 1)], dim=-1) &#47&#47 [N, 3], in [0, 128)
+                    indices<a id="change"> = </a>raymarching.morton3D(coords).long() &#47&#47 [N]
+                    xyzs<a id="change"> = </a>2 * coords.float() / (self.grid_size - 1) - 1 &#47&#47 [N, 3] in [-1, 1]
+
+                    &#47&#47 cascading
+                    for cas in range(self.cascade):</code></pre>

@@ -1,0 +1,177 @@
+<html><h3>Pattern ID :31368
+</h3><img src='92045693.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        super().__init__(tgt_dict)
+
+        self.silence = (
+            tgt_dict.index("&lt;ctc_blank&gt;")<a id="change">
+            if "&lt;ctc_blank&gt;" in tgt_dict.indices</a><a id="change">
+            else </a>tgt_dict.bos()
+        )
+        
+        self.lexicon = load_words(args[&quotlexicon&quot])</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        self.unit_lm = getattr(args, "unit_lm", False)
+
+        <a id="change">if </a>args[&quotlexicon&quot]:
+            self.lexicon = load_words(args[&quotlexicon&quot])
+            self.word_dict = create_word_dict(self.lexicon)
+            self.unk_word = self.word_dict.get_index("&lt;unk&gt;")
+
+            self.lm = KenLM(args[&quotkenlm_model&quot], self.word_dict)
+            self.trie = Trie(self.vocab_size, self.silence)
+
+            start_state = self.lm.start(False)
+            for i, (word, spellings) in enumerate(self.lexicon.items()):
+                word_idx = self.word_dict.get_index(word)
+                _, score = self.lm.score(start_state, word_idx)
+                for spelling in spellings:
+                    spelling_idxs = [tgt_dict.index(token) for token in spelling]
+                    assert (
+                        tgt_dict.unk() not in spelling_idxs
+                    ), f"{spelling} {spelling_idxs}"
+                    self.trie.insert(spelling_idxs, word_idx, score)
+            self.trie.smear(SmearingMode.MAX)
+
+            self.decoder_opts = LexiconDecoderOptions(
+                beam_size=args[&quotbeam&quot],
+                beam_size_token=int(getattr(args, "beam_size_token", len(tgt_dict))),
+                beam_threshold=args[&quotbeam_threshold&quot],
+                lm_weight=args[&quotlm_weight&quot],
+                word_score=args[&quotword_score&quot],
+                unk_score=args[&quotunk_weight&quot],
+                sil_score=args[&quotsil_weight&quot],
+                log_add=False,
+                criterion_type=self.criterion_type,
+            )
+
+            if self.asg_transitions is None:
+                N = 768
+                &#47&#47 self.asg_transitions = torch.FloatTensor(N, N).zero_()
+                self.asg_transitions = []
+
+            self.decoder = LexiconDecoder(
+                self.decoder_opts,
+                self.trie,
+                self.lm,
+                self.silence,
+                self.blank,
+                self.unk_word,
+                self.asg_transitions,
+                self.unit_lm,
+            )
+        else:
+            <a id="change">assert </a>args.unit_lm, "lexicon free decoding can only be done with a unit language model"
+            from flashlight.lib.text.decoder import LexiconFreeDecoder, LexiconFreeDecoderOptions
+
+            d<a id="change"> = </a>{w: [[w]] for w in tgt_dict.symbols}
+            self.word_dict = create_word_dict(d)
+            self.lm = KenLM(args.kenlm_model, self.word_dict)
+            self.decoder_opts<a id="change"> = </a>LexiconFreeDecoderOptions(
+                beam_size=args.beam,
+                beam_size_token=int(getattr(args, "beam_size_token", len(tgt_dict))),
+                beam_threshold=args.beam_threshold,</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 5</div><BR><div id='size'>Non-data size: 6</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/open-speech-ekstep/vakyansh-wav2vec2-experimentation/commit/ea475ace163f4cc82e00481c41a6c9bfca552f0c#diff-332f2c04f41dad05fa88b4afb1b63f615ad063e58b6a28cc1bf0c0340b03d8a8L117' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 92045693</div><div id='project'> Project Name: open-speech-ekstep/vakyansh-wav2vec2-experimentation</div><div id='commit'> Commit Name: ea475ace163f4cc82e00481c41a6c9bfca552f0c</div><div id='time'> Time: 2021-04-28</div><div id='author'> Author: Harveen</div><div id='file'> File Name: utils/inference/single_file_inference.py</div><div id='m_class'> M Class Name: W2lKenLMDecoder</div><div id='n_method'> N Class Name: W2lKenLMDecoder</div><div id='m_method'> M Method Name: __init__(3)</div><div id='n_method'> N Method Name: __init__(3)</div><div id='m_parent_class'> M Parent Class: W2lDecoder</div><div id='n_parent_class'> N Parent Class: W2lDecoder</div><div id='m_file'> M File Name: utils/inference/single_file_inference.py</div><div id='n_file'> N File Name: utils/inference/single_file_inference.py</div><div id='m_start'> M Start Line: 117</div><div id='m_end'> M End Line: 168</div><div id='n_start'> N Start Line: 170</div><div id='n_end'> N End Line: 242</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            t = int(abs(math.log(channels, 2) + beta) / gamma)
+            kernel_size = max(t if t % 2 else t + 1, 3)
+        assert kernel_size % 2 == 1
+        has_act = <a id="change">act_layer is not None</a>
+        self.conv = nn.Conv1d(1, 1, kernel_size=kernel_size, padding=(kernel_size - 1) // 2, bias=has_act)
+        self.act = create_act_layer(act_layer)<a id="change"> if </a>has_act<a id="change"> else </a>nn.Identity()
+        self.gate = create_act_layer(gate_layer)
+
+    def forward(self, x):</code></pre><h3>After Change</h3><pre><code class='java'>
+            kernel_size = max(t if t % 2 else t + 1, 3)
+        assert kernel_size % 2 == 1
+        padding = (kernel_size - 1) // 2
+        <a id="change">if </a>use_mlp:
+            &#47&#47 NOTE &quotmlp&quot mode is a timm experiment, not in paper
+            <a id="change">assert </a>channels is not None
+            if rd_channels is None:
+                rd_channels = make_divisible(channels * rd_ratio, divisor=rd_divisor)
+            act_layer = act_layer or nn.ReLU
+            self.conv = nn.Conv1d(1, rd_channels, kernel_size=1, padding=0, bias=True)
+            self.act = create_act_layer(act_layer)
+            self.conv2 = nn.Conv1d(rd_channels, 1, kernel_size=kernel_size, padding=padding, bias=True)
+        else:
+            self.conv<a id="change"> = </a>nn.Conv1d(1, 1, kernel_size=kernel_size, padding=padding, bias=False)
+            self.act<a id="change"> = </a>None
+            self.conv2 = None
+        self.gate = create_act_layer(gate_layer)
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/feng-lab/pytorch-image-models/commit/307a935b790b5af8d551ebecda053cb1a9b16fcb#diff-cd8b6be486a16daa47a735ab6d06aeb32c8f615c82a04ae7ce0e775ae94c6576L59' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 92045772</div><div id='project'> Project Name: feng-lab/pytorch-image-models</div><div id='commit'> Commit Name: 307a935b790b5af8d551ebecda053cb1a9b16fcb</div><div id='time'> Time: 2021-05-31</div><div id='author'> Author: rwightman@gmail.com</div><div id='file'> File Name: timm/models/layers/eca.py</div><div id='m_class'> M Class Name: EcaModule</div><div id='n_method'> N Class Name: EcaModule</div><div id='m_method'> M Method Name: __init__(11)</div><div id='n_method'> N Method Name: __init__(7)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: timm/models/layers/eca.py</div><div id='n_file'> N File Name: timm/models/layers/eca.py</div><div id='m_start'> M Start Line: 65</div><div id='m_end'> M End Line: 67</div><div id='n_start'> N Start Line: 62</div><div id='n_end'> N End Line: 82</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    &#47&#47 Set the parameters for the model / container
+    n_threads = None if constants.N_THREADS not in extra_config else extra_config[constants.N_THREADS]
+    batch_size = None<a id="change"> if constants.BATCH_SIZE not in extra_config</a><a id="change"> else </a>extra_config[constants.BATCH_SIZE]
+
+    &#47&#47 We set the number of threads for torch here to avoid errors in case we JIT.
+    &#47&#47 We set intra op concurrency while we force operators to run sequentially.</code></pre><h3>After Change</h3><pre><code class='java'>
+    batch_size = None if constants.TEST_INPUT not in extra_config else _get_batch_size(test_input)
+    hb_container = container(hb_model, n_threads, batch_size, extra_config=extra_config)
+
+    <a id="change">if </a>remainder_model:
+        aux_container<a id="change"> = </a>container(remainder_model, n_threads, remainder_size, extra_config=extra_config)
+        return BatchContainer(hb_container, aux_container)
+    elif remainder_size is not None and remainder_size &gt; 0:
+        &#47&#47 remainder_size is non zero but remainder_model is not created
+        &#47&#47 -&gt; torch backend case
+        aux_container<a id="change"> = </a>container(hb_model, n_threads, remainder_size, extra_config=extra_config)
+        return BatchContainer(hb_container, aux_container)
+    elif remainder_size is not None:
+        &#47&#47 remainder_size is not None but remainder_model is not created
+        &#47&#47 -&gt; remainder_size must be zero (no need to create remainder_model)
+        <a id="change">assert </a>remainder_size == 0, "remainder_size is non zero but no remainder_model has been created"
+        &#47&#47 remainder_size is not None only if called by convert_batch(...), so we return BatchContainer
+        &#47&#47 for this code path, even though there is no remainder_model created.
+        return BatchContainer(hb_container)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/microsoft/hummingbird/commit/71c951d31caa5e372ce9fac6dd74be1ac327bc4d#diff-a1e4be711b012ff95dc7edc19f4a37c5dc1e0a9816900bcfefa68a29c8b71905L106' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 92045785</div><div id='project'> Project Name: microsoft/hummingbird</div><div id='commit'> Commit Name: 71c951d31caa5e372ce9fac6dd74be1ac327bc4d</div><div id='time'> Time: 2020-12-14</div><div id='author'> Author: masahi129@gmail.com</div><div id='file'> File Name: hummingbird/ml/_topology.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: convert(5)</div><div id='n_method'> N Method Name: convert(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: hummingbird/ml/_topology.py</div><div id='n_file'> N File Name: hummingbird/ml/_topology.py</div><div id='m_start'> M Start Line: 141</div><div id='m_end'> M End Line: 375</div><div id='n_start'> N Start Line: 106</div><div id='n_end'> N End Line: 392</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        quantizer_channels = extract_channels[-1]
+        post_quantizer_channels = context_channels[-1]
+        extra_args = (
+            {"num_residuals": quantizer_num_residuals}<a id="change">
+            if quantizer_type == "rvq"</a><a id="change">
+            else </a>{}
+        )
+
+        self.quantizer = Quantizer1d(</code></pre><h3>After Change</h3><pre><code class='java'>
+        quantizer_channels = extract_channels[-1]
+        post_quantizer_channels = context_channels[-1]
+
+        <a id="change">if </a>self.quantizer_type == "timewise":
+            self.quantizer = Quantizer1d(
+                channels=quantizer_channels,
+                num_groups=quantizer_groups,
+                codebook_size=codebook_size,
+                expire_threshold=quantizer_expire_threshold,
+                num_residuals=quantizer_num_residuals,
+            )
+        elif self.quantizer_type == "channelwise":
+            assert_message<a id="change"> = </a>"quantizer_split_size required with channelwise type"
+            <a id="change">assert </a>quantizer_split_size is not None, assert_message
+            self.quantizer<a id="change"> = </a>QuantizerChannelwise1d(
+                channels=quantizer_channels,
+                split_size=quantizer_split_size,
+                num_groups=quantizer_groups,</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/archinetai/audio-diffusion-pytorch-trainer/commit/d95282a5569b4aecd3bd9a11e751ecf659093bde#diff-c571f52981352b8ae331df88d5933bcdf64567980f4af6de2a94a37dbee42040L25' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 92045684</div><div id='project'> Project Name: archinetai/audio-diffusion-pytorch-trainer</div><div id='commit'> Commit Name: d95282a5569b4aecd3bd9a11e751ecf659093bde</div><div id='time'> Time: 2022-09-09</div><div id='author'> Author: flavio.schneider.97@gmail.com</div><div id='file'> File Name: main/module_diffqe.py</div><div id='m_class'> M Class Name: Model</div><div id='n_method'> N Class Name: Model</div><div id='m_method'> M Method Name: __init__(38)</div><div id='n_method'> N Method Name: __init__(38)</div><div id='m_parent_class'> M Parent Class: pl.LightningModule</div><div id='n_parent_class'> N Parent Class: pl.LightningModule</div><div id='m_file'> M File Name: main/module_diffqe.py</div><div id='n_file'> N File Name: main/module_diffqe.py</div><div id='m_start'> M Start Line: 58</div><div id='m_end'> M End Line: 107</div><div id='n_start'> N Start Line: 63</div><div id='n_end'> N End Line: 116</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        visible_maddrs_str = [str(a) for a in dht.get_visible_maddrs()]
+        logger.info(f"Running DHT node on {visible_maddrs_str}, initial peers = {initial_peers}")
+
+        num_handlers = num_handlers<a id="change"> if num_handlers is not None</a><a id="change"> else </a>num_blocks * 8
+        device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+        block_config = DistributedBloomConfig.from_pretrained(block_config, use_auth_token=True)
+        memory_cache = MemoryCache(device, cache_size_bytes)</code></pre><h3>After Change</h3><pre><code class='java'>
+        device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+        memory_cache = MemoryCache(device, cache_size_bytes)
+
+        <a id="change">if </a>block_indices is not None:
+            try:
+                start<a id="change">, end = </a>block_indices.split(&quot:&quot)
+                start<a id="change">, end = </a>map(int, map(str.strip, (start, end)))
+            except Exception as e:
+                logger.error(f"Failed to parse --block_indices ({e}), must be start:end (e.g. 0:33)")
+                raise
+            block_indices = range(start, end)
+        else:
+            <a id="change">assert </a>num_blocks is not None
+            block_indices = range(num_blocks) &#47&#47 TODO replace with proper load balancing
+
+        &#47&#47&#47&#47 TODO: the code below will load the entire model in RAM. Please replace with sliced model</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/bigscience-workshop/distributed-bloom/commit/20497f81d1d2e7f123364726ac5259bc56c29e99#diff-e0bb43e77afdc23f85aefba41e3d8fda1554c6402c8e08536508ed6246d8068fL82' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 92045685</div><div id='project'> Project Name: bigscience-workshop/distributed-bloom</div><div id='commit'> Commit Name: 20497f81d1d2e7f123364726ac5259bc56c29e99</div><div id='time'> Time: 2022-06-17</div><div id='author'> Author: justheuristic@gmail.com</div><div id='file'> File Name: src/server/server.py</div><div id='m_class'> M Class Name: Server</div><div id='n_method'> N Class Name: Server</div><div id='m_method'> M Method Name: create(16)</div><div id='n_method'> N Method Name: create(14)</div><div id='m_parent_class'> M Parent Class: threading.Thread</div><div id='n_parent_class'> N Parent Class: threading.Thread</div><div id='m_file'> M File Name: src/server/server.py</div><div id='n_file'> N File Name: src/server/server.py</div><div id='m_start'> M Start Line: 109</div><div id='m_end'> M End Line: 115</div><div id='n_start'> N Start Line: 86</div><div id='n_end'> N End Line: 151</div><BR>

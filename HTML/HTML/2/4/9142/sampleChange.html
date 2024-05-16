@@ -1,0 +1,20 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    outputs = dict()
+    output_shapes = gess_output_shape(inputs=inputs, model_onnx=model_onnx)
+    for axis_name, shape in output_shapes.items():
+        tensor = <a id="change">torch.empty(shape, dtype=torch.float32, device=device).contiguous()</a>
+        outputs[axis_name] = tensor
+        binding.bind_output(
+            name=axis_name,
+            device_type=device,</code></pre><h3>After Change</h3><pre><code class='java'>
+        if input_onnx.name not in inputs:  &#47&#47 some inputs may be optional
+            continue
+        tensor: torch.Tensor = inputs[input_onnx.name]
+        tensor<a id="change"> = </a><a id="change">tensor.detach()</a>
+        if tensor.dtype in [torch.int64, torch.long]:
+            &#47&#47 int32 mandatory as input of bindings, int64 not supported
+            tensor = tensor.type(dtype=torch.int32)
+        tensor = tensor.contiguous()</code></pre>

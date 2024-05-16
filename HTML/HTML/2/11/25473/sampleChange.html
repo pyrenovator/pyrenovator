@@ -1,0 +1,43 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        encodings.max = 2.5
+        encodings.min = -7
+        encodings.offset = -188
+        <a id="change">qc_op.set_encodings(</a>encodings<a id="change">)</a>
+        qc_op.set_mode(OpMode.quantize_dequantize)
+
+        output_qdq = qc_op.compute(input_arr)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        input_arr = np.asarray([[[[-7, -5, -3, 0, .1, 2.5]]]]).astype(np.float32)
+
+        quant_info = libquant_info.QcQuantizeInfo()
+        quant_node = <a id="change">helper.make_node(</a>op_name<a id="change">, inputs=[&quotinput&quot], outputs=[&quotoutput&quot],
+                                      domain=op_domain, quant_info=libpymo.PtrToInt64(quant_info))</a>
+        model<a id="change"> = create_model_from_node(</a>quant_node, input_arr.shape<a id="change">)</a>
+        session<a id="change"> = build_session(</a>model, <a id="change">[&quotCPUExecutionProvider&quot</a>]<a id="change">)</a>
+        qc_op = QcQuantizeOp(quant_info=quant_info,
+                     quant_scheme=QuantScheme.post_training_tf,
+                     rounding_mode=&quotnearest&quot,
+                     encodings=None,
+                     op_mode=OpMode.oneShotQuantizeDequantize,
+                     bitwidth=8,
+                     use_symmetric_encodings=False,
+                     use_cuda=False)
+
+        output_oneshot = session.run(None, {&quotinput&quot: input_arr})[0]
+
+        encodings = libpymo.TfEncoding()
+        encodings.bw = 8
+        encodings.max = 2.5
+        encodings.min = -7
+        encodings.offset = -188
+        qc_op.encodings = encodings
+        qc_op.op_mode = OpMode.quantizeDequantize
+
+        output_qdq<a id="change"> = </a><a id="change">session.run(</a>None, <a id="change">{</a>&quotinput&quot: input_arr<a id="change">}</a><a id="change">)</a>
+
+
+        assert np.allclose(output_oneshot, output_qdq)
+</code></pre>

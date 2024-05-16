@@ -1,0 +1,37 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        logp_pi = pi_distribution.log_prob(actions).sum(axis=-1)
+        logp_pi -= (2*(np.log(2) - actions - F.softplus(-2*actions))).sum(axis=1)
+
+        <a id="change">return </a>logp_pi
+
+
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+
+    def get_logprob(self, obs, act):
+        <a id="change">value</a><a id="change"> = </a><a id="change">torch.clamp(</a>act, -0.999999, 0.999999<a id="change">)</a>
+        pre_tanh_value<a id="change"> = </a>torch<a id="change">.log(1+value) / 2 - </a>torch.log(<a id="change">1</a><a id="change">-value</a>)<a id="change"> / </a>2
+
+
+        net_out = self.net(obs)
+        mu = self.mu_layer(net_out)
+        log_std = self.log_std_layer(net_out)
+        log_std = torch.clamp(log_std, LOG_STD_MIN, LOG_STD_MAX)
+        std = torch.exp(log_std)
+        &#47&#47 Pre-squash distribution and sample
+        pi_distribution = Normal(mu, std)
+        log_prob_val = pi_distribution.log_prob(pre_tanh_value)
+        
+        correction = - 2. * (
+            torch.from_numpy(np.log([2.])).to(pre_tanh_value.get_device())
+            - pre_tanh_value
+            - torch.nn.functional.softplus(-2. * pre_tanh_value)
+        ).sum(dim=1)
+        
+        <a id="change">return </a>log_prob_val.sum(dim=1) + correction
+
+
+class awacMLPActor(nn.Module):</code></pre>

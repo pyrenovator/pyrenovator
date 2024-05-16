@@ -1,0 +1,90 @@
+<html><h3>Pattern ID :39079
+</h3><img src='111287666.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            raise ValueError(
+                "&quotmax_grad_norm&quot is not supported as an optimizer parameter, please switch to using the deepspeed parameter &quotgradient_clipping&quot see: https://www.deepspeed.ai/docs/config-json/&#47&#47gradient-clipping for more details"
+            )
+        if <a id="change">self.optimizer_name() == ADAM_OPTIMIZER</a>:
+            if self.zero_cpu_offload():
+                optimizer = torch.optim.Adam(model_parameters, **optimizer_parameters)
+            else:
+                from apex.optimizers.fused_adam import FusedAdam
+                optimizer<a id="change"> = </a>FusedAdam(model_parameters, **optimizer_parameters)
+        elif self.optimizer_name() == DEEPSPEED_ADAM:
+            from deepspeed.ops.adam import DeepSpeedCPUAdam
+            optimizer = DeepSpeedCPUAdam(model_parameters, **optimizer_parameters)</code></pre><h3>After Change</h3><pre><code class='java'>
+                "&quotmax_grad_norm&quot is not supported as an optimizer parameter, please switch to using the deepspeed parameter &quotgradient_clipping&quot see: https://www.deepspeed.ai/docs/config-json/&#47&#47gradient-clipping for more details"
+            )
+
+        if <a id="change">self.optimizer_name() == ADAM_OPTIMIZER</a>:
+            torch_adam = optimizer_parameters.pop(TORCH_ADAM_PARAM, False)
+            adam_w_mode = optimizer_parameters.pop(ADAM_W_MODE_PARAM, True)
+
+            &#47&#47 zero-offload  torch-adam  adam_w_mode optimizer
+            &#47&#47 T|F           T           T           torch.optim.AdamW
+            &#47&#47 T|F           T           F           torch.optim.Adam
+            &#47&#47 T             F           T|F         DeepSpeedCPUAdam(adam_w_mode)
+            &#47&#47 F             F           T|F         FusedAdam(adam_w_mode)
+            if torch_adam and adam_w_mode:
+                optimizer = torch.optim.AdamW(model_parameters, **optimizer_parameters)
+            elif torch_adam and not adam_w_mode:
+                optimizer = torch.optim.Adam(model_parameters, **optimizer_parameters)
+            elif self.zero_cpu_offload() and not torch_adam:
+                from deepspeed.ops.adam import DeepSpeedCPUAdam
+                optimizer = DeepSpeedCPUAdam(model_parameters,
+                                             **optimizer_parameters,
+                                             adamw_mode=adam_w_mode)
+            elif not self.zero_cpu_offload() and not torch_adam:
+                from apex.optimizers.fused_adam import FusedAdam
+                optimizer_parameters[ADAM_W_MODE_PARAM]<a id="change"> = </a>adam_w_mode
+                optimizer<a id="change"> = </a>FusedAdam(model_parameters, **optimizer_parameters)
+
+        elif self.optimizer_name() == LAMB_OPTIMIZER:
+            from deepspeed.ops.lamb import FusedLamb</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 7</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/microsoft/deepspeed/commit/f5aa2547d88f145c4b5223d5bb8f79db69ee5288#diff-e6635a81d2c2bf0938b5f83b1c4945e0f344e0106191a6960df8ee4aa64cc55fL547' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 111287666</div><div id='project'> Project Name: microsoft/deepspeed</div><div id='commit'> Commit Name: f5aa2547d88f145c4b5223d5bb8f79db69ee5288</div><div id='time'> Time: 2020-10-30</div><div id='author'> Author: 44502768+RezaYazdaniAminabadi@users.noreply.github.com</div><div id='file'> File Name: deepspeed/runtime/engine.py</div><div id='m_class'> M Class Name: DeepSpeedEngine</div><div id='n_method'> N Class Name: DeepSpeedEngine</div><div id='m_method'> M Method Name: _configure_basic_optimizer(2)</div><div id='n_method'> N Method Name: _configure_basic_optimizer(2)</div><div id='m_parent_class'> M Parent Class: Module</div><div id='n_parent_class'> N Parent Class: Module</div><div id='m_file'> M File Name: deepspeed/runtime/engine.py</div><div id='n_file'> N File Name: deepspeed/runtime/engine.py</div><div id='m_start'> M Start Line: 551</div><div id='m_end'> M End Line: 569</div><div id='n_start'> N Start Line: 547</div><div id='n_end'> N End Line: 586</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            raise ValueError(
+                "&quotmax_grad_norm&quot is not supported as an optimizer parameter, please switch to using the deepspeed parameter &quotgradient_clipping&quot see: https://www.deepspeed.ai/docs/config-json/&#47&#47gradient-clipping for more details"
+            )
+        if <a id="change">self.optimizer_name() == ADAM_OPTIMIZER</a>:
+            from apex.optimizers.fused_adam import FusedAdam
+            optimizer<a id="change"> = </a>FusedAdam(model_parameters, **optimizer_parameters)
+        elif self.optimizer_name() == LAMB_OPTIMIZER:
+            optimizer = FusedLamb(model_parameters, **optimizer_parameters)
+        else:</code></pre><h3>After Change</h3><pre><code class='java'>
+            raise ValueError(
+                "&quotmax_grad_norm&quot is not supported as an optimizer parameter, please switch to using the deepspeed parameter &quotgradient_clipping&quot see: https://www.deepspeed.ai/docs/config-json/&#47&#47gradient-clipping for more details"
+            )
+        if <a id="change">self.optimizer_name() == ADAM_OPTIMIZER</a>:
+            from apex.optimizers.fused_adam import FusedAdam
+            optimizer<a id="change"> = </a>FusedAdam(model_parameters, **optimizer_parameters)
+        elif self.optimizer_name() == LAMB_OPTIMIZER:
+            from deepspeed.ops.lamb import FusedLamb
+            optimizer = FusedLamb(model_parameters, **optimizer_parameters)
+        elif self.optimizer_name() == ONEBIT_ADAM_OPTIMIZER:
+            from deepspeed.runtime.fp16.onebit_adam import OnebitAdam
+            optimizer<a id="change"> = </a>OnebitAdam(model_parameters, self, **optimizer_parameters)
+        else:
+            torch_optimizer = getattr(torch.optim, self.optimizer_name())
+            optimizer = torch_optimizer(model_parameters, **optimizer_parameters)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/microsoft/deepspeed/commit/01726ce2b8ec1adbffae7974b5bfe600962c2043#diff-e6635a81d2c2bf0938b5f83b1c4945e0f344e0106191a6960df8ee4aa64cc55fL528' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 111287664</div><div id='project'> Project Name: microsoft/deepspeed</div><div id='commit'> Commit Name: 01726ce2b8ec1adbffae7974b5bfe600962c2043</div><div id='time'> Time: 2020-09-09</div><div id='author'> Author: ammar.awan@microsoft.com</div><div id='file'> File Name: deepspeed/runtime/engine.py</div><div id='m_class'> M Class Name: DeepSpeedEngine</div><div id='n_method'> N Class Name: DeepSpeedEngine</div><div id='m_method'> M Method Name: _configure_basic_optimizer(2)</div><div id='n_method'> N Method Name: _configure_basic_optimizer(2)</div><div id='m_parent_class'> M Parent Class: Module</div><div id='n_parent_class'> N Parent Class: Module</div><div id='m_file'> M File Name: deepspeed/runtime/engine.py</div><div id='n_file'> N File Name: deepspeed/runtime/engine.py</div><div id='m_start'> M Start Line: 534</div><div id='m_end'> M End Line: 542</div><div id='n_start'> N Start Line: 535</div><div id='n_end'> N End Line: 547</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            raise ValueError(
+                "&quotmax_grad_norm&quot is not supported as an optimizer parameter, please switch to using the deepspeed parameter &quotgradient_clipping&quot see: https://www.deepspeed.ai/docs/config-json/&#47&#47gradient-clipping for more details"
+            )
+        if <a id="change">self.optimizer_name() == ADAM_OPTIMIZER</a>:
+            from apex.optimizers.fused_adam import FusedAdam
+            optimizer<a id="change"> = </a>FusedAdam(model_parameters, **optimizer_parameters)
+        elif self.optimizer_name() == LAMB_OPTIMIZER:
+            from deepspeed.ops.lamb import FusedLamb
+            optimizer = FusedLamb(model_parameters, **optimizer_parameters)</code></pre><h3>After Change</h3><pre><code class='java'>
+            raise ValueError(
+                "&quotmax_grad_norm&quot is not supported as an optimizer parameter, please switch to using the deepspeed parameter &quotgradient_clipping&quot see: https://www.deepspeed.ai/docs/config-json/&#47&#47gradient-clipping for more details"
+            )
+        if <a id="change">self.optimizer_name() == ADAM_OPTIMIZER</a>:
+            if self.zero_cpu_offload():
+                optimizer<a id="change"> = </a>torch.optim.Adam(model_parameters, **optimizer_parameters)
+            else:
+                from apex.optimizers.fused_adam import FusedAdam
+                optimizer<a id="change"> = </a>FusedAdam(model_parameters, **optimizer_parameters)
+        elif self.optimizer_name() == DEEPSPEED_ADAM:
+            from deepspeed.ops.adam import DeepSpeedCPUAdam
+            optimizer = DeepSpeedCPUAdam(model_parameters, **optimizer_parameters)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/microsoft/deepspeed/commit/41db1c2f033b82485a3ef7bd0a986d1a1b579519#diff-e6635a81d2c2bf0938b5f83b1c4945e0f344e0106191a6960df8ee4aa64cc55fL528' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 111287662</div><div id='project'> Project Name: microsoft/deepspeed</div><div id='commit'> Commit Name: 41db1c2f033b82485a3ef7bd0a986d1a1b579519</div><div id='time'> Time: 2020-09-09</div><div id='author'> Author: jerasley@microsoft.com</div><div id='file'> File Name: deepspeed/runtime/engine.py</div><div id='m_class'> M Class Name: DeepSpeedEngine</div><div id='n_method'> N Class Name: DeepSpeedEngine</div><div id='m_method'> M Method Name: _configure_basic_optimizer(2)</div><div id='n_method'> N Method Name: _configure_basic_optimizer(2)</div><div id='m_parent_class'> M Parent Class: Module</div><div id='n_parent_class'> N Parent Class: Module</div><div id='m_file'> M File Name: deepspeed/runtime/engine.py</div><div id='n_file'> N File Name: deepspeed/runtime/engine.py</div><div id='m_start'> M Start Line: 535</div><div id='m_end'> M End Line: 547</div><div id='n_start'> N Start Line: 537</div><div id='n_end'> N End Line: 555</div><BR>

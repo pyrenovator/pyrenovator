@@ -1,0 +1,74 @@
+<html><h3>Pattern ID :38532
+</h3><img src='110242202.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                    buffer.copy_(server_state.to(**self.setup))
+
+            &#47&#47 Compute the forward pass
+            outputs<a id="change"> = </a>self.model(data)
+            loss = self.loss(outputs, labels)
+            shared_grads<a id="change"> += </a>[<a id="change">torch.autograd.grad(</a>loss, self.model.parameters()<a id="change">)</a>]
+            breakpoint()
+            shared_buffers += [[b.clone().detach() for b in self.model.buffers()]]
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            if self.clip_value &gt; 0:  &#47&#47 Compute per-example gradients and clip them in this case
+                grads = [torch.zeros_like(p) for p in self.model.parameters()]
+                for data_point, data_label in zip(data, labels):
+                    per_example_grads = _compute_batch_gradient(data_point[None<a id="change">, ...</a>], data_label[None, ...])
+                    self._clip_list_of_grad_(per_example_grads)
+                    torch._foreach_add_(grads, per_example_grads)
+                torch._foreach_div(grads, len(data))</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/jonasgeiping/breaching/commit/1f625e9cefacbec13043b09b1cfe2dda0f465c97#diff-222118a39af19077a8b428b60923841d31a00f445f3963533670a0eaa87a9924L60' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 110242202</div><div id='project'> Project Name: jonasgeiping/breaching</div><div id='commit'> Commit Name: 1f625e9cefacbec13043b09b1cfe2dda0f465c97</div><div id='time'> Time: 2021-10-04</div><div id='author'> Author: jonas.geiping@googlemail.com</div><div id='file'> File Name: breaching/cases/users.py</div><div id='m_class'> M Class Name: UserSingleStep</div><div id='n_method'> N Class Name: UserSingleStep</div><div id='m_method'> M Method Name: compute_local_updates(2)</div><div id='n_method'> N Method Name: compute_local_updates(2)</div><div id='m_parent_class'> M Parent Class: torch.nn.Module</div><div id='n_parent_class'> N Parent Class: torch.nn.Module</div><div id='m_file'> M File Name: breaching/cases/users.py</div><div id='n_file'> N File Name: breaching/cases/users.py</div><div id='m_start'> M Start Line: 60</div><div id='m_end'> M End Line: 77</div><div id='n_start'> N Start Line: 73</div><div id='n_end'> N End Line: 102</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        attribution: obj:`torch.Tensor`
+            Attribution of the model wrt. to `input`, with the same shape as `input`.
+        &quot&quot&quot
+        input<a id="change"> = </a>input.detach()
+
+        dims = tuple(range(1, input.ndim))
+        std = self.noise_level * (input.amax(dims, keepdim=True) - input.amin(dims, keepdim=True))
+
+        result = torch.zeros_like(input)
+        for n in range(self.n_iter):
+            &#47&#47 the last epsilon is defined as zero to compute the true output,
+            &#47&#47 and have SmoothGrad w/ n_iter = 1 === gradient
+            if n == self.n_iter - 1:
+                epsilon = torch.zeros_like(input)
+            else:
+                epsilon = torch.randn_like(input) * std
+            noisy_input = (input + epsilon).requires_grad_()
+            output = self.model(noisy_input)
+            gradient<a id="change">, = </a><a id="change">torch.autograd.grad(</a>(output,), (noisy_input,)<a id="change">, grad_outputs=(attr_output_fn(output.detach()),))</a>
+            result += gradient / self.n_iter
+
+        &#47&#47 output is leaking from the loop for the last epsilon (which is zero)
+        return output, result</code></pre><h3>After Change</h3><pre><code class='java'>
+                epsilon = torch.zeros_like(input)
+            else:
+                epsilon = torch.randn_like(input) * std
+            output<a id="change">, gradient</a> = self.grad(input + epsilon, attr_output_fn)
+            result += gradient / self.n_iter
+
+        &#47&#47 output is leaking from the loop for the last epsilon (which is zero)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/chr5tphr/zennit/commit/8a94236e24ffcb390e2d5a6b550d993cf6633ae4#diff-aec4fc5b4fe3af842c45fd0079e83864d77466d2d844b03b7f17a1239dcbbf28L263' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 110242206</div><div id='project'> Project Name: chr5tphr/zennit</div><div id='commit'> Commit Name: 8a94236e24ffcb390e2d5a6b550d993cf6633ae4</div><div id='time'> Time: 2022-09-29</div><div id='author'> Author: chrstphr@posteo.eu</div><div id='file'> File Name: src/zennit/attribution.py</div><div id='m_class'> M Class Name: SmoothGrad</div><div id='n_method'> N Class Name: SmoothGrad</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: Gradient</div><div id='n_parent_class'> N Parent Class: Attributor</div><div id='m_file'> M File Name: src/zennit/attribution.py</div><div id='n_file'> N File Name: src/zennit/attribution.py</div><div id='m_start'> M Start Line: 282</div><div id='m_end'> M End Line: 297</div><div id='n_start'> N Start Line: 366</div><div id='n_end'> N End Line: 366</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        attribution: obj:`torch.Tensor`
+            Attribution of the model wrt. to `input`, with the same shape as `input`.
+        &quot&quot&quot
+        input<a id="change"> = </a>input.detach()
+
+        baseline = self.baseline_fn(input)
+
+        result = torch.zeros_like(input)
+        for alpha in torch.linspace(1. / self.n_iter, 1., self.n_iter):
+            path_step = (baseline + alpha * (input - baseline)).requires_grad_()
+            output = self.model(path_step)
+            gradient<a id="change">, = </a><a id="change">torch.autograd.grad(</a>(output,), (path_step,)<a id="change">, grad_outputs=(attr_output_fn(output.detach()),))</a>
+            result += gradient / self.n_iter
+
+        result *= (input - baseline)
+        &#47&#47 in the last step, path_step is equal to input, thus `output` is the original output</code></pre><h3>After Change</h3><pre><code class='java'>
+        result = torch.zeros_like(input)
+        for alpha in torch.linspace(1. / self.n_iter, 1., self.n_iter):
+            path_step = baseline + alpha * (input - baseline)
+            output<a id="change">, gradient</a> = self.grad(path_step, attr_output_fn)
+            result += gradient / self.n_iter
+
+        result *= (input - baseline)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/chr5tphr/zennit/commit/8a94236e24ffcb390e2d5a6b550d993cf6633ae4#diff-aec4fc5b4fe3af842c45fd0079e83864d77466d2d844b03b7f17a1239dcbbf28L341' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 110242207</div><div id='project'> Project Name: chr5tphr/zennit</div><div id='commit'> Commit Name: 8a94236e24ffcb390e2d5a6b550d993cf6633ae4</div><div id='time'> Time: 2022-09-29</div><div id='author'> Author: chrstphr@posteo.eu</div><div id='file'> File Name: src/zennit/attribution.py</div><div id='m_class'> M Class Name: IntegratedGradients</div><div id='n_method'> N Class Name: IntegratedGradients</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: Gradient</div><div id='n_parent_class'> N Parent Class: Attributor</div><div id='m_file'> M File Name: src/zennit/attribution.py</div><div id='n_file'> N File Name: src/zennit/attribution.py</div><div id='m_start'> M Start Line: 360</div><div id='m_end'> M End Line: 368</div><div id='n_start'> N Start Line: 450</div><div id='n_end'> N End Line: 455</div><BR>

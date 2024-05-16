@@ -1,0 +1,60 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    train_loss = 0.0
+    correct = 0
+    group=0
+    for <a id="change">id</a>,(data, target) in enumerate(train_loader):  &#47&#47 batch之前组装到data数据集里的,pytorch的MBDG统一用这种方式进行,会按序列一个个batch训练
+        &#47&#47print("id:",id)
+        optimizer.zero_accum_grad()  &#47&#47 梯度清空
+
+        &#47&#47这里执行单样本操作，但是没有参数决定是单样本，依赖这里面的数据集的组装形式（TensorDataset(data, target)），和上面的train_loader一样，默认都是一个torch一个torch来
+        &#47&#47 数据组装中torch的维度决定你想要进行多少样本的梯度训练，取决于一开始的数据组装的结构
+        for iid,(X_microbatch, y_microbatch) in enumerate(TensorDataset(data, target)):  &#47&#47这里相当于逐样本
+
+            optimizer.zero_microbatch_grad()
+            output = model(torch.unsqueeze(X_microbatch.to(torch.float32), 0))    &#47&#47这要是这里要做升维
+
+            loss = criterion(output, torch.unsqueeze(y_microbatch.to(torch.long), 0))       &#47&#47相反，这边对于的output就不用升维了
+
+            loss.backward()         &#47&#47梯度求导，这边求出梯度
+            optimizer.microbatch_step()  &#47&#47 这个step做的是每个样本的梯度裁剪和梯度累加的操作
+
+            train_loss<a id="change"> += </a><a id="change">loss.item()</a>  &#47&#47 损失累加
+            prediction = output.argmax(dim=1, keepdim=True)  &#47&#47 将one-hot输出转为单个标量
+            correct<a id="change"> += </a>prediction.eq(y_microbatch.view_as(prediction)).sum().item()  &#47&#47 比较得到准确率
+
+
+        optimizer.step()  &#47&#47 这个做的是梯度加噪和梯度平均更新下降的操作</code></pre><h3>After Change</h3><pre><code class='java'>
+    output_batch=[]
+    aa=0
+    train_acc=0.
+    i<a id="change">=</a>0
+    for <a id="change">id</a>,(data, target) in enumerate(train_loader):  &#47&#47 batch之前组装到data数据集里的,pytorch的MBDG统一用这种方式进行,会按序列一个个batch训练
+        &#47&#47print("id:",id)
+        optimizer.zero_accum_grad()  &#47&#47 梯度清空
+
+        &#47&#47这里执行单样本操作，但是没有参数决定是单样本，依赖这里面的数据集的组装形式（TensorDataset(data, target)），和上面的train_loader一样，默认都是一个torch一个torch来
+        &#47&#47 数据组装中torch的维度决定你想要进行多少样本的梯度训练，取决于一开始的数据组装的结构
+        for iid,(X_microbatch, y_microbatch) in enumerate(TensorDataset(data, target)):  &#47&#47这里相当于逐样本
+
+            optimizer.zero_microbatch_grad()
+            output = model(torch.unsqueeze(X_microbatch.to(torch.float32), 0))    &#47&#47这要是这里要做升维
+            loss = criterion(output, torch.unsqueeze(y_microbatch, 0))
+
+            loss.backward()         &#47&#47梯度求导，这边求出梯度
+            optimizer.microbatch_step()  &#47&#47 这个step做的是每个样本的梯度裁剪和梯度累加的操作
+
+        optimizer.step()  &#47&#47 这个做的是梯度加噪和梯度平均更新下降的操作
+
+        &#47&#47训练集测试损失值和准确率
+        train_output=model(<a id="change">data.to(</a>torch.float32<a id="change">)</a>)
+        train_loss<a id="change">=</a>criterion(train_output,target).item()
+        prediction = train_output.argmax(dim=1, keepdim=True)  &#47&#47 将one-hot输出转为单个标量
+        correct = prediction.eq(target.view_as(prediction)).sum().item()  &#47&#47 比较得到准确率
+        train_acc=100. * correct/len(data)
+        i<a id="change">+=</a>1
+
+        &#47&#47 print(f&quotbatch: {i}, &quotf&quotTrain set: loss: {train_loss:.4f}, &quot
+        &#47&#47       f&quotAccuracy: {correct}/{len(data)} ({train_acc:.2f}%)&quot)</code></pre>

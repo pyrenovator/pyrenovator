@@ -1,0 +1,22 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        module.register_buffer(&quotidxs&quot, idxs.to(module.weight.device))
+        &#47&#47 module.register_buffer(&quotselect_idxs&quot, select_idxs.to(module.weight.device))
+        module.register_parameter(&quotbf&quot, torch.nn.Parameter(bias))
+        module.register_buffer(&quotzeros&quot, <a id="change">torch.zeros(</a>1, *<a id="change">bias.shape, dtype=bias.dtype, device=module.weight.device)</a>)
+        setattr(module, "use_bf", bias.abs().sum() != 0)
+        
+        setattr(module, &quotzero_cache&quot, module.zeros)</code></pre><h3>After Change</h3><pre><code class='java'>
+        module.__class__ = ConvExpand
+
+        select_idxs = []
+        current<a id="change"> = 0</a>
+        <a id="change">for i</a> in <a id="change">range(</a>bias.shape[0]<a id="change">):
+            </a>if i in idxs:
+                select_idxs.append(current)
+                current<a id="change"> += </a>1
+            else:
+                select_idxs.append(module.weight.shape[0])
+        select_idxs = torch.tensor(select_idxs)</code></pre>

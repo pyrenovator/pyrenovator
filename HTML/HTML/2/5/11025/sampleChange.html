@@ -1,0 +1,39 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    :param use_unsigned_symmetric: Whether to use signed/unsigned in symmetric case
+    :return: Tuple of delta and offset and num_steps
+    
+    num_steps = torch.pow(<a id="change">torch.tensor(</a>[2]<a id="change">, device=encoding_min.device)</a>, bitwidth) - 1
+    if use_symmetric_encodings and use_strict_symmetric:
+        num_steps -= 1
+
+    &#47&#47 NOTE: This assumes that the use_* flags reflect true condition (regardless of the encoding_* values)
+    if use_symmetric_encodings and (not use_unsigned_symmetric):
+        &#47&#47 signed symmetric
+        absmax = torch.max(torch.abs(encoding_min), torch.abs(encoding_max))
+        half_num_steps = torch.div(num_steps, 2)
+
+        delta = absmax / torch.floor(half_num_steps)
+        offset = -torch.ceil(half_num_steps)
+    else:
+        delta = (encoding_max - encoding_min) / num_steps
+        if use_symmetric_encodings:
+            &#47&#47 unsigned symmetric
+            offset = encoding_min / delta
+        else:
+            &#47&#47 asymmetric
+            b_zero = torch.round(-encoding_min / delta)
+            b_zero = torch.min(num_steps, torch.max(<a id="change">torch.tensor(</a>[0]<a id="change">, device=encoding_min.device)</a>, b_zero))
+            offset = torch.tensor(-b_zero, device=encoding_min.device)
+
+    return delta, offset, num_steps</code></pre><h3>After Change</h3><pre><code class='java'>
+            zero_tensor = constant_tensor_factory(0., device)
+            b_zero = torch.round(-encoding_min / delta)
+            b_zero = torch.min(num_steps_tensor, torch.max(zero_tensor, b_zero))
+            offset = -<a id="change">b_zero.clone().detach()</a>
+
+    return delta, offset, num_steps_tensor
+
+</code></pre>

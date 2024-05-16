@@ -1,0 +1,36 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    op = nvt.ops.FillMissing(42)
+
+    cont_names = ["x", "y"]
+    <a id="change">columns_ctx</a> = <a id="change">{}</a>
+    <a id="change">columns_ctx["continuous"]</a> = <a id="change">{}</a>
+    <a id="change">columns_ctx["continuous"]["base"]</a> = cont_names
+    for col in cont_names:
+        idx = np.random.choice(df.shape[0] - 1, int(df.shape[0] * 0.2))
+        df[col].iloc[idx] = None
+
+    transformed<a id="change"> = </a>cudf.concat([<a id="change">op.apply_op(</a>df, <a id="change">columns_ctx</a>, <a id="change">"continuous"</a><a id="change">)</a>])
+    assert_eq(transformed[cont_names], df[cont_names].fillna(42))
+
+</code></pre><h3>After Change</h3><pre><code class='java'>
+@pytest.mark.parametrize("engine", ["parquet"])
+def test_fill_missing(tmpdir, df, dataset, engine):
+    cont_names = ["x", "y"]
+    cont_features = cont_names<a id="change"> &gt;&gt; </a>nvt.ops.FillMissing(fill_val=42)
+
+    for col in cont_names:
+        idx = np.random.choice(df.shape[0] - 1, int(df.shape[0] * 0.2))
+        df[col].iloc[idx] = None
+
+    df = df.reset_index()
+    <a id="change">dataset</a> = <a id="change">nvt.Dataset(</a>df<a id="change">)</a>
+    <a id="change">processor</a> = <a id="change">nvt.Workflow(</a>cont_features<a id="change">)</a>
+    <a id="change">processor.fit(dataset</a><a id="change">)</a>
+    new_gdf<a id="change"> = processor</a><a id="change">.transform(dataset).to_ddf().compute()</a>
+    for col in cont_names:
+        assert np.all((df[col].fillna(42) - new_gdf[col]).abs().values &lt;= 1e-2)
+        assert new_gdf[col].isna().sum() == 0
+</code></pre>

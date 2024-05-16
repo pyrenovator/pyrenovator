@@ -1,0 +1,44 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        qc_op.set_encodings(encodings)
+        qc_op.set_mode(OpMode.quantize_dequantize)
+
+        output_qdq<a id="change"> = </a><a id="change">qc_op.compute(</a>input_arr<a id="change">)</a>
+
+        assert np.allclose(output_oneshot, output_qdq)
+
+    def test_set_get_properties(self):</code></pre><h3>After Change</h3><pre><code class='java'>
+    def test_one_shot_quantize_dequantize_symmetric_unsigned_cpu(self):
+        input_arr = np.asarray([[[[0, 1.2, 1.5, 4.0, 4.9, 5.3]]]]).astype(np.float32)
+        quant_info = libquant_info.QcQuantizeInfo()
+        quant_node<a id="change"> = helper.make_node(</a>op_name<a id="change">, inputs=[&quotinput&quot], outputs=[&quotoutput&quot],
+                                      domain=op_domain, quant_info=libpymo.PtrToInt64(quant_info))</a>
+        model = create_model_from_node(quant_node, input_arr.shape)
+        <a id="change">session</a><a id="change"> = </a><a id="change">build_session(</a>model, <a id="change">[&quotCPUExecutionProvider&quot</a>]<a id="change">)</a>
+        qc_op = QcQuantizeOp(quant_info=quant_info,
+                     quant_scheme=QuantScheme.post_training_tf,
+                     rounding_mode=&quotnearest&quot,
+                     op_mode=OpMode.oneShotQuantizeDequantize,
+                     bitwidth=8,
+                     use_symmetric_encodings=True,
+                     use_cuda=False)
+
+        qc_op.use_unsigned_symmetric = True
+
+        output_oneshot<a id="change"> = session</a><a id="change">.run(None</a>, <a id="change">{</a>&quotinput&quot: input_arr<a id="change">})</a>
+
+        encodings = libpymo.TfEncoding()
+        encodings.bw = 8
+        encodings.max = 5.3
+        encodings.min = 0.0
+        encodings.offset = 0
+        qc_op.encodings = encodings
+        qc_op.op_mode = OpMode.quantizeDequantize
+
+        output_qdq<a id="change"> = session.run(None</a>, <a id="change">{</a>&quotinput&quot: input_arr<a id="change">})</a>
+
+        assert np.allclose(output_oneshot, output_qdq)
+
+    def test_set_get_properties(self):</code></pre>

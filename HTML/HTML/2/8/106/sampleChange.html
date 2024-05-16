@@ -1,0 +1,55 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        self.train()
+        optimizer = self.optimizer
+        loss_fn = self.loss
+        metrics<a id="change"> = </a>self.metrics
+        optimizer.zero_grad()
+        x = to_device(x, device=device)
+        z = self.encode(*x)
+        &#47&#47 here `out_index` maybe pos_edge_index
+        &#47&#47 or (pos_edge_index, neg_edge_index)
+        if isinstance(out_index, (list, tuple)):
+            assert len(out_index) == 2, &quot`out_index` should be (pos_edge_index, neg_edge_index) or pos_edge_index&quot
+            pos_edge_index, neg_edge_index = out_index
+        else:
+            pos_edge_index, neg_edge_index = out_index, None
+
+        pos_pred = self.decode(z, pos_edge_index)
+        pos_y = z.new_ones(pos_edge_index.size(1))
+
+        &#47&#47 Do not include self-loops in negative samples
+        &#47&#47 TODO: is it necessary?
+        pos_edge_index, _ = remove_self_loops(pos_edge_index)
+        pos_edge_index, _ = add_self_loops(pos_edge_index)
+
+        if neg_edge_index is None:
+            neg_edge_index = negative_sampling(pos_edge_index, z.size(0))
+        neg_pred = self.decode(z, neg_edge_index)
+
+        loss = loss_fn(pos_pred, neg_pred)
+        loss.backward()
+        optimizer.step()
+        if self.scheduler is not None:
+            self.scheduler.step()
+
+        neg_y = z.new_zeros(neg_edge_index.size(1))
+        y = torch.cat([pos_y, neg_y], dim=0)
+        pred = torch.cat([pos_pred, neg_pred], dim=0)
+
+        <a id="change">for metric</a> in metrics<a id="change">:
+            metric</a><a id="change">.update_state(y.cpu()</a>, <a id="change">pred.detach().cpu())</a>
+
+        results = [loss.cpu().detach()] + [metric.result() for metric in metrics]
+        return dict(zip(self.metrics_names, results))
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        y = torch.cat([pos_y, neg_y], dim=0)
+        pred = torch.cat([pos_pred, neg_pred], dim=0)
+
+        <a id="change">self.update_metrics(</a>pred, y<a id="change">)</a>
+
+        results = [loss.cpu().detach()] + [metric.result() for metric in self.metrics]
+        return dict(zip(self.metrics_names, results))
+</code></pre>

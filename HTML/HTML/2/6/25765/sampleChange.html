@@ -1,0 +1,24 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    from relative distances (with length 2*tokens-1) to absolute distance (length tokens)
+    
+    query_index = torch.arange(tokens).unsqueeze(0)  &#47&#47 [1, dim]
+    key_index = <a id="change">torch.arange(</a>tokens<a id="change">)</a>.unsqueeze(1)  &#47&#47 [dim, 1]
+
+    relative_index = (key_index - query_index) + tokens - 1  &#47&#47 dim X dim (zero indexed)
+    flatten_index = rearrange(relative_index, &quoti j-&gt;(i j)&quot)  &#47&#47 flatten</code></pre><h3>After Change</h3><pre><code class='java'>
+      Input: [bs, heads, length, 2*length - 1]
+      Output: [bs, heads, length, length]
+    
+    <a id="change">b</a><a id="change">, h, l, _, device, dtype</a> = *q.shape, q.device, q.dtype
+    dd = {&quotdevice&quot: device, &quotdtype&quot: dtype}
+    col_pad = <a id="change">torch.zeros(</a>(<a id="change">b</a><a id="change">, h, l, 1</a>)<a id="change">, **dd)</a>
+    x = torch.cat((q, col_pad), dim=3)  &#47&#47 zero pad 2l-1 to 2l
+    flat_x = rearrange(x, &quotb h l c -&gt; b h (l c)&quot)
+    flat_pad = torch.zeros((b, h, l - 1), **dd)
+    flat_x_padded<a id="change"> = </a>torch.cat((flat_x, flat_pad), dim=2)
+    final_x = flat_x_padded.reshape(b, h, l + 1, 2 * l - 1)
+    final_x = final_x[:, :, :l, (l - 1):]
+    return final_x</code></pre>

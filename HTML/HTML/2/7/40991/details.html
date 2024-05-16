@@ -1,0 +1,69 @@
+<html><h3>Pattern ID :40991
+</h3><img src='115617797.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        _output = self._model.pool(feats)
+        _output = self._model.flatten(_output)
+        _output = self._model.classifier(_output)
+        grad: torch.FloatTensor = list(torch.autograd.grad(<a id="change">_output[:, _class]</a>, feats))[0]   &#47&#47 (N,C,H,W)
+        feats.requires_grad_(False)
+
+        weights: torch.FloatTensor = grad.mean(axis=-1, keepdim=True).mean(axis=-1, keepdim=True)    &#47&#47 (N,C,1,1)</code></pre><h3>After Change</h3><pre><code class='java'>
+        _output: torch.FloatTensor = self._model.pool(feats)
+        _output: torch.FloatTensor = self._model.flatten(_output)
+        _output: torch.FloatTensor = self._model.classifier(_output)
+        _output<a id="change">: torch.FloatTensor = </a><a id="change">_output.gather(dim=1, index=_class.unsqueeze(1)).sum()</a>
+        grad: torch.FloatTensor = torch.autograd.grad(_output, feats)[0]   &#47&#47 (N,C,H,W)
+        feats.requires_grad_(False)
+
+        weights: torch.FloatTensor = grad.mean(dim=-2, keepdim=True).mean(dim=-1, keepdim=True)    &#47&#47 (N,C,1,1)
+        heatmap: torch.FloatTensor = (feats * weights).sum(dim=1).clamp(0)  &#47&#47 (N,H,W)
+        heatmap.sub_(heatmap.min(dim=-2, keepdim=True)[0].min(dim=-1, keepdim=True)[0])
+        heatmap.div_(heatmap.max(dim=-2, keepdim=True)[0].max(dim=-1, keepdim=True)[0])
+        heatmap = (to_numpy(heatmap).transpose(1, 2, 0)<a id="change"> * </a>255).astype(np.uint8)
+
+        heatmap = cv2.resize(heatmap, dsize=_input.shape[-2:], interpolation=cv2.INTER_CUBIC)
+        if len(heatmap.shape) == 2:
+            heatmap = heatmap.reshape(heatmap.shape[0], heatmap.shape[1], 1)
+        heatmap<a id="change"> = </a>heatmap.transpose(2, 0, 1).astype(float)<a id="change"> / </a>255    &#47&#47 (N, H, W)
+        return heatmap
+
+    def get_saliency_map(self, _input: torch.FloatTensor, _class: List[int]) -&gt; torch.Tensor:</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 7</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/ain-soph/trojanzoo/commit/2bf7c2a2e8acba2592ee17d60d1a59b7bd1bbfe5#diff-2e5a199c407507ee95051b9d3c697f33888e4d96925f51e508939244c2f34dbeL190' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 115617797</div><div id='project'> Project Name: ain-soph/trojanzoo</div><div id='commit'> Commit Name: 2bf7c2a2e8acba2592ee17d60d1a59b7bd1bbfe5</div><div id='time'> Time: 2020-11-24</div><div id='author'> Author: ain-soph@live.com</div><div id='file'> File Name: trojanzoo/model/imagemodel.py</div><div id='m_class'> M Class Name: ImageModel</div><div id='n_method'> N Class Name: ImageModel</div><div id='m_method'> M Method Name: grad_cam(3)</div><div id='n_method'> N Method Name: grad_cam(3)</div><div id='m_parent_class'> M Parent Class: Model</div><div id='n_parent_class'> N Parent Class: Model</div><div id='m_file'> M File Name: trojanzoo/model/imagemodel.py</div><div id='n_file'> N File Name: trojanzoo/model/imagemodel.py</div><div id='m_start'> M Start Line: 206</div><div id='m_end'> M End Line: 222</div><div id='n_start'> N Start Line: 190</div><div id='n_end'> N End Line: 212</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        for i in range(num_batches):
+            for j in range(num_labels):
+                intersection = (
+                    (<a id="change">y_pred[i, j, :, :]</a>.unsqueeze(0) & y_true[i, j, :, :].unsqueeze(0))
+                    .float()
+                    .sum((1, 2))
+                )</code></pre><h3>After Change</h3><pre><code class='java'>
+            for j in range(num_labels):
+                y_pred_local = y_pred[i, j, :, :].unsqueeze(0)
+                y_true_local = y_true[i, j, :, :].unsqueeze(0)
+                intersection<a id="change"> = </a><a id="change">(y_pred_local & y_true_local).float().sum()</a>
+                union = (y_pred_local | y_true_local).float().sum()
+                correct = (y_pred_local == y_true_local).int().sum()
+
+                total = y_true_local.numel()
+                trues = y_pred_local.float().sum() + y_true_local.float().sum()
+
+                self.iou_per_class[j] += 1 if union == 0 else (intersection / union)
+                self.f1_score_per_class[j]<a id="change"> += </a>(
+                    1 if trues == 0 else (2<a id="change"> * intersection / </a>trues)
+                )
+                self.pixel_accuracy_per_class[j] += correct / total
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/biasvariancelabs/aitlas/commit/e11bf3d1eaac800ad330870791cd1f5e251967bd#diff-c0d71207f64739512046cec6efdc4d6e7d3cbd93d90bb13154c3dfebe606609eL244' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 115617813</div><div id='project'> Project Name: biasvariancelabs/aitlas</div><div id='commit'> Commit Name: e11bf3d1eaac800ad330870791cd1f5e251967bd</div><div id='time'> Time: 2021-09-17</div><div id='author'> Author: ivan.kitanovski@gmail.com</div><div id='file'> File Name: aitlas/base/metrics.py</div><div id='m_class'> M Class Name: SegmentationRunningScore</div><div id='n_method'> N Class Name: SegmentationRunningScore</div><div id='m_method'> M Method Name: update(3)</div><div id='n_method'> N Method Name: update(3)</div><div id='m_parent_class'> M Parent Class: RunningScore</div><div id='n_parent_class'> N Parent Class: RunningScore</div><div id='m_file'> M File Name: aitlas/base/metrics.py</div><div id='n_file'> N File Name: aitlas/base/metrics.py</div><div id='m_start'> M Start Line: 248</div><div id='m_end'> M End Line: 260</div><div id='n_start'> N Start Line: 256</div><div id='n_end'> N End Line: 269</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                       *([1] * len(self.group_dim)))
+            Z = Z.permute(*self.perm_inv).contiguous()
+        alpha = (1 - Z) ** (self.T - 1)
+        log_p = log_p + torch.log((1 - alpha) * <a id="change">acc[:, 0]</a> / Z + alpha) + log_p_gauss
+        return log_p</code></pre><h3>After Change</h3><pre><code class='java'>
+        else:
+            Z = Z.view(-1, *self.not_group_shape)
+        alpha = (1 - Z) ** (self.T - 1)
+        log_p_a = <a id="change">torch.sum(</a>torch.log((1 - alpha) * acc / Z + alpha)<a id="change">,
+                            dim=self.group_sum_dim)</a>
+        if self.same_dist:
+            log_p_a<a id="change"> = </a>log_p_a * self.not_group_prod
+        log_p<a id="change"> = </a>log_p<a id="change"> + log_p_a + </a>log_p_gauss
+        return log_p</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/vincentstimper/resampled-base-flows/commit/2276007df3ec0b622880ec93964007be94002d00#diff-caffeb67c01a8f6e445a303da08f116f007da28e2460f6eab60ffa908432e7e3L220' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 115617809</div><div id='project'> Project Name: vincentstimper/resampled-base-flows</div><div id='commit'> Commit Name: 2276007df3ec0b622880ec93964007be94002d00</div><div id='time'> Time: 2020-09-25</div><div id='author'> Author: vincent.stimper@gmail.com</div><div id='file'> File Name: larsflow/distributions.py</div><div id='m_class'> M Class Name: FactorizedResampledGaussian</div><div id='n_method'> N Class Name: FactorizedResampledGaussian</div><div id='m_method'> M Method Name: log_prob(3)</div><div id='n_method'> N Method Name: log_prob(3)</div><div id='m_parent_class'> M Parent Class: nf.distributions.BaseDistribution</div><div id='n_parent_class'> N Parent Class: nf.distributions.BaseDistribution</div><div id='m_file'> M File Name: larsflow/distributions.py</div><div id='n_file'> N File Name: larsflow/distributions.py</div><div id='m_start'> M Start Line: 227</div><div id='m_end'> M End Line: 276</div><div id='n_start'> N Start Line: 229</div><div id='n_end'> N End Line: 278</div><BR>

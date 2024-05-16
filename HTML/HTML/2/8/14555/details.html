@@ -1,0 +1,77 @@
+<html><h3>Pattern ID :14555
+</h3><img src='47905098.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        Compute the number of training steps for each epoch.
+
+        if self._num_training_steps is None:
+            <a id="change">if self.trainer.train_dataloader is None</a>:
+                try:
+                    dataloader = self.train_dataloader()
+                except NotImplementedError:
+                    <a id="change">raise </a><a id="change">RuntimeError(
+                        "To use linear warmup cosine annealing lr"
+                        "set the dataloader with .set_loaders(...)"</a><a id="change">
+                    )</a>
+
+            dataset_size = getattr(self, "dali_epoch_size", None) or len(dataloader.dataset)
+
+            dataset_size = self.trainer.limit_train_batches * dataset_size</code></pre><h3>After Change</h3><pre><code class='java'>
+        if self._num_training_steps is None:
+            try:
+                dataset = self.extra_args.get("dataset", None)
+                <a id="change">if </a>dataset not in ["cifar10", "cifar100", "stl10"]:
+                    folder<a id="change"> = </a><a id="change">os.path.join(</a>self.extra_args["data_dir"], self.extra_args["train_dir"]<a id="change">)</a>
+                else:
+                    folder = None
+                no_labels = self.extra_args.get("no_labels", False)
+                data_fraction = self.extra_args.get("data_fraction", -1.0)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 7</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/vturrisi/contrastive-learning/commit/eb07a9c7c2872efb1ae83767f59a67fa616a7652#diff-306471ca72f10d091f7adabfddc03e702f662348314d589d172c5c700eae27abL184' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 47905098</div><div id='project'> Project Name: vturrisi/contrastive-learning</div><div id='commit'> Commit Name: eb07a9c7c2872efb1ae83767f59a67fa616a7652</div><div id='time'> Time: 2022-05-02</div><div id='author'> Author: vt.turrisi@gmail.com</div><div id='file'> File Name: solo/methods/linear.py</div><div id='m_class'> M Class Name: LinearModel</div><div id='n_method'> N Class Name: LinearModel</div><div id='m_method'> M Method Name: num_training_steps(1)</div><div id='n_method'> N Method Name: num_training_steps(1)</div><div id='m_parent_class'> M Parent Class: pl.LightningModule</div><div id='n_parent_class'> N Parent Class: pl.LightningModule</div><div id='m_file'> M File Name: solo/methods/linear.py</div><div id='n_file'> N File Name: solo/methods/linear.py</div><div id='m_start'> M Start Line: 199</div><div id='m_end'> M End Line: 208</div><div id='n_start'> N Start Line: 184</div><div id='n_end'> N End Line: 206</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            self._grad_norm_buf.zero_()
+            self._grad_norm_buf[self.data_parallel_rank] = grad_norm
+            distributed_utils.all_reduce(self._grad_norm_buf, group=self.data_parallel_process_group)
+            <a id="change">if </a>not <a id="change">(self._grad_norm_buf == self._grad_norm_buf[0])</a>.all():
+                <a id="change">raise </a><a id="change">RuntimeError(
+                    "Fatal error: gradients are inconsistent between workers. "
+                    "Try --ddp-backend=no_c10d."</a><a id="change">
+                )</a>
+
+    def _reduce_and_log_stats(self, logging_outputs, sample_size, grad_norm=None):
+        if grad_norm is not None:
+            metrics.log_speed("ups", 1., priority=100, round=2)</code></pre><h3>After Change</h3><pre><code class='java'>
+                group=self.data_parallel_process_group
+            )
+
+            <a id="change">if </a>not self._is_grad_norms_consistent(self._grad_norm_buf):
+                pretty_detail = <a id="change">"\n".join(
+                    </a>"rank {:3d} = {:.8f}"<a id="change">.format(r, n)
+                    for r, n in enumerate(self._grad_norm_buf.tolist())
+                )</a>
+                error_detail<a id="change"> = </a>"grad_norm across the workers:\n{}\n".format(pretty_detail)
+                raise RuntimeError(
+                    "Fatal error: gradients are inconsistent between workers. "
+                    "Try --ddp-backend=no_c10d. "</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/kssteven418/i-bert/commit/29b8a4deb58ca9798b61690a31de1ea57de92122#diff-1d9c528283eebce84124f45bd2f04e9c1b50dc4d3f63e867776eb89dc55dd95fL840' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 47905096</div><div id='project'> Project Name: kssteven418/i-bert</div><div id='commit'> Commit Name: 29b8a4deb58ca9798b61690a31de1ea57de92122</div><div id='time'> Time: 2020-05-29</div><div id='author'> Author: yqw@fb.com</div><div id='file'> File Name: fairseq/trainer.py</div><div id='m_class'> M Class Name: Trainer</div><div id='n_method'> N Class Name: Trainer</div><div id='m_method'> M Method Name: _check_grad_norms(2)</div><div id='n_method'> N Method Name: _check_grad_norms(2)</div><div id='m_parent_class'> M Parent Class: object</div><div id='n_parent_class'> N Parent Class: object</div><div id='m_file'> M File Name: fairseq/trainer.py</div><div id='n_file'> N File Name: fairseq/trainer.py</div><div id='m_start'> M Start Line: 844</div><div id='m_end'> M End Line: 852</div><div id='n_start'> N Start Line: 853</div><div id='n_end'> N End Line: 875</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        Compute the number of training steps for each epoch.
+
+        if self._num_training_steps is None:
+            <a id="change">if self.trainer.train_dataloader is None</a>:
+                try:
+                    dataloader = self.train_dataloader()
+                except NotImplementedError:
+                    <a id="change">raise </a><a id="change">RuntimeError(
+                        "To use linear warmup cosine annealing lr"
+                        "set the dataloader with .set_loaders(...)"</a><a id="change">
+                    )</a>
+
+            dataset_size = getattr(self, "dali_epoch_size", None) or len(dataloader.dataset)
+
+            dataset_size = self.trainer.limit_train_batches * dataset_size</code></pre><h3>After Change</h3><pre><code class='java'>
+        if self._num_training_steps is None:
+            try:
+                dataset = self.extra_args.get("dataset", None)
+                <a id="change">if </a>dataset not in ["cifar10", "cifar100", "stl10"]:
+                    folder<a id="change"> = </a><a id="change">os.path.join(</a>self.extra_args["data_dir"], self.extra_args["train_dir"]<a id="change">)</a>
+                else:
+                    folder = None
+                no_labels = self.extra_args.get("no_labels", False)
+                data_fraction = self.extra_args.get("data_fraction", -1.0)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/vturrisi/contrastive-learning/commit/eb07a9c7c2872efb1ae83767f59a67fa616a7652#diff-bf0f79abb0e767723150e5fe64a4a5935492d2fcf2eb222cfe5f8c901bcd11b0L379' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 47905101</div><div id='project'> Project Name: vturrisi/contrastive-learning</div><div id='commit'> Commit Name: eb07a9c7c2872efb1ae83767f59a67fa616a7652</div><div id='time'> Time: 2022-05-02</div><div id='author'> Author: vt.turrisi@gmail.com</div><div id='file'> File Name: solo/methods/base.py</div><div id='m_class'> M Class Name: BaseMethod</div><div id='n_method'> N Class Name: BaseMethod</div><div id='m_method'> M Method Name: num_training_steps(1)</div><div id='n_method'> N Method Name: num_training_steps(1)</div><div id='m_parent_class'> M Parent Class: pl.LightningModule</div><div id='n_parent_class'> N Parent Class: pl.LightningModule</div><div id='m_file'> M File Name: solo/methods/base.py</div><div id='n_file'> N File Name: solo/methods/base.py</div><div id='m_start'> M Start Line: 383</div><div id='m_end'> M End Line: 392</div><div id='n_start'> N Start Line: 362</div><div id='n_end'> N End Line: 384</div><BR>

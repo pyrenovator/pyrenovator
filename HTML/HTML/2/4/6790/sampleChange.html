@@ -1,0 +1,27 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+  def __call__(self, x): return x.sequential(self.net)
+
+def train_cifar():
+  X<a id="change">,Y</a> = fetch_cifar()
+  model = SpeedyResNet()
+  optimizer = optim.SGD(get_parameters(model))
+  train(model, X, Y, optimizer, steps=X.shape[0]//512, BS=512)</code></pre><h3>After Change</h3><pre><code class='java'>
+  &#47&#47 https://www.anandtech.com/show/16727/nvidia-announces-geforce-rtx-3080-ti-3070-ti-upgraded-cards-coming-in-june
+  &#47&#47 136 TFLOPS is the theoretical max w float16 on 3080TI
+
+  for <a id="change">i</a> in range(10):
+    X, Y = fetch_batch(X_train, Y_train, BS=512)
+    CL.time_sum, CL.kernel_count = 0, -1
+    CL.ops_sum = 0  &#47&#47 TODO: this should be GlobalCounters.global_ops
+    GlobalCounters.global_ops = 0
+    st = time.monotonic()
+    loss = train_step_jitted(model, optimizer, X, Y)
+    et = <a id="change">time.monotonic()</a>
+    loss_cpu = loss.detach().cpu().data[0]
+    cl<a id="change"> = </a>time.monotonic()
+    print(f"{(cl-st)*1000.0:7.2f} ms run, {(et-st)*1000.0:7.2f} ms python, {(cl-et)*1000.0:7.2f} ms CL, {loss_cpu:7.2f} loss, {CL.mem_used/1e9:.2f} GB used, {GlobalCounters.global_ops*1e-9/(cl-st):9.2f} GFLOPS")
+
+  &#47&#47train(model, X, Y, optimizer, steps=X.shape[0]//BS, BS=BS)</code></pre>

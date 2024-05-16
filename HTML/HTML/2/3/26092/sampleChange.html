@@ -1,0 +1,45 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        value_loss_buffer = []
+        for _ in range(self.value_update_iter):
+            value = self.value_net.forward(obs)
+            value_loss = <a id="change">(ret - value).pow(2).mean()</a>
+            value_loss_buffer.append(value_loss.item())
+            self.value_optimizer.zero_grad()
+            value_loss.backward()
+            self.value_optimizer.step()</code></pre><h3>After Change</h3><pre><code class='java'>
+        value_loss_buffer = []
+        policy_loss_buffer = []
+        for _ in range(self.value_update_iter):
+            td_target = rew + self.gamma * <a id="change">self.value_net.forward(</a>next_obs<a id="change">)</a> * (1 - don)
+            delta = td_target - self.value_net.forward(obs)
+            delta = delta.detach().numpy()
+
+            advantage_lst = []
+            advantage = 0.0
+            for delta_t in delta[::-1]:
+                advantage = self.gamma * self.lam * advantage + delta_t[0]
+                advantage_lst.append([advantage])
+
+            advantage_lst.reverse()
+            advantage = torch.FloatTensor(advantage_lst)
+
+            value = self.value_net.forward(obs)
+            &#47&#47value_loss = (ret - value).pow(2).mean()
+            value_loss = F.smooth_l1_loss(td_target.detach(), value)
+            value_loss_buffer.append(value_loss.item())
+            self.value_optimizer.zero_grad()
+            value_loss.backward()
+            self.value_optimizer.step()
+            if self.log:
+                self.writer.add_scalar(&quotvalue_loss&quot, np.mean(value_loss_buffer), self.train_count)
+
+            probs = self.policy_net.forward(obs)
+            probs = probs.gather(1, act).squeeze(1)
+            ratio = probs / old_probs
+            surr1<a id="change"> = </a>ratio * advantage
+            surr2 = torch.clamp(ratio, 1. - self.epsilon, 1. + self.epsilon) * advantage
+            policy_loss = - torch.min(surr1, surr2).mean()
+            policy_loss_buffer.append(policy_loss.item())</code></pre>

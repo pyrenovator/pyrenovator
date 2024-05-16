@@ -1,0 +1,122 @@
+<html><h3>Pattern ID :4483
+</h3><img src='16354175.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        score = F.log_softmax(y, dim=2)  &#47&#47 calculate loss by NLLoss
+        &#47&#47 因为是补齐了的，所以需要找到真正的 score
+        loc_len = batch.get_origin_len(&quotcurrent_loc&quot)
+        <a id="change">for </a>i in range(score.shape[0])<a id="change">:
+            </a>if i == 0:
+                true_scores<a id="change"> = </a>score[i][loc_len[i]<a id="change"> - </a>1].reshape(1, -1)
+            else:
+                true_scores = torch.cat(
+                    (true_scores, score[i][loc_len[i] - 1].reshape(1, -1)), 0)</code></pre><h3>After Change</h3><pre><code class='java'>
+        origin_len = batch.get_origin_len(&quotcurrent_loc&quot)
+        final_out_index = torch.tensor(origin_len) - 1
+        final_out_index = final_out_index.reshape(final_out_index.shape[0], 1, -1)
+        final_out_index = <a id="change">final_out_index.repeat(1</a>, <a id="change">1</a>, self.hidden_size<a id="change">)</a>.to(self.device)
+        out<a id="change"> = </a>torch.gather(out, 1, final_out_index).squeeze(1)  &#47&#47 batch_size * hidden_size
+        out = F.selu(out)
+        out = self.dropout(out)
+
+        y = self.fc(out)
+        score<a id="change"> = </a>F.log_softmax(y, dim=1)  &#47&#47 calculate loss by NLLoss
+        return score
+
+    def predict(self, batch):</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 6</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/libcity/bigscity-libcity/commit/ec61c9cd984d1c86ee715380ed3b65b4222c8d1f#diff-f7e6a5cf5965e29788168874ecb4a6a81ecf849824f4f08f81428bfb514f6906L84' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 16354175</div><div id='project'> Project Name: libcity/bigscity-libcity</div><div id='commit'> Commit Name: ec61c9cd984d1c86ee715380ed3b65b4222c8d1f</div><div id='time'> Time: 2021-05-06</div><div id='author'> Author: 33283819+WenMellors@users.noreply.github.com</div><div id='file'> File Name: trafficdl/model/trajectory_loc_prediction/RNN.py</div><div id='m_class'> M Class Name: RNN</div><div id='n_method'> N Class Name: RNN</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: AbstractModel</div><div id='n_parent_class'> N Parent Class: AbstractModel</div><div id='m_file'> M File Name: trafficdl/model/trajectory_loc_prediction/RNN.py</div><div id='n_file'> N File Name: trafficdl/model/trajectory_loc_prediction/RNN.py</div><div id='m_start'> M Start Line: 87</div><div id='m_end'> M End Line: 97</div><div id='n_start'> N Start Line: 84</div><div id='n_end'> N End Line: 94</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        p = []
+        Mv = []
+
+        <a id="change">for </a>qt, <a id="change">xt</a> in zip(q.permute(1, 0), x.permute(1, 0))<a id="change">:
+            </a>kt = self.k_emb_layer(qt)
+            vt = self.v_emb_layer(xt)
+
+            wt = torch.softmax(torch.matmul(kt, self.Mk), dim=-1)
+
+            &#47&#47 Read Process
+            rt = (wt.unsqueeze(-1)<a id="change"> * </a>Mvt).sum(1)
+            ft = torch.tanh(self.f_layer(torch.cat([rt, kt], dim=-1)))
+            pt = torch.sigmoid(self.p_layer(ft)).squeeze()
+
+            &#47&#47 Write Process
+            et = torch.sigmoid(self.e_layer(vt))
+            Mvt = Mvt * (1 - (wt.unsqueeze(-1) * et.unsqueeze(1)))
+            at<a id="change"> = </a>torch.tanh(self.a_layer(vt))
+            Mvt = Mvt + (wt.unsqueeze(-1) * at.unsqueeze(1))
+
+            p.append(pt)</code></pre><h3>After Change</h3><pre><code class='java'>
+        x = q + self.num_q * r
+
+        batch_size = x.shape[0]
+        Mvt = <a id="change">self.Mv0.unsqueeze(0).repeat(</a>batch_size, <a id="change">1</a>, <a id="change">1</a><a id="change">)</a>
+
+        Mv<a id="change"> = </a>[Mvt]
+
+        k = self.k_emb_layer(q)
+        v = self.v_emb_layer(x)
+
+        w = torch.softmax(torch.matmul(k, self.Mk.T), dim=-1)
+
+        &#47&#47 Write Process
+        e = torch.sigmoid(self.e_layer(v))
+        a = torch.tanh(self.a_layer(v))
+
+        for et, at, wt in zip(
+            e.permute(1, 0, 2), a.permute(1, 0, 2), w.permute(1, 0, 2)
+        ):
+            Mvt = Mvt * (1 - (wt.unsqueeze(-1) * et.unsqueeze(1))) + \
+                (wt.unsqueeze(-1) * at.unsqueeze(1))
+            Mv.append(Mvt)
+
+        Mv = torch.stack(Mv, dim=1)
+
+        &#47&#47 Read Process
+        f<a id="change"> = </a>torch.tanh(
+            self.f_layer(
+                torch.cat(
+                    [</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/hcnoh/knowledge-tracing-collection-pytorch/commit/c42b01b83dbe54e94f4294009fbfe8bd910e3638#diff-f2ab9795149528e0325dcc207d9bb2ee66e3cdd4dff09817a550ab5174cc8763L39' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 16354088</div><div id='project'> Project Name: hcnoh/knowledge-tracing-collection-pytorch</div><div id='commit'> Commit Name: c42b01b83dbe54e94f4294009fbfe8bd910e3638</div><div id='time'> Time: 2021-10-06</div><div id='author'> Author: rhc0624@gmail.com</div><div id='file'> File Name: models/dkvmn.py</div><div id='m_class'> M Class Name: DKVMN</div><div id='n_method'> N Class Name: DKVMN</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: Module</div><div id='n_parent_class'> N Parent Class: Module</div><div id='m_file'> M File Name: models/dkvmn.py</div><div id='n_file'> N File Name: models/dkvmn.py</div><div id='m_start'> M Start Line: 40</div><div id='m_end'> M End Line: 66</div><div id='n_start'> N Start Line: 50</div><div id='n_end'> N End Line: 87</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        score = F.log_softmax(y, dim=2)  &#47&#47 calculate loss by NLLoss
+        &#47&#47 因为是补齐了的，所以需要找到真正的 score
+        loc_len = batch.get_origin_len(&quotcurrent_loc&quot)
+        <a id="change">for i</a> in range(score.shape[0])<a id="change">:
+            </a>if i == 0:
+                true_scores = score[i][loc_len[i]<a id="change"> - </a>1].reshape(1, -1)
+            else:
+                true_scores<a id="change"> = </a>torch.cat(
+                    (true_scores, score[i][loc_len[i] - 1].reshape(1, -1)), 0)
+        return true_scores
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        origin_len = batch.get_origin_len(&quotcurrent_loc&quot)
+        final_out_index = torch.tensor(origin_len) - 1
+        final_out_index = final_out_index.reshape(final_out_index.shape[0], 1, -1)
+        final_out_index = <a id="change">final_out_index.repeat(1</a>, <a id="change">1</a>, self.hidden_size<a id="change">)</a>.to(self.device)
+        out<a id="change"> = </a>torch.gather(out, 1, final_out_index).squeeze(1)  &#47&#47 batch_size * hidden_size
+        out = F.selu(out)
+        out = self.dropout(out)
+
+        y = self.fc(out)
+        score<a id="change"> = </a>F.log_softmax(y, dim=1)  &#47&#47 calculate loss by NLLoss
+        return score
+
+    def predict(self, batch):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/libcity/bigscity-libcity/commit/ec61c9cd984d1c86ee715380ed3b65b4222c8d1f#diff-f7e6a5cf5965e29788168874ecb4a6a81ecf849824f4f08f81428bfb514f6906L60' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 16354174</div><div id='project'> Project Name: libcity/bigscity-libcity</div><div id='commit'> Commit Name: ec61c9cd984d1c86ee715380ed3b65b4222c8d1f</div><div id='time'> Time: 2021-05-06</div><div id='author'> Author: 33283819+WenMellors@users.noreply.github.com</div><div id='file'> File Name: trafficdl/model/trajectory_loc_prediction/RNN.py</div><div id='m_class'> M Class Name: RNN</div><div id='n_method'> N Class Name: RNN</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: AbstractModel</div><div id='n_parent_class'> N Parent Class: AbstractModel</div><div id='m_file'> M File Name: trafficdl/model/trajectory_loc_prediction/RNN.py</div><div id='n_file'> N File Name: trafficdl/model/trajectory_loc_prediction/RNN.py</div><div id='m_start'> M Start Line: 87</div><div id='m_end'> M End Line: 97</div><div id='n_start'> N Start Line: 84</div><div id='n_end'> N End Line: 94</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        y = self.fc_final(out)  &#47&#47 batch_size * state_len * loc_size
+        score = F.log_softmax(y, dim=2)
+        &#47&#47 因为是补齐了的，所以需要找到真正的 score
+        <a id="change">for i</a> in range(score.shape[0])<a id="change">:
+            </a>if i == 0:
+                true_scores<a id="change"> = </a>score[i][loc_len[i] - 1].reshape(1, -1)
+            else:
+                true_scores = torch.cat(
+                    (true_scores, score[i][loc_len[i]<a id="change"> - </a>1].reshape(1, -1)), 0)
+        return true_scores
+
+    def predict(self, batch):</code></pre><h3>After Change</h3><pre><code class='java'>
+        origin_len = batch.get_origin_len(&quotcurrent_loc&quot)
+        final_out_index = torch.tensor(origin_len) - 1
+        final_out_index = final_out_index.reshape(final_out_index.shape[0], 1, -1)
+        final_out_index<a id="change"> = </a><a id="change">final_out_index.repeat(1</a>, <a id="change">1</a>, 2*self.hidden_size<a id="change">)</a>.to(self.device)
+        out<a id="change"> = </a>torch.gather(out, 1, final_out_index).squeeze(1)  &#47&#47 batch_size * (2*hidden_size)
+        out = self.dropout(out)
+
+        y = self.fc_final(out)  &#47&#47 batch_size * loc_size</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/libcity/bigscity-libcity/commit/ec61c9cd984d1c86ee715380ed3b65b4222c8d1f#diff-e952722699ca3186325fca5947706a0f1eb9b447d1d51063beaddb3480efa998L117' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 16354288</div><div id='project'> Project Name: libcity/bigscity-libcity</div><div id='commit'> Commit Name: ec61c9cd984d1c86ee715380ed3b65b4222c8d1f</div><div id='time'> Time: 2021-05-06</div><div id='author'> Author: 33283819+WenMellors@users.noreply.github.com</div><div id='file'> File Name: trafficdl/model/trajectory_loc_prediction/DeepMove.py</div><div id='m_class'> M Class Name: DeepMove</div><div id='n_method'> N Class Name: DeepMove</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: AbstractModel</div><div id='n_parent_class'> N Parent Class: AbstractModel</div><div id='m_file'> M File Name: trafficdl/model/trajectory_loc_prediction/DeepMove.py</div><div id='n_file'> N File Name: trafficdl/model/trajectory_loc_prediction/DeepMove.py</div><div id='m_start'> M Start Line: 122</div><div id='m_end'> M End Line: 175</div><div id='n_start'> N Start Line: 152</div><div id='n_end'> N End Line: 163</div><BR>

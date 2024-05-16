@@ -1,0 +1,41 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                    grad = grad.add(p, alpha=group[&quotweight_decay&quot])
+
+                square_avg.mul_(rho).addcmul_(grad, grad, value=1 - rho)
+                std<a id="change"> = </a>square_avg.add(eps).sqrt_()
+                delta = acc_delta.add(eps).sqrt_().div_(std).mul_(grad)
+                p.add_(delta, alpha=-group[&quotlr&quot])
+                <a id="change">acc_delta.mul_(rho).addcmul_(</a>delta, delta<a id="change">, value=1 - rho)</a>
+
+        return loss
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        for group in self.param_groups:
+            params_with_grad = []
+            grads = []
+            square_avgs<a id="change"> = </a><a id="change">[]</a>
+            acc_deltas = []
+
+            for p in group[&quotparams&quot]:
+                if p.grad is None:
+                    continue
+                params_with_grad.append(p)
+                if p.grad.is_sparse:
+                    raise RuntimeError(&quotAdadelta does not support sparse gradients&quot)
+                grads.append(p.grad)
+
+                state = self.state[p]
+
+                &#47&#47 Lazy state initialization
+                if len(state) == 0:
+                    state[&quotstep&quot] = 0
+                    state[&quotsquare_avg&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+                    state[&quotacc_delta&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+
+                <a id="change">square_avgs.append(</a>state[&quotsquare_avg&quot]<a id="change">)</a>
+                acc_deltas.append(state[&quotacc_delta&quot])
+
+                lr, rho, eps, weight_decay = group[&quotlr&quot], group[&quotrho&quot], group[&quoteps&quot], group[&quotweight_decay&quot]
+</code></pre>

@@ -1,0 +1,52 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        :return: none
+        
+        archive_db = Utility.environment[&quothistory_server&quot][&quotdeletion&quot][&quotarchive_db&quot]
+        client<a id="change"> = </a>HistoryProcessor.get_mongo_connection()
+        archive_collection = f"{collection}.{sender_id}"
+
+        <a id="change">with </a>client<a id="change"> as client:
+            </a><a id="change">try:
+                </a>db<a id="change"> = </a>client.get_database()
+                conversations<a id="change"> = </a>db.get_collection(collection)
+                <a id="change">conversations.aggregate(</a>[{"$match": {"sender_id": sender_id}},
+                                         {"$unwind": {"path": "$events"}},
+                                         {"$match": {"events.timestamp": {
+                                             "$lt": timestamp_req}}},
+                                         <a id="change">{</a>"$unset": "_id"<a id="change">}</a>,
+                                         {"$merge": {"into": {"db": archive_db, "coll": archive_collection},
+                                                     "on": "_id",
+                                                     "whenMatched": "keepExisting",
+                                                     "whenNotMatched": "insert"}}
+                                         ]<a id="change">)</a>
+            except Exception as e:
+                logger.error(e)
+                raise AppException(e)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        :param timestamp_req: the timestamp based on month up to which chat to be archived
+        :return: none
+        
+        <a id="change">try:
+            </a>archive_db = Utility.environment[&quothistory_server&quot][&quotdeletion&quot][&quotarchive_db&quot]
+            client<a id="change"> = </a>HistoryProcessor.get_mongo_connection()
+            archive_collection = f"{collection}.{sender_id}"
+
+            <a id="change">with </a>client<a id="change"> as client:
+                </a>db<a id="change"> = </a>client.get_database()
+                conversations<a id="change"> = </a>db.get_collection(collection)
+                <a id="change">conversations.aggregate(</a>[{"$match": {"sender_id": sender_id}},
+                                         {"$match": {"event.timestamp": {
+                                             "$lt": timestamp_req}}},
+                                         {"$project": {"_id":0}},
+                                         {"$merge": {"into": {"db": archive_db, "coll": archive_collection},
+                                                     "on": "_id",
+                                                     "whenMatched": "keepExisting",
+                                                     "whenNotMatched": "insert"}}
+                                         ]<a id="change">)</a>
+        except Exception as e:
+            logger.error(e)
+            raise AppException(e)
+</code></pre>

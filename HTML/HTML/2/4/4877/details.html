@@ -1,0 +1,119 @@
+<html><h3>Pattern ID :4877
+</h3><img src='17251717.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    def parse_name(name: str, pretrained_dataset: str = &quotM&quot, layer: int = 50) -&gt; tuple[str, str, int]:
+        if name[:3] == &quotbit&quot:
+            name = &quotBiT&quot + name[3:]
+        full_name_list: list[str] = <a id="change">re.findall(</a>r&quot[0-9]+|[A-Za-z]+|_&quot, name<a id="change">)</a>
+        name_list<a id="change"> = </a>full_name_list[0].split(&quot-&quot)
+        if len(name_list) == 1:
+            name_list.append(pretrained_dataset)
+            name_list.append(&quotR&quot)</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    @staticmethod
+    def parse_name(name: str, pretrained_dataset: str = &quotm&quot, layer: int = 50, width_factor: int = 1) -&gt; str:
+        name_list<a id="change"> = </a>name.lower().split(&quot-&quot)
+        assert name_list[0] == &quotbit&quot
+        if len(name_list) != 1:
+            <a id="change">for </a>element in name_list[1:]<a id="change">:
+                </a>if element[0] == &quotr&quot:
+                    sub_list = element[1:].split(&quotx&quot)
+                    layer = int(sub_list[0])
+                    if len(sub_list) == 2:</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/ain-soph/trojanzoo/commit/d1791a5d2011850d8796399912be84c49dd5e788#diff-4c3e42eb0c5012429d8a52fae551eaa3029b50408e5b3f7c99b9e5a17a76698eL48' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 17251717</div><div id='project'> Project Name: ain-soph/trojanzoo</div><div id='commit'> Commit Name: d1791a5d2011850d8796399912be84c49dd5e788</div><div id='time'> Time: 2021-04-06</div><div id='author'> Author: ain-soph@live.com</div><div id='file'> File Name: trojanvision/models/bit.py</div><div id='m_class'> M Class Name: BiT</div><div id='n_method'> N Class Name: BiT</div><div id='m_method'> M Method Name: parse_name(4)</div><div id='n_method'> N Method Name: parse_name(3)</div><div id='m_parent_class'> M Parent Class: ImageModel</div><div id='n_parent_class'> N Parent Class: ImageModel</div><div id='m_file'> M File Name: trojanvision/models/bit.py</div><div id='n_file'> N File Name: trojanvision/models/bit.py</div><div id='m_start'> M Start Line: 49</div><div id='m_end'> M End Line: 67</div><div id='n_start'> N Start Line: 48</div><div id='n_end'> N End Line: 61</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                output_row = ""
+                if args.remove_with_heuristics:
+                    all_input_columns = &quot &quot.join([o[c] for c in args.input_columns])
+                    input_special_tokens<a id="change"> = </a>set(<a id="change">re.findall(</a>&quot[A-Za-z:_.]+_[0-9]&quot, all_input_columns<a id="change">)</a>)
+                    output_special_tokens = set(re.findall(&quot[A-Za-z:_.]+_[0-9]&quot, o[args.thingtalk_column]))
+                    if  not is_subset(output_special_tokens, input_special_tokens) :
+                        heuristic_count += 1</code></pre><h3>After Change</h3><pre><code class='java'>
+        all_thrown_away_rows = []
+        for row in tqdm(reader, desc=&quotLines&quot):
+            output_rows = []
+            thrown_away_rows<a id="change"> = </a>[]
+            if args.transformation == &quotremove_thingtalk_quotes&quot:
+                row[args.thingtalk_column], _ = remove_thingtalk_quotes(row[args.thingtalk_column])
+            if args.transformation == &quotremove_wrong_thingtalk&quot:
+                if row[args.thingtalk_column] == gold_thingtalks[gold_thingtalk_count]:
+                    output_rows = [row]
+                else:
+                    output_rows = []
+                    thrown_away_rows = [row]
+                gold_thingtalk_count += 1
+            elif args.transformation == &quotget_wrong_thingtalk&quot:
+                if row[args.thingtalk_column] != gold_thingtalks[gold_thingtalk_count]:
+                    if args.replace_with_gold:
+                        row[args.thingtalk_column] = gold_thingtalks[gold_thingtalk_count]
+                    output_rows = [row]
+                else:
+                    output_rows = []
+                gold_thingtalk_count += 1
+            elif args.transformation == &quotmerge_input_file_with_query_file&quot:
+                output_rows.append(row)
+                for _ in range(args.num_new_queries):
+                    row = row.copy()
+                    row[args.utterance_column] = new_queries[new_query_count]
+                    output_rows.append(row)
+                    new_query_count += 1
+            elif args.transformation == &quotreplace_queries&quot:
+                for idx in range(args.num_new_queries):
+                    copy_row = row.copy()
+                    copy_row[args.utterance_column] = new_queries[new_query_count]
+                    copy_row[args.id_column] = &quotA&quot + copy_row[args.id_column] + &quot-&quot + str(idx) &#47&#47 add &quotA&quot for auto-paraphrasing
+                    output_rows.append(copy_row)
+                    new_query_count += 1
+            else:
+                assert args.transformation == &quotnone&quot
+                &#47&#47 do basic clean-up because old generation code missed these
+                row[args.utterance_column] = row[args.utterance_column].replace(&quot&lt;pad&gt;&quot, &quot&quot)
+                row[args.utterance_column] = re.sub(&quot\s\s+&quot, &quot &quot, row[args.utterance_column])
+                row[args.utterance_column] = row[args.utterance_column].strip()
+                output_rows = [row]
+            
+            for o in output_rows:
+                output_row = ""
+                if args.remove_with_heuristics:
+                    if not passes_heuristic_checks(o, args):
+                        heuristic_count += 1
+                        continue
+                if args.remove_duplicates:
+                    normalized_example = re.sub(&quot\s+&quot, &quot&quot, &quot&quot.join([o[i] for i in args.no_duplication_columns]))
+                    &#47&#47 print(normalized_example)
+                    if normalized_example in seen_examples:
+                        duplicate_count += 1
+                        continue
+                    else:
+                        seen_examples.add(normalized_example)
+                written_count += 1
+                for i, column in enumerate(args.output_columns):
+                    output_row += o[column]
+                    if i &lt; len(args.output_columns)-1:
+                        output_row += &quot\t&quot
+                output_file.write(output_row + &quot\n&quot)
+            <a id="change">for </a>o in thrown_away_rows<a id="change">:
+                </a>if args.remove_with_heuristics and passes_heuristic_checks(o, args):
+                    all_thrown_away_rows.append(o)
+
+        if args.thrown_away is not None:</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/stanford-oval/genienlp/commit/d2eacd4e5c5347cb45907aea9e0a81a54b9fd5bf#diff-ee119052413383bfd6476efcd585c7782e225b9afadedd52e593204c70c2e120L15' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 17251637</div><div id='project'> Project Name: stanford-oval/genienlp</div><div id='commit'> Commit Name: d2eacd4e5c5347cb45907aea9e0a81a54b9fd5bf</div><div id='time'> Time: 2020-05-26</div><div id='author'> Author: s.j.semnani@gmail.com</div><div id='file'> File Name: genienlp/paraphrase/scripts/transform_dataset.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(0)</div><div id='n_method'> N Method Name: main(0)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: genienlp/paraphrase/scripts/transform_dataset.py</div><div id='n_file'> N File Name: genienlp/paraphrase/scripts/transform_dataset.py</div><div id='m_start'> M Start Line: 55</div><div id='m_end'> M End Line: 162</div><div id='n_start'> N Start Line: 31</div><div id='n_end'> N End Line: 196</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+def find_math(s):
+    matches = []
+    x<a id="change"> = </a><a id="change">re.findall(</a>dollar, s<a id="change">)</a>
+    matches.extend([g[1] for g in x])
+    x = re.findall(inline, s)
+    matches.extend([(g[1] if g[1] != &quot&quot else g[-1]) for g in x])
+    x = re.findall(equation, s)</code></pre><h3>After Change</h3><pre><code class='java'>
+    x = re.findall(inline, s)
+    matches.extend([(g[1] if g[1] != &quot&quot else g[-1]) for g in x])
+    patterns = [dollar, equation, align]
+    groups<a id="change"> = </a>[1, 1, 0]
+    if html:
+        patterns.append(displaymath)
+        groups.append(1)
+    <a id="change">for </a>i, pattern in zip(groups, patterns)<a id="change">:
+        </a>x = re.findall(pattern, s)
+        matches.extend([g[groups[i]] for g in x])
+
+    return clean_matches(matches)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lukas-blecher/latex-ocr/commit/37c16475f37e15ec635a28e530c14fcbc099dd41#diff-759a72c3e89c0ebcf03b8c40814fac0019c40b9c0f2b44070dcc08f712c093c7L19' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 17251641</div><div id='project'> Project Name: lukas-blecher/latex-ocr</div><div id='commit'> Commit Name: 37c16475f37e15ec635a28e530c14fcbc099dd41</div><div id='time'> Time: 2020-12-12</div><div id='author'> Author: luk.blecher@gmx.de</div><div id='file'> File Name: extract_latex.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: find_math(2)</div><div id='n_method'> N Method Name: find_math(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: extract_latex.py</div><div id='n_file'> N File Name: extract_latex.py</div><div id='m_start'> M Start Line: 19</div><div id='m_end'> M End Line: 26</div><div id='n_start'> N Start Line: 28</div><div id='n_end'> N End Line: 41</div><BR>

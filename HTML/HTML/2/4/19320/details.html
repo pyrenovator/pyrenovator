@@ -1,0 +1,65 @@
+<html><h3>Pattern ID :19320
+</h3><img src='63013029.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+class ReLU(Function):
+  def forward(ctx, input):
+    ctx.save_for_backward(input)
+    out<a id="change"> = </a>MetalBuffer(input.shape, None)
+    mtl_buffer = cmd_buffer()
+    relu_shader.encodeToCommandBuffer_sourceTexture_destinationTexture_(
+      mtl_buffer, input.texture, out.texture
+    )
+    mtl_buffer.commit()
+    <a id="change">return </a>out
+
+  def backward(ctx, grad_output):
+    input, = ctx.saved_tensors</code></pre><h3>After Change</h3><pre><code class='java'>
+class ReLU(Function):
+  def forward(ctx, input):
+    ctx.save_for_backward(input)
+    <a id="change">return </a><a id="change">unary_op(</a>relu_shader, input<a id="change">)</a>
+
+  def backward(ctx, grad_output):
+    input, = ctx.saved_tensors
+    return binary_op(mul_shader, unary_op(inv_relu_shader, input), grad_output)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/geohot/tinygrad/commit/ca154f8b599a60d068d18bccd6557c58f71bc666#diff-20283501e8ce46ebccc64b4e461d2d055228a4f91248d38b1f45c9b994256c3eL84' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 63013029</div><div id='project'> Project Name: geohot/tinygrad</div><div id='commit'> Commit Name: ca154f8b599a60d068d18bccd6557c58f71bc666</div><div id='time'> Time: 2021-11-29</div><div id='author'> Author: geohot@gmail.com</div><div id='file'> File Name: accel/metal/ops_metal.py</div><div id='m_class'> M Class Name: ReLU</div><div id='n_method'> N Class Name: ReLU</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: Function</div><div id='n_parent_class'> N Parent Class: Function</div><div id='m_file'> M File Name: accel/metal/ops_metal.py</div><div id='n_file'> N File Name: accel/metal/ops_metal.py</div><div id='m_start'> M Start Line: 84</div><div id='m_end'> M End Line: 90</div><div id='n_start'> N Start Line: 97</div><div id='n_end'> N End Line: 97</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    &#47&#47 TODO: make in place work
+    &#47&#47mul_shader.encodeToCommandBuffer_inPlacePrimaryTexture_secondaryTexture_fallbackCopyAllocator_(
+    &#47&#47  mtl_buffers, out.texture, grad_output.texture, None)
+    ret<a id="change"> = </a>MetalBuffer(input.shape, None)
+    mul_shader.encodeToCommandBuffer_primaryTexture_secondaryTexture_destinationTexture_(
+      mtl_buffer, grad_output.texture, out.texture, ret.texture
+    )
+    mtl_buffer.commit()
+    <a id="change">return </a>ret
+
+
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+  def backward(ctx, grad_output):
+    input, = ctx.saved_tensors
+    <a id="change">return </a>binary_op(mul_shader, <a id="change">unary_op(</a>inv_relu_shader, input<a id="change">)</a>, grad_output)
+
+class Add(Function):
+  def forward(ctx, x, y):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/geohot/tinygrad/commit/ca154f8b599a60d068d18bccd6557c58f71bc666#diff-20283501e8ce46ebccc64b4e461d2d055228a4f91248d38b1f45c9b994256c3eL92' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 63013028</div><div id='project'> Project Name: geohot/tinygrad</div><div id='commit'> Commit Name: ca154f8b599a60d068d18bccd6557c58f71bc666</div><div id='time'> Time: 2021-11-29</div><div id='author'> Author: geohot@gmail.com</div><div id='file'> File Name: accel/metal/ops_metal.py</div><div id='m_class'> M Class Name: ReLU</div><div id='n_method'> N Class Name: ReLU</div><div id='m_method'> M Method Name: backward(2)</div><div id='n_method'> N Method Name: backward(2)</div><div id='m_parent_class'> M Parent Class: Function</div><div id='n_parent_class'> N Parent Class: Function</div><div id='m_file'> M File Name: accel/metal/ops_metal.py</div><div id='n_file'> N File Name: accel/metal/ops_metal.py</div><div id='m_start'> M Start Line: 94</div><div id='m_end'> M End Line: 107</div><div id='n_start'> N Start Line: 101</div><div id='n_end'> N End Line: 101</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+  return ret
+
+def contiguous(x, ret=None):
+  if ret is None: ret<a id="change"> = </a>GPUBuffer(x.st.shape)
+  clbuild("contiguous", __kernel void contiguous(__global const float *x, __global float *ret) {
+    int gid = get_global_id(0); int valid = 1; int idx = gid; +x.st.expr().replace(&quot//&quot, &quot/&quot)+;
+    ret[gid] = valid ? x[idx] : 0.0;  // should never be out-of-bounds accesses
+  })([prod(ret.shape)], None, x.cl, ret.cl)
+  <a id="change">return </a>ret
+
+def movement_op(op, x, arg=None):
+  ret = GPUBuffer(x.st, x)</code></pre><h3>After Change</h3><pre><code class='java'>
+
+def unary_op(op, x): return elementwise_op([("A", x)], code_for_op[op])
+def binary_op(op, x, y): return elementwise_op([("A", x), ("B", y)], code_for_op[op])
+def contiguous(x:GPUBuffer): <a id="change">return </a>x if x.st.contiguous else <a id="change">unary_op(</a>UnaryOps.NOOP, x<a id="change">)</a>
+
+def reduce_op(op, inp, new_shape):
+  ret = GPUBuffer(new_shape)
+  if op == ReduceOps.SUM: code, start = "out += a", "0.0"</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/geohot/tinygrad/commit/d05e7c291ad428ba3584a1529e6d71c264c5b7b9#diff-305e94e84668440e8f8a2a4e17d5796e43233474510c7af082ab29c9aa824eeeL124' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 63013030</div><div id='project'> Project Name: geohot/tinygrad</div><div id='commit'> Commit Name: d05e7c291ad428ba3584a1529e6d71c264c5b7b9</div><div id='time'> Time: 2022-06-19</div><div id='author'> Author: 72895+geohot@users.noreply.github.com</div><div id='file'> File Name: tinygrad/llops/ops_gpu.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: contiguous(1)</div><div id='n_method'> N Method Name: contiguous(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: tinygrad/llops/ops_gpu.py</div><div id='n_file'> N File Name: tinygrad/llops/ops_gpu.py</div><div id='m_start'> M Start Line: 124</div><div id='m_end'> M End Line: 130</div><div id='n_start'> N Start Line: 84</div><div id='n_end'> N End Line: 84</div><BR>

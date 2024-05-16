@@ -1,0 +1,28 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            x_in = torch.cat((x, y), dim=1)
+            output = model(x_in)
+            flow = output[1]
+            def_out = <a id="change">reg_model_nn(</a><a id="change">[</a><a id="change">x_seg.cuda().float()</a>, <a id="change">output[1].cuda()</a>]<a id="change">)</a>
+            tar = y.detach().cpu().numpy()[0, 0, :, :, :]
+            jac_det = utils.jacobian_determinant_vxm(flow.detach().cpu().numpy()[0, :, :, :, :])
+            line = utils.dice_val_substruct(def_out.long(), y_seg.long(), stdy_idx)</code></pre><h3>After Change</h3><pre><code class='java'>
+            x_in = torch.cat((x, y), dim=1)
+            output = model(x_in)
+            flow = output[1]
+            x_seg_oh = <a id="change">nn.functional.one_hot(x_seg.long()</a><a id="change">, num_classes=46)</a>
+            x_seg_oh<a id="change"> = torch.squeeze(</a>x_seg_oh, <a id="change">1</a><a id="change">)</a>
+            <a id="change">x_seg_oh</a><a id="change"> = x_seg_oh.permute(0, 4, 1, 2, 3).contiguous()</a>
+            &#47&#47 x_segs = model.spatial_trans(x_seg.float(), flow.float())
+            <a id="change">x_segs = </a><a id="change">[]</a>
+            <a id="change">for </a><a id="change">i</a> in <a id="change">range(46</a><a id="change">):
+                </a>def_seg<a id="change"> = </a><a id="change">reg_model(</a><a id="change">[x_seg_oh[:, i:i + 1, ...]</a><a id="change">.float()</a>, <a id="change">flow.float()</a>]<a id="change">)</a>
+                <a id="change">x_segs.append(</a>def_seg<a id="change">)</a>
+            <a id="change">x_segs = torch</a><a id="change">.cat(x_segs</a><a id="change">, dim=1)</a>
+            def_out<a id="change"> = torch</a><a id="change">.argmax(x_segs</a><a id="change">, dim=1, keepdim=True)</a>
+            <a id="change">del x_segs, x_seg_oh</a>
+            tar = y.detach().cpu().numpy()[0, 0, :, :, :]
+            jac_det = utils.jacobian_determinant_vxm(flow.detach().cpu().numpy()[0, :, :, :, :])
+            line = utils.dice_val_substruct(def_out.long(), y_seg.long(), stdy_idx)</code></pre>

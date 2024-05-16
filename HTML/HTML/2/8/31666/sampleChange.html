@@ -1,0 +1,27 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        :param bn_op: Batchnorm op to search for corresponding assign_moving_avg_1 op
+        :return: assign_moving_avg_1 corresponding with the bn op, or None if it does not exist.
+        
+        <a id="change">assert </a>bn_op.type in [&quotFusedBatchNormV3&quot, &quotFusedBatchNorm&quot, &quotIdentity&quot]
+        assert len(bn_op.outputs) == 6 or len(bn_op.outputs) == 5 or len(bn_op.outputs) == 1
+        assign_moving_avg_op = None
+        if bn_op.type in &quotIdentity&quot:</code></pre><h3>After Change</h3><pre><code class='java'>
+               or (bn_op.type == &quotIdentity&quot and len(bn_op.outputs) == 1)
+
+        assign_moving_avg_op = None
+        <a id="change">if </a>bn_op.type in &quotIdentity&quot:
+            if_op = bn_op.inputs[0].op
+            <a id="change">assert </a>if_op.type == &quotIf&quot
+            identity_2_op = if_op.outputs[2].consumers()[0]
+            <a id="change">assert </a>identity_2_op.type == &quotIdentity&quot
+            sub_op<a id="change"> = </a><a id="change">identity_2_op.outputs[0].consumers()</a>[0]
+            assert sub_op.type == &quotSub&quot
+            mul_op = sub_op.outputs[0].consumers()[0]
+            <a id="change">assert </a>mul_op.type == &quotMul&quot
+            assign_moving_avg_op<a id="change"> = </a>mul_op.outputs[0].consumers()[0]
+            assert assign_moving_avg_op.type in [&quotAssignSub&quot, &quotAssignSubVariableOp&quot]
+        elif bn_op.outputs[2].consumers():
+            child_op = bn_op.outputs[2].consumers()[0]</code></pre>

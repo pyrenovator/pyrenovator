@@ -1,0 +1,106 @@
+<html><h3>Pattern ID :15224
+</h3><img src='51421616.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        super().__init__()
+
+    def forward(self, x):
+        <a id="change">return </a>x
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        mems = default(mems, self.memory_slots)
+
+        if mems.ndim == 2:
+            mems<a id="change"> = </a>repeat(mems, &quotn d -&gt; b n d&quot, b = b)
+
+        enc<a id="change"> = </a>self.encoder(src, context = mems)
+        out<a id="change"> = </a><a id="change">self.decoder(</a>tgt<a id="change">, context = enc)</a>
+
+        mems = self.mem_updater(mems, enc)
+        <a id="change">return </a>out<a id="change">, mems</a>
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 7</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/lucidrains/memformer/commit/f8648dffb97894391d67166550584ddb60f7e413#diff-3739fa9ed5b04cd8606fb4ef1d563baf1344fd72b2610c00224ab2f0b223cd86L10' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 51421616</div><div id='project'> Project Name: lucidrains/memformer</div><div id='commit'> Commit Name: f8648dffb97894391d67166550584ddb60f7e413</div><div id='time'> Time: 2020-10-28</div><div id='author'> Author: lucidrains@gmail.com</div><div id='file'> File Name: memformer/memformer.py</div><div id='m_class'> M Class Name: Memformer</div><div id='n_method'> N Class Name: Memformer</div><div id='m_method'> M Method Name: forward(4)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: memformer/memformer.py</div><div id='n_file'> N File Name: memformer/memformer.py</div><div id='m_start'> M Start Line: 10</div><div id='m_end'> M End Line: 11</div><div id='n_start'> N Start Line: 150</div><div id='n_end'> N End Line: 161</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                                        encoded_texts=encoded_texts,
+                                        device=device)
+
+        <a id="change">return </a>before_outs, after_outs, duration_predictions, pitch_predictions, energy_predictions
+
+    @torch.inference_mode()
+    def forward(self,</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        pitch_z = self.pitch_vae(cond=encoded_texts.transpose(1, 2),
+                                 infer=True)
+        energy_z<a id="change"> = </a>self.energy_vae(cond=encoded_texts.transpose(1, 2),
+                                   infer=True)
+        duration_z = self.duration_vae(cond=encoded_texts.transpose(1, 2),
+                                       infer=True)
+
+        pitch_predictions<a id="change"> = </a><a id="change">self.pitch_vae.decoder(</a>pitch_z<a id="change">,
+                                                   nonpadding=None,
+                                                   cond=encoded_texts.transpose(1, 2).detach(),
+                                                   utt_emb=utterance_embedding)</a>.transpose(1, 2)
+        energy_predictions = self.energy_vae.decoder(energy_z,
+                                                     nonpadding=None,
+                                                     cond=encoded_texts.transpose(1, 2).detach(),
+                                                     utt_emb=utterance_embedding).transpose(1, 2)
+        predicted_durations<a id="change"> = </a>self.duration_vae.decoder(duration_z,
+                                                        nonpadding=None,
+                                                        cond=encoded_texts.transpose(1, 2).detach(),
+                                                        utt_emb=utterance_embedding).squeeze(1)
+
+        if gold_durations is not None:
+            predicted_durations = gold_durations
+        else:
+            predicted_durations = make_estimated_durations_usable_for_inference(predicted_durations)
+        if gold_pitch is not None:
+            pitch_predictions = gold_pitch
+        if gold_energy is not None:
+            energy_predictions = gold_energy
+
+        for phoneme_index, phoneme_vector in enumerate(text_tensors.squeeze(0)):
+            if phoneme_vector[get_feature_to_index_lookup()["voiced"]] == 0:
+                &#47&#47 this means the phoneme is unvoiced
+                pitch_predictions[0][phoneme_index] = 0.0
+            if phoneme_vector[get_feature_to_index_lookup()["silence"]] == 1 and pause_duration_scaling_factor != 1.0:
+                predicted_durations[0][phoneme_index] = torch.round(
+                    predicted_durations[0][phoneme_index].float() * pause_duration_scaling_factor)
+        pitch_predictions = _scale_variance(pitch_predictions, pitch_variance_scale)
+        energy_predictions = _scale_variance(energy_predictions, energy_variance_scale)
+
+        embedded_pitch_curve = self.pitch_embed(pitch_predictions.transpose(1, 2)).transpose(1, 2)
+        embedded_energy_curve = self.energy_embed(energy_predictions.transpose(1, 2)).transpose(1, 2)
+        encoded_texts = encoded_texts + embedded_energy_curve + embedded_pitch_curve
+        encoded_texts = self.length_regulator(encoded_texts, predicted_durations,
+                                              duration_scaling_factor)  &#47&#47 (B, Lmax, adim)
+        predicted_spectrogram_before_postnet = self.decoder(encoded_texts, nonpadding=None,
+                                                            utt_emb=utterance_embedding).transpose(1, 2)
+        predicted_spectrogram_before_postnet = self.out_proj(predicted_spectrogram_before_postnet).transpose(1, 2)
+
+        &#47&#47 forward flow post-net
+        predicted_spectrogram_after_postnet = self.run_post_glow(tgt_mels=None,
+                                                                 infer=True,
+                                                                 mel_out=predicted_spectrogram_before_postnet,
+                                                                 encoded_texts=encoded_texts,
+                                                                 tgt_nonpadding=None)
+
+        <a id="change">return </a>predicted_spectrogram_before_postnet<a id="change">, predicted_spectrogram_after_postnet, predicted_durations, pitch_predictions, energy_predictions</a>
+
+    @torch.inference_mode()
+    def forward(self,
+                text,</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/digitalphonetics/ims-toucan/commit/b94d11dc36ef0e5795446826678e202ad390f50b#diff-e3c4143cb425acc1cbdda5567d276c7b7759839b0680a60454efa104d720661eL156' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 51421603</div><div id='project'> Project Name: digitalphonetics/ims-toucan</div><div id='commit'> Commit Name: b94d11dc36ef0e5795446826678e202ad390f50b</div><div id='time'> Time: 2023-01-10</div><div id='author'> Author: lux.florian@gmail.com</div><div id='file'> File Name: InferenceInterfaces/InferenceArchitectures/InferencePortaSpeech.py</div><div id='m_class'> M Class Name: PortaSpeech</div><div id='n_method'> N Class Name: PortaSpeech</div><div id='m_method'> M Method Name: _forward(13)</div><div id='n_method'> N Method Name: _forward(13)</div><div id='m_parent_class'> M Parent Class: torch.nn.Module</div><div id='n_parent_class'> N Parent Class: torch.nn.Module</div><div id='m_file'> M File Name: InferenceInterfaces/InferenceArchitectures/InferencePortaSpeech.py</div><div id='n_file'> N File Name: InferenceInterfaces/InferenceArchitectures/InferencePortaSpeech.py</div><div id='m_start'> M Start Line: 185</div><div id='m_end'> M End Line: 231</div><div id='n_start'> N Start Line: 228</div><div id='n_end'> N End Line: 283</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    def forward(self, x):
+        mu, logvar = self.encode(x.view(-1, 784))
+        z = self.reparameterize(mu, logvar)
+        <a id="change">return </a>self.decode(z), mu, logvar
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    def forward(self, x):
+        encoded = self.encoder(x)
+        mu<a id="change"> = </a>self.mu(encoded)
+        logvar<a id="change"> = </a>self.sigma(encoded)
+        if self.mode == &quottrain&quot:
+            z = self.reparameterize(mu, logvar)
+        else:
+            z = mu
+        output<a id="change"> = </a>self.output(<a id="change">self.decoder(</a>z<a id="change">)</a>)
+        <a id="change">return </a>output<a id="change">, mu, logvar</a>
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/deeperlearner/pytorch-template/commit/576d9f329d45ddf4af2b320655eb909c48d5cb34#diff-21e2f9b1076c045f58e4d63e63a3fbd9155d7b3256dd8398c7e7a33b4dadcda8L29' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 51421636</div><div id='project'> Project Name: deeperlearner/pytorch-template</div><div id='commit'> Commit Name: 576d9f329d45ddf4af2b320655eb909c48d5cb34</div><div id='time'> Time: 2020-11-24</div><div id='author'> Author: b04202035@g.ntu.edu.tw</div><div id='file'> File Name: model/VAE.py</div><div id='m_class'> M Class Name: VAE</div><div id='n_method'> N Class Name: VAE</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: model/VAE.py</div><div id='n_file'> N File Name: model/VAE.py</div><div id='m_start'> M Start Line: 30</div><div id='m_end'> M End Line: 32</div><div id='n_start'> N Start Line: 52</div><div id='n_end'> N End Line: 60</div><BR>

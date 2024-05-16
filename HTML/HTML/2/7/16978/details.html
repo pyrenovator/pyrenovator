@@ -1,0 +1,276 @@
+<html><h3>Pattern ID :16978
+</h3><img src='57057158.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+        i = 0
+        _, depth, segm = ri.get_camera_image()
+        for _ in ri.random_grasp(depth, segm, <a id="change">[plane</a>], object_ids):
+            <a id="change">step_simulation()</a>
+            i += 1
+        for _ in ri.move_to_homej(<a id="change">[plane</a>, <a id="change">table</a>], object_ids):
+            step_simulation()
+        if i == 0:
+            logger.success("Completed the task")
+            break
+
+        if not ri.gripper.check_grasp():
+            ri.ungrasp()
+            continue
+
+        ri.homej[0] = 0
+        for _ in ri.move_to_homej([plane, table], object_ids):
+            step_simulation()
+
+        regrasp_pose = np.mean(regrasp_aabb, axis=0)
+        for i in itertools.count():
+            if i &gt; 0:
+                while True:
+                    c = mercury.geometry.Coordinate(*ri.get_pose("tipLink"))
+                    c.position = regrasp_pose[0]
+                    c.position[2] = 0.7
+                    j = ri.solve_ik(
+                        c.pose,
+                        move_target=ri.robot_model.camera_link,
+                        rotation_axis="z",
+                    )
+                    for _ in ri.movej(j):
+                        step_simulation()
+                    _, depth, segm = ri.get_camera_image()
+                    for _ in ri.random_grasp(
+                        depth,
+                        segm,
+                        <a id="change">[plane</a>, <a id="change">table</a>],
+                        object_ids,
+                        max_angle=np.deg2rad(10),
+                    ):</code></pre><h3>After Change</h3><pre><code class='java'>
+                        object_ids=object_ids,
+                        max_angle=np.deg2rad(10),
+                    ):
+                        <a id="change">step_simulation()</a>
+                    for _ in ri.move_to_homej([plane, table], object_ids):
+                        step_simulation()
+                    if not ri.gripper.check_grasp():
+                        ri.ungrasp()</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 5</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/wkentaro/reorientbot/commit/0f4ecf9bfe3d3c42739580560152c36bb529fd16#diff-14f08b1d4ade890d8878f9a55d12fc4162ca03a57d9a252aac22766d09707372L37' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 57057158</div><div id='project'> Project Name: wkentaro/reorientbot</div><div id='commit'> Commit Name: 0f4ecf9bfe3d3c42739580560152c36bb529fd16</div><div id='time'> Time: 2021-06-07</div><div id='author'> Author: www.kentaro.wada@gmail.com</div><div id='file'> File Name: examples/baseline/place.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(0)</div><div id='n_method'> N Method Name: main(0)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples/baseline/place.py</div><div id='n_file'> N File Name: examples/baseline/place.py</div><div id='m_start'> M Start Line: 37</div><div id='m_end'> M End Line: 136</div><div id='n_start'> N Start Line: 104</div><div id='n_end'> N End Line: 163</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    np.random.seed(args.seed)
+
+    pp.connect()
+    <a id="change">plane</a> = common_utils.init_simulation(camera_distance=1.2)
+
+    ri = mercury.pybullet.PandaRobotInterface()
+    ri.add_camera(
+        pose=baseline_utils.get_camera_pose(args.camera_config),
+        height=240,
+        width=320,
+    )
+
+    pile_pose = ([0, -0.5, 0], [0, 0, 0, 1])
+    object_ids = common_utils.load_pile(
+        base_pose=pile_pose,
+        npz_file=home / "data/mercury/pile_generation/00000001.npz",
+        mass=0.1,
+    )
+    for obj in object_ids:
+        pp.draw_pose(
+            ([0, 0, 0], [0, 0, 0, 1]), length=0.15, width=3, parent=obj
+        )
+
+    <a id="change">table</a> = pp.create_box(
+        0.4, 0.4, 0.1, color=[150 / 255, 111 / 255, 51 / 255, 1]
+    )
+    pp.set_pose(table, ([0.5, 0, 0.1], [0, 0, 0, 1]))
+    aabb = pp.get_aabb(table)
+    regrasp_aabb = (
+        [aabb[0][0] + 0.1, aabb[0][1] + 0.1, aabb[1][2]],
+        [aabb[1][0] - 0.1, aabb[1][1] - 0.1, aabb[1][2] + 0.001],
+    )
+    pp.draw_aabb(regrasp_aabb)
+
+    place_aabb = ((-0.3, 0.3, 0), (0.3, 0.6, 0.2))
+    pp.draw_aabb(place_aabb, width=2)
+
+    step_simulation = baseline_utils.StepSimulation(
+        ri=ri,
+        retime=args.retime,
+        video_dir=here / "logs/regrasp/video" if args.video else None,
+    )
+    step_simulation()
+
+    common_utils.pause(args.pause)
+
+    while True:
+        ri.homej[0] = -np.pi / 2
+        for _ in ri.movej(ri.homej):
+            step_simulation()
+
+        c = mercury.geometry.Coordinate(*ri.get_pose("camera_link"))
+        c.position = pile_pose[0]
+        c.position[2] = 0.7
+        c.quaternion = mercury.geometry.quaternion_from_euler(
+            [np.pi, 0, np.pi / 2]
+        )
+        j = ri.solve_ik(c.pose, move_target=ri.robot_model.camera_link)
+        for _ in ri.movej(j):
+            step_simulation()
+
+        i = 0
+        _, depth, segm = ri.get_camera_image()
+        for _ in ri.random_grasp(depth, segm, <a id="change">[</a>plane<a id="change"></a>], object_ids):
+            <a id="change">step_simulation()</a>
+            i += 1
+        for _ in ri.move_to_homej(<a id="change">[</a>plane, table<a id="change"></a>], object_ids):
+            step_simulation()
+        if i == 0:
+            logger.success("Completed the task")
+            break
+
+        if not ri.gripper.check_grasp():
+            ri.ungrasp()
+            continue
+
+        ri.homej[0] = 0
+        for _ in ri.move_to_homej([plane, table], object_ids):
+            step_simulation()
+
+        regrasp_pose = np.mean(regrasp_aabb, axis=0)
+        done = False
+        for i in itertools.count():
+            if i &gt; 0:
+                while True:
+                    c = mercury.geometry.Coordinate(*ri.get_pose("tipLink"))
+                    c.position = regrasp_pose[0]
+                    c.position[2] = 0.7
+                    j = ri.solve_ik(
+                        c.pose,
+                        move_target=ri.robot_model.camera_link,
+                        rotation_axis="z",
+                    )
+                    for _ in ri.movej(j):
+                        step_simulation()
+                    _, depth, segm = ri.get_camera_image()
+                    for _ in ri.random_grasp(
+                        depth,
+                        segm,
+                        <a id="change">[</a>plane, table<a id="change"></a>],
+                        object_ids,
+                        max_angle=np.deg2rad(10),
+                    ):</code></pre><h3>After Change</h3><pre><code class='java'>
+                        object_ids=object_ids,
+                        max_angle=np.deg2rad(10),
+                    ):
+                        <a id="change">step_simulation()</a>
+                    for _ in ri.move_to_homej([plane, table], object_ids):
+                        step_simulation()
+                    if not ri.gripper.check_grasp():
+                        ri.ungrasp()</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/wkentaro/safepicking/commit/0f4ecf9bfe3d3c42739580560152c36bb529fd16#diff-534a1d5b2c052481b2b127ae49f63c44e947610b5a48467b4c36426acce354e8L21' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 57057159</div><div id='project'> Project Name: wkentaro/safepicking</div><div id='commit'> Commit Name: 0f4ecf9bfe3d3c42739580560152c36bb529fd16</div><div id='time'> Time: 2021-06-07</div><div id='author'> Author: www.kentaro.wada@gmail.com</div><div id='file'> File Name: examples/baseline/regrasp.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(0)</div><div id='n_method'> N Method Name: main(0)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples/baseline/regrasp.py</div><div id='n_file'> N File Name: examples/baseline/regrasp.py</div><div id='m_start'> M Start Line: 37</div><div id='m_end'> M End Line: 137</div><div id='n_start'> N Start Line: 104</div><div id='n_end'> N End Line: 169</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    np.random.seed(args.seed)
+
+    pp.connect()
+    <a id="change">plane</a> = common_utils.init_simulation(camera_distance=1.2)
+
+    ri = mercury.pybullet.PandaRobotInterface()
+    ri.add_camera(
+        pose=baseline_utils.get_camera_pose(args.camera_config),
+        height=240,
+        width=320,
+    )
+
+    pile_pose = ([0, -0.5, 0], [0, 0, 0, 1])
+    object_ids = common_utils.load_pile(
+        base_pose=pile_pose,
+        npz_file=home / "data/mercury/pile_generation/00000001.npz",
+        mass=0.1,
+    )
+    for obj in object_ids:
+        pp.draw_pose(
+            ([0, 0, 0], [0, 0, 0, 1]), length=0.15, width=3, parent=obj
+        )
+
+    <a id="change">table</a> = pp.create_box(
+        0.4, 0.4, 0.1, color=[150 / 255, 111 / 255, 51 / 255, 1]
+    )
+    pp.set_pose(table, ([0.5, 0, 0.1], [0, 0, 0, 1]))
+    aabb = pp.get_aabb(table)
+    regrasp_aabb = (
+        [aabb[0][0] + 0.1, aabb[0][1] + 0.1, aabb[1][2]],
+        [aabb[1][0] - 0.1, aabb[1][1] - 0.1, aabb[1][2] + 0.001],
+    )
+    pp.draw_aabb(regrasp_aabb)
+
+    place_aabb = ((-0.3, 0.3, 0), (0.3, 0.6, 0.2))
+    pp.draw_aabb(place_aabb, width=2)
+
+    step_simulation = baseline_utils.StepSimulation(
+        ri=ri,
+        retime=args.retime,
+        video_dir=here / "logs/place/video" if args.video else None,
+    )
+    step_simulation()
+
+    common_utils.pause(args.pause)
+
+    while True:
+        ri.homej[0] = -np.pi / 2
+        for _ in ri.movej(ri.homej):
+            step_simulation()
+
+        c = mercury.geometry.Coordinate(*ri.get_pose("camera_link"))
+        c.position = pile_pose[0]
+        c.position[2] = 0.7
+        c.quaternion = mercury.geometry.quaternion_from_euler(
+            [np.pi, 0, np.pi / 2]
+        )
+        j = ri.solve_ik(c.pose, move_target=ri.robot_model.camera_link)
+        for _ in ri.movej(j):
+            step_simulation()
+
+        i = 0
+        _, depth, segm = ri.get_camera_image()
+        for _ in ri.random_grasp(depth, segm, <a id="change">[</a>plane<a id="change"></a>], object_ids):
+            <a id="change">step_simulation()</a>
+            i += 1
+        for _ in ri.move_to_homej(<a id="change">[</a>plane, table<a id="change"></a>], object_ids):
+            step_simulation()
+        if i == 0:
+            logger.success("Completed the task")
+            break
+
+        if not ri.gripper.check_grasp():
+            ri.ungrasp()
+            continue
+
+        ri.homej[0] = 0
+        for _ in ri.move_to_homej([plane, table], object_ids):
+            step_simulation()
+
+        regrasp_pose = np.mean(regrasp_aabb, axis=0)
+        for i in itertools.count():
+            if i &gt; 0:
+                while True:
+                    c = mercury.geometry.Coordinate(*ri.get_pose("tipLink"))
+                    c.position = regrasp_pose[0]
+                    c.position[2] = 0.7
+                    j = ri.solve_ik(
+                        c.pose,
+                        move_target=ri.robot_model.camera_link,
+                        rotation_axis="z",
+                    )
+                    for _ in ri.movej(j):
+                        step_simulation()
+                    _, depth, segm = ri.get_camera_image()
+                    for _ in ri.random_grasp(
+                        depth,
+                        segm,
+                        <a id="change">[</a>plane, table<a id="change"></a>],
+                        object_ids,
+                        max_angle=np.deg2rad(10),
+                    ):</code></pre><h3>After Change</h3><pre><code class='java'>
+                        object_ids=object_ids,
+                        max_angle=np.deg2rad(10),
+                    ):
+                        <a id="change">step_simulation()</a>
+                    for _ in ri.move_to_homej([plane, table], object_ids):
+                        step_simulation()
+                    if not ri.gripper.check_grasp():
+                        ri.ungrasp()</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/wkentaro/safepicking/commit/0f4ecf9bfe3d3c42739580560152c36bb529fd16#diff-14f08b1d4ade890d8878f9a55d12fc4162ca03a57d9a252aac22766d09707372L21' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 57057156</div><div id='project'> Project Name: wkentaro/safepicking</div><div id='commit'> Commit Name: 0f4ecf9bfe3d3c42739580560152c36bb529fd16</div><div id='time'> Time: 2021-06-07</div><div id='author'> Author: www.kentaro.wada@gmail.com</div><div id='file'> File Name: examples/baseline/place.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(0)</div><div id='n_method'> N Method Name: main(0)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples/baseline/place.py</div><div id='n_file'> N File Name: examples/baseline/place.py</div><div id='m_start'> M Start Line: 37</div><div id='m_end'> M End Line: 136</div><div id='n_start'> N Start Line: 104</div><div id='n_end'> N End Line: 163</div><BR>

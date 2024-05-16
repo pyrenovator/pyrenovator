@@ -1,0 +1,32 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    positive_label_mask = targets == 1.0
+    cross_entropy = F.binary_cross_entropy_with_logits(logits, targets.to(logits.dtype), reduction=&quotnone&quot)
+    neg_logits = -1.0 * logits
+    modulator = torch.exp(gamma<a id="change"> * </a>targets * neg_logits - gamma * torch.log1p(torch.exp(neg_logits)))
+    loss = modulator * cross_entropy
+    weighted_loss = torch.where(positive_label_mask, alpha * loss, (1.0 - alpha) * loss)
+    weighted_loss /= normalizer
+    <a id="change">return </a>weighted_loss
+
+
+class ExponentialMovingAverage:</code></pre><h3>After Change</h3><pre><code class='java'>
+    alpha_factor = torch.where(
+        torch.eq(targets, 1.), alpha_factor, 1. - alpha_factor)
+    focal_weight = torch.where(
+        <a id="change">torch.eq(</a>targets, 1.<a id="change">)</a>, 1. - outputs, outputs)
+    focal_weight = alpha_factor * torch.pow(focal_weight, gamma)
+
+    bce = -(targets * torch.log(outputs)
+            + (1.0 - targets) * torch.log(1.0 - outputs))
+    loss<a id="change"> = </a>focal_weight * bce
+
+    loss = torch.where(torch.ne(targets, -1.0), loss,
+                       torch.zeros(loss.shape, device=device))
+    loss /= normalizer
+    <a id="change">return </a>loss
+
+
+class ExponentialMovingAverage:</code></pre>

@@ -1,0 +1,53 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        feat_aug[div_mask] /= scale_factor
+
+        edge_index_aug = dense_to_sparse(adj_aug)[0].to(self.device)
+        feat_aug<a id="change"> = </a><a id="change">feat_aug.to(</a>self.device<a id="change">)</a>
+        label_aug = label_aug.to(self.device)
+        return feat_aug, edge_index_aug, label_aug
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        adj = data.s
+        node_idx = data.n_id
+
+        batch_size<a id="change"> = </a>adj.shape[0]
+        num_nodes = adj.shape[1]
+
+        adj_aug, feat_aug = deepcopy(adj), deepcopy(x)
+        label_aug = torch.zeros(batch_size, dtype=torch.int32)
+
+        prob = torch.rand(batch_size)
+        label_aug[prob &lt; rate] = 1
+
+        &#47&#47 high-degree
+        hd_mask = prob &lt; rate / 4
+        n_hd = torch.sum(hd_mask)
+        edges_mask = torch.rand(n_hd, num_nodes) &lt; num_added_edge / num_nodes
+        edges_mask<a id="change"> = </a>edges_mask
+        adj_aug[hd_mask, :] = edges_mask.float()
+
+        &#47&#47 outlying
+        ol_mask = torch.logical_and(rate / 4 &lt;= prob, prob &lt; rate / 2)
+        adj_aug[ol_mask, :] = 0
+
+        &#47&#47 deviated
+        dv_mask = torch.logical_and(rate / 2 &lt;= prob, prob &lt; rate * 3 / 4)
+        feat_c = feat_aug[torch.randperm(batch_size)[:surround]]
+        ds = torch.cdist(feat_aug[dv_mask], feat_c)
+        feat_aug[dv_mask] = feat_c[torch.argmax(ds, 1)]
+
+        &#47&#47 disproportionate
+        mul_mask = torch.logical_and(rate * 3 / 4 &lt;= prob, prob &lt; rate * 7 / 8)
+        div_mask = rate * 7 / 8 &lt;= prob
+        feat_aug[mul_mask] *= scale_factor
+        feat_aug[div_mask] /= scale_factor
+
+        edge_index_aug = dense_to_sparse(adj_aug)[0]
+        inv_idx<a id="change"> = </a><a id="change">torch.zeros(</a>num_nodes<a id="change">, dtype=torch.int64)</a>
+        inv_idx[node_idx] = torch.arange(batch_size)
+        edge_index_aug[1]<a id="change"> = </a>inv_idx[edge_index_aug[1]]
+
+        return feat_aug, edge_index_aug, label_aug
+</code></pre>

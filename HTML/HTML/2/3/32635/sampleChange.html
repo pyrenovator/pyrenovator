@@ -1,0 +1,46 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+    feature_path = Path(export_dir, conf[&quotoutput&quot]+&quot.h5&quot)
+    feature_path.parent.mkdir(exist_ok=True, parents=True)
+    feature_file<a id="change"> = </a>h5py.File(str(feature_path), &quota&quot)
+
+    for data in tqdm(loader):
+        if data[&quotname&quot][0] in feature_file:
+            continue
+
+        pred = model(map_tensor(data, lambda x: x.to(device)))
+        pred = {k: v[0].cpu().numpy() for k, v in pred.items()}
+
+        pred[&quotimage_size&quot] = original_size = data[&quotoriginal_size&quot][0].numpy()
+        if &quotkeypoints&quot in pred:
+            size = np.array(data[&quotimage&quot].shape[-2:][::-1])
+            scales = (original_size / size).astype(np.float32)
+            pred[&quotkeypoints&quot] = (pred[&quotkeypoints&quot] + .5) * scales[None] - .5
+
+        if as_half:
+            for k in pred:
+                dt = pred[k].dtype
+                if (dt == np.float32) and (dt != np.float16):
+                    pred[k] = pred[k].astype(np.float16)
+
+        grp = feature_file.create_group(data[&quotname&quot][0])
+        for k, v in pred.items():
+            grp.create_dataset(k, data=v)
+
+        del pred
+
+    <a id="change">feature_file.close()</a>
+    logging.info(&quotFinished exporting features.&quot)
+
+    return feature_path
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        feature_path = Path(export_dir, conf[&quotoutput&quot]+&quot.h5&quot)
+    feature_path.parent.mkdir(exist_ok=True, parents=True)
+    skip_names = set(list_h5_names(feature_path)
+                     if <a id="change">feature_path.exists()</a> else ())
+    if set(loader.dataset.names).issubset(set(skip_names)):
+        logging.info(&quotSkipping the extraction.&quot)
+        return feature_path</code></pre>

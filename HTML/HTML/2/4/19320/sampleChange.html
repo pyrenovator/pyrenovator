@@ -1,0 +1,25 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+class ReLU(Function):
+  def forward(ctx, input):
+    ctx.save_for_backward(input)
+    out<a id="change"> = </a>MetalBuffer(input.shape, None)
+    mtl_buffer = cmd_buffer()
+    relu_shader.encodeToCommandBuffer_sourceTexture_destinationTexture_(
+      mtl_buffer, input.texture, out.texture
+    )
+    mtl_buffer.commit()
+    <a id="change">return </a>out
+
+  def backward(ctx, grad_output):
+    input, = ctx.saved_tensors</code></pre><h3>After Change</h3><pre><code class='java'>
+class ReLU(Function):
+  def forward(ctx, input):
+    ctx.save_for_backward(input)
+    <a id="change">return </a><a id="change">unary_op(</a>relu_shader, input<a id="change">)</a>
+
+  def backward(ctx, grad_output):
+    input, = ctx.saved_tensors
+    return binary_op(mul_shader, unary_op(inv_relu_shader, input), grad_output)</code></pre>

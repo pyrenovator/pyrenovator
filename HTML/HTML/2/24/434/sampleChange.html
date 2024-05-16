@@ -1,0 +1,47 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                features = self._feature_processor(features)
+            embeddings.append(emb_op.forward(features))
+
+        <a id="change">if len(embeddings) == 0</a>:
+            &#47&#47 a hack for empty ranks
+            <a id="change">return </a><a id="change">self._dummy_embs_tensor.view(sparse_features.stride()</a>, <a id="change">0</a><a id="change">)</a>
+        elif <a id="change">len(embeddings) == 1</a>:
+            <a id="change">return embeddings</a><a id="change">[0]</a>
+        else:
+            <a id="change">return </a><a id="change">torch.cat(embeddings</a><a id="change">, dim=1)</a>
+
+    &#47&#47 pyre-ignore [14]
+    def state_dict(
+        self,</code></pre><h3>After Change</h3><pre><code class='java'>
+        self,
+        sparse_features: KeyedJaggedTensor,
+    ) -&gt; torch.Tensor:
+        <a id="change">embeddings</a>: List[torch.Tensor] = []
+        features_by_group = sparse_features.split(
+            self._feature_splits,
+        )
+        &#47&#47 syntax for torchscript
+        for i, (config, emb_op) in enumerate(
+            zip(self.grouped_configs, self._emb_modules)
+        ):
+            features = features_by_group[i]
+            if (
+                config.has_feature_processor
+                and self._feature_processor is not None
+                and isinstance(self._feature_processor, BaseGroupedFeatureProcessor)
+            ):
+                features = self._feature_processor(features)
+            embeddings.append(emb_op.forward(features))
+
+        <a id="change">return </a><a id="change">embeddings_cat_empty_rank_handle(
+            embeddings</a>,
+            <a id="change">fx_wrap_tensor_view2d(</a>self._dummy_embs_tensor, <a id="change">sparse_features.stride()</a>, <a id="change">0</a><a id="change">)</a><a id="change">,
+            dim=1,
+        )</a>
+
+    &#47&#47 pyre-ignore [14]
+    def state_dict(
+        self,</code></pre>

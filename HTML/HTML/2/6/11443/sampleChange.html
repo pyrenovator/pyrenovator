@@ -1,0 +1,25 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        index = torch.where(label != -1)[0]
+        m_hot = torch.zeros(index.size()[0], cos_theta.size()[1], device=cos_theta.device)
+        margin = torch.normal(mean=self.m, std=self.std, size=label[index, None].size(), device=cos_theta.device)  &#47&#47 Fast converge .clamp(self.m-self.std, self.m+self.std)
+        <a id="change">m_hot.scatter_(</a>1, label[index, None], margin<a id="change">)</a>
+        cos_theta[index] -= m_hot
+        ret = cos_theta * self.s
+        return ret</code></pre><h3>After Change</h3><pre><code class='java'>
+        index = torch.where(label != -1)[0]
+        m_hot = torch.zeros(index.size()[0], cos_theta.size()[1], device=cos_theta.device)
+        margin = torch.normal(mean=self.m, std=self.std, size=label[index, None].size(), device=cos_theta.device)  &#47&#47 Fast converge .clamp(self.m-self.std, self.m+self.std)
+        <a id="change">if self.plus</a>:
+            with torch.no_grad():
+                distmat = cos_theta[index, label.view(-1)].detach().clone()
+                _, idicate_cosie = torch.sort(distmat, dim=0, descending=True)
+                margin, _ = torch.sort(margin, dim=0)
+            <a id="change">m_hot.scatter_(1</a>, label[index, None], margin[idicate_cosie]<a id="change">)</a>
+        else:
+            <a id="change">m_hot.scatter_(</a>1, label[index, None], margin<a id="change">)</a>
+        cos_theta[index] -= m_hot
+        ret = cos_theta * self.s
+        return ret</code></pre>

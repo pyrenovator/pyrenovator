@@ -1,0 +1,371 @@
+<html><h3>Pattern ID :3160
+</h3><img src='12115329.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                torch._foreach_div_scalar_list_(exp_avg_sq_sqrt, bias_correction_sqrt)
+                denom = torch._foreach_add(exp_avg_sq_sqrt, group[&quoteps&quot])
+
+            step_size = [<a id="change">group[&quotlr&quot]</a> / bc for bc in bias_correction1]
+
+            <a id="change">for </a>i in range(len(step_size))<a id="change">:
+                params_with_grad[i]</a><a id="change">.addcdiv_(exp_avg[i]</a>, <a id="change">denom[i]</a><a id="change">, value=-step_size[i])</a>
+
+        return loss
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+            grads = []
+            states = []
+            <a id="change">exp_avg</a> = []
+            exp_avg_sq = []
+            max_exp_avg_sq = []
+            params_with_grad = []
+
+            for p in group[&quotparams&quot]:
+                if p.grad is not None:
+                    if p.grad.is_sparse:
+                        raise RuntimeError(&quotAdam does not support sparse gradients, please consider SparseAdam instead&quot)
+                    params_with_grad.append(p)
+                    grads.append(p.grad)
+
+            for p in params_with_grad:
+                state = self.state[p]
+
+                &#47&#47 State initialization
+                if len(state) == 0:
+                    state[&quotstep&quot] = 0
+                    &#47&#47 Exponential moving average of gradient values
+                    state[&quotexp_avg&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+                    &#47&#47 Exponential moving average of squared gradient values
+                    state[&quotexp_avg_sq&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+                    if amsgrad:
+                        &#47&#47 Maintains max of all exp. moving avg. of sq. grad. values
+                        state[&quotmax_exp_avg_sq&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+
+                exp_avg.append(state[&quotexp_avg&quot])
+                exp_avg_sq.append(state[&quotexp_avg_sq&quot])
+
+                if amsgrad:
+                    max_exp_avg_sq.append(state[&quotmax_exp_avg_sq&quot])
+
+                state[&quotstep&quot] += 1
+                states.append(state)
+
+            beta1, beta2 = group[&quotbetas&quot]
+
+            bias_correction1 = [1 - beta1 ** state[&quotstep&quot] for state in states] 
+            bias_correction2 = [1 - beta2 ** state[&quotstep&quot] for state in states] 
+            if group[&quotweight_decay&quot] != 0:
+                grads = torch._foreach_add(grads, params_with_grad, alpha=group[&quotweight_decay&quot])
+
+            &#47&#47
+            &#47&#47 Decay the first and second moment running average coefficient
+            &#47&#47
+            torch._foreach_mul_(exp_avg, beta1)
+            torch._foreach_add_(exp_avg, grads, alpha=1 - beta1)
+
+            torch._foreach_mul_(exp_avg_sq, beta2)
+            torch._foreach_addcmul_(exp_avg_sq, grads, grads, 1 - beta2)
+
+            if amsgrad:
+                &#47&#47 Maintains the maximum of all 2nd moment running avg. till now
+                max_exp_avg_sq = torch._foreach_maximum(max_exp_avg_sq, exp_avg_sq)
+
+                &#47&#47 Use the max. for normalizing running avg. of gradient
+                max_exp_avg_sq_sqrt = torch._foreach_sqrt(max_exp_avg_sq)
+                bias_correction_sqrt = [math.sqrt(bc) for bc in bias_correction2]
+                torch._foreach_div_scalar_list_(max_exp_avg_sq_sqrt, bias_correction_sqrt)
+                denom = torch._foreach_add(max_exp_avg_sq_sqrt, group[&quoteps&quot])
+            else:
+                exp_avg_sq_sqrt = torch._foreach_sqrt(exp_avg_sq)
+                bias_correction_sqrt = [math.sqrt(bc) for bc in bias_correction2]
+                torch._foreach_div_scalar_list_(exp_avg_sq_sqrt, bias_correction_sqrt)
+                denom = torch._foreach_add(exp_avg_sq_sqrt, group[&quoteps&quot])
+
+            step_size = [(<a id="change">group[&quotlr&quot]</a> / bc)<a id="change"> * -1</a> for bc in bias_correction1]
+            <a id="change">torch._foreach_addcdiv_(params_with_grad</a>, <a id="change">exp_avg</a>, denom, step_size<a id="change">)</a>
+
+        return loss
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 12</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/pytorch/pytorch/commit/8a074af929c78b89f447dc75d5289fe2dacd8d80#diff-5a3825fb3b9aae8776b5f88034487253f7e0f40ee0e8d27b4ce563f4fb9f8093L67' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 12115329</div><div id='project'> Project Name: pytorch/pytorch</div><div id='commit'> Commit Name: 8a074af929c78b89f447dc75d5289fe2dacd8d80</div><div id='time'> Time: 2020-10-14</div><div id='author'> Author: iuriiz@devfair004.maas</div><div id='file'> File Name: torch/optim/_multi_tensor/adam.py</div><div id='m_class'> M Class Name: Adam</div><div id='n_method'> N Class Name: Adam</div><div id='m_method'> M Method Name: step(2)</div><div id='n_method'> N Method Name: step(2)</div><div id='m_parent_class'> M Parent Class: Optimizer</div><div id='n_parent_class'> N Parent Class: Optimizer</div><div id='m_file'> M File Name: torch/optim/_multi_tensor/adam.py</div><div id='n_file'> N File Name: torch/optim/_multi_tensor/adam.py</div><div id='m_start'> M Start Line: 67</div><div id='m_end'> M End Line: 143</div><div id='n_start'> N Start Line: 67</div><div id='n_end'> N End Line: 139</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            with torch.enable_grad():
+                loss = closure()
+
+        for <a id="change">group</a> in self.param_groups:
+            grads = []
+            <a id="change">params_with_grad</a> = []
+            states = []
+            <a id="change">exp_avgs</a> = []
+            exp_infs = []
+
+            beta1, beta2 = group[&quotbetas&quot]
+            eps = group[&quoteps&quot]
+
+            for p in group[&quotparams&quot]:
+                if p.grad is not None:
+                    if p.grad.is_sparse:
+                        raise RuntimeError(&quotAdamax does not support sparse gradients&quot)
+
+                    grads.append(p.grad)
+                    params_with_grad.append(p)
+
+                    state = self.state[p]
+
+                    &#47&#47 State initialization
+                    if len(state) == 0:
+                        state[&quotstep&quot] = 0
+                        state[&quotexp_avg&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+                        state[&quotexp_inf&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+
+                    exp_avgs.append(state[&quotexp_avg&quot])
+                    exp_infs.append(state[&quotexp_inf&quot])
+
+                    state[&quotstep&quot] += 1
+                    states.append(state)
+
+            if group[&quotweight_decay&quot] != 0:
+                torch._foreach_add_(grads, params_with_grad, alpha=group[&quotweight_decay&quot])
+
+            &#47&#47 Update biased first moment estimate.
+            torch._foreach_mul_(exp_avgs, beta1)
+            torch._foreach_add_(exp_avgs, grads, alpha=1 - beta1)
+
+            &#47&#47 Update the exponentially weighted infinity norm.
+            torch._foreach_mul_(exp_infs, beta2)
+
+            for exp_inf, grad in zip(exp_infs, grads):
+                norm_buf = torch.cat([
+                    exp_inf.unsqueeze(0),
+                    grad.abs().add_(eps).unsqueeze_(0)
+                ], 0)
+                torch.max(norm_buf, 0, keepdim=False, out=(exp_inf, exp_inf.new().long()))
+
+            bias_corrections = [1 - beta1 ** state[&quotstep&quot] for state in states]
+            clr = [<a id="change">group[&quotlr&quot]</a> / bias_correction for bias_correction in bias_corrections]
+
+            <a id="change">for </a>i in range(len(params_with_grad))<a id="change">:
+                params_with_grad[i]</a><a id="change">.addcdiv_(</a><a id="change">exp_avgs[i]</a>, <a id="change">exp_infs[i]</a><a id="change">, value=-clr[i])</a>
+
+        return loss
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            with torch.enable_grad():
+                loss = closure()
+
+        for <a id="change">group</a> in self.param_groups:
+            grads = []
+            <a id="change">params_with_grad</a> = []
+            states = []
+            <a id="change">exp_avgs</a> = []
+            exp_infs = []
+
+            beta1, beta2 = group[&quotbetas&quot]
+            eps = group[&quoteps&quot]
+
+            for p in group[&quotparams&quot]:
+                if p.grad is not None:
+                    if p.grad.is_sparse:
+                        raise RuntimeError(&quotAdamax does not support sparse gradients&quot)
+
+                    grads.append(p.grad)
+                    params_with_grad.append(p)
+
+                    state = self.state[p]
+
+                    &#47&#47 State initialization
+                    if len(state) == 0:
+                        state[&quotstep&quot] = 0
+                        state[&quotexp_avg&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+                        state[&quotexp_inf&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+
+                    exp_avgs.append(state[&quotexp_avg&quot])
+                    exp_infs.append(state[&quotexp_inf&quot])
+
+                    state[&quotstep&quot] += 1
+                    states.append(state)
+
+            if group[&quotweight_decay&quot] != 0:
+                torch._foreach_add_(grads, params_with_grad, alpha=group[&quotweight_decay&quot])
+
+            &#47&#47 Update biased first moment estimate.
+            torch._foreach_mul_(exp_avgs, beta1)
+            torch._foreach_add_(exp_avgs, grads, alpha=1 - beta1)
+
+            &#47&#47 Update the exponentially weighted infinity norm.
+            torch._foreach_mul_(exp_infs, beta2)
+
+            for exp_inf, grad in zip(exp_infs, grads):
+                norm_buf = torch.cat([
+                    exp_inf.unsqueeze(0),
+                    grad.abs().add_(eps).unsqueeze_(0)
+                ], 0)
+                torch.max(norm_buf, 0, keepdim=False, out=(exp_inf, exp_inf.new().long()))
+
+            bias_corrections = [1 - beta1 ** state[&quotstep&quot] for state in states]
+            clr = [-<a id="change">1</a><a id="change"> * </a>(<a id="change">group[&quotlr&quot]</a> / bias_correction) for bias_correction in bias_corrections]
+            <a id="change">torch._foreach_addcdiv_(</a>params_with_grad, exp_avgs, exp_infs, clr<a id="change">)</a>
+
+        return loss
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/pytorch/pytorch/commit/8a074af929c78b89f447dc75d5289fe2dacd8d80#diff-05420c76c3d1380e45d36b1e653ecea83e8185697833fba351238791eb4462c9L40' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 12115330</div><div id='project'> Project Name: pytorch/pytorch</div><div id='commit'> Commit Name: 8a074af929c78b89f447dc75d5289fe2dacd8d80</div><div id='time'> Time: 2020-10-14</div><div id='author'> Author: iuriiz@devfair004.maas</div><div id='file'> File Name: torch/optim/_multi_tensor/adamax.py</div><div id='m_class'> M Class Name: Adamax</div><div id='n_method'> N Class Name: Adamax</div><div id='m_method'> M Method Name: step(2)</div><div id='n_method'> N Method Name: step(2)</div><div id='m_parent_class'> M Parent Class: Optimizer</div><div id='n_parent_class'> N Parent Class: Optimizer</div><div id='m_file'> M File Name: torch/optim/_multi_tensor/adamax.py</div><div id='n_file'> N File Name: torch/optim/_multi_tensor/adamax.py</div><div id='m_start'> M Start Line: 52</div><div id='m_end'> M End Line: 107</div><div id='n_start'> N Start Line: 52</div><div id='n_end'> N End Line: 103</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            with torch.enable_grad():
+                loss = closure()
+
+        for <a id="change">group</a> in self.param_groups:
+            amsgrad = group[&quotamsgrad&quot]
+
+            grads = []
+            states = []
+            <a id="change">exp_avg</a> = []
+            exp_avg_sq = []
+            max_exp_avg_sq = []
+            <a id="change">params_with_grad</a> = []
+
+            for p in group[&quotparams&quot]:
+                if p.grad is not None:
+                    if p.grad.is_sparse:
+                        raise RuntimeError(&quotAdamW does not support sparse gradients&quot)
+
+                    &#47&#47 Perform stepweight decay
+                    p.mul_(1 - group[&quotlr&quot] * group[&quotweight_decay&quot])
+
+                    params_with_grad.append(p)
+                    grads.append(p.grad)
+
+            for p in params_with_grad:
+                state = self.state[p]
+
+                &#47&#47 State initialization
+                if len(state) == 0:
+                    state[&quotstep&quot] = 0
+                    &#47&#47 Exponential moving average of gradient values
+                    state[&quotexp_avg&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+                    &#47&#47 Exponential moving average of squared gradient values
+                    state[&quotexp_avg_sq&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+                    if amsgrad:
+                        &#47&#47 Maintains max of all exp. moving avg. of sq. grad. values
+                        state[&quotmax_exp_avg_sq&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+
+                exp_avg.append(state[&quotexp_avg&quot])
+                exp_avg_sq.append(state[&quotexp_avg_sq&quot])
+
+                if amsgrad:
+                    max_exp_avg_sq.append(state[&quotmax_exp_avg_sq&quot])
+
+                state[&quotstep&quot] += 1
+                states.append(state)
+
+            beta1, beta2 = group[&quotbetas&quot]
+
+            bias_correction1 = [1 - beta1 ** state[&quotstep&quot] for state in states] 
+            bias_correction2 = [1 - beta2 ** state[&quotstep&quot] for state in states] 
+
+            &#47&#47
+            &#47&#47 Decay the first and second moment running average coefficient
+            &#47&#47
+            torch._foreach_mul_(exp_avg, beta1)
+            torch._foreach_add_(exp_avg, grads, alpha=1 - beta1)
+
+            torch._foreach_mul_(exp_avg_sq, beta2)
+            torch._foreach_addcmul_(exp_avg_sq, grads, grads, 1 - beta2)
+
+            if amsgrad:
+                &#47&#47 Maintains the maximum of all 2nd moment running avg. till now
+                max_exp_avg_sq = torch._foreach_maximum(max_exp_avg_sq, exp_avg_sq)
+
+                &#47&#47 Use the max. for normalizing running avg. of gradient
+                max_exp_avg_sq_sqrt = torch._foreach_sqrt(max_exp_avg_sq)
+                bias_correction_sqrt = [math.sqrt(bc) for bc in bias_correction2]
+                torch._foreach_div_scalar_list_(max_exp_avg_sq_sqrt, bias_correction_sqrt)
+                denom = torch._foreach_add(max_exp_avg_sq_sqrt, group[&quoteps&quot])
+            else:
+                exp_avg_sq_sqrt = torch._foreach_sqrt(exp_avg_sq)
+                bias_correction_sqrt = [math.sqrt(bc) for bc in bias_correction2]
+                torch._foreach_div_scalar_list_(exp_avg_sq_sqrt, bias_correction_sqrt)
+                denom = torch._foreach_add(exp_avg_sq_sqrt, group[&quoteps&quot])
+
+            step_size = [<a id="change">group[&quotlr&quot]</a> / bc for bc in bias_correction1]
+
+            <a id="change">for </a>i in range(len(step_size))<a id="change">:
+                params_with_grad[i]</a><a id="change">.addcdiv_(</a><a id="change">exp_avg[i]</a>, <a id="change">denom[i]</a><a id="change">, value=-step_size[i])</a>
+
+        return loss
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            with torch.enable_grad():
+                loss = closure()
+
+        for <a id="change">group</a> in self.param_groups:
+            amsgrad = group[&quotamsgrad&quot]
+
+            grads = []
+            states = []
+            <a id="change">exp_avg</a> = []
+            exp_avg_sq = []
+            max_exp_avg_sq = []
+            <a id="change">params_with_grad</a> = []
+
+            for p in group[&quotparams&quot]:
+                if p.grad is not None:
+                    if p.grad.is_sparse:
+                        raise RuntimeError(&quotAdamW does not support sparse gradients&quot)
+
+                    &#47&#47 Perform stepweight decay
+                    p.mul_(1 - group[&quotlr&quot] * group[&quotweight_decay&quot])
+
+                    params_with_grad.append(p)
+                    grads.append(p.grad)
+
+            for p in params_with_grad:
+                state = self.state[p]
+
+                &#47&#47 State initialization
+                if len(state) == 0:
+                    state[&quotstep&quot] = 0
+                    &#47&#47 Exponential moving average of gradient values
+                    state[&quotexp_avg&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+                    &#47&#47 Exponential moving average of squared gradient values
+                    state[&quotexp_avg_sq&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+                    if amsgrad:
+                        &#47&#47 Maintains max of all exp. moving avg. of sq. grad. values
+                        state[&quotmax_exp_avg_sq&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+
+                exp_avg.append(state[&quotexp_avg&quot])
+                exp_avg_sq.append(state[&quotexp_avg_sq&quot])
+
+                if amsgrad:
+                    max_exp_avg_sq.append(state[&quotmax_exp_avg_sq&quot])
+
+                state[&quotstep&quot] += 1
+                states.append(state)
+
+            beta1, beta2 = group[&quotbetas&quot]
+
+            bias_correction1 = [1 - beta1 ** state[&quotstep&quot] for state in states] 
+            bias_correction2 = [1 - beta2 ** state[&quotstep&quot] for state in states] 
+
+            &#47&#47
+            &#47&#47 Decay the first and second moment running average coefficient
+            &#47&#47
+            torch._foreach_mul_(exp_avg, beta1)
+            torch._foreach_add_(exp_avg, grads, alpha=1 - beta1)
+
+            torch._foreach_mul_(exp_avg_sq, beta2)
+            torch._foreach_addcmul_(exp_avg_sq, grads, grads, 1 - beta2)
+
+            if amsgrad:
+                &#47&#47 Maintains the maximum of all 2nd moment running avg. till now
+                max_exp_avg_sq = torch._foreach_maximum(max_exp_avg_sq, exp_avg_sq)
+
+                &#47&#47 Use the max. for normalizing running avg. of gradient
+                max_exp_avg_sq_sqrt = torch._foreach_sqrt(max_exp_avg_sq)
+                bias_correction_sqrt = [math.sqrt(bc) for bc in bias_correction2]
+                torch._foreach_div_scalar_list_(max_exp_avg_sq_sqrt, bias_correction_sqrt)
+                denom = torch._foreach_add(max_exp_avg_sq_sqrt, group[&quoteps&quot])
+            else:
+                exp_avg_sq_sqrt = torch._foreach_sqrt(exp_avg_sq)
+                bias_correction_sqrt = [math.sqrt(bc) for bc in bias_correction2]
+                torch._foreach_div_scalar_list_(exp_avg_sq_sqrt, bias_correction_sqrt)
+                denom = torch._foreach_add(exp_avg_sq_sqrt, group[&quoteps&quot])
+
+            step_size = [-<a id="change">1</a><a id="change"> * </a>(<a id="change">group[&quotlr&quot]</a> / bc) for bc in bias_correction1]
+            <a id="change">torch._foreach_addcdiv_(</a>params_with_grad, exp_avg, denom, step_size<a id="change">)</a>
+
+        return loss
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/pytorch/pytorch/commit/8a074af929c78b89f447dc75d5289fe2dacd8d80#diff-e974df578e6ee505a4f8eb09b28e6dae2b67c75ba3aa43378f1ea55f06d319ffL55' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 12115332</div><div id='project'> Project Name: pytorch/pytorch</div><div id='commit'> Commit Name: 8a074af929c78b89f447dc75d5289fe2dacd8d80</div><div id='time'> Time: 2020-10-14</div><div id='author'> Author: iuriiz@devfair004.maas</div><div id='file'> File Name: torch/optim/_multi_tensor/adamw.py</div><div id='m_class'> M Class Name: AdamW</div><div id='n_method'> N Class Name: AdamW</div><div id='m_method'> M Method Name: step(2)</div><div id='n_method'> N Method Name: step(2)</div><div id='m_parent_class'> M Parent Class: Optimizer</div><div id='n_parent_class'> N Parent Class: Optimizer</div><div id='m_file'> M File Name: torch/optim/_multi_tensor/adamw.py</div><div id='n_file'> N File Name: torch/optim/_multi_tensor/adamw.py</div><div id='m_start'> M Start Line: 67</div><div id='m_end'> M End Line: 145</div><div id='n_start'> N Start Line: 67</div><div id='n_end'> N End Line: 141</div><BR>

@@ -1,0 +1,26 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    
+    if thresholds is None:
+        return preds, target
+    len_t<a id="change"> = </a><a id="change">len(</a>thresholds<a id="change">)</a>
+    preds_t = (preds.unsqueeze(-1) &gt;= thresholds.unsqueeze(0)).long()  &#47&#47 num_samples x num_thresholds
+    unique_mapping = preds_t<a id="change"> + 2 * target.unsqueeze(-1) + </a>4 * <a id="change">torch.arange(</a>len_t<a id="change">, device=target.device)</a>
+    bins<a id="change"> = </a>_bincount(unique_mapping.flatten(), minlength=4 * len_t)
+    return bins.reshape(len_t, 2, 2)
+
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    
+    if thresholds is None:
+        return preds, target
+    <a id="change">if preds</a><a id="change">.numel() &lt;= 50_000</a>:
+        update_fn<a id="change"> = </a>_binary_precision_recall_curve_update_vectorized
+    else:
+        update_fn<a id="change"> = </a>_binary_precision_recall_curve_update_loop
+    <a id="change">return </a><a id="change">update_fn(preds</a>, target, thresholds<a id="change">)</a>
+
+
+def _binary_precision_recall_curve_update_vectorized(
+    preds: Tensor,</code></pre>

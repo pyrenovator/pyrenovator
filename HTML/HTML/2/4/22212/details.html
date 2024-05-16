@@ -1,0 +1,100 @@
+<html><h3>Pattern ID :22212
+</h3><img src='70212907.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+            self.on_epoch_end(epoch, train_stats, valid_stats)
+
+        return train_stats<a id="change">, valid_stats</a>
+
+    def write_wavs(self, predictions, inputs, epoch):
+        ids, wavs, lens = inputs
+        predictions = predictions.cpu()</code></pre><h3>After Change</h3><pre><code class='java'>
+        for epoch in epoch_counter:
+            self.modules.train()
+            train_stats = {}
+            <a id="change">with </a>tqdm<a id="change">(train_set) as t:
+                </a>for i, batch in enumerate(t):
+                    stats = self.fit_batch(batch)
+                    self.add_stats(train_stats, stats)
+                    average = self.update_average(stats, iteration=i + 1)
+                    <a id="change">t.set_postfix(train_loss=average)</a>
+
+            valid_stats = {}
+            if valid_set is not None:
+                self.modules.eval()</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/speechbrain/speechbrain/commit/7574b09b2beef5c05957e5cb23df11ed7fe922e4#diff-ca22995f18e66c05296025c8afa3d308e207cdd83cd9180f80917390e91d0f4bL111' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 70212907</div><div id='project'> Project Name: speechbrain/speechbrain</div><div id='commit'> Commit Name: 7574b09b2beef5c05957e5cb23df11ed7fe922e4</div><div id='time'> Time: 2020-06-01</div><div id='author'> Author: jerrygood0703@gmail.com</div><div id='file'> File Name: recipes/DNS/Baseline/experiment_baseline.py</div><div id='m_class'> M Class Name: SEBrain</div><div id='n_method'> N Class Name: SEBrain</div><div id='m_method'> M Method Name: fit(4)</div><div id='n_method'> N Method Name: fit(4)</div><div id='m_parent_class'> M Parent Class: sb.core.Brain</div><div id='n_parent_class'> N Parent Class: sb.core.Brain</div><div id='m_file'> M File Name: recipes/DNS/Baseline/experiment_baseline.py</div><div id='n_file'> N File Name: recipes/DNS/Baseline/experiment_baseline.py</div><div id='m_start'> M Start Line: 111</div><div id='m_end'> M End Line: 129</div><div id='n_start'> N Start Line: 111</div><div id='n_end'> N End Line: 118</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        total_loss += loss
+        waste_time = time.time() - start_time
+        print(&quot\nEpoch:&quot+ str(epoch+1) + &quot/&quot + str(Epoch))
+        print(&quotiter:&quot + str(iteration) + &quot/&quot + str(epoch_size) + &quot || Total Loss: %.4f || %.4fs/step&quot % (total_loss/(iteration+1)<a id="change">,waste_time</a>))
+        start_time = time.time()
+    &#47&#47 将loss写入tensorboard，下面注释的是每个世代保存一次
+    &#47&#47 writer.add_scalar(&quotTrain_loss&quot, total_loss/(iteration+1), epoch)</code></pre><h3>After Change</h3><pre><code class='java'>
+    &#47&#47 writer.add_scalar(&quotTrain_loss&quot, total_loss/(iteration+1), epoch)
+
+    print(&quotStart Validation&quot)
+    <a id="change">with </a>tqdm<a id="change">(total=epoch_size_val, desc=f&quotEpoch {epoch + 1}/{Epoch}&quot,postfix=dict,mininterval=0.3) as pbar:
+        </a>for iteration, batch in enumerate(genval):
+            if iteration &gt;= epoch_size_val:
+                break
+            images_val, targets_val = batch[0], batch[1]
+
+            with torch.no_grad():
+                if cuda:
+                    images_val = Variable(torch.from_numpy(images_val).type(torch.FloatTensor)).cuda()
+                    targets_val = [Variable(torch.from_numpy(ann).type(torch.FloatTensor)) for ann in targets_val]
+                else:
+                    images_val = Variable(torch.from_numpy(images_val).type(torch.FloatTensor))
+                    targets_val = [Variable(torch.from_numpy(ann).type(torch.FloatTensor)) for ann in targets_val]
+                optimizer.zero_grad()
+                outputs = net(images_val)
+                losses = []
+
+                for i in range(3):
+                    loss_item = yolo_losses[i](outputs[i], targets_val)
+                    losses.append(loss_item[0])
+                loss = sum(losses)
+                val_loss += loss
+                &#47&#47 将loss写入tensorboard, 下面注释的是每一步都写
+                &#47&#47 writer.add_scalar(&quotVal_loss&quot,val_loss/(epoch_size_val+1), (epoch*epoch_size_val + iteration))
+
+            <a id="change">pbar.set_postfix(**{&quottotal_loss&quot: val_loss.item() / (iteration + 1)})</a>
+            pbar.update(1)
+            
+    &#47&#47 将loss写入tensorboard，每个世代保存一次</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/bubbliiiing/yolov4-pytorch/commit/c1c7677c0d9837682dfc807b39415bb4b9a1cb3c#diff-bd82358bc6c4c160f47a62aadfd20d68a0c03408cc9d0840ac78e471f696f5e6L36' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 70212904</div><div id='project'> Project Name: bubbliiiing/yolov4-pytorch</div><div id='commit'> Commit Name: c1c7677c0d9837682dfc807b39415bb4b9a1cb3c</div><div id='time'> Time: 2020-07-28</div><div id='author'> Author: 47347516+bubbliiiing@users.noreply.github.com</div><div id='file'> File Name: train_with_tensorboard.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: fit_ont_epoch(10)</div><div id='n_method'> N Method Name: fit_ont_epoch(10)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: train_with_tensorboard.py</div><div id='n_file'> N File Name: train_with_tensorboard.py</div><div id='m_start'> M Start Line: 37</div><div id='m_end'> M End Line: 96</div><div id='n_start'> N Start Line: 45</div><div id='n_end'> N End Line: 113</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        total_loss += loss
+        waste_time = time.time() - start_time
+        print(&quot\nEpoch:&quot+ str(epoch+1) + &quot/&quot + str(Epoch))
+        print(&quotiter:&quot + str(iteration) + &quot/&quot + str(epoch_size) + &quot || Total Loss: %.4f || %.4fs/step&quot % (total_loss/(iteration+1)<a id="change">,waste_time</a>))
+        start_time = time.time()
+
+    print(&quotStart Validation&quot)</code></pre><h3>After Change</h3><pre><code class='java'>
+            start_time = time.time()
+
+    print(&quotStart Validation&quot)
+    <a id="change">with </a>tqdm<a id="change">(total=epoch_size_val, desc=f&quotEpoch {epoch + 1}/{Epoch}&quot,postfix=dict,mininterval=0.3) as pbar:
+        </a>for iteration, batch in enumerate(genval):
+            if iteration &gt;= epoch_size_val:
+                break
+            images_val, targets_val = batch[0], batch[1]
+
+            with torch.no_grad():
+                if cuda:
+                    images_val = Variable(torch.from_numpy(images_val).type(torch.FloatTensor)).cuda()
+                    targets_val = [Variable(torch.from_numpy(ann).type(torch.FloatTensor)) for ann in targets_val]
+                else:
+                    images_val = Variable(torch.from_numpy(images_val).type(torch.FloatTensor))
+                    targets_val = [Variable(torch.from_numpy(ann).type(torch.FloatTensor)) for ann in targets_val]
+                optimizer.zero_grad()
+                outputs = net(images_val)
+                losses = []
+                for i in range(3):
+                    loss_item = yolo_losses[i](outputs[i], targets_val)
+                    losses.append(loss_item[0])
+                loss = sum(losses)
+                val_loss += loss
+            <a id="change">pbar.set_postfix(**{&quottotal_loss&quot: val_loss.item() / (iteration + 1)})</a>
+            pbar.update(1)
+            
+    print(&quotFinish Validation&quot)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/bubbliiiing/yolo3-pytorch/commit/d67b456f0551b5565d1be3339b446ca601d1078c#diff-ed183d67207df065a11e1289f19d34cc2abbc5448dea952683cfe9728c342b95L19' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 70212903</div><div id='project'> Project Name: bubbliiiing/yolo3-pytorch</div><div id='commit'> Commit Name: d67b456f0551b5565d1be3339b446ca601d1078c</div><div id='time'> Time: 2020-07-28</div><div id='author'> Author: 47347516+bubbliiiing@users.noreply.github.com</div><div id='file'> File Name: train.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: fit_ont_epoch(9)</div><div id='n_method'> N Method Name: fit_ont_epoch(9)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: train.py</div><div id='n_file'> N File Name: train.py</div><div id='m_start'> M Start Line: 20</div><div id='m_end'> M End Line: 71</div><div id='n_start'> N Start Line: 28</div><div id='n_end'> N End Line: 85</div><BR>

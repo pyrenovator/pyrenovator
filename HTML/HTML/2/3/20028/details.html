@@ -1,0 +1,52 @@
+<html><h3>Pattern ID :20028
+</h3><img src='65200106.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+        &#47&#47 input should be (seq_len, batch, input_size)
+        output, h_n = self.rnn(x.unsqueeze(1))
+        output = self.fc(<a id="change">output.flatten()</a>)
+        &#47&#47 print(output)
+        &#47&#47 return torch.mean(output, dim=0)
+        return output</code></pre><h3>After Change</h3><pre><code class='java'>
+    def forward(self, st_maps, target):
+        output_per_clip = []
+        &#47&#47 so as to reflect a batch_size = 1
+        st_maps = <a id="change">st_maps.unsqueeze(0</a><a id="change">)</a>
+        for t in range(st_maps.size(1)):
+            with torch.no_grad():
+                x = self.resnet18(st_maps[:, t, :, :, :])
+                &#47&#47 collapse dimensions to BSx512 (resnet o/p)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 2</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/anweshcr7/rhythmnet/commit/5486b317570359a6ab1971196350ee70894b19db#diff-3fc5bf831ef8bd1cc5d50189ec691215fb3d3ae0cbb974e736200edc7f8c65cdL25' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 65200106</div><div id='project'> Project Name: anweshcr7/rhythmnet</div><div id='commit'> Commit Name: 5486b317570359a6ab1971196350ee70894b19db</div><div id='time'> Time: 2021-02-02</div><div id='author'> Author: anwesh.marwade@beyondsports.nl</div><div id='file'> File Name: src/models/rhythmNet.py</div><div id='m_class'> M Class Name: RhythmNet</div><div id='n_method'> N Class Name: RhythmNet</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: src/models/rhythmNet.py</div><div id='n_file'> N File Name: src/models/rhythmNet.py</div><div id='m_start'> M Start Line: 25</div><div id='m_end'> M End Line: 32</div><div id='n_start'> N Start Line: 32</div><div id='n_end'> N End Line: 48</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        x = self.encoder_layer(x, src_key_padding_mask=mask)
+
+        &#47&#47 concatenate static features to the flattened encoder layer
+        x = <a id="change">torch.flatten(</a>x<a id="change">, start_dim=1, end_dim=2)</a>
+        x = torch.cat((x, X_static), dim=1)
+
+        &#47&#47 pass through fully-connected part to lower dimension to 2 (binary classification)
+        return self.feed_forward(x)</code></pre><h3>After Change</h3><pre><code class='java'>
+        x = self.encoder_layer(x, src_key_padding_mask=mask)
+
+        &#47&#47 concatenate static features to the matrix (add additional row with the size 64)
+        static_x = <a id="change">self.static_feed_forward(X_static).unsqueeze(1</a><a id="change">)</a>
+        x = torch.cat((x, static_x), dim=1)
+
+        &#47&#47 take the mean of all time steps (rows) with additional row for static features; output size = (batch_size, 64)
+        x = torch.mean(x, 1)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/mims-harvard/raindrop/commit/179943be5e765f45da529ca49e98663d3f98a2b3#diff-9130f919aee7ec822bf1d82f703744c78d2ed7fa68b5691eab535c724d94934aL130' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 65200107</div><div id='project'> Project Name: mims-harvard/raindrop</div><div id='commit'> Commit Name: 179943be5e765f45da529ca49e98663d3f98a2b3</div><div id='time'> Time: 2021-07-28</div><div id='author'> Author: mz4730@student.uni-lj.si</div><div id='file'> File Name: code/baselines/Transformer_baseline.py</div><div id='m_class'> M Class Name: Transformer_P12</div><div id='n_method'> N Class Name: Transformer_P12</div><div id='m_method'> M Method Name: forward(4)</div><div id='n_method'> N Method Name: forward(4)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: code/baselines/Transformer_baseline.py</div><div id='n_file'> N File Name: code/baselines/Transformer_baseline.py</div><div id='m_start'> M Start Line: 146</div><div id='m_end'> M End Line: 149</div><div id='n_start'> N Start Line: 150</div><div id='n_end'> N End Line: 163</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                                           jacobian=False)
+
+        djast = djast / jast.unsqueeze(-1)
+        djast = <a id="change">djast.permute(0, 2, 1).flatten(start_dim=1)</a>
+
+        d2jast = d2jast / jast
+
+        grad_val = self.fc(operator.add(*grad) *</code></pre><h3>After Change</h3><pre><code class='java'>
+        out = d2jast.sum(-1) + 2*(grad_val * djast).sum(0) + \
+            hess.squeeze(-1)
+
+        return -0.5 * <a id="change">out.unsqueeze(-1</a><a id="change">)</a>
+
+    def gradients_jacobi(self, x, jacobian=True):
+        Computes the gradients of the wf using Jacobi&quots Formula
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/nlesc-jcer/qmctorch/commit/5654a53cdf0573c98200d679edd17b0a5a81cd9d#diff-eaa9ccab6d453eea2609ffcad8418988e71115a6453ac7f631fad12f23df9977L122' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 65200105</div><div id='project'> Project Name: nlesc-jcer/qmctorch</div><div id='commit'> Commit Name: 5654a53cdf0573c98200d679edd17b0a5a81cd9d</div><div id='time'> Time: 2021-04-13</div><div id='author'> Author: nicolas.gm.renaud@gmail.com</div><div id='file'> File Name: qmctorch/wavefunction/slater_jastrow_backflow.py</div><div id='m_class'> M Class Name: SlaterJastrowBackFlow</div><div id='n_method'> N Class Name: SlaterJastrowBackFlow</div><div id='m_method'> M Method Name: kinetic_energy_jacobi(2)</div><div id='n_method'> N Method Name: kinetic_energy_jacobi(2)</div><div id='m_parent_class'> M Parent Class: SlaterJastrowBase</div><div id='n_parent_class'> N Parent Class: SlaterJastrowBase</div><div id='m_file'> M File Name: qmctorch/wavefunction/slater_jastrow_backflow.py</div><div id='n_file'> N File Name: qmctorch/wavefunction/slater_jastrow_backflow.py</div><div id='m_start'> M Start Line: 165</div><div id='m_end'> M End Line: 187</div><div id='n_start'> N Start Line: 165</div><div id='n_end'> N End Line: 200</div><BR>

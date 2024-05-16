@@ -1,0 +1,32 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+    if args.model != &quotTransformer&quot:
+        hidden = model.init_hidden(args.batch_size)
+    length<a id="change"> = </a>len(range(0, <a id="change">train_data.size(0</a><a id="change">)</a> - 1, args.bptt))
+
+    with tqdm(total=length, 
+              desc=&quotEpoch {:2d}/{:2d}&quot.format(epoch + 1, args.epochs),</code></pre><h3>After Change</h3><pre><code class='java'>
+    with tqdm(total=len(train_loader), 
+              desc=&quotEpoch {:2d}/{:2d}&quot.format(epoch + 1, args.epochs),
+              disable=not args.verbose) as t:
+        for batch_idx, (data, target) in <a id="change">enumerate(</a>train_loader<a id="change">)</a>:
+            if args.cuda:
+                data, target = data.cuda(), target.cuda()
+            data, target = torch.squeeze(data), torch.squeeze(target)
+            &#47&#47 Starting each batch, we detach the hidden state from how it was 
+            &#47&#47 previously produced. If we didn&quott, the model would try backpropagating 
+            &#47&#47 all the way to start of the dataset.
+            model.zero_grad()
+            if args.model == &quotTransformer&quot:
+                output = model(data)
+                output = output.view(-1, args.ntokens)
+            else:
+                hidden = repackage_hidden(hidden)
+                output, hidden = model(data, hidden)
+            loss<a id="change"> = </a>criterion(output, target)
+
+            loss.backward()
+            train_loss.update(loss)</code></pre>

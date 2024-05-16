@@ -1,0 +1,59 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+    def forward(self, input_ids, labels=None, past=None, attention_mask=None, token_type_ids=None, position_ids=None, head_mask=None,
+                ):
+        <a id="change">transformer_outputs</a> = <a id="change">self.transformer(</a>input_ids,
+                                               self.w_wte<a id="change">,
+                                               past=past,
+                                               attention_mask=attention_mask,
+                                               token_type_ids=token_type_ids,
+                                               position_ids=position_ids,
+                                               head_mask=head_mask)</a>
+
+        hidden_states<a id="change"> = transformer_outputs</a><a id="change">[0]</a>
+        &#47&#47 hidden_states should be torch.Size([1, 1024, 768]) after reshape
+        &#47&#47 hidden_states=hidden_states.view(-1,self.n_positions,self.n_embed)
+        <a id="change">lm_logits</a> = self.stateless_lm_head(self.w_wte, hidden_states)
+        outputs<a id="change"> = </a>(<a id="change">lm_logits</a>,)<a id="change"> + transformer_outputs[1:]</a>
+        <a id="change">if labels is not None</a>:
+            &#47&#47 Shift so that tokens &lt; n predict n
+            <a id="change">shift_logits = lm_logits[..., :-1, :]</a><a id="change">.contiguous()</a>
+            shift_labels<a id="change"> = labels</a><a id="change">[..., 1:].contiguous()</a>
+            &#47&#47 Flatten the tokens
+            &#47&#47 loss_fct = CrossEntropyLoss(ignore_index=-100)
+
+            def loss_fct(logits, labels):
+                return nn.functional.cross_entropy(logits, labels, ignore_index=-100)
+            loss<a id="change"> = </a>loss_fct(<a id="change">shift_logits.view(-1</a>, <a id="change">shift_logits.size(-1</a><a id="change">)</a><a id="change">)</a>,
+                            <a id="change">shift_labels.view(-1</a><a id="change">)</a>)
+            
+            &#47&#47 HACK: changed to output just the loss, somehow this improves partitioning results,
+            &#47&#47 need to understand why.
+            outputs = (loss<a id="change"></a>,)
+            &#47&#47 outputs = (loss,) + outputs
+
+        &#47&#47 (loss), lm_logits, presents, (all hidden_states), (attentions)
+        <a id="change">return </a>outputs
+
+
+@add_start_docstrings(The GPT2 Model transformer with a language modeling and a multiple-choice classification</code></pre><h3>After Change</h3><pre><code class='java'>
+                                   self.transformer.wte)
+
+    def forward(self, input_ids, labels=None):
+        hidden_states = <a id="change">self.transformer(</a>input_ids,
+                                         self.w_wte<a id="change">)</a>
+
+        &#47&#47 hidden_states should be torch.Size([1, 1024, 768]) after reshape
+        &#47&#47 hidden_states=hidden_states.view(-1,self.n_positions,self.n_embed)
+        <a id="change">lm_logits</a> = self.stateless_lm_head(self.w_wte, hidden_states)
+        output = self.compute_output(lm_logits,
+                                     labels=labels)
+
+        &#47&#47 loss or logits
+        <a id="change">return </a>output
+
+
+@add_start_docstrings(The GPT2 Model transformer with a language modeling and a multiple-choice classification</code></pre>

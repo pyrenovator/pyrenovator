@@ -1,0 +1,178 @@
+<html><h3>Pattern ID :26147
+</h3><img src='78820578.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            itertools.accumulate(batch_size_per_feature)
+        )
+        recat_per_feature = recat
+        recat = <a id="change">[]</a>
+        <a id="change">for </a>r in recat_per_feature<a id="change">:
+            </a><a id="change">recat.extend(
+                </a>list(
+                    range(
+                        batch_size_per_feature_cumsum[r],
+                        batch_size_per_feature_cumsum[r + 1],
+                    )
+                )<a id="change">
+            )</a>
+
+    return recat
+
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    with record_function("&#47&#47&#47&#47 all2all_data:recat_permute_gen &#47&#47&#47&#47"):
+        recat: List[int] = []
+
+        <a id="change">if local_split == 0</a>:
+            return torch.tensor(recat, device=device, dtype=torch.int32)
+
+        feature_order: List[int] = [
+            x + num_splits // stagger * y
+            for x in range(num_splits // stagger)
+            for y in range(stagger)
+        ]
+
+        for i in range(local_split):
+            for j in feature_order:  &#47&#47 range(num_splits):
+                recat.append(i + j * local_split)
+
+        &#47&#47 variable batch size
+        if batch_size_per_rank is not None:
+            batch_size_per_feature = list(
+                itertools.chain.from_iterable(
+                    itertools.repeat(x, local_split) for x in batch_size_per_rank
+                )
+            )
+            permuted_batch_size_per_feature = [batch_size_per_feature[r] for r in recat]
+            input_offset = [0] + list(itertools.accumulate(batch_size_per_feature))
+            output_offset = [0]<a id="change"> + </a>list(
+                itertools.accumulate(permuted_batch_size_per_feature)
+            )
+            recat_tensor<a id="change"> = </a>torch.tensor(
+                recat,
+                device=device,
+                dtype=torch.int32,
+            )
+            input_offset_tensor = torch.tensor(
+                input_offset,
+                device=device,
+                dtype=torch.int32,
+            )
+            output_offset_tensor<a id="change"> = </a>torch.tensor(
+                output_offset,
+                device=device,
+                dtype=torch.int32,
+            )
+            recat = torch.ops.fbgemm.expand_into_jagged_permute(
+                recat_tensor,
+                input_offset_tensor,
+                output_offset_tensor,
+                output_offset[-1],
+            )
+            return recat
+        else:
+            <a id="change">return </a>torch.tensor(recat, device=device, dtype=torch.int32)
+
+
+def _split_lengths(</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 9</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/facebookresearch/torchrec/commit/860d5740f4a0f3c39b09457e6e3f83c71d3589d6#diff-b6e190b5c72ee118670ea8a50a0fbd5ceb0e88769d9bb88e1e61982a27762389L44' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 78820578</div><div id='project'> Project Name: facebookresearch/torchrec</div><div id='commit'> Commit Name: 860d5740f4a0f3c39b09457e6e3f83c71d3589d6</div><div id='time'> Time: 2022-03-30</div><div id='author'> Author: leongao@fb.com</div><div id='file'> File Name: torchrec/distributed/dist_data.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: _get_recat(5)</div><div id='n_method'> N Method Name: _get_recat(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: torchrec/distributed/dist_data.py</div><div id='n_file'> N File Name: torchrec/distributed/dist_data.py</div><div id='m_start'> M Start Line: 67</div><div id='m_end'> M End Line: 101</div><div id='n_start'> N Start Line: 44</div><div id='n_end'> N End Line: 120</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            itertools.accumulate(batch_size_per_feature)
+        )
+        recat_per_feature = recat
+        recat = <a id="change">[]</a>
+        <a id="change">for r</a> in recat_per_feature<a id="change">:
+            </a><a id="change">recat.extend(
+                </a>list(
+                    range(
+                        batch_size_per_feature_cumsum[r],
+                        batch_size_per_feature_cumsum[r + 1],
+                    )
+                )<a id="change">
+            )</a>
+
+    return recat
+
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    with record_function("&#47&#47&#47&#47 all2all_data:recat_permute_gen &#47&#47&#47&#47"):
+        recat: List[int] = []
+
+        <a id="change">if local_split == 0</a>:
+            <a id="change">return </a>torch.tensor(recat, device=device, dtype=torch.int32)
+
+        feature_order: List[int] = [
+            x + num_splits // stagger * y
+            for x in range(num_splits // stagger)
+            for y in range(stagger)
+        ]
+
+        for i in range(local_split):
+            for j in feature_order:  &#47&#47 range(num_splits):
+                recat.append(i + j * local_split)
+
+        &#47&#47 variable batch size
+        if batch_size_per_rank is not None:
+            batch_size_per_feature = list(
+                itertools.chain.from_iterable(
+                    itertools.repeat(x, local_split) for x in batch_size_per_rank
+                )
+            )
+            permuted_batch_size_per_feature = [batch_size_per_feature[r] for r in recat]
+            input_offset = [0] + list(itertools.accumulate(batch_size_per_feature))
+            output_offset = [0]<a id="change"> + </a>list(
+                itertools.accumulate(permuted_batch_size_per_feature)
+            )
+            recat_tensor<a id="change"> = </a>torch.tensor(
+                recat,
+                device=device,
+                dtype=torch.int32,
+            )
+            input_offset_tensor = torch.tensor(
+                input_offset,
+                device=device,
+                dtype=torch.int32,
+            )
+            output_offset_tensor<a id="change"> = </a>torch.tensor(
+                output_offset,
+                device=device,
+                dtype=torch.int32,</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/facebookresearch/torchrec/commit/860d5740f4a0f3c39b09457e6e3f83c71d3589d6#diff-b6e190b5c72ee118670ea8a50a0fbd5ceb0e88769d9bb88e1e61982a27762389L40' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 78820579</div><div id='project'> Project Name: facebookresearch/torchrec</div><div id='commit'> Commit Name: 860d5740f4a0f3c39b09457e6e3f83c71d3589d6</div><div id='time'> Time: 2022-03-30</div><div id='author'> Author: leongao@fb.com</div><div id='file'> File Name: torchrec/distributed/dist_data.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: _get_recat(5)</div><div id='n_method'> N Method Name: _get_recat(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: torchrec/distributed/dist_data.py</div><div id='n_file'> N File Name: torchrec/distributed/dist_data.py</div><div id='m_start'> M Start Line: 67</div><div id='m_end'> M End Line: 101</div><div id='n_start'> N Start Line: 44</div><div id='n_end'> N End Line: 120</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    def tokenize(self, text, maxlen=None):
+        spaced_text = self._basic_tokenize(text)
+        tokens = <a id="change">[]</a>
+        <a id="change">for text</a> in spaced_text.strip().split()<a id="change">:
+            </a><a id="change">tokens.extend(</a>self._word_piece_tokenize(text)<a id="change">)</a>
+
+        return tokens
+
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        if self._token_end is not None:
+            tokens.append(self._token_end)
+
+        <a id="change">if maxlen is None</a>:
+            <a id="change">return </a>tokens
+
+        pop_index<a id="change"> = </a>int(bool(self._token_end))<a id="change"> + </a>1
+        tokens<a id="change">, _ = </a>self.truncate_seq(tokens, None, maxlen=maxlen, pop_index=-pop_index)
+        return tokens
+
+    def encode(self, first_text, second_text=None, maxlen=None, pattern=&quotS*E*E&quot):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/xv44586/toolkit4nlp/commit/0bf79d28404d2804b16e8ed743858fb121d49f20#diff-2ccc30e47ed2daa8c67c53311ea7c476ec45d8ff779850b34fbb592a84a66cedL239' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 78820564</div><div id='project'> Project Name: xv44586/toolkit4nlp</div><div id='commit'> Commit Name: 0bf79d28404d2804b16e8ed743858fb121d49f20</div><div id='time'> Time: 2020-07-18</div><div id='author'> Author: xv44586@163.com</div><div id='file'> File Name: toolkit4nlp/tokenizers.py</div><div id='m_class'> M Class Name: Tokenizer</div><div id='n_method'> N Class Name: Tokenizer</div><div id='m_method'> M Method Name: tokenize(3)</div><div id='n_method'> N Method Name: tokenize(3)</div><div id='m_parent_class'> M Parent Class: BasicTokenizer</div><div id='n_parent_class'> N Parent Class: BasicTokenizer</div><div id='m_file'> M File Name: toolkit4nlp/tokenizers.py</div><div id='n_file'> N File Name: toolkit4nlp/tokenizers.py</div><div id='m_start'> M Start Line: 240</div><div id='m_end'> M End Line: 245</div><div id='n_start'> N Start Line: 316</div><div id='n_end'> N End Line: 326</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    def tokenize(self, text, maxlen=None):
+        spaced_text = self._basic_tokenize(text)
+        tokens = <a id="change">[]</a>
+        <a id="change">for text</a> in spaced_text.strip().split()<a id="change">:
+            </a><a id="change">tokens.extend(</a>self._word_piece_tokenize(text)<a id="change">)</a>
+
+        return tokens
+
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        if self._token_end is not None:
+            tokens.append(self._token_end)
+
+        <a id="change">if maxlen is None</a>:
+            <a id="change">return </a>tokens
+
+        pop_index<a id="change"> = </a>int(bool(self._token_end))<a id="change"> + </a>1
+        tokens<a id="change">, _ = </a>self.truncate_seq(tokens, None, maxlen=maxlen, pop_index=-pop_index)
+        return tokens
+
+    def encode(self, first_text, second_text=None, maxlen=None, pattern=&quotS*E*E&quot):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/xv44586/toolkit4nlp/commit/be67410e44e5fa777976bec4d242af8411a31adf#diff-2ccc30e47ed2daa8c67c53311ea7c476ec45d8ff779850b34fbb592a84a66cedL239' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 78820565</div><div id='project'> Project Name: xv44586/toolkit4nlp</div><div id='commit'> Commit Name: be67410e44e5fa777976bec4d242af8411a31adf</div><div id='time'> Time: 2020-07-18</div><div id='author'> Author: xv44586@163.com</div><div id='file'> File Name: toolkit4nlp/tokenizers.py</div><div id='m_class'> M Class Name: Tokenizer</div><div id='n_method'> N Class Name: Tokenizer</div><div id='m_method'> M Method Name: tokenize(3)</div><div id='n_method'> N Method Name: tokenize(3)</div><div id='m_parent_class'> M Parent Class: BasicTokenizer</div><div id='n_parent_class'> N Parent Class: BasicTokenizer</div><div id='m_file'> M File Name: toolkit4nlp/tokenizers.py</div><div id='n_file'> N File Name: toolkit4nlp/tokenizers.py</div><div id='m_start'> M Start Line: 240</div><div id='m_end'> M End Line: 245</div><div id='n_start'> N Start Line: 316</div><div id='n_end'> N End Line: 326</div><BR>

@@ -1,0 +1,57 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            &#47&#47con_ls = 0
+            img_con_loss += img_con_ls.item()
+            txt_con_loss += txt_con_ls.item()
+            bce_loss += <a id="change">bce_ls.item()</a>
+            &#47&#47con_loss += 0
+            ce_loss += ce_ls.item()
+            loss = ce_ls + self.img_con_loss_weight * img_con_ls + self.txt_con_loss_weight * txt_con_ls \
+                   + self.bce_loss_weight * bce_ls</code></pre><h3>After Change</h3><pre><code class='java'>
+        img_con_loss = 0
+        txt_con_loss = 0
+        img_bce_loss = 0
+        txt_bce_loss<a id="change"> = 0</a>
+        self.model.train()
+        for batch_idx, (images_id, images, reports_ids, reports_masks, labels) in enumerate(self.train_dataloader):
+
+            images, reports_ids, reports_masks, labels = images.to(self.device), reports_ids.to(self.device), \
+                                                 reports_masks.to(self.device), labels.to(self.device)
+
+            output, img_con_ls, txt_con_ls, img_cls, txt_cls = self.model(images, reports_ids, labels=labels, mode=&quottrain&quot)
+            img_bce_ls = self.bce_loss(img_cls, labels)
+            txt_bce_ls = self.bce_loss(txt_cls, labels)
+            ce_ls = self.criterion(output, reports_ids, reports_masks)
+            &#47&#47print(&quot222&quot, con_ls, con_ls.shape)
+            &#47&#47if self.n_gpu &gt; 1:
+            img_con_ls = img_con_ls.mean()
+            txt_con_ls = txt_con_ls.mean()
+            &#47&#47con_ls = contrastive_loss(memory_matrix, labels)
+            &#47&#47con_ls = 0
+            img_con_loss += img_con_ls.item()
+            txt_con_loss += txt_con_ls.item()
+            img_bce_loss += img_bce_ls.item()
+            txt_bce_loss<a id="change"> += txt_bce_ls.item()</a>
+            &#47&#47con_loss += 0
+            ce_loss += ce_ls.item()
+            loss = ce_ls + self.img_con_loss_weight * img_con_ls + self.txt_con_loss_weight * txt_con_ls \
+                   + self.img_bce_loss_weight * img_bce_ls + self.txt_bce_loss_weight * txt_bce_ls
+            self.optimizer.zero_grad()
+            loss.backward()
+            self.optimizer.step()
+            if batch_idx % self.args.log_period == 0:
+                self.logger.info(&quot[{}/{}] Step: {}/{}, CE Ls: {:.5f}, CON Ls1: {:.5f}, CON Ls2: &quot
+                                 &quot{:.5f}, BCE Ls1: {:.5f}, BCE Ls2: {:.5f}.&quot
+                                 .format(epoch, self.epochs, batch_idx, len(self.train_dataloader),
+                                         ce_loss / (batch_idx + 1), img_con_loss / (batch_idx + 1),
+                                         txt_con_loss / (batch_idx + 1), img_bce_loss / (batch_idx + 1),
+                                         txt_bce_ls / (batch_idx + 1)))
+
+        log = {&quotce_loss&quot: ce_loss / len(self.train_dataloader), &quotimg_con&quot: img_con_loss / len(self.train_dataloader),
+               &quottxt_con&quot: txt_con_loss / len(self.train_dataloader),
+               &quotimg_bce_loss&quot: img_bce_loss / len(self.train_dataloader), &quottxt_bce_loss&quot: txt_bce_loss<a id="change"> / </a><a id="change">len(</a>self.train_dataloader<a id="change">)</a>}
+
+        self.logger.info(&quot[{}/{}] Start to evaluate in the validation set.&quot.format(epoch, self.epochs))
+        self.model.eval()</code></pre>

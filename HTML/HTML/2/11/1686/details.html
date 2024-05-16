@@ -1,0 +1,139 @@
+<html><h3>Pattern ID :1686
+</h3><img src='7975089.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        elif m is nn.BatchNorm2d:
+            args = [ch[f]]
+        elif m is Concat:
+            c2 = sum(<a id="change">[ch[x] for x in f]</a>)
+        elif m is Detect:
+            args.append([ch[x] for x in f])
+            if isinstance(args[1], int):  &#47&#47 number of anchors
+                args[1] = [list(range(args[1] * 2))] * len(f)
+        elif m is Contract:
+            c2 = ch[f] * args[0] ** 2
+        elif m is Expand:
+            c2 = ch[f] // args[0] ** 2
+        else:
+            c2 = ch[f]
+
+        m_ = nn.Sequential(*<a id="change">[m(*args) for _ in range(n)]</a>) if n &gt; 1 else m(*args)  &#47&#47 module
+        t = str(m)[8:-2].replace(&quot__main__.&quot, &quot&quot)  &#47&#47 module type
+        np = sum(<a id="change">[x.numel() for x in m_.parameters()]</a>)  &#47&#47 number params
+        m_.i, m_.f, m_.type, m_.np = i, f, t, np  &#47&#47 attach index, &quotfrom&quot index, type, number params
+        LOGGER.info(&quot%3s%18s%3s%10.0f  %-40s%-30s&quot<a id="change"> % </a>(<a id="change">i</a><a id="change">, f, n_, np, t, args</a>))  &#47&#47 print
+        save.extend(x % i for x in ([f] if isinstance(f, int) else f) if x != -1)  &#47&#47 append to savelist
+        layers.append(m_)
+        if i == 0:</code></pre><h3>After Change</h3><pre><code class='java'>
+        else:
+            c2 = ch[f]
+
+        m_ = nn.Sequential(*<a id="change">(m(*args) for _ in range(n))</a>) if n &gt; 1 else m(*args)  &#47&#47 module
+        t = str(m)[8:-2].replace(&quot__main__.&quot, &quot&quot)  &#47&#47 module type
+        np = sum(x.numel() for x in m_.parameters())  &#47&#47 number params
+        m_.i, m_.f, m_.type, m_.np = i, f, t, np  &#47&#47 attach index, &quotfrom&quot index, type, number params</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 10</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/ultralytics/yolov5/commit/ed887b5976d94dc61fa3f7e8e07170623dc7d6ee#diff-2cd118cbb69c9ca7b5544f4187b11335fc3addbaf2c3c5bb45435cac648c957bL250' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 7975089</div><div id='project'> Project Name: ultralytics/yolov5</div><div id='commit'> Commit Name: ed887b5976d94dc61fa3f7e8e07170623dc7d6ee</div><div id='time'> Time: 2021-10-28</div><div id='author'> Author: Borda@users.noreply.github.com</div><div id='file'> File Name: models/yolo.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: parse_model(2)</div><div id='n_method'> N Method Name: parse_model(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: models/yolo.py</div><div id='n_file'> N File Name: models/yolo.py</div><div id='m_start'> M Start Line: 250</div><div id='m_end'> M End Line: 294</div><div id='n_start'> N Start Line: 250</div><div id='n_end'> N End Line: 294</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    no = na * (nc + 5)  &#47&#47 number of outputs = anchors * (classes + 5)
+
+    layers, save, c2 = [], [], ch[-1]  &#47&#47 layers, savelist, ch out
+    for <a id="change">i</a>, (f, n, m, args) in enumerate(d[&quotbackbone&quot] + d[&quothead&quot]):  &#47&#47 from, number, module, args
+        m_str = m
+        m = eval(m) if isinstance(m, str) else m  &#47&#47 eval strings
+        for j, a in enumerate(args):
+            try:
+                args[j] = eval(a) if isinstance(a, str) else a  &#47&#47 eval strings
+            except NameError:
+                pass
+
+        n = max(round(n * gd), 1) if n &gt; 1 else n  &#47&#47 depth gain
+        if m in [nn.Conv2d, Conv, Bottleneck, SPP, SPPF, DWConv, MixConv2d, Focus, CrossConv, BottleneckCSP, C3]:
+            c1, c2 = ch[f], args[0]
+            c2 = make_divisible(c2 * gw, 8) if c2 != no else c2
+
+            args = [c1, c2, *args[1:]]
+            if m in [BottleneckCSP, C3]:
+                args.insert(2, n)
+                n = 1
+        elif m is nn.BatchNorm2d:
+            args = [ch[f]]
+        elif m is Concat:
+            c2 = sum(<a id="change">[ch[-1 if x == -1 else x + 1] for x in f]</a>)
+        elif m is Detect:
+            args.append([ch[x + 1] for x in f])
+            if isinstance(args[1], int):  &#47&#47 number of anchors
+                args[1] = [list(range(args[1] * 2))] * len(f)
+            args.append(imgsz)
+        else:
+            c2 = ch[f]
+
+        tf_m = eval(&quotTF&quot + m_str.replace(&quotnn.&quot, &quot&quot))
+        m_ = keras.Sequential([tf_m(*args, w=model.model[i][j]) for j in range(n)]) if n &gt; 1 \
+            else tf_m(*args, w=model.model[i])  &#47&#47 module
+
+        torch_m_ = nn.Sequential(*<a id="change">[m(*args) for _ in range(n)]</a>) if n &gt; 1 else m(*args)  &#47&#47 module
+        t = str(m)[8:-2].replace(&quot__main__.&quot, &quot&quot)  &#47&#47 module type
+        np = sum(<a id="change">[x.numel() for x in torch_m_.parameters()]</a>)  &#47&#47 number params
+        m_.i, m_.f, m_.type, m_.np = i, f, t, np  &#47&#47 attach index, &quotfrom&quot index, type, number params
+        LOGGER.info(&quot%3s%18s%3s%10.0f  %-40s%-30s&quot<a id="change"> % </a>(i<a id="change">, f, n, np, t, args</a>))  &#47&#47 print
+        save.extend(x % i for x in ([f] if isinstance(f, int) else f) if x != -1)  &#47&#47 append to savelist
+        layers.append(m_)
+        ch.append(c2)</code></pre><h3>After Change</h3><pre><code class='java'>
+        m_ = keras.Sequential([tf_m(*args, w=model.model[i][j]) for j in range(n)]) if n &gt; 1 \
+            else tf_m(*args, w=model.model[i])  &#47&#47 module
+
+        torch_m_ = nn.Sequential(*<a id="change">(m(*args) for _ in range(n))</a>) if n &gt; 1 else m(*args)  &#47&#47 module
+        t = str(m)[8:-2].replace(&quot__main__.&quot, &quot&quot)  &#47&#47 module type
+        np = sum(x.numel() for x in torch_m_.parameters())  &#47&#47 number params
+        m_.i, m_.f, m_.type, m_.np = i, f, t, np  &#47&#47 attach index, &quotfrom&quot index, type, number params</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/ultralytics/yolov5/commit/ed887b5976d94dc61fa3f7e8e07170623dc7d6ee#diff-8e25d6265fbd96f107ef99cdbbdef2848f4e700aecf9c2e7767d82838c9b2e52L274' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 7975088</div><div id='project'> Project Name: ultralytics/yolov5</div><div id='commit'> Commit Name: ed887b5976d94dc61fa3f7e8e07170623dc7d6ee</div><div id='time'> Time: 2021-10-28</div><div id='author'> Author: Borda@users.noreply.github.com</div><div id='file'> File Name: models/tf.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: parse_model(4)</div><div id='n_method'> N Method Name: parse_model(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: models/tf.py</div><div id='n_file'> N File Name: models/tf.py</div><div id='m_start'> M Start Line: 275</div><div id='m_end'> M End Line: 319</div><div id='n_start'> N Start Line: 275</div><div id='n_end'> N End Line: 319</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    no = na * (nc + 5)  &#47&#47 number of outputs = anchors * (classes + 5)
+
+    layers, save, c2 = [], [], ch[-1]  &#47&#47 layers, savelist, ch out
+    for <a id="change">i</a>, (f, n, m, args) in enumerate(d[&quotbackbone&quot] + d[&quothead&quot]):  &#47&#47 from, number, module, args
+        m = eval(m) if isinstance(m, str) else m  &#47&#47 eval strings
+        for j, a in enumerate(args):
+            try:
+                args[j] = eval(a) if isinstance(a, str) else a  &#47&#47 eval strings
+            except NameError:
+                pass
+
+        n = n_ = max(round(n * gd), 1) if n &gt; 1 else n  &#47&#47 depth gain
+        if m in [Conv, GhostConv, Bottleneck, GhostBottleneck, SPP, SPPF, DWConv, MixConv2d, Focus, CrossConv,
+                 BottleneckCSP, C3, C3TR, C3SPP, C3Ghost]:
+            c1, c2 = ch[f], args[0]
+            if c2 != no:  &#47&#47 if not output
+                c2 = make_divisible(c2 * gw, 8)
+
+            args = [c1, c2, *args[1:]]
+            if m in [BottleneckCSP, C3, C3TR, C3Ghost]:
+                args.insert(2, n)  &#47&#47 number of repeats
+                n = 1
+        elif m is nn.BatchNorm2d:
+            args = [ch[f]]
+        elif m is Concat:
+            c2 = sum(<a id="change">[ch[x] for x in f]</a>)
+        elif m is Detect:
+            args.append([ch[x] for x in f])
+            if isinstance(args[1], int):  &#47&#47 number of anchors
+                args[1] = [list(range(args[1] * 2))] * len(f)
+        elif m is Contract:
+            c2 = ch[f] * args[0] ** 2
+        elif m is Expand:
+            c2 = ch[f] // args[0] ** 2
+        else:
+            c2 = ch[f]
+
+        m_ = nn.Sequential(*<a id="change">[m(*args) for _ in range(n)]</a>) if n &gt; 1 else m(*args)  &#47&#47 module
+        t = str(m)[8:-2].replace(&quot__main__.&quot, &quot&quot)  &#47&#47 module type
+        np = sum(<a id="change">[x.numel() for x in m_.parameters()]</a>)  &#47&#47 number params
+        m_.i, m_.f, m_.type, m_.np = i, f, t, np  &#47&#47 attach index, &quotfrom&quot index, type, number params
+        LOGGER.info(&quot%3s%18s%3s%10.0f  %-40s%-30s&quot<a id="change"> % </a>(i<a id="change">, f, n_, np, t, args</a>))  &#47&#47 print
+        save.extend(x % i for x in ([f] if isinstance(f, int) else f) if x != -1)  &#47&#47 append to savelist
+        layers.append(m_)
+        if i == 0:</code></pre><h3>After Change</h3><pre><code class='java'>
+        else:
+            c2 = ch[f]
+
+        m_ = nn.Sequential(*<a id="change">(m(*args) for _ in range(n))</a>) if n &gt; 1 else m(*args)  &#47&#47 module
+        t = str(m)[8:-2].replace(&quot__main__.&quot, &quot&quot)  &#47&#47 module type
+        np = sum(x.numel() for x in m_.parameters())  &#47&#47 number params
+        m_.i, m_.f, m_.type, m_.np = i, f, t, np  &#47&#47 attach index, &quotfrom&quot index, type, number params</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/pooya-mohammadi/deep_utils/commit/6c6bdc5844e3780de3f51693c710a1a9e68a0f7a#diff-49eab6b0c60ac05fb492f015910f89eb7e7700e4f19ef20b92bf2a7483df7ec3L249' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 7975090</div><div id='project'> Project Name: pooya-mohammadi/deep_utils</div><div id='commit'> Commit Name: 6c6bdc5844e3780de3f51693c710a1a9e68a0f7a</div><div id='time'> Time: 2022-03-14</div><div id='author'> Author: pooyamohammadikazaj@gmail.com</div><div id='file'> File Name: deep_utils/vision/object_detection/yolo/v5/torch/models/yolo.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: parse_model(2)</div><div id='n_method'> N Method Name: parse_model(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: deep_utils/vision/object_detection/yolo/v5/torch/models/yolo.py</div><div id='n_file'> N File Name: deep_utils/vision/object_detection/yolo/v5/torch/models/yolo.py</div><div id='m_start'> M Start Line: 250</div><div id='m_end'> M End Line: 294</div><div id='n_start'> N Start Line: 244</div><div id='n_end'> N End Line: 288</div><BR>

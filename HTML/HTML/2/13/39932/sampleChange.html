@@ -1,0 +1,31 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        train_dataset: (:obj:`List`): the training dataset, if use the training dataset to do contextualized calibrate.
+        valid_dataset: (:obj:`List`): the valid dataset, if use the valid dataset to do contextualized calibrate.
+    
+    <a id="change">if config.calibrate == "pmi_calibrate"</a>:
+        calibrate_logits = pmi_calibrate(model, max_seq_length=config.dataloader.max_seq_length)
+        model.register_calibrate_logits(calibrate_logits)
+    elif config.calibrate_type == "contextualized_calibrate":
+        <a id="change">if config.contextualized_calibrate.use_split == "train"</a>:
+            context_dataset = train_dataset
+        elif config.contextualized_calibrate.use_split == "valid":
+            context_dataset<a id="change"> = </a>valid_dataset
+        elif config.contextualized_calibrate.use_split is None and config.contextualized_calibrate.num_example is not None:
+            sampler = FewShotSampler(num_examples_total=config.contextualized_calibrate.num_example,
+                                also_sample_dev=False)
+            context_dataset<a id="change"> = </a>sampler(train_dataset)
+        calibrate_logits<a id="change"> = </a>contextualized_calibrate(model, context=context_dataset, max_seq_length=config.dataloader.max_seq_length)
+        model.register_calibrate_logits(calibrate_logits)
+
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    all_logits = []
+    prompt_model.eval()
+    for batch in tqdm(dataloader,desc=&quotContextCali&quot):
+        batch<a id="change"> = batch</a><a id="change">.to(</a>prompt_model.device<a id="change">)</a>
+        logits<a id="change"> = </a>prompt_model.forward_without_verbalize(batch)
+        all_logits.append(logits.detach())
+    all_logits = torch.cat(all_logits, dim=0)
+    return all_logits.mean(dim=0)</code></pre>

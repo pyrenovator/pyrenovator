@@ -1,0 +1,81 @@
+<html><h3>Pattern ID :12511
+</h3><img src='42415429.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        if task_id == 0:
+            ref_data = samples
+        else:
+            <a id="change">assert </a>not (ref_data==samples).all()
+
+            trsf_data = list_transf[task_id](ref_data)
+            assert not (ref_data==samples).all()</code></pre><h3>After Change</h3><pre><code class='java'>
+
+            &#47&#47 we test transformation on one data point and verify if it is applied
+            trsf = list_transf[task_id][0]
+            raw_sample<a id="change"> = </a>Image.fromarray(<a id="change">raw_ref_data[0].astype(</a>"uint8"<a id="change">)</a>)
+            trsf_data<a id="change"> = </a>trsf(raw_sample)
+            trsf_data = transforms.ToTensor()(trsf_data)
+
+            assert torch.all(trsf_data.eq(samples[0]))</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/continvvm/continuum/commit/4772377ba686811674439aca95a82ed81b68f1bd#diff-b77763d88250b0aa2ddca4cf656ec0408bae318dfed87ff71c15a3dda24088d9L34' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 42415429</div><div id='project'> Project Name: continvvm/continuum</div><div id='commit'> Commit Name: 4772377ba686811674439aca95a82ed81b68f1bd</div><div id='time'> Time: 2020-07-28</div><div id='author'> Author: t.lesort@gmail.com</div><div id='file'> File Name: tests/test_transformation_incremental.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: test_init(1)</div><div id='n_method'> N Method Name: test_init(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: tests/test_transformation_incremental.py</div><div id='n_file'> N File Name: tests/test_transformation_incremental.py</div><div id='m_start'> M Start Line: 34</div><div id='m_end'> M End Line: 55</div><div id='n_start'> N Start Line: 34</div><div id='n_end'> N End Line: 64</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        forward_pass_function(sim.session, None)
+
+        for name, qc_op in sim.get_qc_quantize_op().items():
+            <a id="change">assert </a>qc_op.tensor_quantizer.isEncodingValid is True
+
+
+def forward_pass_function(session, args=None):</code></pre><h3>After Change</h3><pre><code class='java'>
+        if not os.path.exists(WORKING_DIR):
+            os.makedirs(WORKING_DIR)
+
+        inputs<a id="change"> = </a><a id="change">np.random.rand(1, 3, 224, 224).astype(</a>np.float32<a id="change">)</a>
+
+        model = models.resnet18(pretrained=False)
+
+        &#47&#47 model = model.to(torch.device(&quotcuda&quot))
+
+        &#47&#47 layers_to_ignore = [model.conv1]
+        sim_pt = PtQuantizationSimModel(model, quant_scheme=QuantScheme.post_training_tf, default_param_bw=8,
+                                   default_output_bw=8, dummy_input=torch.as_tensor(inputs))
+
+        def dummy_forward_pass_pt(model, _):
+            model.eval()
+            model(torch.as_tensor(inputs))
+
+        &#47&#47 If &quotiterations&quotset to None, will iterate over all the validation data
+        sim_pt.compute_encodings(dummy_forward_pass_pt, forward_pass_callback_args=None)
+
+        torch.onnx.export(model, torch.as_tensor(inputs), os.path.join(WORKING_DIR, &quotresnet18.onnx&quot),
+                          training=torch.onnx.TrainingMode.PRESERVE,
+                          input_names=[&quotinput&quot], output_names=[&quotoutput&quot])
+
+        onnx_model = load_model(os.path.join(WORKING_DIR, &quotresnet18.onnx&quot))
+        sim = QuantizationSimModel(onnx_model, quant_scheme=QuantScheme.post_training_tf, default_param_bw=8,
+                                   default_activation_bw=8)
+
+        def dummy_forward_pass_onnx(session, _):
+            in_tensor = {&quotinput&quot: inputs}
+            session.run(None, in_tensor)
+
+        sim.compute_encodings(dummy_forward_pass_onnx, None)
+
+        pytorch_forward_pass_output<a id="change"> = </a>model(torch.as_tensor(inputs))
+        onnx_forward_pass_output = sim.session.run(None, {&quotinput&quot: inputs})
+        assert np.all((np.asarray(pytorch_forward_pass_output.detach().numpy()) - np.asarray(onnx_forward_pass_output)) &lt; 0.05)
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/quic/aimet/commit/5407489a33f6b1cd1f5826eda2e2a756d1bd7438#diff-399a3422b6263fcd378207253b1804985367f575917d6d3733a6275579e853cfL51' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 42415415</div><div id='project'> Project Name: quic/aimet</div><div id='commit'> Commit Name: 5407489a33f6b1cd1f5826eda2e2a756d1bd7438</div><div id='time'> Time: 2022-11-17</div><div id='author'> Author: 63610745+quic-mangal@users.noreply.github.com</div><div id='file'> File Name: NightlyTests/onnx/test_quantsim.py</div><div id='m_class'> M Class Name: TestQuantizeAcceptance</div><div id='n_method'> N Class Name: TestQuantizeAcceptance</div><div id='m_method'> M Method Name: test_quantize_resnet18(1)</div><div id='n_method'> N Method Name: test_quantize_resnet18(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: NightlyTests/onnx/test_quantsim.py</div><div id='n_file'> N File Name: NightlyTests/onnx/test_quantsim.py</div><div id='m_start'> M Start Line: 58</div><div id='m_end'> M End Line: 73</div><div id='n_start'> N Start Line: 54</div><div id='n_end'> N End Line: 93</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        hbf = HighBiasFold(model)
+        hbf.bias_fold(cls_set_info, bn_dict)
+        bias1_new = numpy_helper.to_array(ParamUtils.get_param(model.model, convs[1], BIAS_INDEX))
+        <a id="change">assert </a>not bias1.sum() == bias1_new.sum()
+
+def _build_session(model):
+    </code></pre><h3>After Change</h3><pre><code class='java'>
+        model_onnx, model_torch = models_for_tests.get_single_residual_model_and_torch_model()
+
+        input_shape = (1, 3, 32, 32)
+        test_data<a id="change"> = </a><a id="change">np.random.randn(*input_shape).astype(</a>np.float32<a id="change">)</a>
+        equalize_torch(model_torch, input_shape)
+        cle_out<a id="change"> = </a>model_torch(torch.as_tensor(test_data))
+
+        &#47&#47 Equalize ONNX
+        conv_bn_pairs, bn_conv_pairs = fold_all_batch_norms_to_weight(model_onnx.model)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/quic/aimet/commit/561eb0f70f1b9a8b5f8efbe82ff66c5da5dbe4cb#diff-e4f45301af3ca455a0c0247bab1f110651005f2bafd3c043b22658a18a9ce10eL182' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 42415418</div><div id='project'> Project Name: quic/aimet</div><div id='commit'> Commit Name: 561eb0f70f1b9a8b5f8efbe82ff66c5da5dbe4cb</div><div id='time'> Time: 2023-04-26</div><div id='author'> Author: 63610745+quic-mangal@users.noreply.github.com</div><div id='file'> File Name: TrainingExtensions/onnx/test/python/test_cross_layer_equalization.py</div><div id='m_class'> M Class Name: TestHighBiasFold</div><div id='n_method'> N Class Name: TestHighBiasFold</div><div id='m_method'> M Method Name: test_find_high_bias_fold(1)</div><div id='n_method'> N Method Name: test_find_high_bias_fold(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: TrainingExtensions/onnx/test/python/test_cross_layer_equalization.py</div><div id='n_file'> N File Name: TrainingExtensions/onnx/test/python/test_cross_layer_equalization.py</div><div id='m_start'> M Start Line: 183</div><div id='m_end'> M End Line: 199</div><div id='n_start'> N Start Line: 194</div><div id='n_end'> N End Line: 220</div><BR>

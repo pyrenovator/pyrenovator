@@ -1,0 +1,38 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    &#47&#47 sum all of the hinged pair-wise distances
+    hinged_dist = torch.sum(hinged_dist, dim=(0, 1))
+    &#47&#47 normalized by the number of paris and return
+    <a id="change">return </a>hinged_dist / (C * (C - 1))
+
+
+&#47&#47 NOTE: it would be better to not expand the instance sizes spatially, but instead expand the</code></pre><h3>After Change</h3><pre><code class='java'>
+    dist_matrix = torch.norm(cm_matrix1 - cm_matrix2, p=norm, dim=2)
+
+    C_norm = C
+    <a id="change">if ignore_labels is not None</a>:
+        &#47&#47 TODO implement arbitrary ignore labels
+        assert ignore_labels == [0], "Only zero ignore label supported so far"
+        if C == 2:
+            &#47&#47 just two cluster instances, including one which is ignored,
+            &#47&#47 i.e. distance term does not contribute to the loss
+            return 0.0
+        &#47&#47 set the distance to ignore-labels to be greater than 2*delta_dist,
+        &#47&#47 so that it does not contribute to the loss because of the hinge at 2*delta_dist
+
+        &#47&#47 find minimum dist
+        d_min = torch.min(dist_matrix[dist_matrix &gt; 0]).item()
+        &#47&#47 dist_multiplier = 2 * delta_dist / d_min + epsilon
+        dist_multiplier = 2 * delta_dist / d_min + 1e-3
+        &#47&#47 create distance mask
+        dist_mask = <a id="change">torch.ones_like(</a>dist_matrix<a id="change">)</a>
+        dist_mask[0, 1:] = dist_multiplier
+        dist_mask[1:, 0] = dist_multiplier
+
+        &#47&#47 mask the dist_matrix
+        dist_matrix<a id="change"> = </a>dist_matrix<a id="change"> * </a>dist_mask
+        &#47&#47 decrease number of instances
+        C_norm -= 1
+</code></pre>

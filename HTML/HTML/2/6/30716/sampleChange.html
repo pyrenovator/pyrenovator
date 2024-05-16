@@ -1,0 +1,19 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+
+def conv_encoder(inputs, mlp_ratio=4, kernel_size=7, layer_scale=1e-6, drop_rate=0, activation="gelu", name=""):
+    input_channel = <a id="change">inputs.shape[-1]</a>
+    nn = depthwise_conv2d_no_bias(inputs, kernel_size, use_bias=True, padding="SAME", name=name)
+    nn = norm_inverted_bottleneck(nn, mlp_ratio, layer_scale, drop_rate, activation=activation, name=name)
+    &#47&#47 print(f"{nn.shape = }, {inputs.shape = }")
+    return keras.layers.Add(name=name + "output")([inputs, nn])</code></pre><h3>After Change</h3><pre><code class='java'>
+
+def conv_encoder(inputs, mlp_ratio=4, kernel_size=7, layer_scale=1e-6, drop_rate=0, activation="gelu", name=""):
+    nn = depthwise_conv2d_no_bias(inputs, kernel_size, use_bias=True, padding="SAME", name=name)
+    nn = nn<a id="change"> if </a><a id="change">image_data_format() == "channels_last" else </a>layers.Permute([2, 3, 1])(nn)  &#47&#47 channels_first -&gt; channels_last
+    nn = norm_inverted_bottleneck(nn, mlp_ratio, layer_scale, drop_rate, activation=activation, name=name)
+    nn = nn if image_data_format() == "channels_last" else layers.Permute([3, 1, 2])(nn)  &#47&#47 channels_last -&gt; channels_first
+    &#47&#47 print(f"{nn.shape = }, {inputs.shape = }")</code></pre>

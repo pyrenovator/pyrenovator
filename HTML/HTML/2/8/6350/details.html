@@ -1,0 +1,85 @@
+<html><h3>Pattern ID :6350
+</h3><img src='22135527.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        if ids_freq_mapping is not None:
+            sorted_idx = np.flipud(np.argsort(ids_freq_mapping))
+
+        <a id="change">for _id</a> in <a id="change">range(</a>self.num_embeddings<a id="change">)</a><a id="change">:
+            </a>chunk_id<a id="change">, offset_in_chunk</a> = divmod(_id if ids_freq_mapping is None else sorted_idx[_id], self.chunk_size)
+            <a id="change">self.index_mapping_table.append(</a>(chunk_id, offset_in_chunk)<a id="change">)</a>
+            self.IMP_chunkid_Embedding.weight[_id]<a id="change"> = </a>chunk_id
+            self.IMP_offsetinchunk_Embedding.weight[_id] = offset_in_chunk
+        self.IMP_chunkid_Embedding = self.IMP_chunkid_Embedding.cuda()
+        self.IMP_offsetinchunk_Embedding = self.IMP_offsetinchunk_Embedding.cuda()</code></pre><h3>After Change</h3><pre><code class='java'>
+        if ids_freq_mapping is not None:
+            sorted_idx = torch.argsort(torch.from_numpy(ids_freq_mapping).cuda(), descending=True)
+        else:
+            sorted_idx<a id="change"> = </a><a id="change">torch.arange(</a>self.num_embeddings<a id="change">, device=torch.cuda.current_device(), dtype=torch.long)</a>
+
+        divs = torch.div(sorted_idx, self.chunk_size, rounding_mode=&quotfloor&quot).unsqueeze(1)
+        mods = torch.remainder(sorted_idx, self.chunk_size).unsqueeze(1)
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 7</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/hpcaitech/cachedembedding/commit/649b198bab518ec907dcf5b4ad2f33c6058b5697#diff-aab5f7e7e049810d29a74e3eab12af668892a81357998cc464ab0f8cd2272767L122' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 22135527</div><div id='project'> Project Name: hpcaitech/cachedembedding</div><div id='commit'> Commit Name: 649b198bab518ec907dcf5b4ad2f33c6058b5697</div><div id='time'> Time: 2022-07-26</div><div id='author'> Author: 34452939+zxgx@users.noreply.github.com</div><div id='file'> File Name: recsys/modules/embeddings/chunk_param_mgr.py</div><div id='m_class'> M Class Name: ChunkParamMgr</div><div id='n_method'> N Class Name: ChunkParamMgr</div><div id='m_method'> M Method Name: reorder(2)</div><div id='n_method'> N Method Name: reorder(2)</div><div id='m_parent_class'> M Parent Class: object</div><div id='n_parent_class'> N Parent Class: object</div><div id='m_file'> M File Name: recsys/modules/embeddings/chunk_param_mgr.py</div><div id='n_file'> N File Name: recsys/modules/embeddings/chunk_param_mgr.py</div><div id='m_start'> M Start Line: 122</div><div id='m_end'> M End Line: 130</div><div id='n_start'> N Start Line: 125</div><div id='n_end'> N End Line: 133</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        mask = torch.gt((key_padding_mask + look_ahead_mask), 0)
+        attn_weights = []
+        attn_outputs = behavior_list_emb_drop
+        <a id="change">for i</a> in <a id="change">range(</a>self.num_blocks<a id="change">)</a><a id="change">:
+            </a>attn_outputs<a id="change">, attn = </a>self.multi_head_attention(attn_outputs, attn_outputs, attn_outputs, mask)
+            <a id="change">attn_weights.append(</a>attn<a id="change">)</a>
+            attn_outputs = self.feedforward(attn_outputs)
+        long_term_prefernce = self.gather_indexes(attn_outputs, interaction[self.ITEM_LIST_LEN] - 1)
+        predict_behavior_emb = self.layer_norm(long_term_prefernce)
+        return predict_behavior_emb, attn_weights</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    def forward(self, interaction):
+        item_list = interaction[self.ITEM_ID_LIST]
+        position_ids = <a id="change">torch.arange(</a>item_list.size(1)<a id="change">, dtype=torch.long, device=item_list.device)</a>
+        position_ids = position_ids.unsqueeze(0).expand_as(item_list)
+        position_embedding = self.position_embedding(position_ids)
+
+        item_emb = self.item_embedding(item_list)
+        input_emb = item_emb + position_embedding
+        input_emb = self.LayerNorm(input_emb)
+        input_emb = self.dropout(input_emb)
+
+        extended_attention_mask = self.get_attention_mask(item_list)
+
+        trm_output = self.trm_encoder(input_emb,
+                                      extended_attention_mask,
+                                      output_all_encoded_layers=True)
+        output<a id="change"> = </a>trm_output[-1]
+        output = self.gather_indexes(output, interaction[self.ITEM_LIST_LEN] - 1)
+        return output &#47&#47 [B H]
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/rucaibox/recbole/commit/bcb4d69235f1460db426402cc76af1ec1db8e898#diff-3f2df073b88ea5a0412fb350bb06885c28d181f2bc95afabc9592a18c3ff3a70L62' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 22135526</div><div id='project'> Project Name: rucaibox/recbole</div><div id='commit'> Commit Name: bcb4d69235f1460db426402cc76af1ec1db8e898</div><div id='time'> Time: 2020-10-07</div><div id='author'> Author: 838803621@qq.com</div><div id='file'> File Name: recbox/model/sequential_recommender/sasrec.py</div><div id='m_class'> M Class Name: SASRec</div><div id='n_method'> N Class Name: SASRec</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: SequentialRecommender</div><div id='n_parent_class'> N Parent Class: SequentialRecommender</div><div id='m_file'> M File Name: recbox/model/sequential_recommender/sasrec.py</div><div id='n_file'> N File Name: recbox/model/sequential_recommender/sasrec.py</div><div id='m_start'> M Start Line: 63</div><div id='m_end'> M End Line: 78</div><div id='n_start'> N Start Line: 98</div><div id='n_end'> N End Line: 115</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        mask = torch.gt((key_padding_mask + look_ahead_mask), 0)
+        attn_weights = []
+        attn_outputs = behavior_list_emb_drop
+        <a id="change">for i</a> in <a id="change">range(</a>self.num_blocks<a id="change">)</a><a id="change">:
+            </a>attn_outputs<a id="change">, attn = </a>self.multi_head_attention(attn_outputs, attn_outputs, attn_outputs, mask)
+            <a id="change">attn_weights.append(</a>attn<a id="change">)</a>
+            attn_outputs = self.feedforward(attn_outputs)
+        long_term_prefernce = self.gather_indexes(attn_outputs, interaction[self.ITEM_LIST_LEN] - 1)
+        predict_behavior_emb = self.layer_norm(long_term_prefernce)
+        return predict_behavior_emb, attn_weights</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    def forward(self, interaction):
+        item_list = interaction[self.ITEM_ID_LIST]
+        position_ids = <a id="change">torch.arange(</a>item_list.size(1)<a id="change">, dtype=torch.long, device=item_list.device)</a>
+        position_ids = position_ids.unsqueeze(0).expand_as(item_list)
+        position_embedding = self.position_embedding(position_ids)
+
+        item_emb = self.item_embedding(item_list)
+        input_emb = item_emb + position_embedding
+        input_emb = self.LayerNorm(input_emb)
+        input_emb = self.dropout(input_emb)
+
+        extended_attention_mask = self.get_attention_mask(item_list)
+
+        trm_output = self.trm_encoder(input_emb,
+                                      extended_attention_mask,
+                                      output_all_encoded_layers=True)
+        output<a id="change"> = </a>trm_output[-1]
+        output = self.gather_indexes(output, interaction[self.ITEM_LIST_LEN] - 1)
+        return output &#47&#47 [B H]
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/rucaibox/recbole/commit/ffcc134b950b0452fc3002c303ddab36e6f9738c#diff-3f2df073b88ea5a0412fb350bb06885c28d181f2bc95afabc9592a18c3ff3a70L62' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 22135530</div><div id='project'> Project Name: rucaibox/recbole</div><div id='commit'> Commit Name: ffcc134b950b0452fc3002c303ddab36e6f9738c</div><div id='time'> Time: 2020-10-08</div><div id='author'> Author: 838803621@qq.com</div><div id='file'> File Name: recbox/model/sequential_recommender/sasrec.py</div><div id='m_class'> M Class Name: SASRec</div><div id='n_method'> N Class Name: SASRec</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: SequentialRecommender</div><div id='n_parent_class'> N Parent Class: SequentialRecommender</div><div id='m_file'> M File Name: recbox/model/sequential_recommender/sasrec.py</div><div id='n_file'> N File Name: recbox/model/sequential_recommender/sasrec.py</div><div id='m_start'> M Start Line: 63</div><div id='m_end'> M End Line: 78</div><div id='n_start'> N Start Line: 98</div><div id='n_end'> N End Line: 115</div><BR>

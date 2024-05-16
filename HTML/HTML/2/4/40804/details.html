@@ -1,0 +1,58 @@
+<html><h3>Pattern ID :40804
+</h3><img src='115184797.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        initrange = 0.1
+        self.encoder.weight.data.uniform_(-initrange, initrange)
+        self.decoder.bias.data.fill_(0)
+        <a id="change">self.decoder.weight.data.uniform_(-initrange</a>, initrange<a id="change">)</a>
+
+    def forward(self, input, hidden, return_h=False):
+        emb = embedded_dropout(self.encoder, input, dropout=self.dropoute if self.training else 0)
+        &#47&#47emb = self.idrop(emb)</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 self.decoder.bias.data.fill_(0)
+        &#47&#47 self.decoder.weight.data.uniform_(-initrange, initrange)
+        for name, param in self.named_parameters():
+            <a id="change">if </a>"weight_hh" in name:
+                nn.init.orthogonal_(param.data)
+            elif "weight_ih" in name:
+                nn.init.xavier_uniform_(param.data)
+            elif "bias" in name:
+                nn.init.zeros_(param.data)
+                param.data[self.nhid:2 * self.nhid]<a id="change"> = </a>1
+
+    def forward(self, input, hidden, return_h=False, lengths=None):
+        &#47&#47 emb = embedded_dropout(self.encoder, input, dropout=self.dropoute if self.training else 0)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/mourga/variational-lstm/commit/59c63b2394f0b42455673363b2acdb29446bd78b#diff-aebab7e121236eb0bad629139e9e8b895403caf822ce66eb06e349d8b4827de7L72' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 115184797</div><div id='project'> Project Name: mourga/variational-lstm</div><div id='commit'> Commit Name: 59c63b2394f0b42455673363b2acdb29446bd78b</div><div id='time'> Time: 2020-02-05</div><div id='author'> Author: katerina.margatina@gmail.com</div><div id='file'> File Name: rnn_model.py</div><div id='m_class'> M Class Name: RNNModel</div><div id='n_method'> N Class Name: RNNModel</div><div id='m_method'> M Method Name: init_weights(1)</div><div id='n_method'> N Method Name: init_weights(1)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: rnn_model.py</div><div id='n_file'> N File Name: rnn_model.py</div><div id='m_start'> M Start Line: 81</div><div id='m_end'> M End Line: 84</div><div id='n_start'> N Start Line: 72</div><div id='n_end'> N End Line: 81</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            batch_size, n_tokens = positions.shape
+            delta = torch.FloatTensor(batch_size, 1).uniform_(-self.max_global_shift, self.max_global_shift).to(positions.device)
+            if self.max_local_shift:
+                delta_local = <a id="change">torch.FloatTensor(batch_size, n_tokens).uniform_(</a>-(self.pos_scale*self.max_local_shift) / 2.0, (self.pos_scale*self.max_local_shift)<a id="change"> / </a>2.0<a id="change">)</a>.to(positions.device)
+            else:
+                delta_local = 0
+            log_lambdas = torch.FloatTensor(batch_size, 1).uniform_(-math.log(self.max_global_scaling), math.log(self.max_global_scaling)).to(positions.device)</code></pre><h3>After Change</h3><pre><code class='java'>
+                                                              self.max_global_shift)
+            delta = delta.to(positions.device)
+
+            <a id="change">if </a>self.max_local_shift:
+                epsilon = self.pos_scale * self.max_local_shift
+                delta_local<a id="change"> = </a>torch.FloatTensor(batch_size, n_tokens)
+                delta_local = delta_local.uniform_(-epsilon / 2.0,
+                                                   epsilon / 2.0)
+                delta_local = delta_local.to(positions.device)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/gcambara/cape/commit/58947c7941cf62d77a4ed713cf6a0e17af62cdda#diff-7fa374f1a5ecd784a38f81aa2a23c26df78689c32aa63e9cc88df831e1d6c877L43' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 115184796</div><div id='project'> Project Name: gcambara/cape</div><div id='commit'> Commit Name: 58947c7941cf62d77a4ed713cf6a0e17af62cdda</div><div id='time'> Time: 2021-11-19</div><div id='author'> Author: guillermocambara@gmail.com</div><div id='file'> File Name: cape/cape.py</div><div id='m_class'> M Class Name: CAPE1d</div><div id='n_method'> N Class Name: CAPE1d</div><div id='m_method'> M Method Name: _augment_positions(2)</div><div id='n_method'> N Method Name: _augment_positions(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: cape/cape.py</div><div id='n_file'> N File Name: cape/cape.py</div><div id='m_start'> M Start Line: 51</div><div id='m_end'> M End Line: 56</div><div id='n_start'> N Start Line: 56</div><div id='n_end'> N End Line: 72</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            new_bias = torch.empty(n_classes_to_add)
+            fan_in, _ = nn.init._calculate_fan_in_and_fan_out(self.output_layer.weight)
+            bound = 1 / math.sqrt(fan_in) if fan_in &gt; 0 else 0
+            <a id="change">nn.init.uniform_(</a>new_bias, <a id="change">-bound</a>, bound<a id="change">)</a>
+            self.output_layer.bias = nn.parameter.Parameter(
+                torch.cat([self.output_layer.bias, new_bias], axis=0)
+            )
+        self.output_layer.out_features += n_classes_to_add</code></pre><h3>After Change</h3><pre><code class='java'>
+            Number of output dimensions to add.
+        
+        new_weights = torch.mean(self.output_layer.weight,dim=0).unsqueeze(1).T
+        <a id="change">if </a>n_classes_to_add &gt; 1:
+            new_weights<a id="change"> = </a>new_weights.unsqueeze(1).T.repeat(1,n_classes_to_add, 1).squeeze()
+        self.output_layer.weight = nn.parameter.Parameter(
+            torch.cat([self.output_layer.weight, new_weights], axis=0)
+        )</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/online-ml/river-torch/commit/27f914a787bc844de5af4720487e2314f206960d#diff-b7b3dc93db412db0f1b244453a944c127c40d624ca0330c220405196365d357aL291' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 115184769</div><div id='project'> Project Name: online-ml/river-torch</div><div id='commit'> Commit Name: 27f914a787bc844de5af4720487e2314f206960d</div><div id='time'> Time: 2022-09-26</div><div id='author'> Author: cedric.kulbach@googlemail.com</div><div id='file'> File Name: river_torch/classification/classifier.py</div><div id='m_class'> M Class Name: Classifier</div><div id='n_method'> N Class Name: Classifier</div><div id='m_method'> M Method Name: _add_output_features(2)</div><div id='n_method'> N Method Name: _add_output_features(2)</div><div id='m_parent_class'> M Parent Class: DeepEstimator,base.Classifier</div><div id='n_parent_class'> N Parent Class: DeepEstimator,base.Classifier</div><div id='m_file'> M File Name: river_torch/classification/classifier.py</div><div id='n_file'> N File Name: river_torch/classification/classifier.py</div><div id='m_start'> M Start Line: 300</div><div id='m_end'> M End Line: 310</div><div id='n_start'> N Start Line: 300</div><div id='n_end'> N End Line: 311</div><BR>

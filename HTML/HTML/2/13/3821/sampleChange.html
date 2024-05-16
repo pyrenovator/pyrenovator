@@ -1,0 +1,50 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        for identity_label_name in utils.IDENTITY_LABELS:
+          additional_labels_all_dict[identity_label_name] = []
+
+      <a id="change">for </a>step in range(steps_per_eval[dataset_name])<a id="change">:
+        </a>if step % 20 == 0:
+          message = &quotStarting to run eval step {}/{} of dataset: {}&quot.format(
+              step, steps_per_eval[dataset_name], dataset_name)
+          logging.info(message)
+
+        <a id="change">try:
+          </a>(text_step, logits_step, labels_step,
+           additional_labels_dict_step)<a id="change"> = </a>final_eval_step(test_iterator)
+        <a id="change">except </a>tf.errors.OutOfRangeError:
+          <a id="change">continue</a>
+
+        texts_all.append(text_step)
+        logits_all.append(logits_step)
+        labels_all.append(labels_step)</code></pre><h3>After Change</h3><pre><code class='java'>
+        for identity_label_name in utils.IDENTITY_LABELS:
+          additional_labels_all_dict[identity_label_name] = []
+
+      <a id="change">try:
+        with tf.experimental.async_scope()</a><a id="change">:
+          for </a>step in range(steps_per_eval[dataset_name])<a id="change">:
+            </a>if step % 20 == 0:
+              message = &quotStarting to run eval step {}/{} of dataset: {}&quot.format(
+                  step, steps_per_eval[dataset_name], dataset_name)
+              logging.info(message)
+
+            (text_step, logits_step, labels_step,
+             additional_labels_dict_step)<a id="change"> = </a>final_eval_step(test_iterator)
+
+            texts_all.append(text_step)
+            logits_all.append(logits_step)
+            labels_all.append(labels_step)
+            if &quotidentity&quot in dataset_name:
+              for identity_label_name in utils.IDENTITY_LABELS:
+                additional_labels_all_dict[identity_label_name].append(
+                    additional_labels_dict_step[identity_label_name])
+
+      <a id="change">except </a>(StopIteration, tf.errors.OutOfRangeError):
+        <a id="change">tf.experimental.async_clear_error()</a>
+        logging.info(&quotDone with eval on %s&quot, dataset_name)
+
+      texts_all = tf.concat(texts_all, axis=0)
+      logits_all = tf.concat(logits_all, axis=0)</code></pre>

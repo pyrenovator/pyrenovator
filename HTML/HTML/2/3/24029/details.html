@@ -1,0 +1,79 @@
+<html><h3>Pattern ID :24029
+</h3><img src='74657507.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        if torch.cuda.is_available():
+            dist.all_reduce(torch.zeros(1).cuda())
+        else:
+            <a id="change">dist.all_reduce(</a>torch.zeros(1)<a id="change">)</a>
+
+        if is_master(args):
+            logging.getLogger().setLevel(logging.INFO)
+        else:</code></pre><h3>After Change</h3><pre><code class='java'>
+    if args.distributed_world_size == 1:
+        raise ValueError(&quotCannot initialize distributed with distributed_world_size=1&quot)
+
+    <a id="change">if </a>not getattr(args, &quottpu&quot, False):
+        if torch.distributed.is_initialized():
+            warnings.warn(&quotDistributed is already initialized, cannot initialize twice!&quot)
+        else:
+            logger.info(&quotdistributed init (rank {}): {}&quot.format(
+                args.distributed_rank, args.distributed_init_method,
+            ))
+            dist.init_process_group(
+                backend=args.distributed_backend,
+                init_method=args.distributed_init_method,
+                world_size=args.distributed_world_size,
+                rank=args.distributed_rank,
+            )
+            logger.info(&quotinitialized host {} as rank {}&quot.format(
+                socket.gethostname(), args.distributed_rank,
+            ))
+
+            &#47&#47 perform a dummy all-reduce to initialize the NCCL communicator
+            if torch.cuda.is_available():
+                dist.all_reduce(torch.zeros(1).cuda())
+
+        args.distributed_rank = torch.distributed.get_rank()
+    else:
+        import torch_xla.core.xla_model as xm
+        assert xm.xrt_world_size() == args.distributed_world_size
+        args.device_id = xm.get_local_ordinal()
+        args.distributed_rank<a id="change"> = </a>xm.get_ordinal()
+        xm.rendezvous(&quotdistributed_init&quot)  &#47&#47 wait for all workers
+        xm.mark_step()
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/kssteven418/i-bert/commit/775122950d145382146e9120308432a9faf9a9b8#diff-d4588fc3718fca1ca01de4a78b71dea14a12c7a1ee2296e8c345277d081d3ad5L83' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 74657507</div><div id='project'> Project Name: kssteven418/i-bert</div><div id='commit'> Commit Name: 775122950d145382146e9120308432a9faf9a9b8</div><div id='time'> Time: 2020-05-18</div><div id='author'> Author: myleott@fb.com</div><div id='file'> File Name: fairseq/distributed_utils.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: distributed_init(1)</div><div id='n_method'> N Method Name: distributed_init(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: fairseq/distributed_utils.py</div><div id='n_file'> N File Name: fairseq/distributed_utils.py</div><div id='m_start'> M Start Line: 83</div><div id='m_end'> M End Line: 110</div><div id='n_start'> N Start Line: 83</div><div id='n_end'> N End Line: 118</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        scaled_norm_tensor = torch.tensor(scaled_norm,
+                                          device=self.fp32_groups_flat[i].device,
+                                          dtype=torch.float)
+        <a id="change">dist.all_reduce(</a>scaled_norm_tensor<a id="change">, group=pg)</a>
+        all_groups_norm = scaled_norm_tensor.item()
+        &#47&#47print(f"old = {all_groups_norm_old} and new = {all_groups_norm} at rank: {torch.distributed.get_rank()}")
+
+        self.stop_timers([COMPUTE_NORM])</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        self.stop_timers([COMPUTE_NORM])
+
+        <a id="change">if </a>self.has_moe_layers:
+            all_groups_norm<a id="change"> = </a>self._get_norm_with_moe_layers(all_groups_norm)
+
+        scaled_global_grad_norm = get_global_norm(norm_list=[all_groups_norm])
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/microsoft/deepspeed/commit/56c522386878df2513ccb548de76b50191ae3af7#diff-ed82e9cf3856985862bddad15c8ea4f500fe0d1eb585c1890aa1729646c04858L202' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 74657509</div><div id='project'> Project Name: microsoft/deepspeed</div><div id='commit'> Commit Name: 56c522386878df2513ccb548de76b50191ae3af7</div><div id='time'> Time: 2022-04-19</div><div id='author'> Author: olruwase@microsoft.com</div><div id='file'> File Name: deepspeed/runtime/fp16/fused_optimizer.py</div><div id='m_class'> M Class Name: FP16_Optimizer</div><div id='n_method'> N Class Name: FP16_Optimizer</div><div id='m_method'> M Method Name: step(2)</div><div id='n_method'> N Method Name: step(2)</div><div id='m_parent_class'> M Parent Class: object</div><div id='n_parent_class'> N Parent Class: object</div><div id='m_file'> M File Name: deepspeed/runtime/fp16/fused_optimizer.py</div><div id='n_file'> N File Name: deepspeed/runtime/fp16/fused_optimizer.py</div><div id='m_start'> M Start Line: 260</div><div id='m_end'> M End Line: 280</div><div id='n_start'> N Start Line: 267</div><div id='n_end'> N End Line: 303</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+        avg_factor = flatten_assigned_scores.sum()
+        if paddle.distributed.get_world_size() &gt; 1:
+            <a id="change">paddle.distributed.all_reduce(</a>avg_factor<a id="change">)</a>
+            avg_factor = paddle.clip(
+                avg_factor / paddle.distributed.get_world_size(), min=1)
+        loss_vfl = self.loss_vfl(
+            flatten_cls_preds, flatten_assigned_scores, avg_factor=avg_factor)</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        avg_factor = flatten_assigned_scores.sum()
+        world_size = get_world_size()
+        <a id="change">if </a>world_size &gt; 1:
+            dist.all_reduce(avg_factor, op=dist.ReduceOp.SUM)
+            avg_factor<a id="change"> = </a>avg_factor / world_size
+        avg_factor = F.relu(avg_factor - 1.) + 1.  &#47&#47 y = max(x, 1)
+        loss_vfl = self.loss_vfl(
+            flatten_cls_preds, flatten_assigned_scores, avg_factor=avg_factor)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/miemie2013/miemiedetection/commit/d9eef056542cd4f7d65ab570409593f464935727#diff-ab2878b6229148f539620b9917bc669bce7caf164de0011bb9b8d2612f70f603L399' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 74657513</div><div id='project'> Project Name: miemie2013/miemiedetection</div><div id='commit'> Commit Name: d9eef056542cd4f7d65ab570409593f464935727</div><div id='time'> Time: 2023-04-13</div><div id='author'> Author: 53960695+miemie2013@users.noreply.github.com</div><div id='file'> File Name: mmdet/models/heads/pico_head.py</div><div id='m_class'> M Class Name: PicoHeadV2</div><div id='n_method'> N Class Name: PicoHeadV2</div><div id='m_method'> M Method Name: get_loss(3)</div><div id='n_method'> N Method Name: get_loss(3)</div><div id='m_parent_class'> M Parent Class: GFLHead</div><div id='n_parent_class'> N Parent Class: GFLHead</div><div id='m_file'> M File Name: mmdet/models/heads/pico_head.py</div><div id='n_file'> N File Name: mmdet/models/heads/pico_head.py</div><div id='m_start'> M Start Line: 451</div><div id='m_end'> M End Line: 495</div><div id='n_start'> N Start Line: 453</div><div id='n_end'> N End Line: 501</div><BR>

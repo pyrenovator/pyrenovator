@@ -1,0 +1,27 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                self.CCT.squeeze(1).index_fill_(0, evict_info[:, 0], -1)
+                self._cuda_available_chunk_num += evict_num
+            self._cuda_to_cpu_elapse += timer.elapsed
+            weight_size<a id="change"> = </a><a id="change">chunks.numel()</a>
+            self._cuda_to_cpu_numel += weight_size
+            print(f"evict embedding weight: {weight_size*self.elem_size_in_byte/1e6:.2f} MB")
+
+        with Timer() as timer:</code></pre><h3>After Change</h3><pre><code class='java'>
+
+                &#47&#47 TODO() allocate tmp memory on CPU and copy chunks on CUDA to CPU.
+                tmp_cuda_chunks = self.cuda_partial_weight.view(self.cuda_chunk_num, -1).index_select(0, evict_slot_ids)
+                <a id="change">tmp_cpu_chunks = </a><a id="change">torch.empty_like(tmp_cuda_chunks</a><a id="change">, device=&quotcpu&quot, pin_memory=True)</a>
+                <a id="change">tmp_cpu_chunks.copy_(tmp_cuda_chunks</a><a id="change">)</a>
+                self.cpu_weight.view(self.chunk_num, -1).index_copy_(0, evict_info[:, 0].cpu(), tmp_cpu_chunks)
+                self.cached_chunk_table[:, 0].index_fill_(0, evict_slot_ids, -1)
+                self.CCT.squeeze(1).index_fill_(0, evict_info[:, 0], -1)
+                self._cuda_available_chunk_num += evict_num
+
+                weight_size<a id="change"> = tmp_cpu_chunks</a><a id="change">.numel()</a>
+            self._cuda_to_cpu_elapse += timer.elapsed
+            self._cuda_to_cpu_numel += weight_size
+            print(f"evict embedding weight: {weight_size*self.elem_size_in_byte/1e6:.2f} MB")
+</code></pre>

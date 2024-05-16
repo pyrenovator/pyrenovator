@@ -1,0 +1,33 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    @dtypes(*torch.testing.get_all_dtypes())
+    def test_complex_scalarlist(self, device, dtype):
+        for N in N_values:
+            for foreach_bin_op, foreach_bin_op_, torch_bin_op in <a id="change">zip(</a>self.foreach_bin_ops,
+                                                                     self.foreach_bin_ops_,
+                                                                     self.torch_bin_ops<a id="change">)</a>:
+                tensors = self._get_test_data(device, dtype, N)
+                scalars = [3 + 5j for _ in range(N)]
+                expected = [torch_bin_op(t, s) for t, s in zip(tensors, scalars)]
+
+                if dtype == torch.bool:
+                    if foreach_bin_op == torch._foreach_sub:
+                        with self.assertRaisesRegex(RuntimeError, "Subtraction, the `-` operator, with two bool"):
+                            foreach_bin_op_(tensors, scalar)
+
+                        with self.assertRaisesRegex(RuntimeError, "Subtraction, the `-` operator, with two bool"):
+                            foreach_bin_op(tensors, scalar)
+                    <a id="change">return</a>
+
+                with self.assertRaisesRegex(TypeError, "argument &quotscalars&quot must be tuple of floats"):
+                    res = foreach_bin_op(tensors, scalars)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+                    continue
+
+                expected = [torch_bin_op(t, s) for t, s in zip(tensors, scalars)]
+                <a id="change">if dtype in [torch.complex64, torch.complex128]</a><a id="change"> and self.device_type == "cuda"</a>:
+                    with self.assertRaisesRegex(RuntimeError, "not implemented for"):
+                        res = foreach_bin_op(tensors, scalars)
+</code></pre>

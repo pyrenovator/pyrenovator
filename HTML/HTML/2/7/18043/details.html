@@ -1,0 +1,89 @@
+<html><h3>Pattern ID :18043
+</h3><img src='59171584.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 attention is batch x time x heads x time_to_attend
+        &#47&#47 average over batches, heads + only keep prediction attention and attention on observed timesteps
+        if attention_prediction_horizon is None:  &#47&#47 average over all horizons
+            attention<a id="change"> = </a><a id="change">out["attention"][..., : self.hparams.encode_length]</a>.mean(
+                dim=average_dims + [2]
+            )  &#47&#47 todo: how to handle zero attention due to shorter encode length?
+            attention = attention / attention.sum(-1).unsqueeze(-1)  &#47&#47 renormalize</code></pre><h3>After Change</h3><pre><code class='java'>
+        for i in range(len(attention)):  &#47&#47 very inefficient but does the trick
+            if 0 &lt; out["encode_lengths"][i] &lt; attention.size(1):
+                attention[i, -out["encode_lengths"][i] :] = attention[i, : out["encode_lengths"][i]].clone()
+                attention[i, : <a id="change">attention.size(1</a><a id="change">)</a> - out["encode_lengths"][i]]<a id="change"> = </a>0.0
+
+        if average_batches:  &#47&#47 if to average over batches
+            static_variables = static_variables.mean(dim=0)
+            encoder_variables = encoder_variables.mean(dim=0)
+            decoder_variables = decoder_variables.mean(dim=0)
+            attention = attention.mean(dim=0)
+            attention = attention / attention.sum(-1).unsqueeze(-1)  &#47&#47 renormalize
+
+            attention = torch.zeros(self.hparams.max_encode_length).scatter(
+                dim=0,
+                index=torch.arange(self.hparams.max_encode_length - attention.size(0), self.hparams.max_encode_length),
+                src=attention,
+            )
+        else:
+            attention = attention / attention.sum(-1).unsqueeze(-1)  &#47&#47 renormalize
+            attention<a id="change"> = </a>torch.zeros(attention.size(0), self.hparams.max_encode_length).scatter(
+                dim=1,
+                index=torch.arange(
+                    self.hparams.max_encode_length - attention.size(0), self.hparams.max_encode_length</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 6</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/jdb78/pytorch-forecasting/commit/79cfec0818dbe78d8773534e6ce8f5fd578c3c3a#diff-326fa71fa47eb2d5a00ea5fa14cac5f65c967b6856192e5c0e687cbce8b581e3L553' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 59171584</div><div id='project'> Project Name: jdb78/pytorch-forecasting</div><div id='commit'> Commit Name: 79cfec0818dbe78d8773534e6ce8f5fd578c3c3a</div><div id='time'> Time: 2020-06-22</div><div id='author'> Author: beitner.jan@bcg.com</div><div id='file'> File Name: temporal_fusion_transformer_pytorch/model/__init__.py</div><div id='m_class'> M Class Name: TemporalFusionTransformer</div><div id='n_method'> N Class Name: TemporalFusionTransformer</div><div id='m_method'> M Method Name: interpret_output(4)</div><div id='n_method'> N Method Name: interpret_output(4)</div><div id='m_parent_class'> M Parent Class: pl.LightningModule</div><div id='n_parent_class'> N Parent Class: pl.LightningModule</div><div id='m_file'> M File Name: temporal_fusion_transformer_pytorch/model/__init__.py</div><div id='n_file'> N File Name: temporal_fusion_transformer_pytorch/model/__init__.py</div><div id='m_start'> M Start Line: 555</div><div id='m_end'> M End Line: 605</div><div id='n_start'> N Start Line: 553</div><div id='n_end'> N End Line: 610</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        last_output = torch.zeros((batch_size, self.d_output), device=device)
+
+        if timespans is None:
+            timespans<a id="change"> = </a>x.new_ones(x.shape[:-1]+(1,)) / x.shape[1]
+
+        for t in range(seq_len):
+            inputs = <a id="change">x[:, t]</a>
+            ts = timespans[:, t].squeeze()
+            hidden_state = self.rnn_cell.forward(inputs, hidden_state, ts)
+            current_output = self.fc(hidden_state[0])
+            outputs.append(current_output)
+            last_output = current_output
+        if self.return_sequences:
+            outputs = torch.stack(outputs, dim=1)  &#47&#47 return entire sequence
+        else:
+            outputs<a id="change"> = </a>last_output  &#47&#47 only last item
+        return outputs, hidden_state</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        device = u.device
+        batch_size = u.size(0)
+        seq_len<a id="change"> = </a><a id="change">u.size(1</a><a id="change">)</a>
+        hidden_state = [
+            torch.zeros((batch_size, self.d_hidden), device=device),
+            torch.zeros((batch_size, self.d_hidden), device=device),
+        ]</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/raminmh/liquid-s4/commit/52f2ec0442e4b1472915480269dff07788ed7f97#diff-ab2372bdc1906ad2a23c39f4d39f3f048c08b9f7b91891862db640d26d4916afL83' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 59171597</div><div id='project'> Project Name: raminmh/liquid-s4</div><div id='commit'> Commit Name: 52f2ec0442e4b1472915480269dff07788ed7f97</div><div id='time'> Time: 2022-08-30</div><div id='author'> Author: mlech26l@gmail.com</div><div id='file'> File Name: src/models/sequence/mm.py</div><div id='m_class'> M Class Name: mmRNN</div><div id='n_method'> N Class Name: mmRNN</div><div id='m_method'> M Method Name: forward(5)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: src/models/sequence/mm.py</div><div id='n_file'> N File Name: src/models/sequence/mm.py</div><div id='m_start'> M Start Line: 83</div><div id='m_end'> M End Line: 108</div><div id='n_start'> N Start Line: 89</div><div id='n_end'> N End Line: 123</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        acc = []
+        f1 = []
+        for emo_ind in range(4):
+            preds_i<a id="change"> = </a>np.argmax(<a id="change">preds[:, emo_ind]</a>, axis=-1)
+            truths_i = truths[:, emo_ind]
+            acc.append(torch.sum(truths_i == preds_i).item() / len(preds))
+            f1.append(f1_score(truths_i, preds_i, average=&quotweighted&quot))</code></pre><h3>After Change</h3><pre><code class='java'>
+    truths: (bs, num_emotions)
+    &quot&quot&quot
+
+    total = <a id="change">preds.size(0</a><a id="change">)</a>
+    num_emo = preds.size(1)
+
+    preds<a id="change"> = </a>preds.cpu().detach()
+    truths = truths.cpu().detach()
+
+    preds_inds = np.argmax(preds, axis=-1)
+    preds = torch.zeros_like(preds)
+
+    for i in range(total):
+        preds[i, preds_inds[i]] = 1
+
+    accs = []
+    f1s = []
+    for i in range(num_emo):
+        pred_i<a id="change"> = </a>preds[:, i]
+        truth_i = truths[:, i]
+        acc = torch.sum(pred_i == truth_i).item() / total
+        f1 = f1_score(truth_i, pred_i, average=&quotweighted&quot)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/wenliangdai/modality-transferable-mer/commit/38664b152a63fb703932bd0b32dfdf90fb6b3d48#diff-0aeb543dc2f4cfda989f7c60a43d968c7b7fb62a96bfcc862e73340dc0cdc97aL147' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 59171581</div><div id='project'> Project Name: wenliangdai/modality-transferable-mer</div><div id='commit'> Commit Name: 38664b152a63fb703932bd0b32dfdf90fb6b3d48</div><div id='time'> Time: 2020-06-15</div><div id='author'> Author: wenliang.dai.1995@gmail.com</div><div id='file'> File Name: src/evaluate.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: eval_iemocap(2)</div><div id='n_method'> N Method Name: eval_iemocap(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/evaluate.py</div><div id='n_file'> N File Name: src/evaluate.py</div><div id='m_start'> M Start Line: 147</div><div id='m_end'> M End Line: 166</div><div id='n_start'> N Start Line: 155</div><div id='n_end'> N End Line: 177</div><BR>

@@ -1,0 +1,73 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    val_dataset = ConcatDataset(val_split_list)
+    all_dataset = ConcatDataset([train_dataset, val_dataset])
+
+    dataset_dict<a id="change"> = </a><a id="change">{
+        </a>&quottrain&quot: train_dataset,
+        &quotval&quot: val_dataset,
+        &quotall&quot: all_dataset<a id="change">
+    }</a>
+    return dataset_dict[split], num_classes
+
+
+def split_dataset(dataset, n, seed=0):</code></pre><h3>After Change</h3><pre><code class='java'>
+
+def get_dataset(dataset_name, root, task_list, split=&quottrain&quot, download=True, transform=None, seed=0):
+    assert split in [&quottrain&quot, &quotval&quot, &quottest&quot]
+    <a id="change">if dataset_name in datasets.__dict__</a>:
+        &#47&#47 load datasets from common.vision.datasets
+        &#47&#47 currently only PACS, OfficeHome and DomainNet are supported
+        supported_dataset = [&quotPACS&quot, &quotOfficeHome&quot, &quotDomainNet&quot]
+        assert dataset_name in supported_dataset
+
+        dataset = datasets.__dict__[dataset_name]
+
+        train_split_list = []
+        val_split_list = []
+        test_split_list = []
+        &#47&#47 we follow DomainBed and split each dataset randomly into two parts, with 80% samples and 20% samples
+        &#47&#47 respectively, the former (larger) will be used as training set, and the latter will be used as validation set.
+        split_ratio = 0.8
+        num_classes = 0
+
+        &#47&#47 under domain generalization setting, we use all samples in target domain as test set
+        for task in task_list:
+            if dataset_name == &quotPACS&quot:
+                all_split = dataset(root=root, task=task, split=&quotall&quot, download=download, transform=transform)
+                num_classes = all_split.num_classes
+            elif dataset_name == &quotOfficeHome&quot:
+                all_split = dataset(root=root, task=task, download=download, transform=transform)
+                num_classes = all_split.num_classes
+            elif dataset_name == &quotDomainNet&quot:
+                train_split = dataset(root=root, task=task, split=&quottrain&quot, download=download, transform=transform)
+                test_split = dataset(root=root, task=task, split=&quottest&quot, download=download, transform=transform)
+                num_classes = train_split.num_classes
+                all_split = ConcatDataset([train_split, test_split])
+
+            train_split, val_split = split_dataset(all_split, int(len(all_split) * split_ratio), seed)
+
+            train_split_list.append(train_split)
+            val_split_list.append(val_split)
+            test_split_list.append(all_split)
+
+        train_dataset = ConcatDatasetWithDomainLabel(train_split_list)
+        val_dataset<a id="change"> = </a>ConcatDatasetWithDomainLabel(val_split_list)
+        test_dataset<a id="change"> = </a>ConcatDatasetWithDomainLabel(test_split_list)
+
+        dataset_dict = {
+            &quottrain&quot: train_dataset,
+            &quotval&quot: val_dataset,
+            &quottest&quot: test_dataset
+        }
+        return dataset_dict[split], num_classes
+    else:
+        &#47&#47 load datasets from wilds
+        &#47&#47 currently only iwildcam, camelyon17 and fmow are supported
+        supported_dataset<a id="change"> = [</a>&quotiwildcam&quot, &quotcamelyon17&quot, &quotfmow&quot<a id="change"></a>]
+        <a id="change">assert </a>dataset_name in supported_dataset
+
+        dataset = wilds.get_dataset(dataset_name, root_dir=root, download=True)
+        num_classes = dataset.n_classes</code></pre>

@@ -1,0 +1,28 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+def body_ctx(ctx: Context, src: jnp.ndarray) -&gt; typing.Union[typing.Tuple[jnp.ndarray, jnp.ndarray], jnp.ndarray]:
+    src = input_embed(ctx, src)
+    zero = shard(jnp.zeros_like(src))
+    src = 0<a id="change">, (src, zero, src, zero)</a>
+    <a id="change">if ctx.is_initializing</a>:
+        src<a id="change"> = </a><a id="change">step(ctx)(</a>src, None<a id="change">)</a>
+    else:
+        src<a id="change"> = </a>lax.scan(step(ctx), src, None, ctx.dims.sizes.depth, unroll=ctx.model.scan_unroll)
+    return output_embed(ctx, revnet_out(src[0][1]))
+
+</code></pre><h3>After Change</h3><pre><code class='java'>
+def body_ctx(ctx: Context, src: jnp.ndarray) -&gt; typing.Union[typing.Tuple[jnp.ndarray, jnp.ndarray], jnp.ndarray]:
+    src = input_embed(ctx, src)
+    zero = shard(jnp.zeros_like(src))
+    src = src<a id="change">, zero, src, zero</a>
+    <a id="change">for </a><a id="change">_</a> in range(ctx.dims.sizes.depth)<a id="change">:
+        </a>src<a id="change"> = </a><a id="change">reversible(ctx</a>, momentumnet_main(ctx, spatial_mixing), src<a id="change">)</a>
+        src = reversible(ctx, momentumnet_side(ctx), src)
+        src = reversible(ctx, momentumnet_main(ctx, feed_forward), src)
+        src<a id="change"> = </a><a id="change">reversible(ctx</a>, momentumnet_side(ctx), src<a id="change">)</a>
+    return output_embed(ctx, revnet_out(src[0][1]))
+
+
+def compute(params: typing.Dict[str, jnp.ndarray], inp: jnp.ndarray) -&gt; typing.Tuple[jnp.ndarray, jnp.ndarray]:</code></pre>

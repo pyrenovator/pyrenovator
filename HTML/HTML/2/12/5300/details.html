@@ -1,0 +1,176 @@
+<html><h3>Pattern ID :5300
+</h3><img src='18998369.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            return True
+
+        process_data = [in_buffer.get(key) for key in self._node_repr.inputs]
+        <a id="change">if </a>not any(process_data):
+            <a id="change">return </a>False
+
+        self._time_profiler.record(self.uid, Event.process_in)
+        succ, outputs, msg = self._call(process_data)
+        self._time_profiler.record(self.uid, Event.process_out)
+        <a id="change">if not succ</a>:
+            <a id="change">self._set_failed(</a>msg<a id="change">)</a>
+            return True
+
+        size = len(self._node_repr.outputs)
+        if size &gt; 1:
+            output_map<a id="change"> = </a>dict((self._node_repr.outputs[i], [outputs[i]])
+                              for i in range(size))
+        else:
+            output_map = {}
+            output_map[self._node_repr.outputs[0]] = [outputs]
+
+        <a id="change">in_buffer.update(</a>output_map<a id="change">)</a>
+        self._time_profiler.record(self.uid, Event.queue_out)
+
+        for out_que in self._output_ques:
+            if not out_que.batch_put_dict(in_buffer):
+                self._set_stopped()
+                <a id="change">return </a>True
+        self._set_finished()
+        return True
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        
+        self._time_profiler.record(self.uid, Event.queue_in)
+        in_buffer = self._get_buffer()
+        <a id="change">if </a>in_buffer is None:
+            return
+
+        if all(map(lambda x: len(x) == 0, in_buffer.values())):
+            self._set_finished()
+            return
+
+        process_data = [in_buffer.get(key) for key in self._node_repr.inputs]
+        self._time_profiler.record(self.uid, Event.process_in)
+        succ, outputs, msg = self._call(process_data)
+        self._time_profiler.record(self.uid, Event.process_out)
+        <a id="change">assert </a>succ, msg
+
+        size = len(self._node_repr.outputs)
+        if size &gt; 1:
+            output_map<a id="change"> = </a>dict((self._node_repr.outputs[i], outputs[i])
+                              for i in range(size))
+        elif size == 1:
+            output_map = {}
+            output_map[self._node_repr.outputs[0]] = outputs
+        else:
+            output_map = {}
+
+        self._time_profiler.record(self.uid, Event.queue_out)
+        if not <a id="change">self.data_to_next(</a>output_map<a id="change">)</a>:
+            return
+        self._set_finished()
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 12</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/towhee-io/towhee/commit/60d2b7c9c6dcb1040e17a5f65db2bcb1b32577ef#diff-0c432e3416dea1f6358b8e115df7fb3ad93ace5cddc9a3e06bf64306e9ae4015L57' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 18998369</div><div id='project'> Project Name: towhee-io/towhee</div><div id='commit'> Commit Name: 60d2b7c9c6dcb1040e17a5f65db2bcb1b32577ef</div><div id='time'> Time: 2023-03-28</div><div id='author'> Author: junjie.jiang@zilliz.com</div><div id='file'> File Name: towhee/runtime/nodes/_window_all.py</div><div id='m_class'> M Class Name: WindowAll</div><div id='n_method'> N Class Name: WindowAll</div><div id='m_method'> M Method Name: process_step(1)</div><div id='n_method'> N Method Name: process_step(1)</div><div id='m_parent_class'> M Parent Class: Node,SingleInputMixin</div><div id='n_parent_class'> N Parent Class: Node</div><div id='m_file'> M File Name: towhee/runtime/nodes/_window_all.py</div><div id='n_file'> N File Name: towhee/runtime/nodes/_window_all.py</div><div id='m_start'> M Start Line: 74</div><div id='m_end'> M End Line: 106</div><div id='n_start'> N Start Line: 57</div><div id='n_end'> N End Line: 84</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+        side_by = dict((k, data[k]) for k in self._side_by_keys)
+        process_data = [data.get(key) for key in self._node_repr.inputs]
+        <a id="change">if </a>any((i is Empty() for i in process_data)):
+            for out_que in self._output_ques:
+                if not out_que.put_dict(side_by):
+                    self._set_stopped()
+                    <a id="change">return </a>True
+        else:
+            self._time_profiler.record(self.uid, Event.process_in)
+            succ, outputs, msg = self._call(process_data)
+            <a id="change">if not succ</a>:
+                <a id="change">self._set_failed(</a>msg<a id="change">)</a>
+                <a id="change">return </a>True
+
+            size<a id="change"> = </a>len(self._node_repr.outputs)
+
+            for output in outputs:
+                if size &gt; 1:
+                    output_map = {self._node_repr.outputs[i]: output[i] for i in range(size)}
+                else:
+                    output_map = {self._node_repr.outputs[0]: output}
+
+                <a id="change">side_by.update(</a>output_map<a id="change">)</a>
+
+                for out_que in self._output_ques:
+                    if not out_que.put_dict(side_by):
+                        self._set_stopped()</code></pre><h3>After Change</h3><pre><code class='java'>
+            return None
+        process_data = [data.get(key) for key in self._node_repr.inputs]
+
+        <a id="change">if </a>any((item is Empty() for item in process_data)):
+            return None
+
+        self._time_profiler.record(self.uid, Event.process_in)
+        succ, outputs, msg = self._call(process_data)
+        <a id="change">assert </a>succ, msg
+
+        size<a id="change"> = </a>len(self._node_repr.outputs)
+        for output in outputs:
+            if size &gt; 1:
+                output_map = {self._node_repr.outputs[i]: output[i] for i in range(size)}
+            else:
+                output_map = {self._node_repr.outputs[0]: output}
+            if not <a id="change">self.data_to_next(</a>output_map<a id="change">)</a>:
+                return None
+
+        self._time_profiler.record(self.uid, Event.process_out)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/towhee-io/towhee/commit/60d2b7c9c6dcb1040e17a5f65db2bcb1b32577ef#diff-ac4b8b345fa8a5e47b7515037ad40a5f08c324596e0eddbc16a2ef3930ab0bbdL37' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 18998375</div><div id='project'> Project Name: towhee-io/towhee</div><div id='commit'> Commit Name: 60d2b7c9c6dcb1040e17a5f65db2bcb1b32577ef</div><div id='time'> Time: 2023-03-28</div><div id='author'> Author: junjie.jiang@zilliz.com</div><div id='file'> File Name: towhee/runtime/nodes/_flat_map.py</div><div id='m_class'> M Class Name: FlatMap</div><div id='n_method'> N Class Name: FlatMap</div><div id='m_method'> M Method Name: process_step(1)</div><div id='n_method'> N Method Name: process_step(1)</div><div id='m_parent_class'> M Parent Class: Node,SingleInputMixin</div><div id='n_parent_class'> N Parent Class: Node</div><div id='m_file'> M File Name: towhee/runtime/nodes/_flat_map.py</div><div id='n_file'> N File Name: towhee/runtime/nodes/_flat_map.py</div><div id='m_start'> M Start Line: 39</div><div id='m_end'> M End Line: 77</div><div id='n_start'> N Start Line: 36</div><div id='n_end'> N End Line: 58</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+        side_by = dict((k, data[k]) for k in self._side_by_keys)
+        process_data = [data.get(key) for key in self._node_repr.inputs]
+        <a id="change">if </a>not any((i is Empty() for i in process_data)):
+            self._time_profiler.record(self.uid, Event.process_in)
+            succ, outputs, msg = self._call(process_data)
+            <a id="change">if not succ</a>:
+                <a id="change">self._set_failed(</a>msg<a id="change">)</a>
+                <a id="change">return </a>True
+            if isinstance(outputs, Generator):
+                outputs = self._get_from_generator(outputs, len(self._node_repr.outputs))
+            self._time_profiler.record(self.uid, Event.process_out)
+
+            size<a id="change"> = </a>len(self._node_repr.outputs)
+            if size &gt; 1:
+                output_map = dict((self._node_repr.outputs[i], outputs[i])
+                                  for i in range(size))
+            elif size == 0:
+                output_map = {}
+            else:
+                output_map = {}
+                output_map[self._node_repr.outputs[0]] = outputs
+
+            <a id="change">side_by.update(</a>output_map<a id="change">)</a>
+        self._time_profiler.record(self.uid, Event.queue_out)
+
+        if not side_by:
+            return False</code></pre><h3>After Change</h3><pre><code class='java'>
+            return None
+        process_data = [data.get(key) for key in self._node_repr.inputs]
+
+        <a id="change">if </a>any((item is Empty() for item in process_data)):
+            <a id="change">return </a>None
+
+        self._time_profiler.record(self.uid, Event.process_in)
+        succ, outputs, msg = self._call(process_data)
+        <a id="change">assert </a>succ, msg
+        if isinstance(outputs, Generator):
+            outputs = self._get_from_generator(outputs, len(self._node_repr.outputs))
+        self._time_profiler.record(self.uid, Event.process_out)
+
+        size<a id="change"> = </a>len(self._node_repr.outputs)
+        if size &gt; 1:
+            output_map = dict((self._node_repr.outputs[i], outputs[i])
+                              for i in range(size))
+        elif size == 0:
+            &#47&#47 ignore the op result
+            &#47&#47 eg: ignore the milvus result
+            &#47&#47 .map(&quotvec&quot, (), ops.ann_insert.milvus()),
+            output_map = {}
+        else:
+            &#47&#47 Use one col to store all op result.
+            output_map = {}
+            output_map[self._node_repr.outputs[0]] = outputs
+
+        self._time_profiler.record(self.uid, Event.queue_out)
+        <a id="change">self.data_to_next(</a>output_map<a id="change">)</a>
+
+    def _get_from_generator(self, gen, size):
+        if size == 1:
+            return list(gen)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/towhee-io/towhee/commit/60d2b7c9c6dcb1040e17a5f65db2bcb1b32577ef#diff-d68510a0ccc30999edecbc5d42e045efe1ee1097c7254597d52f0efc02d46323L51' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 18998381</div><div id='project'> Project Name: towhee-io/towhee</div><div id='commit'> Commit Name: 60d2b7c9c6dcb1040e17a5f65db2bcb1b32577ef</div><div id='time'> Time: 2023-03-28</div><div id='author'> Author: junjie.jiang@zilliz.com</div><div id='file'> File Name: towhee/runtime/nodes/_map.py</div><div id='m_class'> M Class Name: Map</div><div id='n_method'> N Class Name: Map</div><div id='m_method'> M Method Name: process_step(1)</div><div id='n_method'> N Method Name: process_step(1)</div><div id='m_parent_class'> M Parent Class: Node,SingleInputMixin</div><div id='n_parent_class'> N Parent Class: Node</div><div id='m_file'> M File Name: towhee/runtime/nodes/_map.py</div><div id='n_file'> N File Name: towhee/runtime/nodes/_map.py</div><div id='m_start'> M Start Line: 56</div><div id='m_end'> M End Line: 94</div><div id='n_start'> N Start Line: 53</div><div id='n_end'> N End Line: 83</div><BR>

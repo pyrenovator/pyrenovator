@@ -1,0 +1,103 @@
+<html><h3>Pattern ID :1198
+</h3><img src='6061661.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        hidden_states = self.weight_proj(hidden_states)
+        hidden_states = hidden_states.view(batch_size * sequence_length * self.num_groups, -1)
+
+        <a id="change">if </a>self.training:
+            &#47&#47 sample code vector probs via gumbel in differentiateable way
+            codevector_probs<a id="change"> = </a>_ipu_gumbel_softmax(hidden_states.float(), tau=gumbel_temperature, hard=True).type_as(
+                hidden_states
+            )
+
+            &#47&#47 compute perplexity
+            codevector_soft_dist = torch.softmax(
+                hidden_states.view(batch_size * sequence_length, self.num_groups, -1).float(), dim=-1
+            )
+            perplexity<a id="change"> = </a>self._compute_perplexity(codevector_soft_dist, mask_time_indices)
+        else:
+            &#47&#47 take argmax in non-differentiable way
+            &#47&#47 comptute hard codevector distribution (one hot)
+            codevector_idx = hidden_states.argmax(dim=-1)
+
+            update_values<a id="change"> = </a><a id="change">torch.ones_like(</a>codevector_idx.view(-1, 1)<a id="change">, dtype=hidden_states.dtype)</a>
+
+            codevector_probs<a id="change"> = </a>hidden_states.new_zeros(*hidden_states.shape).scatter_(
+                -1, codevector_idx.view(-1, 1), update_values
+            )
+            codevector_probs = codevector_probs.view(batch_size * sequence_length, self.num_groups, -1)</code></pre><h3>After Change</h3><pre><code class='java'>
+        )
+        prob_perplexity = self._compute_perplexity(soft_probs, mask_time_indices)
+
+        <a id="change">if </a>self.training:
+            &#47&#47 sample code vector probs via gumbel in differentiateable way
+            codevector_probs<a id="change"> = </a>_ipu_gumbel_softmax(hidden_states.float(), tau=gumbel_temperature, hard=True).type_as(
+                hidden_states
+            )
+        else:
+            codevector_probs<a id="change"> = </a>hard_probs.type_as(hidden_states)
+
+        codevector_probs = codevector_probs.view(batch_size * sequence_length, self.num_groups, -1)
+        codebook = self.codevectors[0, :, :]</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 9</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/huggingface/optimum-graphcore/commit/2ec4ed72ea362414d20c9b112072f3aa7b3d399a#diff-b63bcc25111bbfe2539201f910ae754a6d8dd4b6bb244b4b94823ef62e6cc61dL68' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 6061661</div><div id='project'> Project Name: huggingface/optimum-graphcore</div><div id='commit'> Commit Name: 2ec4ed72ea362414d20c9b112072f3aa7b3d399a</div><div id='time'> Time: 2022-07-29</div><div id='author'> Author: 91201457+thorinf@users.noreply.github.com</div><div id='file'> File Name: optimum/graphcore/models/wav2vec2/ipu_gumbel_vector_quantizer.py</div><div id='m_class'> M Class Name: IPUWav2Vec2GumbelVectorQuantizer</div><div id='n_method'> N Class Name: IPUWav2Vec2GumbelVectorQuantizer</div><div id='m_method'> M Method Name: forward(4)</div><div id='n_method'> N Method Name: forward(4)</div><div id='m_parent_class'> M Parent Class: Wav2Vec2GumbelVectorQuantizer</div><div id='n_parent_class'> N Parent Class: Wav2Vec2GumbelVectorQuantizer</div><div id='m_file'> M File Name: optimum/graphcore/models/wav2vec2/ipu_gumbel_vector_quantizer.py</div><div id='n_file'> N File Name: optimum/graphcore/models/wav2vec2/ipu_gumbel_vector_quantizer.py</div><div id='m_start'> M Start Line: 68</div><div id='m_end'> M End Line: 102</div><div id='n_start'> N Start Line: 80</div><div id='n_end'> N End Line: 110</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            self.model._train(epoch, save=save,
+                              validate_fn=self.validate_fn, get_data_fn=self.get_data,
+                              save_fn=self.save, **kwargs)
+        elif <a id="change"></a>self.train_mode == &quotdataset&quot:
+            clean_dataset<a id="change"> = </a>self.dataset.loader[&quottrain&quot].dataset
+            _input, _label = next(iter(self.dataset.get_dataloader(
+                &quottrain&quot, batch_size=int(self.poison_percent * len(clean_dataset)))))
+            _label<a id="change"> = </a><a id="change">torch.ones_like(</a>_label<a id="change">)</a> * self.target_class
+            _label<a id="change"> = </a>_label.tolist()
+            poison_input = self.add_mark(_input)
+            poison_dataset = TensorListDataset(poison_input, _label)
+            dataset = torch.utils.data.ConcatDataset([clean_dataset, poison_dataset])
+            loader<a id="change"> = </a>self.dataset.get_dataloader(&quottrain&quot, dataset=dataset)
+            self.model._train(epoch, save=save,
+                              validate_fn=self.validate_fn, loader_train=loader,
+                              save_fn=self.save, **kwargs)</code></pre><h3>After Change</h3><pre><code class='java'>
+            self.model._train(epoch, save=save,
+                              validate_fn=self.validate_fn, get_data_fn=self.get_data,
+                              save_fn=self.save, **kwargs)
+        elif <a id="change"></a>self.train_mode == &quotdataset&quot:
+            dataset<a id="change"> = </a>self.mix_dataset()
+            loader<a id="change"> = </a>self.dataset.get_dataloader(&quottrain&quot, dataset=dataset)
+            self.model._train(epoch, save=save,
+                              validate_fn=self.validate_fn, loader_train=loader,
+                              save_fn=self.save, **kwargs)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/ain-soph/trojanzoo/commit/bdbf67816179497c3bfb09f45ff8a2ff4da1e5c7#diff-52612ba8cbd426c83252dd0708d09eaa9c1dec1451423e23ac6293b267441fdbL66' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 6061662</div><div id='project'> Project Name: ain-soph/trojanzoo</div><div id='commit'> Commit Name: bdbf67816179497c3bfb09f45ff8a2ff4da1e5c7</div><div id='time'> Time: 2021-03-11</div><div id='author'> Author: ain-soph@live.com</div><div id='file'> File Name: trojanvision/attacks/backdoor/badnet.py</div><div id='m_class'> M Class Name: BadNet</div><div id='n_method'> N Class Name: BadNet</div><div id='m_method'> M Method Name: attack(3)</div><div id='n_method'> N Method Name: attack(3)</div><div id='m_parent_class'> M Parent Class: Attack</div><div id='n_parent_class'> N Parent Class: Attack</div><div id='m_file'> M File Name: trojanvision/attacks/backdoor/badnet.py</div><div id='n_file'> N File Name: trojanvision/attacks/backdoor/badnet.py</div><div id='m_start'> M Start Line: 71</div><div id='m_end'> M End Line: 84</div><div id='n_start'> N Start Line: 71</div><div id='n_end'> N End Line: 77</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            &#47&#47 adjust the step size
+            new_factor = self.step_mult * (errnorm + 1e-8) ** self.error_exponent
+            &#47&#47 if accepted and not t1_achieved:
+            <a id="change">if </a>accepted:
+                factor = torch.minimum(torch.full_like(new_factor, self.max_factor), new_factor)
+                if prev_rejected:
+                    factor<a id="change"> = </a>torch.minimum(<a id="change">torch.ones_like(</a>factor<a id="change">)</a>, factor)
+                not_t1_achieved = torch.logical_not(t1_achieved)
+                h[not_t1_achieved]<a id="change"> *= </a>factor[not_t1_achieved]
+
+            else:
+                factor = torch.maximum(torch.full_like(new_factor, self.min_factor), new_factor)
+                h<a id="change"> = </a>hstep * factor
+
+            prev_rejected = not accepted
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            accepted = errnorm &lt; 1
+
+            &#47&#47 adjust the step size
+            <a id="change">if </a>accepted and not t1_achieved:
+                if errnorm == 0:
+                    factor = self.max_factor
+                else:
+                    factor = min(self.max_factor, self.step_mult * errnorm ** self.error_exponent)
+
+                if prev_rejected:
+                    factor<a id="change"> = </a>min(1.0, factor)
+
+                h<a id="change"> *= </a>factor
+            elif not accepted:
+                factor = max(self.min_factor, self.step_mult * errnorm ** self.error_exponent)
+                h<a id="change"> = </a>hstep * factor
+
+            prev_rejected = not accepted
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/xitorch/xitorch/commit/d91c4d6e56fb40b9f91fda53f69871e97dcb6abe#diff-1483d3ea142df8ec6c0e99905625e2421b3c2854fb87878e7255748ac68ae5a4L125' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 6061649</div><div id='project'> Project Name: xitorch/xitorch</div><div id='commit'> Commit Name: d91c4d6e56fb40b9f91fda53f69871e97dcb6abe</div><div id='time'> Time: 2021-12-30</div><div id='author'> Author: firman.kasim@gmail.com</div><div id='file'> File Name: xitorch/_impls/integrate/ivp/adaptive_rk.py</div><div id='m_class'> M Class Name: RKAdaptiveStepSolver</div><div id='n_method'> N Class Name: RKAdaptiveStepSolver</div><div id='m_method'> M Method Name: _single_step(3)</div><div id='n_method'> N Method Name: _single_step(3)</div><div id='m_parent_class'> M Parent Class: object</div><div id='n_parent_class'> N Parent Class: object</div><div id='m_file'> M File Name: xitorch/_impls/integrate/ivp/adaptive_rk.py</div><div id='n_file'> N File Name: xitorch/_impls/integrate/ivp/adaptive_rk.py</div><div id='m_start'> M Start Line: 125</div><div id='m_end'> M End Line: 165</div><div id='n_start'> N Start Line: 85</div><div id='n_end'> N End Line: 122</div><BR>

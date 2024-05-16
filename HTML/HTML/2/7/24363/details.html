@@ -1,0 +1,82 @@
+<html><h3>Pattern ID :24363
+</h3><img src='75697411.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        tail_weights += torch.where(l_mask, left_weight, zero).sum(-1)
+
+        &#47&#47 a size (B,) mask that removes non-firing position
+        <a id="change">if </a>keep_all_tails:
+            extend_mask<a id="change"> = </a>feat_lengths.new_ones((B,))
+        else:
+            extend_mask<a id="change"> = </a>tail_weights &gt;= (beta / 2)
+
+        &#47&#47 &#47&#47 extend 1 fire and upscale the weights
+        &#47&#47 one = zero.fill_(1.0)</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 extend 1 fire and upscale the weights
+        if extend_mask.any():
+            &#47&#47 (B, T, C), may have infs so need the mask
+            upscale<a id="change"> = </a>(
+                torch.ones_like(output)
+                .scatter(
+                    1,
+                    feat_lengths.view(B, 1, 1).expand(-1, -1, C),
+                    beta / <a id="change">tail_weights.view(B, 1, 1).expand(-1</a>, <a id="change">-1</a>, C<a id="change">)</a>,
+                )
+            )
+            output[extend_mask] *= upscale[extend_mask]</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 5</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/george0828zhang/torch_cif/commit/68e2689c475308cd5043cf1d25c49891b23e946a#diff-32b811c4bee1b0d13968dded1dd3f2123be4bbc3124e6e5811c83d4fab99a456L27' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 75697411</div><div id='project'> Project Name: george0828zhang/torch_cif</div><div id='commit'> Commit Name: 68e2689c475308cd5043cf1d25c49891b23e946a</div><div id='time'> Time: 2022-02-23</div><div id='author'> Author: cc.chang0828@gmail.com</div><div id='file'> File Name: cif.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: cif_function(7)</div><div id='n_method'> N Method Name: cif_function(9)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: cif.py</div><div id='n_file'> N File Name: cif.py</div><div id='m_start'> M Start Line: 29</div><div id='m_end'> M End Line: 216</div><div id='n_start'> N Start Line: 27</div><div id='n_end'> N End Line: 197</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            output &lt;torch.Tensor&gt;: (batch_size, n_sources, n_bins, n_frames)
+            latent &lt;torch.Tensor&gt;: (batch_size, n_bins, n_frames, embed_dim)
+        
+        <a id="change">if </a>self.fixed_attractor is None:
+            raise RuntimeError("Call self.set_fixed_attractor() beforehand.")
+        
+        n_sources = self.fixed_attractor.size(0)
+        embed_dim = self.embed_dim
+        eps<a id="change"> = </a>self.eps
+        
+        batch_size, _, n_bins, n_frames = input.size()
+
+        self.rnn.flatten_parameters()
+
+        if self.take_log:
+            x = torch.log(input + eps)
+        elif self.take_db:
+            x = 20 * torch.log10(input + eps)
+        else:
+            x = input
+        
+        x = x.squeeze(dim=1).permute(0, 2, 1).contiguous() &#47&#47 (batch_size, n_frames, n_bins)
+        x, _ = self.rnn(x) &#47&#47 (batch_size, n_frames, n_bins)
+        x<a id="change"> = </a>self.fc(x) &#47&#47 (batch_size, n_frames, embed_dim * n_bins)
+        x = x.view(batch_size, n_frames, embed_dim, n_bins)
+        x = x.permute(0, 2, 3, 1).contiguous()  &#47&#47 (batch_size, embed_dim, n_bins, n_frames)
+        latent = x.view(batch_size, embed_dim, n_bins * n_frames)</code></pre><h3>After Change</h3><pre><code class='java'>
+        latent = x.view(batch_size, embed_dim, n_bins * n_frames)
+        latent = latent.permute(0, 2, 1).contiguous() &#47&#47 (batch_size, n_bins * n_frames, embed_dim)
+    
+        batch_fixed_attractor = <a id="change">self.fixed_attractor.expand(</a>batch_size, <a id="change">-1</a>, <a id="change">-1</a><a id="change">)</a>
+        similarity = torch.bmm(batch_fixed_attractor, latent.permute(0, 2, 1)) &#47&#47 (batch_size, n_sources, n_bins * n_frames)
+        similarity = similarity.view(batch_size, n_sources, n_bins, n_frames)
+        mask<a id="change"> = </a>self.base_model.mask_nonlinear2d(similarity) &#47&#47 (batch_size, n_sources, n_bins, n_frames)
+        output = mask * input
+
+        latent = latent.view(batch_size, n_bins, n_frames, embed_dim)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/tky823/dnn-based_source_separation/commit/e05e8c7e39f6c678d58ce21705caa26f880c7119#diff-f02896a956c5a8c637fe40844934a4cad3cc5c5df11d362f37de32989aa10f6bL330' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 75697473</div><div id='project'> Project Name: tky823/dnn-based_source_separation</div><div id='commit'> Commit Name: e05e8c7e39f6c678d58ce21705caa26f880c7119</div><div id='time'> Time: 2021-11-22</div><div id='author'> Author: delta9guitar97@gmail.com</div><div id='file'> File Name: src/models/danet.py</div><div id='m_class'> M Class Name: FixedAttractorDANet</div><div id='n_method'> N Class Name: FixedAttractorDANet</div><div id='m_method'> M Method Name: extract_latent(2)</div><div id='n_method'> N Method Name: extract_latent(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: DANet</div><div id='m_file'> M File Name: src/models/danet.py</div><div id='n_file'> N File Name: src/models/danet.py</div><div id='m_start'> M Start Line: 338</div><div id='m_end'> M End Line: 369</div><div id='n_start'> N Start Line: 355</div><div id='n_end'> N End Line: 380</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            )
+
+        &#47&#47 Collect final samples in temporary tensor
+        <a id="change">if </a>hasattr(self.base_leaf, "cardinality"):
+            cardinality<a id="change"> = </a>self.base_leaf.cardinality
+        else:
+            cardinality<a id="change"> = </a>1
+        tmp = torch.zeros(
+            context.num_samples,
+            self.in_features,</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        &#47&#47 assert (indices_in_tmp == indices_in_gather).all()
+
+        indices_in_gather<a id="change"> = </a><a id="change">indices_in_gather.view(num_samples, 1, -1, 1).expand(</a>-1, samples.shape[1], <a id="change">-1</a>, <a id="change">-1</a><a id="change">)</a>
+        samples = samples.gather(dim=-1, index=indices_in_gather)
+        samples.squeeze_(-1)  &#47&#47 Remove num_leaves dimension
+
+        return samples</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/braun-steven/simple-einet/commit/e657fc668bd0f87f5e622a8b2549cd9e8ade437a#diff-0e167804f5443ae4e51928b2569dfa157205f2b3fd2aa197779a9ef67fb370e5L60' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 75697479</div><div id='project'> Project Name: braun-steven/simple-einet</div><div id='commit'> Commit Name: e657fc668bd0f87f5e622a8b2549cd9e8ade437a</div><div id='time'> Time: 2022-01-11</div><div id='author'> Author: steven.lang.mz@gmail.com</div><div id='file'> File Name: simple_einet/factorized_leaf_layer.py</div><div id='m_class'> M Class Name: FactorizedLeaf</div><div id='n_method'> N Class Name: FactorizedLeaf</div><div id='m_method'> M Method Name: sample(3)</div><div id='n_method'> N Method Name: sample(3)</div><div id='m_parent_class'> M Parent Class: AbstractLayer</div><div id='n_parent_class'> N Parent Class: AbstractLayer</div><div id='m_file'> M File Name: simple_einet/factorized_leaf_layer.py</div><div id='n_file'> N File Name: simple_einet/factorized_leaf_layer.py</div><div id='m_start'> M Start Line: 63</div><div id='m_end'> M End Line: 120</div><div id='n_start'> N Start Line: 68</div><div id='n_end'> N End Line: 147</div><BR>

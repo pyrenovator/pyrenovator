@@ -1,0 +1,81 @@
+<html><h3>Pattern ID :17303
+</h3><img src='57500405.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+def shampoo(ctx: Context, grad: jnp.ndarray, step: jnp.ndarray) -&gt; jnp.ndarray:
+    last_size = grad.shape[-1]
+    kernel_sizes = (ctx.dims.pointwise_kernel, ctx.dims.outer_bottleneck_kernel, ctx.dims.inner_bottleneck_kernel)
+    <a id="change">if grad.ndim != 3</a> or last_size not in kernel_sizes:
+        return _shampoo(ctx, grad, step)
+    return jnp.stack([_shampoo(ctx, <a id="change">grad[:, :, i]</a>, step) for i in range(last_size)], axis=-1)
+
+
+def clip_norm(val: jnp.ndarray, min_norm: float) -&gt; jnp.ndarray:</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    preconditioner = Preconditioner(grad, ctx.optimizer.block_size)
+    new_preconditioners = []
+    <a id="change">for </a>i, old_stat in enumerate(preconditioner.statistics_from_grad(grad))<a id="change">:
+        </a>new_stat = ema(ctx, old_stat, step, 1 - ctx.optimizer.shampoo_beta2, f"statistics_{i}", True,
+                       jnp.eye(old_stat.shape[0], dtype=ctx.model.storage_dtype) * ctx.optimizer.epsilon)
+        prev_p = get_param(ctx, f&quotpreconditioner_{i}&quot, old_stat.shape, dtype=ctx.model.storage_dtype,
+                           init_val=jnp.eye(old_stat.shape[0], dtype=ctx.model.storage_dtype))
+        <a id="change">if </a>ctx.is_initializing:
+            <a id="change">continue</a>
+
+        new_p<a id="change">, error = </a>matrix_inverse_pth_root(new_stat, preconditioner.exponent_for_preconditioner(),
+                                               ridge_epsilon=ctx.optimizer.epsilon)
+        new_p<a id="change"> = </a>select_preconditioner(error, new_p, prev_p)
+        new_preconditioners.append(new_p)
+        assign(ctx, f"preconditioner_{i}", new_p)
+    if ctx.is_initializing:</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 9</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/homebrewnlp/homebrewnlp-jax/commit/bf951740b4e76e5a2144d26015890e30aed83bb5#diff-4540d7c8541eb25568b448ea775d64c43be83ce020bc67dd8340da4d4e804846L70' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 57500405</div><div id='project'> Project Name: homebrewnlp/homebrewnlp-jax</div><div id='commit'> Commit Name: bf951740b4e76e5a2144d26015890e30aed83bb5</div><div id='time'> Time: 2022-07-06</div><div id='author'> Author: 39779310+ClashLuke@users.noreply.github.com</div><div id='file'> File Name: src/optimizer.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: shampoo(3)</div><div id='n_method'> N Method Name: shampoo(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/optimizer.py</div><div id='n_file'> N File Name: src/optimizer.py</div><div id='m_start'> M Start Line: 93</div><div id='m_end'> M End Line: 97</div><div id='n_start'> N Start Line: 70</div><div id='n_end'> N End Line: 89</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            reid_preds = outputs[:, :, self.num_classes+5:]
+
+        &#47&#47 calculate targets
+        mixup = <a id="change">targets.shape[2] &gt; 5</a>
+        <a id="change">if </a>mixup:
+            label_cut = <a id="change">targets[..., :5]</a>
+        else:
+            label_cut = targets
+        nlabel = (label_cut.sum(dim=2) &gt; 0).sum(dim=1)  &#47&#47 number of objects
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        if self.reid_dim &gt; 0:
+            reid_feat = reid_preds.view(-1, self.reid_dim)[fg_masks]
+            cls_label_targets = cls_targets.max(1)[1]
+            <a id="change">for </a><a id="change">cls</a> in range(self.num_classes)<a id="change">:
+                </a>inds = torch.where(cls == cls_label_targets)
+                <a id="change">if </a>inds[0].shape[0] == 0:
+                    <a id="change">continue</a>
+                this_cls_tracking_id<a id="change"> = </a>reid_targets[inds]
+                this_cls_reid_feat = self.emb_scales[cls] * F.normalize(reid_feat[inds])
+
+                reid_output<a id="change"> = </a>self.classifiers[cls](this_cls_reid_feat)
+                reid_loss += self.reid_loss(reid_output, this_cls_tracking_id)
+
+        reg_weight = 5.0</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/zhangming8/yolox-pytorch/commit/e162fc0465b1f5d8b3211cdc81fd8eabb6dd55c7#diff-180d1e08e835c9b52081c2fe023d6b978026584c661357da6f5f7bcab9805901L85' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 57500404</div><div id='project'> Project Name: zhangming8/yolox-pytorch</div><div id='commit'> Commit Name: e162fc0465b1f5d8b3211cdc81fd8eabb6dd55c7</div><div id='time'> Time: 2021-07-26</div><div id='author'> Author: zhangming8@github.com</div><div id='file'> File Name: models/losses/yolox_loss.py</div><div id='m_class'> M Class Name: YOLOXLoss</div><div id='n_method'> N Class Name: YOLOXLoss</div><div id='m_method'> M Method Name: get_losses(9)</div><div id='n_method'> N Method Name: get_losses(9)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: models/losses/yolox_loss.py</div><div id='n_file'> N File Name: models/losses/yolox_loss.py</div><div id='m_start'> M Start Line: 94</div><div id='m_end'> M End Line: 206</div><div id='n_start'> N Start Line: 105</div><div id='n_end'> N End Line: 224</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+def shampoo(ctx: Context, grad: jnp.ndarray, step: jnp.ndarray) -&gt; jnp.ndarray:
+    last_size = grad.shape[-1]
+    kernel_sizes = (ctx.dims.pointwise_kernel, ctx.dims.outer_bottleneck_kernel, ctx.dims.inner_bottleneck_kernel)
+    <a id="change">if grad.ndim != 3</a> or last_size not in kernel_sizes:
+        return _shampoo(ctx, grad, step)
+    return jnp.stack([_shampoo(ctx, <a id="change">grad[:, :, i]</a>, step) for i in range(last_size)], axis=-1)
+
+
+def clip_norm(val: jnp.ndarray, min_norm: float) -&gt; jnp.ndarray:</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    preconditioner = Preconditioner(grad, ctx.optimizer.block_size)
+    new_preconditioners = []
+    <a id="change">for </a>i, <a id="change">old_stat</a> in enumerate(preconditioner.statistics_from_grad(grad))<a id="change">:
+        </a>new_stat = ema(ctx, old_stat, step, 1 - ctx.optimizer.shampoo_beta2, f"statistics_{i}", True,
+                       jnp.eye(old_stat.shape[0], dtype=ctx.model.storage_dtype) * ctx.optimizer.epsilon)
+        prev_p = get_param(ctx, f&quotpreconditioner_{i}&quot, old_stat.shape, dtype=ctx.model.storage_dtype,
+                           init_val=jnp.eye(old_stat.shape[0], dtype=ctx.model.storage_dtype))
+        <a id="change">if </a>ctx.is_initializing:
+            <a id="change">continue</a>
+
+        new_p<a id="change">, error = </a>matrix_inverse_pth_root(new_stat, preconditioner.exponent_for_preconditioner(),
+                                               ridge_epsilon=ctx.optimizer.epsilon)
+        new_p<a id="change"> = </a>select_preconditioner(error, new_p, prev_p)
+        new_preconditioners.append(new_p)
+        assign(ctx, f"preconditioner_{i}", new_p)
+    if ctx.is_initializing:</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/homebrewnlp/homebrewnlp-jax/commit/bf951740b4e76e5a2144d26015890e30aed83bb5#diff-4540d7c8541eb25568b448ea775d64c43be83ce020bc67dd8340da4d4e804846L92' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 57500406</div><div id='project'> Project Name: homebrewnlp/homebrewnlp-jax</div><div id='commit'> Commit Name: bf951740b4e76e5a2144d26015890e30aed83bb5</div><div id='time'> Time: 2022-07-06</div><div id='author'> Author: 39779310+ClashLuke@users.noreply.github.com</div><div id='file'> File Name: src/optimizer.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: shampoo(3)</div><div id='n_method'> N Method Name: shampoo(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/optimizer.py</div><div id='n_file'> N File Name: src/optimizer.py</div><div id='m_start'> M Start Line: 93</div><div id='m_end'> M End Line: 97</div><div id='n_start'> N Start Line: 70</div><div id='n_end'> N End Line: 89</div><BR>

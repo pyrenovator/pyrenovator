@@ -1,0 +1,18 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+  &#47&#47 TODO: support arbitrary strides
+  def _pool2d(self, py, px):
+    xup = <a id="change">self[:, :, :self.shape[2]-self.shape[2]%py, :self.shape[3]-self.shape[3]%px]</a> if (self.shape[2]%py != 0) or (self.shape[3]%px != 0) else self
+    return xup.reshape(shape=(xup.shape[0], xup.shape[1], xup.shape[2]//py, py, xup.shape[3]//px, px))
+
+  def avg_pool2d(self, kernel_size=(2,2)): return self._pool2d(*make_pair(kernel_size)).mean(axis=(3,5))</code></pre><h3>After Change</h3><pre><code class='java'>
+
+  &#47&#47 TODO: support arbitrary strides
+  def _pool2d(self, py, px, sy, sx):
+    <a id="change">if py &gt; sy</a> or px &gt; sx: <a id="change">raise </a>NotImplementedError("pool2d doesn&quott support kernel_size &gt; stride")
+    xup = self.slice(((0, self.shape[0]), (0, self.shape[1]), (0, (self.shape[2]+(sy-py))//sy*sy), (0, (self.shape[3]+(sx-px))//sx*sx)))
+    return xup.reshape(shape=(xup.shape[0], xup.shape[1], xup.shape[2]//sy, sy, xup.shape[3]//sx, sx))[:, :, :, :py, :, :px]
+</code></pre>

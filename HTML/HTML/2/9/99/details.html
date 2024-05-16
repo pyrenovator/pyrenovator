@@ -1,0 +1,134 @@
+<html><h3>Pattern ID :99
+</h3><img src='1058608.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    &gt;&gt;&gt; losses = tlx.losses.normalized_mean_square_error(y_logits, y_target_logits)
+
+    
+    <a id="change">with </a><a id="change">tf.name_scope("normalized_mean_squared_error_loss"):
+        &#47&#47 if len(output.shape) == 2:  &#47&#47 [batch_size, n_feature]
+        &#47&#47     axis = 1
+        &#47&#47 elif len(output.shape) == 3:  &#47&#47 [batch_size, w, h]
+        &#47&#47     axis = [1, 2]
+        &#47&#47 elif len(output.shape) == 4:  &#47&#47 [batch_size, w, h, c]
+        &#47&#47     axis = [1, 2, 3]
+        </a>nmse_a = tf.sqrt(tf.reduce_sum(tf.math.squared_difference(output, target), axis=axis))
+        nmse_b = tf.sqrt(tf.reduce_sum(tf.square(target), axis=axis))
+        nmse = tf.reduce_mean(nmse_a / nmse_b, name=name)
+    return nmse</code></pre><h3>After Change</h3><pre><code class='java'>
+    nmse_a = tf.sqrt(tf.reduce_sum(tf.math.squared_difference(output, target), axis=-1))
+    nmse_b = tf.sqrt(tf.reduce_sum(tf.square(target), axis=-1))
+
+    <a id="change">if reduction == &quotmean&quot</a>:
+        nmse = tf.reduce_mean(nmse_a / nmse_b)
+    elif reduction == &quotsum&quot:
+        nmse<a id="change"> = </a>tf.reduce_sum(nmse_a / nmse_b)
+    elif <a id="change">reduction == &quotnone&quot</a>:
+        nmse = nmse_a / nmse_b
+    else:
+        <a id="change">raise </a>Exception("The reduction values are &quotmean&quot, &quotsum&quot, and &quotnone&quot.")
+    return nmse
+
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 8</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/tensorlayer/tensorlayerx/commit/21bf2328ccadff5a24520c774d17bfd6d5e05fa4#diff-3c223aba3b10d989eee06bb108c922fd971ff8ab3e4cddf2fb7bc28c495b1918L168' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 1058608</div><div id='project'> Project Name: tensorlayer/tensorlayerx</div><div id='commit'> Commit Name: 21bf2328ccadff5a24520c774d17bfd6d5e05fa4</div><div id='time'> Time: 2022-01-26</div><div id='author'> Author: laicheng_vip@163.com</div><div id='file'> File Name: tensorlayerx/losses/tensorflow_cost.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: normalized_mean_square_error(3)</div><div id='n_method'> N Method Name: normalized_mean_square_error(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: tensorlayerx/losses/tensorflow_cost.py</div><div id='n_file'> N File Name: tensorlayerx/losses/tensorflow_cost.py</div><div id='m_start'> M Start Line: 168</div><div id='m_end'> M End Line: 198</div><div id='n_start'> N Start Line: 198</div><div id='n_end'> N End Line: 209</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    logging.info(f"Using hyperparameters: {env.hparams}")
+    logging.debug(f"Using a test experiment config: {env.experiment_config}")
+
+    <a id="change">with </a><a id="change">local_execution_manager(context_path):
+        </a>if not trial_class:
+            logging.debug("Loading trial class from experiment configuration")
+            trial_class = load.load_trial_implementation(env.experiment_config["entrypoint"])
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    logging.info(f"Using hyperparameters: {env.hparams}")
+    logging.debug(f"Using a test experiment config: {env.experiment_config}")
+
+    <a id="change">if native_context_cls is not None</a> and controller_cls is not None:
+        &#47&#47 Case 1: test one batch for Native implementation.
+        controller_cls.pre_execute_hook(env=env, hvd_config=hvd_config)
+        context<a id="change"> = </a>native_context_cls(env=env, hvd_config=hvd_config)
+
+        def train_fn() -&gt; None:
+            controller = cast(Type[det.TrialController], controller_cls).from_native(
+                context=context,
+                env=env,
+                workloads=workloads,
+                load_path=None,
+                rendezvous_info=rendezvous_info,
+                hvd_config=hvd_config,
+            )
+            controller.run()
+            checkpoint_dir.cleanup()
+
+        context._set_train_fn(train_fn)
+        logging.info(
+            "Note: to submit an experiment to the cluster, change mode argument to Mode.CLUSTER"
+        )
+        return context
+
+    elif <a id="change">trial_class is not None</a>:
+        &#47&#47 Case 2: test one batch for Trial implementation.
+        controller = load.load_controller_from_trial(
+            trial_class=trial_class,
+            env=env,
+            workloads=workloads,
+            load_path=None,
+            rendezvous_info=rendezvous_info,
+            hvd_config=hvd_config,
+        )
+        controller.run()
+        checkpoint_dir.cleanup()
+        logging.info(
+            "Note: to submit an experiment to the cluster, change mode argument to Mode.CLUSTER"
+        )
+
+    else:
+        <a id="change">raise </a>errors.InternalException(
+            "Must provide a trial_def if using Trial API or "
+            "a controller_cls and a native_context_cls if using Native API."
+        )</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/determined-ai/determined/commit/03270c0aafa01876b93c31eeb61b052807608307#diff-2e9eea92d2d4e898e5ac7ab67a269b4276d4b0c5d909e1321e370f5d74155039L431' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 1058624</div><div id='project'> Project Name: determined-ai/determined</div><div id='commit'> Commit Name: 03270c0aafa01876b93c31eeb61b052807608307</div><div id='time'> Time: 2020-05-15</div><div id='author'> Author: shiyuan@determined.ai</div><div id='file'> File Name: harness/determined/experimental/_native.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: test_one_batch(4)</div><div id='n_method'> N Method Name: test_one_batch(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: harness/determined/experimental/_native.py</div><div id='n_file'> N File Name: harness/determined/experimental/_native.py</div><div id='m_start'> M Start Line: 432</div><div id='m_end'> M End Line: 466</div><div id='n_start'> N Start Line: 325</div><div id='n_end'> N End Line: 387</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    def process(self, audio_path):
+        &#47&#47 start = timeit.default_timer()
+        <a id="change">with </a><a id="change">torch.no_grad():
+            </a>if isinstance(audio_path, str):
+            	audio, _ = librosa.load(audio_path, sr=self.sample_rate)  &#47&#47 reading the data
+            else:
+            	audio = audio_path</code></pre><h3>After Change</h3><pre><code class='java'>
+
+
+    def process(self, audio_path, inference_model, plot = False):
+        <a id="change">if inference_model == "PF"</a>:                 &#47&#47 instantiating a Particle Filter decoder - Is Chosen for online inference
+            self.estimator<a id="change"> = </a>particle_filter_cascade(beats_per_bar=[], fps=50, plot=plot)
+        elif <a id="change">inference_model == "DBN"</a>:                &#47&#47 instantiating an HMM decoder - Is chosen for offline inference
+            self.estimator = DBNDownBeatTrackingProcessor(beats_per_bar=[2, 3, 4], fps=50)
+        else:
+            <a id="change">raise </a>RuntimeError(&quotinference_model can be either "PF" or "DBN"&quot)
+        preds = self.activation_extractor(audio_path)
+        if inference_model == "PF":   &#47&#47 Online _ causal
+            data = self.estimator.process(preds)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/mjhydri/beatnet/commit/0fb33177b8fcafe2daff996b597bcb04eeb71a15#diff-592f3b4d9c6eeded7fac4dbc1ac54ce2d8b7012a1045e4bc17945a64e9ce0a32L47' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 1058617</div><div id='project'> Project Name: mjhydri/beatnet</div><div id='commit'> Commit Name: 0fb33177b8fcafe2daff996b597bcb04eeb71a15</div><div id='time'> Time: 2021-10-29</div><div id='author'> Author: mj.hydri@gmail.com</div><div id='file'> File Name: src/BeatNet/BeatNet.py</div><div id='m_class'> M Class Name: BeatNet</div><div id='n_method'> N Class Name: BeatNet</div><div id='m_method'> M Method Name: process(4)</div><div id='n_method'> N Method Name: process(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/BeatNet/BeatNet.py</div><div id='n_file'> N File Name: src/BeatNet/BeatNet.py</div><div id='m_start'> M Start Line: 47</div><div id='m_end'> M End Line: 71</div><div id='n_start'> N Start Line: 39</div><div id='n_end'> N End Line: 51</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    &gt;&gt;&gt; losses = tlx.losses.normalized_mean_square_error(y_logits, y_target_logits)
+
+    
+    <a id="change">with </a><a id="change">tf.name_scope("normalized_mean_squared_error_loss"):
+        &#47&#47 if len(output.shape) == 2:  &#47&#47 [batch_size, n_feature]
+        &#47&#47     axis = 1
+        &#47&#47 elif len(output.shape) == 3:  &#47&#47 [batch_size, w, h]
+        &#47&#47     axis = [1, 2]
+        &#47&#47 elif len(output.shape) == 4:  &#47&#47 [batch_size, w, h, c]
+        &#47&#47     axis = [1, 2, 3]
+        </a>nmse_a = tf.sqrt(tf.reduce_sum(tf.math.squared_difference(output, target), axis=axis))
+        nmse_b = tf.sqrt(tf.reduce_sum(tf.square(target), axis=axis))
+        nmse = tf.reduce_mean(nmse_a / nmse_b, name=name)
+    return nmse</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    if reduction == &quotmean&quot:
+        nmse = tf.reduce_mean(nmse_a / nmse_b)
+    elif <a id="change">reduction == &quotsum&quot</a>:
+        nmse<a id="change"> = </a>tf.reduce_sum(nmse_a / nmse_b)
+    elif <a id="change">reduction == &quotnone&quot</a>:
+        nmse = nmse_a / nmse_b
+    else:
+        <a id="change">raise </a>Exception("The reduction values are &quotmean&quot, &quotsum&quot, and &quotnone&quot.")
+    return nmse
+
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/tensorlayer/tensorlayerx/commit/21bf2328ccadff5a24520c774d17bfd6d5e05fa4#diff-3c223aba3b10d989eee06bb108c922fd971ff8ab3e4cddf2fb7bc28c495b1918L168' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 1058623</div><div id='project'> Project Name: tensorlayer/tensorlayerx</div><div id='commit'> Commit Name: 21bf2328ccadff5a24520c774d17bfd6d5e05fa4</div><div id='time'> Time: 2022-01-26</div><div id='author'> Author: laicheng_vip@163.com</div><div id='file'> File Name: tensorlayerx/losses/tensorflow_cost.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: normalized_mean_square_error(3)</div><div id='n_method'> N Method Name: normalized_mean_square_error(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: tensorlayerx/losses/tensorflow_cost.py</div><div id='n_file'> N File Name: tensorlayerx/losses/tensorflow_cost.py</div><div id='m_start'> M Start Line: 168</div><div id='m_end'> M End Line: 198</div><div id='n_start'> N Start Line: 198</div><div id='n_end'> N End Line: 209</div><BR>

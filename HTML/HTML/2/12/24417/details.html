@@ -1,0 +1,229 @@
+<html><h3>Pattern ID :24417
+</h3><img src='75853765.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        List[Metadata],
+        Optional[List[TextDocument]],
+    ]:
+        inputs<a id="change"> = []</a>
+        expanded_documents = []
+        <a id="change">for </a>doc in documents<a id="change">:
+            partitions: </a>Sequence[Span]
+            if self.single_sentence:
+                partitions = doc[self.sentence_annotation]
+            else:
+                partitions = [Span(start=0, end=len(doc.text))]
+            for partition in partitions:
+                encoding = self.tokenizer(
+                    doc.text[partition.start : partition.end],
+                    padding=False,
+                    truncation=self.truncation,
+                    max_length=self.max_length,
+                    is_split_into_words=False,
+                    return_offsets_mapping=True,
+                    return_special_tokens_mask=True,
+                )
+                <a id="change">inputs.append(</a>encoding<a id="change">)</a>
+                expanded_documents.append(doc)
+
+        metadata<a id="change"> = </a>[
+            {
+                "offset_mapping": inp.pop("offset_mapping"),
+                "special_tokens_mask": inp.pop("special_tokens_mask"),
+            }
+            for inp in inputs
+        ]
+
+        if self.single_sentence:
+            i = 0
+            for document in documents:
+                for sentence_index in range(len(document[self.sentence_annotation])):
+                    metadata[i]["sentence_index"]<a id="change"> = </a>sentence_index
+                    i += 1
+
+        <a id="change">return </a>inputs<a id="change">, metadata, expanded_documents</a>
+
+    def encode_target(
+        self,
+        documents: List[TextDocument],</code></pre><h3>After Change</h3><pre><code class='java'>
+        else:
+            partitions = [Span(start=0, end=len(document.text))]
+
+        task_encodings<a id="change">: List[TaskEncoding] = </a><a id="change">[]</a>
+        for partition_idx, partition in enumerate(partitions):
+            inputs = self.tokenizer(
+                document.text[partition.start : partition.end],
+                padding=False,
+                truncation=self.truncation,
+                max_length=self.max_length,
+                is_split_into_words=False,
+                return_offsets_mapping=True,
+                return_special_tokens_mask=True,
+            )
+
+            metadata = {
+                "offset_mapping": inputs.pop("offset_mapping"),
+                "special_tokens_mask": inputs.pop("special_tokens_mask"),
+            }
+
+            if self.single_sentence:
+                metadata["partition_idx"] = partition_idx
+
+            task_encodings.append(
+                TaskEncoding(
+                    document=document,
+                    inputs=inputs,
+                    metadata=metadata,
+                )
+            )
+
+        <a id="change">return </a>task_encodings
+
+    def encode_target(
+        self,</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 11</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/christophalt/pytorch-ie/commit/71e9abcacab7dfca0b9ff2e2052008eaf3a52ed0#diff-c62017095786d14acc04fe19ff24a45d406b12526c013b6ff49bd62dc8e0fb83L121' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 75853765</div><div id='project'> Project Name: christophalt/pytorch-ie</div><div id='commit'> Commit Name: 71e9abcacab7dfca0b9ff2e2052008eaf3a52ed0</div><div id='time'> Time: 2022-04-29</div><div id='author'> Author: ChristophAlt@users.noreply.github.com</div><div id='file'> File Name: src/pytorch_ie/taskmodules/transformer_span_classification.py</div><div id='m_class'> M Class Name: TransformerSpanClassificationTaskModule</div><div id='n_method'> N Class Name: TransformerSpanClassificationTaskModule</div><div id='m_method'> M Method Name: encode_input(3)</div><div id='n_method'> N Method Name: encode_input(3)</div><div id='m_parent_class'> M Parent Class: _TransformerSpanClassificationTaskModule</div><div id='n_parent_class'> N Parent Class: _TransformerSpanClassificationTaskModule</div><div id='m_file'> M File Name: src/pytorch_ie/taskmodules/transformer_span_classification.py</div><div id='n_file'> N File Name: src/pytorch_ie/taskmodules/transformer_span_classification.py</div><div id='m_start'> M Start Line: 121</div><div id='m_end'> M End Line: 164</div><div id='n_start'> N Start Line: 121</div><div id='n_end'> N End Line: 163</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        )
+
+    def forward(self, input, hidden_state=None):
+        output<a id="change"> = []</a>
+        <a id="change">for step</a> in range(input.size(1))<a id="change">:
+            &#47&#47 Compute current time-step
+            </a>hidden_state = self.rnn_cell(input[:, step, :, :, :], hidden_state)
+            <a id="change">output.append(</a>hidden_state<a id="change">)</a>
+        &#47&#47 Stack the list of output hidden states into a tensor
+        output = torch.stack(output, 0)
+        <a id="change">return </a>output
+
+
+&#47&#47 --------------------------------------------------------------------------</code></pre><h3>After Change</h3><pre><code class='java'>
+        seq_len = len(cur_layer_input)
+
+        layer_output_list = []
+        last_state_list<a id="change"> = </a><a id="change">[]</a>
+
+        for l, (gru_cell, hid_dp) in enumerate(zip(self.cell_list, self.hidden_dps)):
+            h = hidden_state[l]
+            output_inner = []
+            for t in range(seq_len):
+                h = gru_cell(input=cur_layer_input[t], h_prev=h)
+                output_inner.append(h)
+
+            cur_layer_input = torch.stack(output_inner)  &#47&#47 list to array
+            if l != self.n_layers:
+                cur_layer_input = hid_dp(cur_layer_input)
+            last_state_list.append(h)
+
+        layer_output<a id="change"> = </a>torch.stack(output_inner, dim=int(self.batch_first))
+        last_state_list<a id="change"> = </a>torch.stack(last_state_list, dim=0)
+        <a id="change">return </a>layer_output<a id="change">, last_state_list</a>
+
+    def reset_parameters(self):
+        for c in self.cell_list:
+            c.reset_parameters()</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/openclimatefix/skillful_nowcasting/commit/02c5ceadd01484d6ac8bce848ff76446fe7a6917#diff-cee00a565d888c684ec40bd3eac27669aa3223b223a80ae9f871383a9fb64917L268' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 75853764</div><div id='project'> Project Name: openclimatefix/skillful_nowcasting</div><div id='commit'> Commit Name: 02c5ceadd01484d6ac8bce848ff76446fe7a6917</div><div id='time'> Time: 2021-10-18</div><div id='author'> Author: jacob@bieker.tech</div><div id='file'> File Name: nowcasting_gan/layers/ConvGRU.py</div><div id='m_class'> M Class Name: ConvGRU</div><div id='n_method'> N Class Name: ConvGRU</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: nowcasting_gan/layers/ConvGRU.py</div><div id='n_file'> N File Name: nowcasting_gan/layers/ConvGRU.py</div><div id='m_start'> M Start Line: 269</div><div id='m_end'> M End Line: 276</div><div id='n_start'> N Start Line: 196</div><div id='n_end'> N End Line: 221</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+        &#47&#47 Update gate of the GRU.
+        update_gate_conv = layers.SNConv2D(num_channels, self._kernel_size, sn_eps=self._sn_eps)
+        update_gate<a id="change"> = </a>F.sigmoid(update_gate_conv(xh))
+
+        &#47&#47 Gate the inputs.
+        gated_input<a id="change"> = </a>torch.cat(<a id="change">[</a>x, read_gate * prev_state<a id="change"></a>], dim=1)
+
+        &#47&#47 Gate the cell and state / outputs.
+        output_conv = layers.SNConv2D(num_channels, self._kernel_size, sn_eps=self._sn_eps)
+        c<a id="change"> = </a>F.relu(output_conv(gated_input))
+        out = update_gate * prev_state + (1.0 - update_gate) * c
+        new_state = out
+
+        <a id="change">return </a>out<a id="change">, new_state</a>
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        self.cell = ConvGRUCell(input_channels, output_channels, kernel_size, sn_eps)
+
+    def forward(self, x: torch.Tensor, hidden_state=None) -&gt; torch.Tensor:
+        outputs<a id="change"> = </a><a id="change">[]</a>
+        <a id="change">for step</a> in range(x.size(1))<a id="change">:
+            &#47&#47 Compute current timestep
+            </a>output, hidden_state = self.cell(x[:, step, :, :, :], hidden_state)
+            <a id="change">outputs.append(</a>output<a id="change">)</a>
+        &#47&#47 Stack outputs to return as tensor
+        outputs = torch.stack(outputs, dim=0)
+        <a id="change">return </a>outputs
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/openclimatefix/skillful_nowcasting/commit/b080785f5f559396d0b7e1a52d1c6d9a948d9439#diff-cee00a565d888c684ec40bd3eac27669aa3223b223a80ae9f871383a9fb64917L19' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 75853767</div><div id='project'> Project Name: openclimatefix/skillful_nowcasting</div><div id='commit'> Commit Name: b080785f5f559396d0b7e1a52d1c6d9a948d9439</div><div id='time'> Time: 2021-11-08</div><div id='author'> Author: jacob@bieker.tech</div><div id='file'> File Name: nowcasting_gan/layers/ConvGRU.py</div><div id='m_class'> M Class Name: ConvGRU</div><div id='n_method'> N Class Name: ConvGRU</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: torch.nn.Module</div><div id='n_parent_class'> N Parent Class: torch.nn.Module</div><div id='m_file'> M File Name: nowcasting_gan/layers/ConvGRU.py</div><div id='n_file'> N File Name: nowcasting_gan/layers/ConvGRU.py</div><div id='m_start'> M Start Line: 19</div><div id='m_end'> M End Line: 51</div><div id='n_start'> N Start Line: 70</div><div id='n_end'> N End Line: 78</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        List[Metadata],
+        Optional[List[TextDocument]],
+    ]:
+        inputs<a id="change"> = []</a>
+        expanded_documents<a id="change"> = </a>[]
+        <a id="change">for doc</a> in documents<a id="change">:
+            partitions: </a>Sequence[Span]
+            if self.single_sentence:
+                partitions = doc[self.sentence_annotation]
+            else:
+                partitions = [Span(start=0, end=len(doc.text))]
+            for partition in partitions:
+                encoding = self.tokenizer(
+                    doc.text[partition.start : partition.end],
+                    padding=False,
+                    truncation=self.truncation,
+                    max_length=self.max_length,
+                    is_split_into_words=False,
+                    return_offsets_mapping=True,
+                    return_special_tokens_mask=True,
+                )
+                <a id="change">inputs.append(</a>encoding<a id="change">)</a>
+                expanded_documents.append(doc)
+
+        metadata<a id="change"> = </a>[
+            {
+                "offset_mapping": inp.pop("offset_mapping"),
+                "special_tokens_mask": inp.pop("special_tokens_mask"),
+            }
+            for inp in inputs
+        ]
+
+        if self.single_sentence:
+            i = 0
+            for document in documents:
+                for sentence_index in range(len(document[self.sentence_annotation])):
+                    metadata[i]["sentence_index"] = sentence_index
+                    i += 1
+
+        <a id="change">return </a>inputs<a id="change">, metadata, expanded_documents</a>
+
+    def encode_target(
+        self,
+        documents: List[TextDocument],</code></pre><h3>After Change</h3><pre><code class='java'>
+        else:
+            partitions = [Span(start=0, end=len(document.text))]
+
+        task_encodings<a id="change">: List[TaskEncoding] = </a><a id="change">[]</a>
+        for partition_idx, partition in enumerate(partitions):
+            inputs = self.tokenizer(
+                document.text[partition.start : partition.end],
+                padding=False,
+                truncation=self.truncation,
+                max_length=self.max_length,
+                is_split_into_words=False,
+                return_offsets_mapping=True,
+                return_special_tokens_mask=True,
+            )
+
+            metadata = {
+                "offset_mapping": inputs.pop("offset_mapping"),
+                "special_tokens_mask": inputs.pop("special_tokens_mask"),
+            }
+
+            if self.single_sentence:
+                metadata["partition_idx"] = partition_idx
+
+            task_encodings.append(
+                TaskEncoding(
+                    document=document,
+                    inputs=inputs,
+                    metadata=metadata,
+                )
+            )
+
+        <a id="change">return </a>task_encodings
+
+    def encode_target(
+        self,</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/christophalt/pytorch-ie/commit/71e9abcacab7dfca0b9ff2e2052008eaf3a52ed0#diff-c62017095786d14acc04fe19ff24a45d406b12526c013b6ff49bd62dc8e0fb83L119' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 75853775</div><div id='project'> Project Name: christophalt/pytorch-ie</div><div id='commit'> Commit Name: 71e9abcacab7dfca0b9ff2e2052008eaf3a52ed0</div><div id='time'> Time: 2022-04-29</div><div id='author'> Author: ChristophAlt@users.noreply.github.com</div><div id='file'> File Name: src/pytorch_ie/taskmodules/transformer_span_classification.py</div><div id='m_class'> M Class Name: TransformerSpanClassificationTaskModule</div><div id='n_method'> N Class Name: TransformerSpanClassificationTaskModule</div><div id='m_method'> M Method Name: encode_input(3)</div><div id='n_method'> N Method Name: encode_input(3)</div><div id='m_parent_class'> M Parent Class: _TransformerSpanClassificationTaskModule</div><div id='n_parent_class'> N Parent Class: _TransformerSpanClassificationTaskModule</div><div id='m_file'> M File Name: src/pytorch_ie/taskmodules/transformer_span_classification.py</div><div id='n_file'> N File Name: src/pytorch_ie/taskmodules/transformer_span_classification.py</div><div id='m_start'> M Start Line: 121</div><div id='m_end'> M End Line: 164</div><div id='n_start'> N Start Line: 121</div><div id='n_end'> N End Line: 163</div><BR>

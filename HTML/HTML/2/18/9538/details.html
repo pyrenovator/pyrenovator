@@ -1,0 +1,502 @@
+<html><h3>Pattern ID :9538
+</h3><img src='34175881.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+    &#47&#47 3. Fit encoder:
+    label_encoder.insert_blank(index=hparams["blank_index"])
+    <a id="change">label_encoder.update_from_didataset(</a>train_data<a id="change">, output_key="phn_list")</a>
+
+    &#47&#47 4. Set output:
+    sb.dataio.dataset.set_output_keys(datasets, ["id", "sig", "phn_encoded"])
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    &#47&#47 3. Fit encoder:
+    &#47&#47 Load or compute the label encoder
+    <a id="change">label_encoder_file = </a><a id="change">os.path.join(
+        hparams["save_folder"]</a>, <a id="change">"label_encoder.txt"</a><a id="change">
+    )</a>
+    <a id="change">if os.path.exists(label_encoder_file</a><a id="change">)</a>:
+        <a id="change">label_encoder.load(label_encoder_file</a><a id="change">)</a>
+    else:
+        label_encoder.insert_blank(index=hparams["blank_index"])
+        <a id="change">label_encoder.update_from_didataset(</a>train_data<a id="change">, output_key="phn_list")</a>
+        <a id="change">label_encoder.save(
+            </a><a id="change">os.path.join(hparams["save_folder"]</a>, <a id="change">"label_encoder.txt"</a><a id="change">)
+        )</a>
+
+    &#47&#47 4. Set output:
+    sb.dataio.dataset.set_output_keys(datasets, ["id", "sig", "phn_encoded"])
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 5</div><BR><div id='size'>Non-data size: 13</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/speechbrain/speechbrain/commit/f937893465fd5c10fd556f164cc08ee1251cca49#diff-ef99f633c419aa2f620176535e1f719997941ca05391e356e4f660cb783e7bc4L125' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 34175881</div><div id='project'> Project Name: speechbrain/speechbrain</div><div id='commit'> Commit Name: f937893465fd5c10fd556f164cc08ee1251cca49</div><div id='time'> Time: 2021-02-05</div><div id='author'> Author: mirco.ravanelli@gmail.com</div><div id='file'> File Name: recipes/TIMIT/ASR/CTC/train/train.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: dataio_prep(1)</div><div id='n_method'> N Method Name: dataio_prep(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: recipes/TIMIT/ASR/CTC/train/train.py</div><div id='n_file'> N File Name: recipes/TIMIT/ASR/CTC/train/train.py</div><div id='m_start'> M Start Line: 177</div><div id='m_end'> M End Line: 178</div><div id='n_start'> N Start Line: 125</div><div id='n_end'> N End Line: 192</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    &#47&#47 3. Fit encoder:
+    &#47&#47 NOTE: In this minimal example, also update from valid data
+
+    <a id="change">label_encoder.update_from_didataset(</a>train_data<a id="change">, output_key="phn_list")</a>
+    if (
+        hparams["blank_index"] != hparams["bos_index"]
+        or hparams["blank_index"] != hparams["eos_index"]
+    ):</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 we sort training data to speed up training and get better results.
+        train_data = train_data.filtered_sorted(sort_key="duration")
+        &#47&#47 when sorting do not shuffle in dataloader ! otherwise is pointless
+        <a id="change">hparams["train_dataloader_opts"]["shuffle"]</a> = False
+
+    elif hparams["sorting"] == "descending":
+        train_data = train_data.filtered_sorted(
+            sort_key="duration", reverse=True
+        )
+        &#47&#47 when sorting do not shuffle in dataloader ! otherwise is pointless
+        hparams["train_dataloader_opts"]["shuffle"] = False
+
+    elif hparams["sorting"] == "random":
+        pass
+
+    else:
+        raise NotImplementedError(
+            "sorting must be random, ascending or descending"
+        )
+
+    valid_data = sb.dataio.dataset.DynamicItemDataset.from_csv(
+        csv_path=hparams["valid_annotation"],
+        replacements={"data_root": data_folder},
+    )
+    valid_data = valid_data.filtered_sorted(sort_key="duration")
+
+    test_data = sb.dataio.dataset.DynamicItemDataset.from_csv(
+        csv_path=hparams["test_annotation"],
+        replacements={"data_root": data_folder},
+    )
+    test_data = test_data.filtered_sorted(sort_key="duration")
+
+    datasets = [train_data, valid_data, test_data]
+    <a id="change">label_encoder</a> = sb.dataio.encoder.CTCTextEncoder()
+
+    &#47&#47 2. Define audio pipeline:
+    @sb.utils.data_pipeline.takes("wav")
+    @sb.utils.data_pipeline.provides("sig")
+    def audio_pipeline(wav):
+        sig = sb.dataio.dataio.read_audio(wav)
+        return sig
+
+    sb.dataio.dataset.add_dynamic_item(datasets, audio_pipeline)
+
+    &#47&#47 3. Define text pipeline:
+    @sb.utils.data_pipeline.takes("phn")
+    @sb.utils.data_pipeline.provides(
+        "phn_list",
+        "phn_encoded_list",
+        "phn_encoded",
+        "phn_encoded_eos",
+        "phn_encoded_bos",
+    )
+    def text_pipeline(phn):
+        phn_list = phn.strip().split()
+        yield phn_list
+        phn_encoded_list = label_encoder.encode_sequence(phn_list)
+        yield phn_encoded_list
+        phn_encoded = torch.LongTensor(phn_encoded_list)
+        yield phn_encoded
+        phn_encoded_eos = torch.LongTensor(
+            label_encoder.append_eos_index(phn_encoded_list)
+        )
+        yield phn_encoded_eos
+        phn_encoded_bos = torch.LongTensor(
+            label_encoder.prepend_bos_index(phn_encoded_list)
+        )
+        yield phn_encoded_bos
+
+    sb.dataio.dataset.add_dynamic_item(datasets, text_pipeline)
+
+    &#47&#47 3. Fit encoder:
+    &#47&#47 Load or compute the label encoder
+    <a id="change">label_encoder_file = </a><a id="change">os.path.join(
+        hparams["save_folder"]</a>, <a id="change">"label_encoder.txt"</a><a id="change">
+    )</a>
+    <a id="change">if os.path.exists(</a>label_encoder_file<a id="change">)</a>:
+        <a id="change">label_encoder.load(</a>label_encoder_file<a id="change">)</a>
+    else:
+        <a id="change">label_encoder.update_from_didataset(</a>train_data<a id="change">, output_key="phn_list")</a>
+        if (
+            hparams["blank_index"] != hparams["bos_index"]
+            or hparams["blank_index"] != hparams["eos_index"]
+        ):
+            label_encoder.insert_blank(index=hparams["blank_index"])
+
+        if hparams["bos_index"] == hparams["eos_index"]:
+            label_encoder.insert_bos_eos(
+                bos_label="&lt;eos-bos&gt;",
+                eos_label="&lt;eos-bos&gt;",
+                bos_index=hparams["bos_index"],
+            )
+        else:
+            label_encoder.insert_bos_eos(
+                bos_label="&lt;bos&gt;",
+                eos_label="&lt;eos&gt;",
+                bos_index=hparams["bos_index"],
+                eos_index=hparams["eos_index"],
+            )
+        <a id="change">label_encoder.save(
+            </a><a id="change">os.path.join(hparams["save_folder"]</a>, <a id="change">"label_encoder.txt"</a><a id="change">)
+        )</a>
+
+    &#47&#47 4. Set output:
+    sb.dataio.dataset.set_output_keys(
+        datasets,</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/speechbrain/speechbrain/commit/f937893465fd5c10fd556f164cc08ee1251cca49#diff-bf48549ec22867c2b116830eaa36f22c5241c0cdd084e6fa66e9758a511bce92L154' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 34175880</div><div id='project'> Project Name: speechbrain/speechbrain</div><div id='commit'> Commit Name: f937893465fd5c10fd556f164cc08ee1251cca49</div><div id='time'> Time: 2021-02-05</div><div id='author'> Author: mirco.ravanelli@gmail.com</div><div id='file'> File Name: recipes/TIMIT/ASR/seq2seq_knowledge_distillation/train_teacher.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: data_io_prep(1)</div><div id='n_method'> N Method Name: data_io_prep(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: recipes/TIMIT/ASR/seq2seq_knowledge_distillation/train_teacher.py</div><div id='n_file'> N File Name: recipes/TIMIT/ASR/seq2seq_knowledge_distillation/train_teacher.py</div><div id='m_start'> M Start Line: 237</div><div id='m_end'> M End Line: 259</div><div id='n_start'> N Start Line: 167</div><div id='n_end'> N End Line: 268</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    &#47&#47 3. Fit encoder:
+    label_encoder.insert_blank(index=hparams["blank_index"])
+    <a id="change">label_encoder.update_from_didataset(</a>train_data<a id="change">, output_key="phn_list")</a>
+
+    &#47&#47 4. Set output:
+    sb.dataio.dataset.set_output_keys(datasets, ["id", "sig", "phn_encoded"])
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 we sort training data to speed up training and get better results.
+        train_data = train_data.filtered_sorted(sort_key="duration")
+        &#47&#47 when sorting do not shuffle in dataloader ! otherwise is pointless
+        <a id="change">hparams["train_dataloader_opts"]["shuffle"]</a> = False
+
+    elif hparams["sorting"] == "descending":
+        train_data = train_data.filtered_sorted(
+            sort_key="duration", reverse=True
+        )
+        &#47&#47 when sorting do not shuffle in dataloader ! otherwise is pointless
+        hparams["train_dataloader_opts"]["shuffle"] = False
+
+    elif hparams["sorting"] == "random":
+        pass
+
+    else:
+        raise NotImplementedError(
+            "sorting must be random, ascending or descending"
+        )
+
+    valid_data = sb.dataio.dataset.DynamicItemDataset.from_csv(
+        csv_path=hparams["valid_annotation"],
+        replacements={"data_root": data_folder},
+    )
+    valid_data = valid_data.filtered_sorted(sort_key="duration")
+
+    test_data = sb.dataio.dataset.DynamicItemDataset.from_csv(
+        csv_path=hparams["test_annotation"],
+        replacements={"data_root": data_folder},
+    )
+    test_data = test_data.filtered_sorted(sort_key="duration")
+
+    datasets = [train_data, valid_data, test_data]
+    <a id="change">label_encoder</a> = sb.dataio.encoder.CTCTextEncoder()
+
+    &#47&#47 2. Define audio pipeline:
+    @sb.utils.data_pipeline.takes("wav")
+    @sb.utils.data_pipeline.provides("sig")
+    def audio_pipeline(wav):
+        sig = sb.dataio.dataio.read_audio(wav)
+        return sig
+
+    sb.dataio.dataset.add_dynamic_item(datasets, audio_pipeline)
+
+    &#47&#47 3. Define text pipeline:
+    @sb.utils.data_pipeline.takes("phn")
+    @sb.utils.data_pipeline.provides("phn_list", "phn_encoded")
+    def text_pipeline(phn):
+        phn_list = phn.strip().split()
+        yield phn_list
+        phn_encoded = label_encoder.encode_sequence_torch(phn_list)
+        yield phn_encoded
+
+    sb.dataio.dataset.add_dynamic_item(datasets, text_pipeline)
+
+    &#47&#47 3. Fit encoder:
+    &#47&#47 Load or compute the label encoder
+    <a id="change">label_encoder_file = </a><a id="change">os.path.join(
+        hparams["save_folder"]</a>, <a id="change">"label_encoder.txt"</a><a id="change">
+    )</a>
+    <a id="change">if os.path.exists(</a>label_encoder_file<a id="change">)</a>:
+        <a id="change">label_encoder.load(</a>label_encoder_file<a id="change">)</a>
+    else:
+        label_encoder.insert_blank(index=hparams["blank_index"])
+        <a id="change">label_encoder.update_from_didataset(</a>train_data<a id="change">, output_key="phn_list")</a>
+        <a id="change">label_encoder.save(
+            </a><a id="change">os.path.join(hparams["save_folder"]</a>, <a id="change">"label_encoder.txt"</a><a id="change">)
+        )</a>
+
+    &#47&#47 4. Set output:
+    sb.dataio.dataset.set_output_keys(datasets, ["id", "sig", "phn_encoded"])
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/speechbrain/speechbrain/commit/f937893465fd5c10fd556f164cc08ee1251cca49#diff-ef99f633c419aa2f620176535e1f719997941ca05391e356e4f660cb783e7bc4L109' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 34175882</div><div id='project'> Project Name: speechbrain/speechbrain</div><div id='commit'> Commit Name: f937893465fd5c10fd556f164cc08ee1251cca49</div><div id='time'> Time: 2021-02-05</div><div id='author'> Author: mirco.ravanelli@gmail.com</div><div id='file'> File Name: recipes/TIMIT/ASR/CTC/train/train.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: dataio_prep(1)</div><div id='n_method'> N Method Name: dataio_prep(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: recipes/TIMIT/ASR/CTC/train/train.py</div><div id='n_file'> N File Name: recipes/TIMIT/ASR/CTC/train/train.py</div><div id='m_start'> M Start Line: 177</div><div id='m_end'> M End Line: 178</div><div id='n_start'> N Start Line: 125</div><div id='n_end'> N End Line: 192</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    sb.dataio.dataset.add_dynamic_item(datasets, phn_ends_pipeline)
+
+    &#47&#47 5. Fit encoder:
+    <a id="change">label_encoder.update_from_didataset(</a>train_data<a id="change">, output_key="phn_list")</a>
+
+    &#47&#47 6. Set output:
+    sb.dataio.dataset.set_output_keys(
+        datasets, ["id", "sig", "phn_encoded", "phn_ends"]</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 we sort training data to speed up training and get better results.
+        train_data = train_data.filtered_sorted(sort_key="duration")
+        &#47&#47 when sorting do not shuffle in dataloader ! otherwise is pointless
+        <a id="change">hparams["dataloader_options"]["shuffle"]</a> = False
+
+    elif hparams["sorting"] == "descending":
+        train_data = train_data.filtered_sorted(
+            sort_key="duration", reverse=True
+        )
+        &#47&#47 when sorting do not shuffle in dataloader ! otherwise is pointless
+        hparams["dataloader_options"]["shuffle"] = False
+
+    elif hparams["sorting"] == "random":
+        pass
+
+    else:
+        raise NotImplementedError(
+            "sorting must be random, ascending or descending"
+        )
+
+    valid_data = sb.dataio.dataset.DynamicItemDataset.from_csv(
+        csv_path=hparams["valid_annotation"],
+        replacements={"data_root": data_folder},
+    )
+
+    test_data = sb.dataio.dataset.DynamicItemDataset.from_csv(
+        csv_path=hparams["test_annotation"],
+        replacements={"data_root": data_folder},
+    )
+
+    datasets = [train_data, valid_data, test_data]
+    <a id="change">label_encoder</a> = sb.dataio.encoder.TextEncoder()
+
+    &#47&#47 2. Define audio pipeline:
+    @sb.utils.data_pipeline.takes("wav")
+    @sb.utils.data_pipeline.provides("sig")
+    def audio_pipeline(wav):
+        sig = sb.dataio.dataio.read_audio(wav)
+        return sig
+
+    sb.dataio.dataset.add_dynamic_item(datasets, audio_pipeline)
+
+    &#47&#47 3. Define text pipeline:
+    @sb.utils.data_pipeline.takes("phn")
+    @sb.utils.data_pipeline.provides("phn_list", "phn_encoded")
+    def text_pipeline(phn):
+        phn_list = phn.strip().split()
+        yield phn_list
+        phn_encoded = label_encoder.encode_sequence_torch(phn_list)
+        yield phn_encoded
+
+    sb.dataio.dataset.add_dynamic_item(datasets, text_pipeline)
+
+    &#47&#47 4. Define end sample pipeline
+    &#47&#47 (end sample is used to retrieve the golden alignment )
+
+    @sb.utils.data_pipeline.takes("ground_truth_phn_ends")
+    @sb.utils.data_pipeline.provides("phn_ends")
+    def phn_ends_pipeline(ground_truth_phn_ends):
+        phn_ends = ground_truth_phn_ends.strip().split()
+        phn_ends = [int(i) for i in phn_ends]
+        phn_ends = torch.Tensor(phn_ends)
+        return phn_ends
+
+    sb.dataio.dataset.add_dynamic_item(datasets, phn_ends_pipeline)
+
+    &#47&#47 3. Fit encoder:
+    &#47&#47 Load or compute the label encoder
+    <a id="change">label_encoder_file = </a><a id="change">os.path.join(
+        hparams["save_folder"]</a>, <a id="change">"label_encoder.txt"</a><a id="change">
+    )</a>
+    <a id="change">if os.path.exists(</a>label_encoder_file<a id="change">)</a>:
+        <a id="change">label_encoder.load(</a>label_encoder_file<a id="change">)</a>
+    else:
+        <a id="change">label_encoder.update_from_didataset(</a>train_data<a id="change">, output_key="phn_list")</a>
+        <a id="change">label_encoder.save(
+            </a><a id="change">os.path.join(hparams["save_folder"]</a>, <a id="change">"label_encoder.txt"</a><a id="change">)
+        )</a>
+
+    &#47&#47 6. Set output:
+    sb.dataio.dataset.set_output_keys(
+        datasets, ["id", "sig", "phn_encoded", "phn_ends"]</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/speechbrain/speechbrain/commit/f937893465fd5c10fd556f164cc08ee1251cca49#diff-6e71a3b27909255f4841c23c0fd70edc34e460822098e12e287d75e2898a8394L138' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 34175873</div><div id='project'> Project Name: speechbrain/speechbrain</div><div id='commit'> Commit Name: f937893465fd5c10fd556f164cc08ee1251cca49</div><div id='time'> Time: 2021-02-05</div><div id='author'> Author: mirco.ravanelli@gmail.com</div><div id='file'> File Name: recipes/TIMIT/Alignment/train/train.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: dataio_prep(1)</div><div id='n_method'> N Method Name: dataio_prep(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: recipes/TIMIT/Alignment/train/train.py</div><div id='n_file'> N File Name: recipes/TIMIT/Alignment/train/train.py</div><div id='m_start'> M Start Line: 218</div><div id='m_end'> M End Line: 218</div><div id='n_start'> N Start Line: 155</div><div id='n_end'> N End Line: 232</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    &#47&#47 3. Fit encoder:
+    &#47&#47 NOTE: In this minimal example, also update from valid data
+
+    <a id="change">label_encoder.update_from_didataset(</a>train_data<a id="change">, output_key="phn_list")</a>
+    if (
+        hparams["blank_index"] != hparams["bos_index"]
+        or hparams["blank_index"] != hparams["eos_index"]
+    ):</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 we sort training data to speed up training and get better results.
+        train_data = train_data.filtered_sorted(sort_key="duration")
+        &#47&#47 when sorting do not shuffle in dataloader ! otherwise is pointless
+        <a id="change">hparams["train_dataloader_opts"]["shuffle"]</a> = False
+
+    elif hparams["sorting"] == "descending":
+        train_data = train_data.filtered_sorted(
+            sort_key="duration", reverse=True
+        )
+        &#47&#47 when sorting do not shuffle in dataloader ! otherwise is pointless
+        hparams["train_dataloader_opts"]["shuffle"] = False
+
+    elif hparams["sorting"] == "random":
+        pass
+
+    else:
+        raise NotImplementedError(
+            "sorting must be random, ascending or descending"
+        )
+
+    valid_data = sb.dataio.dataset.DynamicItemDataset.from_csv(
+        csv_path=hparams["valid_annotation"],
+        replacements={"data_root": data_folder},
+    )
+    valid_data = valid_data.filtered_sorted(sort_key="duration")
+
+    test_data = sb.dataio.dataset.DynamicItemDataset.from_csv(
+        csv_path=hparams["test_annotation"],
+        replacements={"data_root": data_folder},
+    )
+    test_data = test_data.filtered_sorted(sort_key="duration")
+
+    datasets = [train_data, valid_data, test_data]
+    <a id="change">label_encoder</a> = sb.dataio.encoder.CTCTextEncoder()
+
+    &#47&#47 2. Define audio pipeline:
+    @sb.utils.data_pipeline.takes("wav")
+    @sb.utils.data_pipeline.provides("sig")
+    def audio_pipeline(wav):
+        sig = sb.dataio.dataio.read_audio(wav)
+        return sig
+
+    sb.dataio.dataset.add_dynamic_item(datasets, audio_pipeline)
+
+    &#47&#47 3. Define text pipeline:
+    @sb.utils.data_pipeline.takes("phn")
+    @sb.utils.data_pipeline.provides(
+        "phn_list",
+        "phn_encoded_list",
+        "phn_encoded",
+        "phn_encoded_eos",
+        "phn_encoded_bos",
+    )
+    def text_pipeline(phn):
+        phn_list = phn.strip().split()
+        yield phn_list
+        phn_encoded_list = label_encoder.encode_sequence(phn_list)
+        yield phn_encoded_list
+        phn_encoded = torch.LongTensor(phn_encoded_list)
+        yield phn_encoded
+        phn_encoded_eos = torch.LongTensor(
+            label_encoder.append_eos_index(phn_encoded_list)
+        )
+        yield phn_encoded_eos
+        phn_encoded_bos = torch.LongTensor(
+            label_encoder.prepend_bos_index(phn_encoded_list)
+        )
+        yield phn_encoded_bos
+
+    sb.dataio.dataset.add_dynamic_item(datasets, text_pipeline)
+
+    &#47&#47 3. Fit encoder:
+    &#47&#47 Load or compute the label encoder
+    <a id="change">label_encoder_file = </a><a id="change">os.path.join(
+        hparams["save_folder"]</a>, <a id="change">"label_encoder.txt"</a><a id="change">
+    )</a>
+    <a id="change">if os.path.exists(</a>label_encoder_file<a id="change">)</a>:
+        <a id="change">label_encoder.load(</a>label_encoder_file<a id="change">)</a>
+    else:
+        <a id="change">label_encoder.update_from_didataset(</a>train_data<a id="change">, output_key="phn_list")</a>
+        if (
+            hparams["blank_index"] != hparams["bos_index"]
+            or hparams["blank_index"] != hparams["eos_index"]
+        ):
+            label_encoder.insert_blank(index=hparams["blank_index"])
+
+        if hparams["bos_index"] == hparams["eos_index"]:
+            label_encoder.insert_bos_eos(
+                bos_label="&lt;eos-bos&gt;",
+                eos_label="&lt;eos-bos&gt;",
+                bos_index=hparams["bos_index"],
+            )
+        else:
+            label_encoder.insert_bos_eos(
+                bos_label="&lt;bos&gt;",
+                eos_label="&lt;eos&gt;",
+                bos_index=hparams["bos_index"],
+                eos_index=hparams["eos_index"],
+            )
+        <a id="change">label_encoder.save(
+            </a><a id="change">os.path.join(hparams["save_folder"]</a>, <a id="change">"label_encoder.txt"</a><a id="change">)
+        )</a>
+
+    &#47&#47 4. Set output:
+    sb.dataio.dataset.set_output_keys(
+        datasets,</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/speechbrain/speechbrain/commit/f937893465fd5c10fd556f164cc08ee1251cca49#diff-debbaf3573e95dd791268934a3a81d6b24fa5546214058fe518549978a2f91d2L162' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 34175875</div><div id='project'> Project Name: speechbrain/speechbrain</div><div id='commit'> Commit Name: f937893465fd5c10fd556f164cc08ee1251cca49</div><div id='time'> Time: 2021-02-05</div><div id='author'> Author: mirco.ravanelli@gmail.com</div><div id='file'> File Name: recipes/TIMIT/ASR/seq2seq/train/train.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: dataio_prep(1)</div><div id='n_method'> N Method Name: dataio_prep(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: recipes/TIMIT/ASR/seq2seq/train/train.py</div><div id='n_file'> N File Name: recipes/TIMIT/ASR/seq2seq/train/train.py</div><div id='m_start'> M Start Line: 246</div><div id='m_end'> M End Line: 268</div><div id='n_start'> N Start Line: 176</div><div id='n_end'> N End Line: 277</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    &#47&#47 3. Fit encoder:
+    label_encoder.insert_blank(index=hparams["blank_index"])
+    <a id="change">label_encoder.update_from_didataset(</a>train_data<a id="change">, output_key="phn_list")</a>
+
+    &#47&#47 4. Set output:
+    sb.dataio.dataset.set_output_keys(datasets, ["id", "sig", "phn_encoded"])
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            sort_key="duration", reverse=True
+        )
+        &#47&#47 when sorting do not shuffle in dataloader ! otherwise is pointless
+        <a id="change">hparams["train_dataloader_opts"]["shuffle"]</a> = False
+
+    elif hparams["sorting"] == "random":
+        pass
+
+    else:
+        raise NotImplementedError(
+            "sorting must be random, ascending or descending"
+        )
+
+    valid_data = sb.dataio.dataset.DynamicItemDataset.from_csv(
+        csv_path=hparams["valid_annotation"],
+        replacements={"data_root": data_folder},
+    )
+    valid_data = valid_data.filtered_sorted(sort_key="duration")
+
+    test_data = sb.dataio.dataset.DynamicItemDataset.from_csv(
+        csv_path=hparams["test_annotation"],
+        replacements={"data_root": data_folder},
+    )
+    test_data = test_data.filtered_sorted(sort_key="duration")
+
+    datasets = [train_data, valid_data, test_data]
+    <a id="change">label_encoder</a> = sb.dataio.encoder.CTCTextEncoder()
+
+    &#47&#47 2. Define audio pipeline:
+    @sb.utils.data_pipeline.takes("wav")
+    @sb.utils.data_pipeline.provides("sig")
+    def audio_pipeline(wav):
+        sig = sb.dataio.dataio.read_audio(wav)
+        return sig
+
+    sb.dataio.dataset.add_dynamic_item(datasets, audio_pipeline)
+
+    &#47&#47 3. Define text pipeline:
+    @sb.utils.data_pipeline.takes("phn")
+    @sb.utils.data_pipeline.provides("phn_list", "phn_encoded")
+    def text_pipeline(phn):
+        phn_list = phn.strip().split()
+        yield phn_list
+        phn_encoded = label_encoder.encode_sequence_torch(phn_list)
+        yield phn_encoded
+
+    sb.dataio.dataset.add_dynamic_item(datasets, text_pipeline)
+
+    &#47&#47 3. Fit encoder:
+    &#47&#47 Load or compute the label encoder
+    <a id="change">label_encoder_file = </a><a id="change">os.path.join(
+        hparams["save_folder"]</a>, <a id="change">"label_encoder.txt"</a><a id="change">
+    )</a>
+    <a id="change">if os.path.exists(</a>label_encoder_file<a id="change">)</a>:
+        <a id="change">label_encoder.load(</a>label_encoder_file<a id="change">)</a>
+    else:
+        label_encoder.insert_blank(index=hparams["blank_index"])
+        <a id="change">label_encoder.update_from_didataset(</a>train_data<a id="change">, output_key="phn_list")</a>
+        <a id="change">label_encoder.save(
+            </a><a id="change">os.path.join(hparams["save_folder"]</a>, <a id="change">"label_encoder.txt"</a><a id="change">)
+        )</a>
+
+    &#47&#47 4. Set output:
+    sb.dataio.dataset.set_output_keys(datasets, ["id", "sig", "phn_encoded"])
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/speechbrain/speechbrain/commit/f937893465fd5c10fd556f164cc08ee1251cca49#diff-2b6cf302172076bc5a5dce9027853c2c06a39ab027760ebb389bb5795cb8c3eaL146' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 34175877</div><div id='project'> Project Name: speechbrain/speechbrain</div><div id='commit'> Commit Name: f937893465fd5c10fd556f164cc08ee1251cca49</div><div id='time'> Time: 2021-02-05</div><div id='author'> Author: mirco.ravanelli@gmail.com</div><div id='file'> File Name: recipes/TIMIT/ASR/transducer/train/train.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: dataio_prep(1)</div><div id='n_method'> N Method Name: dataio_prep(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: recipes/TIMIT/ASR/transducer/train/train.py</div><div id='n_file'> N File Name: recipes/TIMIT/ASR/transducer/train/train.py</div><div id='m_start'> M Start Line: 215</div><div id='m_end'> M End Line: 216</div><div id='n_start'> N Start Line: 163</div><div id='n_end'> N End Line: 230</div><BR>

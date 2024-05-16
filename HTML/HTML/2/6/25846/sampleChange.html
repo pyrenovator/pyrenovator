@@ -1,0 +1,29 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            prev_values = detached_values[sub_step_keys[i - 1]]
+            observations[step_id].update({&quotprev_value&quot: prev_values.unsqueeze(-1)})
+            value_delta = self.networks[step_id](observations[step_id])["value"][..., 0]
+            next_values<a id="change"> = </a>detached_values[sub_step_keys[i - 1]] + value_delta
+
+            values[step_id] = next_values
+            detached_values[step_id]<a id="change"> = </a><a id="change">values[step_id].detach()</a>
+
+        return values, detached_values
+
+    @override(StateCritic)</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        &#47&#47 predict values for the first state
+        key_0 = record.substep_keys[0]
+        values = <a id="change">[</a>self.networks[key_0](record.observations[0])["value"][..., 0]<a id="change"></a>]
+        detached_values = [values[0].detach()]
+
+        for substep_record in record.substep_records[1:]:
+            &#47&#47 compute value 2 as delta of value 1
+            prev_values = detached_values[-1]
+            obs = substep_record.observation.copy()
+            obs[&quotprev_value&quot]<a id="change"> = </a>prev_values.unsqueeze(-1)
+
+            value_delta = self.networks[substep_record.substep_key](obs)["value"][..., 0]
+            next_values = detached_values[-1] + value_delta</code></pre>

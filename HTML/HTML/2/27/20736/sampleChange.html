@@ -1,0 +1,105 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 Prefill
+        if past_key_values is None:
+            &#47&#47 Create past tensor
+            <a id="change">past_key_values</a> = hidden_states.new_empty(
+                (
+                    len(self.layers),
+                    <a id="change">len(hidden_states</a><a id="change">)</a>,
+                    2,
+                    self.num_heads,
+                    self.head_size,
+                )
+            )
+            layer_past_present_indices = None
+            cu_seqlens_q = None
+        &#47&#47 Decode
+        else:
+            &#47&#47 Create indices from cumulative sequence lengths
+            layer_past_present_indices = cu_seqlens[1:] - 1
+            cu_seqlens_q = torch.arange(
+                cu_seqlens.shape[0], dtype=torch.int32, device=hidden_states.device
+            )
+
+        &#47&#47 Get rotary cos and sin for this forward
+        &#47&#47 Avoid to index in each layer
+        cos, sin = self.layers[0].attention.rotary_emb.get_cos_sin(
+            position_ids, max_s, hidden_states.dtype
+        )
+
+        residual = None
+        for i, layer in enumerate(self.layers):
+            <a id="change">hidden_states</a><a id="change">, residual</a> = <a id="change">layer(
+                hidden_states</a>,
+                <a id="change">residual</a>,
+                cos,
+                sin,
+                cu_seqlens,
+                max_s,
+                <a id="change">past_key_values[i]</a>,
+                layer_past_present_indices,
+                cu_seqlens_q<a id="change">,
+            )</a>
+
+        hidden_states, _ = self.final_layer_norm(hidden_states, residual)
+
+        return hidden_states, past_key_values</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 Prefill
+        if past_key_values is None:
+            &#47&#47 Create past tensor
+            <a id="change">past_key_values</a> = hidden_states.new_empty(
+                (
+                    len(self.layers),
+                    <a id="change">len(hidden_states</a><a id="change">)
+                    if </a><a id="change">pre_allocate_past_size is None
+                    else </a>pre_allocate_past_size,
+                    2,
+                    self.num_heads,
+                    self.head_size,
+                )
+            )
+            layer_past_present_indices = None
+            cu_seqlens_q = None
+            slice_past_index<a id="change"> = </a><a id="change">len(hidden_states</a><a id="change">)</a>
+        &#47&#47 Decode
+        else:
+            &#47&#47 Create indices from cumulative sequence lengths
+            layer_past_present_indices = cu_seqlens[1:] - 1
+            cu_seqlens_q = torch.arange(
+                cu_seqlens.shape[0], dtype=torch.int32, device=hidden_states.device
+            )
+            slice_past_index<a id="change"> = None</a>
+
+        &#47&#47 Get rotary cos and sin for this forward
+        &#47&#47 Avoid to index in each layer
+        cos, sin = self.layers[0].attention.rotary_emb.get_cos_sin(
+            position_ids, max_s, hidden_states.dtype
+        )
+
+        <a id="change">residual</a> = None
+        for i, layer in enumerate(self.layers):
+            &#47&#47 We added padding that now need to slice
+            layer_past_key_values = (
+                <a id="change">past_key_values[i]</a><a id="change">
+                if slice_past_index</a><a id="change"> is None
+                else past_key_values[i, :slice_past_index]</a>
+            )
+
+            <a id="change">hidden_states</a><a id="change">, residual = </a><a id="change">layer(
+                hidden_states</a>,
+                <a id="change">residual</a>,
+                cos,
+                sin,
+                cu_seqlens,
+                max_s,
+                layer_past_key_values,
+                layer_past_present_indices,
+                cu_seqlens_q<a id="change">,
+            )</a>
+
+        hidden_states, _ = self.final_layer_norm(hidden_states, residual)
+
+        return hidden_states, past_key_values</code></pre>

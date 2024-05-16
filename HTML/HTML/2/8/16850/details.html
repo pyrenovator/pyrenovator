@@ -1,0 +1,155 @@
+<html><h3>Pattern ID :16850
+</h3><img src='56335515.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    batch_size = segmask_array.shape[0]
+    batch_stack = []
+    for b in range(batch_size):
+        one_hot_stack = <a id="change">[]</a>
+        &#47&#47 since the input tensor is 5D, with [batch_size, modality, x, y, z], we do not need to consider the modality dimension for labels
+        segmask_array_iter = segmask_array[b, 0, ...]
+        bin_mask = segmask_array_iter == 0  &#47&#47 initialize bin_mask
+        &#47&#47 this implementation allows users to combine logical operands
+        for _class in class_list:
+            if isinstance(_class, str):
+                if "||" in _class:  &#47&#47 special case
+                    class_split = _class.split("||")
+                    bin_mask = segmask_array_iter == int(class_split[0])
+                    for i in range(1, len(class_split)):
+                        bin_mask = bin_mask | (
+                            segmask_array_iter == int(class_split[i])
+                        )
+                elif "|" in _class:  &#47&#47 special case
+                    class_split = _class.split("|")
+                    bin_mask = segmask_array_iter == int(class_split[0])
+                    for i in range(1, len(class_split)):
+                        bin_mask = bin_mask | (
+                            segmask_array_iter == int(class_split[i])
+                        )
+                else:
+                    &#47&#47 assume that it is a simple int
+                    bin_mask = segmask_array_iter == int(_class)
+            else:
+                bin_mask = segmask_array_iter == int(_class)
+                bin_mask = bin_mask.long()
+            <a id="change">one_hot_stack.append(</a>bin_mask<a id="change">)</a>
+        one_hot_stack<a id="change"> = torch.stack(</a>one_hot_stack<a id="change">)</a>
+        batch_stack.append(one_hot_stack)
+    batch_stack = torch.stack(batch_stack)
+    if batch_stack.shape[-1] == 1:
+        batch_stack = batch_stack.squeeze(-1)</code></pre><h3>After Change</h3><pre><code class='java'>
+                bin_mask = segmask_array_iter == int(_class)
+                bin_mask = bin_mask.long()
+                &#47&#47 we always ensure the append happens in dim 0, which is blank
+                bin_mask = <a id="change">bin_mask.unsqueeze(0</a><a id="change">)</a>
+                
+            if one_hot_stack is None:
+                one_hot_stack = bin_mask
+            else:
+                one_hot_stack<a id="change"> = </a>torch.cat((one_hot_stack, bin_mask))
+                
+        if batch_stack is None:
+            batch_stack<a id="change"> = </a>one_hot_stack
+        else:
+            batch_stack = torch.stack([batch_stack, one_hot_stack])
+    &#47&#47 always ensure we are returning a tensor with batch_size encoded</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 7</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/cbica/gandlf/commit/7e55f84b996834a00df755fe6620a3f514b044d8#diff-bb94cfa3aa2c4896ffc51250bc8aaa76a69755d33e3ec31c80f29b9c9353119bL20' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 56335515</div><div id='project'> Project Name: cbica/gandlf</div><div id='commit'> Commit Name: 7e55f84b996834a00df755fe6620a3f514b044d8</div><div id='time'> Time: 2021-10-04</div><div id='author'> Author: sarthak.pati@hotmail.com</div><div id='file'> File Name: GANDLF/utils/tensor.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: one_hot(2)</div><div id='n_method'> N Method Name: one_hot(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: GANDLF/utils/tensor.py</div><div id='n_file'> N File Name: GANDLF/utils/tensor.py</div><div id='m_start'> M Start Line: 20</div><div id='m_end'> M End Line: 53</div><div id='n_start'> N Start Line: 20</div><div id='n_end'> N End Line: 62</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        x = q + self.num_q * r
+        Mvt = self.Mv.unsqueeze(0)
+
+        p = <a id="change">[]</a>
+        Mv = []
+
+        for qt, xt in zip(q.permute(1, 0), x.permute(1, 0)):
+            kt = self.k_emb_layer(qt)
+            vt = self.v_emb_layer(xt)
+
+            wt = torch.softmax(torch.matmul(kt, self.Mk), dim=-1)
+
+            &#47&#47 Read Process
+            rt = (wt.unsqueeze(-1) * Mvt).sum(1)
+            ft = torch.tanh(self.f_layer(torch.cat([rt, kt], dim=-1)))
+            pt = torch.sigmoid(self.p_layer(ft)).squeeze()
+
+            &#47&#47 Write Process
+            et = torch.sigmoid(self.e_layer(vt))
+            Mvt = Mvt * (1 - (wt.unsqueeze(-1) * et.unsqueeze(1)))
+            at = torch.tanh(self.a_layer(vt))
+            Mvt = Mvt + (wt.unsqueeze(-1) * at.unsqueeze(1))
+
+            <a id="change">p.append(</a>pt<a id="change">)</a>
+            Mv.append(Mvt)
+
+        p<a id="change"> = torch.stack(</a>p<a id="change">, dim=1)</a>
+        Mv = torch.stack(Mv, dim=1)
+
+        return p, Mv
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        x = q + self.num_q * r
+
+        batch_size = x.shape[0]
+        Mvt = <a id="change">self.Mv0.unsqueeze(0</a><a id="change">)</a>.repeat(batch_size, 1, 1)
+
+        Mv<a id="change"> = </a>[Mvt]
+
+        k = self.k_emb_layer(q)
+        v = self.v_emb_layer(x)
+
+        w = torch.softmax(torch.matmul(k, self.Mk.T), dim=-1)
+
+        &#47&#47 Write Process
+        e = torch.sigmoid(self.e_layer(v))
+        a = torch.tanh(self.a_layer(v))
+
+        for et, at, wt in zip(
+            e.permute(1, 0, 2), a.permute(1, 0, 2), w.permute(1, 0, 2)
+        ):
+            Mvt = Mvt * (1 - (wt.unsqueeze(-1) * et.unsqueeze(1))) + \
+                (wt.unsqueeze(-1) * at.unsqueeze(1))
+            Mv.append(Mvt)
+
+        Mv = torch.stack(Mv, dim=1)
+
+        &#47&#47 Read Process
+        f<a id="change"> = </a>torch.tanh(
+            self.f_layer(
+                torch.cat(
+                    [</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/hcnoh/knowledge-tracing-collection-pytorch/commit/c42b01b83dbe54e94f4294009fbfe8bd910e3638#diff-f2ab9795149528e0325dcc207d9bb2ee66e3cdd4dff09817a550ab5174cc8763L39' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 56335512</div><div id='project'> Project Name: hcnoh/knowledge-tracing-collection-pytorch</div><div id='commit'> Commit Name: c42b01b83dbe54e94f4294009fbfe8bd910e3638</div><div id='time'> Time: 2021-10-06</div><div id='author'> Author: rhc0624@gmail.com</div><div id='file'> File Name: models/dkvmn.py</div><div id='m_class'> M Class Name: DKVMN</div><div id='n_method'> N Class Name: DKVMN</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: Module</div><div id='n_parent_class'> N Parent Class: Module</div><div id='m_file'> M File Name: models/dkvmn.py</div><div id='n_file'> N File Name: models/dkvmn.py</div><div id='m_start'> M Start Line: 40</div><div id='m_end'> M End Line: 66</div><div id='n_start'> N Start Line: 50</div><div id='n_end'> N End Line: 87</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+		reservoir.forward = self.eprop._decorate_hidden_forward(reservoir.forward, reservoir.name)
+		output_layer.forward = self.eprop._decorate_forward(output_layer.forward, output_layer.name)
+		for _ in progress_bar:
+			x_pred = <a id="change">[]</a>
+			x_pred.append(self.true_time_series[:, 0, :].clone())
+			forward_tensor = self.true_time_series[:, 0, :].clone().to(reservoir.device)
+			hh = None
+			for t in range(1, self.true_time_series.shape[-2]):
+				forward_tensor, hh = unpack_out_hh(reservoir(forward_tensor, hh, t=t-1))
+				forward_tensor, _ = unpack_out_hh(output_layer(forward_tensor, None, t=t-1))
+				<a id="change">x_pred.append(</a>forward_tensor<a id="change">)</a>
+				&#47&#47 eligibility_traces = dy_dw_local(y=forward_tensor, params=self.params)
+				&#47&#47 self.eprop.eligibility_traces = eligibility_traces
+				&#47&#47 batch_loss = self.eprop.apply_criterion(forward_tensor, self.true_time_series[:, t].to(forward_tensor.device))
+				&#47&#47 learning_signals = self.compute_learning_signals(loss_at_t)
+				&#47&#47 errors = self.eprop.compute_errors(forward_tensor, self.true_time_series[:, t])
+				&#47&#47 learning_signals = self.eprop.compute_learning_signals(errors)
+				&#47&#47 self.eprop.update_grads(errors, batch_loss)
+				forward_tensor.detach_()
+				hh = recursive_detach(hh)
+				&#47&#47 if t % self.update_each == 0:
+				&#47&#47 	self.eprop._make_optim_step()
+			self.eprop._make_optim_step()
+			x_pred<a id="change"> = torch.stack(</a>[t.cpu() for t in x_pred]<a id="change">, dim=1)</a>
+			pvar = PVarianceLoss()(x_pred, self.true_time_series.to(x_pred.device))
+			mse = torch.nn.MSELoss()(x_pred, self.true_time_series.to(x_pred.device))
+			progress_bar.set_postfix({"pvar": to_numpy(pvar).item(), "MSE": to_numpy(mse).item()})
+			pvars.append(to_numpy(pvar).item())</code></pre><h3>After Change</h3><pre><code class='java'>
+			mses.append(to_numpy(mse).item())
+		
+		val_pvars = []
+		inputs = <a id="change">self.raw_time_series[:, 0, :].clone().unsqueeze(1</a><a id="change">)</a>.to(self.model.device)
+		for _ in range(100):
+			val_x_pred<a id="change"> = </a>self.model.get_prediction_trace(inputs)
+			pvar<a id="change"> = </a>PVarianceLoss()(val_x_pred, self.raw_time_series.to(val_x_pred.device))
+			val_pvars.append(to_numpy(pvar).item())
+		print(f"Validation PVariance: {np.mean(val_pvars):.3f}")
+		return x_pred, self.raw_time_series</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/neurotorch/neurotorch/commit/da8d4065502c761ccf6e28e47dd189e3b5488140#diff-bfbe6bfd7f09fee9a898ae4ce6ce338f6bfc05e7db28469ba6540dfae09a766dL109' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 56335516</div><div id='project'> Project Name: neurotorch/neurotorch</div><div id='commit'> Commit Name: da8d4065502c761ccf6e28e47dd189e3b5488140</div><div id='time'> Time: 2023-01-31</div><div id='author'> Author: 50332514+JeremieGince@users.noreply.github.com</div><div id='file'> File Name: src/neurotorch/learning_algorithms/debug_e_prop_v5.py</div><div id='m_class'> M Class Name: SimplifiedEpropFinal</div><div id='n_method'> N Class Name: SimplifiedEpropFinal</div><div id='m_method'> M Method Name: train(4)</div><div id='n_method'> N Method Name: train(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/neurotorch/learning_algorithms/debug_e_prop_v5.py</div><div id='n_file'> N File Name: src/neurotorch/learning_algorithms/debug_e_prop_v5.py</div><div id='m_start'> M Start Line: 120</div><div id='m_end'> M End Line: 153</div><div id='n_start'> N Start Line: 115</div><div id='n_end'> N End Line: 144</div><BR>

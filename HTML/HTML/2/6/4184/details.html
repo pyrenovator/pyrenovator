@@ -1,0 +1,72 @@
+<html><h3>Pattern ID :4184
+</h3><img src='15396667.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    src = input_embed(ctx, src)
+    zero = shard(jnp.zeros_like(src))
+    src = (ctx.parameters, src, zero, src, zero)
+    <a id="change">for </a><a id="change">i</a> in <a id="change">range(</a>ctx.model.depth<a id="change">):
+        </a>src = reversible(ctx, spatial_mixing, (i + 1) == ctx.model.depth)(src)
+        src = reversible(ctx, feed_forward, <a id="change">(i + 1) == ctx.model.depth</a>)(src)
+    src = src[1] + src[3]
+    return contrastive_output_embed(ctx, src) if ctx.training.contrastive else output_embed(ctx, src)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    src = input_embed(ctx, src)
+    zero = shard(jnp.zeros_like(src))
+    src = (ctx.parameters, src, zero, src, zero)
+    src = lax.scan(<a id="change">step(</a>ctx<a id="change">)</a>, (src, jnp.zeros([])), None, ctx.dims.sizes.depth, unroll=ctx.model.scan_unroll)
+    return output_embed(ctx, revnet_out(src[0][1:]))
+
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 5</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/homebrewnlp/olmax/commit/7ed6886625803952b38a63e565e4d05fa04a4f7d#diff-6159e4e86b1b15ffd250a78dbdf29a41b004b4963154e49f8b96609b8ea977ceL263' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 15396667</div><div id='project'> Project Name: homebrewnlp/olmax</div><div id='commit'> Commit Name: 7ed6886625803952b38a63e565e4d05fa04a4f7d</div><div id='time'> Time: 2021-09-12</div><div id='author'> Author: 39779310+ClashLuke@users.noreply.github.com</div><div id='file'> File Name: src/model.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: body_ctx(2)</div><div id='n_method'> N Method Name: body_ctx(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/model.py</div><div id='n_file'> N File Name: src/model.py</div><div id='m_start'> M Start Line: 263</div><div id='m_end'> M End Line: 268</div><div id='n_start'> N Start Line: 263</div><div id='n_end'> N End Line: 265</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    src = input_embed(ctx, src)
+    zero = jnp.zeros_like(src)
+    src = (ctx.parameters, src, zero, src, zero)
+    <a id="change">for </a><a id="change">i</a> in <a id="change">range(</a>ctx.dims.depth<a id="change">):
+        </a>src = reversible(ctx, pointwise_block, src)
+        src = reversible(ctx, bottleneck_block, src)
+        src = reversible(ctx, pointwise_block, src)
+        if <a id="change">i % ctx.model.qrnn_frequency == (ctx.model.qrnn_frequency // 2 - 1)</a>:
+            src = reversible(ctx, qrnn_block, src)
+    out = revnet_out(src[1:])
+    out = scale_norm_act(ctx, out, ctx.dims.features, act=False)</code></pre><h3>After Change</h3><pre><code class='java'>
+        ctx.parameters = step(ctx)(src, ({}, 0))
+        ctx.add_depth = False
+    else:
+        src, _ = <a id="change">step(</a>ctx<a id="change">)</a>(src, ({}, 0))
+    out = revnet_out(src)
+    out = scale_norm_act(ctx, out, ctx.dims.features, act=False)
+    wgt = get_param(ctx, "out_embd", [ctx.dims.features, ctx.dims.vocab], std=1,</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/homebrewnlp/homebrewnlp-jax/commit/457dca1ca35d447a12a1e2ede9ac2e19b93c20a1#diff-3f6109f7c9d86f1facffc8877306296391bb997117c4f8adc9461b89d5eba1e4L26' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 15396671</div><div id='project'> Project Name: homebrewnlp/homebrewnlp-jax</div><div id='commit'> Commit Name: 457dca1ca35d447a12a1e2ede9ac2e19b93c20a1</div><div id='time'> Time: 2022-08-28</div><div id='author'> Author: 39779310+ClashLuke@users.noreply.github.com</div><div id='file'> File Name: src/model/main.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: body_ctx(2)</div><div id='n_method'> N Method Name: body_ctx(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/model/main.py</div><div id='n_file'> N File Name: src/model/main.py</div><div id='m_start'> M Start Line: 27</div><div id='m_end'> M End Line: 36</div><div id='n_start'> N Start Line: 55</div><div id='n_end'> N End Line: 64</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    src = input_embed(ctx, src)
+    zero = shard(jnp.zeros_like(src))
+    src = (ctx.parameters, src, zero, src, zero)
+    <a id="change">for </a><a id="change">i</a> in <a id="change">range(</a>ctx.model.depth<a id="change">):
+        </a>src = reversible(ctx, spatial_mixing, <a id="change">(i + 1) == ctx.model.depth</a>)(src)
+        src = reversible(ctx, feed_forward, (i + 1) == ctx.model.depth)(src)
+    src = src[1] + src[3]
+    return contrastive_output_embed(ctx, src) if ctx.training.contrastive else output_embed(ctx, src)</code></pre><h3>After Change</h3><pre><code class='java'>
+    src = input_embed(ctx, src)
+    zero = shard(jnp.zeros_like(src))
+    src = (ctx.parameters, src, zero, src, zero)
+    src = lax.scan(<a id="change">step(</a>ctx<a id="change">)</a>, (src, jnp.zeros([])), None, ctx.dims.sizes.depth, unroll=ctx.model.scan_unroll)
+    return output_embed(ctx, revnet_out(src[0][1:]))
+
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/homebrewnlp/homebrewnlp-jax/commit/7ed6886625803952b38a63e565e4d05fa04a4f7d#diff-6159e4e86b1b15ffd250a78dbdf29a41b004b4963154e49f8b96609b8ea977ceL260' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 15396669</div><div id='project'> Project Name: homebrewnlp/homebrewnlp-jax</div><div id='commit'> Commit Name: 7ed6886625803952b38a63e565e4d05fa04a4f7d</div><div id='time'> Time: 2021-09-12</div><div id='author'> Author: 39779310+ClashLuke@users.noreply.github.com</div><div id='file'> File Name: src/model.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: body_ctx(2)</div><div id='n_method'> N Method Name: body_ctx(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/model.py</div><div id='n_file'> N File Name: src/model.py</div><div id='m_start'> M Start Line: 263</div><div id='m_end'> M End Line: 268</div><div id='n_start'> N Start Line: 263</div><div id='n_end'> N End Line: 265</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    src = [ctx.parameters] + list(src)
+    for _ in range(ctx.model.unroll_depth):
+        <a id="change">for </a><a id="change">depth</a> in <a id="change">range(</a>ctx.model.qrnn_frequency<a id="change">):
+            </a>src = reversible(ctx, pointwise_block, src)
+            src = reversible(ctx, bottleneck_block, src)
+            src = reversible(ctx, pointwise_block, src)
+            if <a id="change">depth % ctx.model.qrnn_frequency == (ctx.model.qrnn_frequency // 2 - 1)</a>:
+                src = reversible(ctx, qrnn_block, src)
+                &#47&#47 lax.cond could work but requires work on the parameter store
+    if ctx.is_initializing:</code></pre><h3>After Change</h3><pre><code class='java'>
+    zero = jnp.zeros_like(src)
+    src = (src, zero, src, zero)
+    if ctx.is_initializing:
+        ctx.parameters = <a id="change">step(</a>ctx<a id="change">)</a>(src, ({}, 0))
+    else:
+        src, _ = step(ctx)(src, (ctx.parameters, 0))
+    out = revnet_out(src)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/homebrewnlp/homebrewnlp-jax/commit/cc7b415282fc8fc070b181ae8d1f79b084a6e315#diff-3f6109f7c9d86f1facffc8877306296391bb997117c4f8adc9461b89d5eba1e4L26' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 15396677</div><div id='project'> Project Name: homebrewnlp/homebrewnlp-jax</div><div id='commit'> Commit Name: cc7b415282fc8fc070b181ae8d1f79b084a6e315</div><div id='time'> Time: 2022-08-28</div><div id='author'> Author: 39779310+ClashLuke@users.noreply.github.com</div><div id='file'> File Name: src/model/main.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: body_ctx(2)</div><div id='n_method'> N Method Name: body_ctx(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/model/main.py</div><div id='n_file'> N File Name: src/model/main.py</div><div id='m_start'> M Start Line: 29</div><div id='m_end'> M End Line: 43</div><div id='n_start'> N Start Line: 50</div><div id='n_end'> N End Line: 55</div><BR>

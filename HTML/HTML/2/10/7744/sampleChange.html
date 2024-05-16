@@ -1,0 +1,26 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        parameter_lr = lr * ctx.parameter_variance.get(param_name, 1)
+        grad = grad.astype(ctx.model.storage_dtype)
+        grad = adaptive_gradient_clipping(inner_ctx, param_name, grad)
+        <a id="change">if </a>"norm" in param_name.lower() or "rezero" in param_name.lower() or <a id="change">grad.ndim &lt; 2</a>:
+            grad = adam(inner_ctx, param_name, grad, current_step)  &#47&#47 Do adam update for small parameters
+        else:
+            grad = sm3(inner_ctx, param_name, grad)
+            grad = ema(inner_ctx, param_name, grad, current_step, 1 - ctx.optimizer.momentum_beta, "momentum", True)
+            <a id="change">ctx.parameters[param_name]</a><a id="change"> = </a>(1 + ctx.optimizer.weight_decay * parameter_lr) * ctx.parameters[param_name]
+        grad *= parameter_lr
+        ctx.parameters[param_name] = grad + ctx.parameters[param_name]
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    lr = -get_current_lr(ctx, current_step)
+    count = ctx.parameters[&quotshampoo/count&quot]
+    stats = {k[len(&quotshampoo/stats/&quot):]: p for k, p in ctx.parameters.items() if k.startswith(&quotshampoo/stats/&quot)}
+    state<a id="change"> = </a>ShampooState(count=count, stats=stats)
+    init, update_fn = distributed_shampoo(1, 1024)
+    grads = {k: adaptive_gradient_clipping(ctx, k, v.astype(ctx.model.storage_dtype)) <a id="change">for</a> k, v in grads.items()}
+    updates<a id="change">, state = </a>update_fn(grads, state, <a id="change">{k: p for k, p in ctx.parameters.items() if not k.startswith(&quotshampoo/&quot)}</a>)
+    for k, s in state.stats.items():
+        ctx.parameters[&quotshampoo/stats/&quot + k] = s
+    ctx.parameters[&quotshampoo/count&quot] = state.count</code></pre>

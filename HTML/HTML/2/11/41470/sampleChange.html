@@ -1,0 +1,35 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        lengths_list: List[int] = self.lengths().tolist()
+        N = max(lengths_list) if desired_length is None else desired_length
+        offset = 0
+        values<a id="change"> = </a><a id="change">[]</a>
+        <a id="change">for </a>length in lengths_list<a id="change">:
+            </a>value<a id="change"> = self.values()[offset : offset + length]</a>
+            if length &lt;= N:
+                padding_tensor = torch.full(
+                    [N - length], padding_value, device=self.values().device
+                )
+                value = (
+                    torch.cat((padding_tensor, value), 0)
+                    if pad_from_beginning
+                    else torch.cat((value<a id="change">, padding_tensor</a>), 0)
+                )
+            else:
+                value = value[-N:] if chop_from_beginning else value[:N]
+            <a id="change">values.append(</a>value<a id="change">)</a>
+            offset += length
+        final_tensor<a id="change"> = </a>torch.stack(values)
+        <a id="change">return </a>final_tensor
+
+    def lengths(self) -&gt; torch.Tensor:
+        _lengths = _maybe_compute_lengths(self._lengths, self._offsets)</code></pre><h3>After Change</h3><pre><code class='java'>
+        lengths_list: List[int] = self.lengths().tolist()
+        N = max(lengths_list) if desired_length is None else desired_length
+        return torch.ops.fbgemm.jagged_to_padded_dense(
+            <a id="change">self.values()</a>, [self.offsets()], [N], padding_value
+        )
+
+    def lengths(self) -&gt; torch.Tensor:</code></pre>

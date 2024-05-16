@@ -1,0 +1,343 @@
+<html><h3>Pattern ID :38451
+</h3><img src='109907725.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            for p in group[&quotparams&quot]:
+                if p.grad is None:
+                    continue
+                grad<a id="change"> = </a>p.grad
+                if grad.is_sparse:
+                    raise RuntimeError(&quotRMSprop does not support sparse gradients&quot)
+                state = self.state[p]
+
+                &#47&#47 State initialization
+                if len(state) == 0:
+                    state[&quotstep&quot] = 0
+                    state[&quotsquare_avg&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+                    if group[&quotmomentum&quot] &gt; 0:
+                        state[&quotmomentum_buffer&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+                    if group[&quotcentered&quot]:
+                        state[&quotgrad_avg&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+
+                square_avg = state[&quotsquare_avg&quot]
+                alpha = group[&quotalpha&quot]
+
+                state[&quotstep&quot] += 1
+
+                if group[&quotweight_decay&quot] != 0:
+                    grad<a id="change"> = </a>grad.add(p, alpha=group[&quotweight_decay&quot])
+
+                <a id="change">square_avg.mul_(</a>alpha<a id="change">)</a>.addcmul_(grad, grad, value=1 - alpha)
+
+                if <a id="change">group[&quotcentered&quot]</a>:
+                    grad_avg = state[&quotgrad_avg&quot]
+                    <a id="change">grad_avg.mul_(</a>alpha<a id="change">)</a>.add_(grad, alpha=1 - alpha)
+                    avg = square_avg.addcmul(grad_avg, grad_avg, value=-1).sqrt_().add_(group[&quoteps&quot])
+                else:
+                    avg = square_avg.sqrt().add_(group[&quoteps&quot])
+
+                <a id="change">if </a>group[&quotmomentum&quot] &gt; 0:
+                    buf<a id="change"> = </a>state[&quotmomentum_buffer&quot]
+                    buf.mul_(<a id="change">group[&quotmomentum&quot]</a>).addcdiv_(grad, avg)
+                    p.add_(buf, alpha=-group[&quotlr&quot])
+                else:
+                    p.addcdiv_(grad, avg, value=-group[&quotlr&quot])</code></pre><h3>After Change</h3><pre><code class='java'>
+                loss = closure()
+
+        for group in self.param_groups:
+            params_with_grad<a id="change"> = []</a>
+            grads<a id="change"> = </a><a id="change">[]</a>
+            square_avgs<a id="change"> = []</a>
+            grad_avgs = []
+            momentum_buffer_list<a id="change"> = []</a>
+
+            for <a id="change">p</a> in group[&quotparams&quot]:
+                if p.grad is None:
+                    continue
+                <a id="change">params_with_grad.append(p</a><a id="change">)</a>
+
+                if p.grad.is_sparse:
+                    raise RuntimeError(&quotRMSprop does not support sparse gradients&quot)
+                <a id="change">grads.append(</a>p.grad<a id="change">)</a>
+
+                state = self.state[p]
+
+                &#47&#47 State initialization
+                if len(state) == 0:
+                    state[&quotstep&quot] = 0
+                    state[&quotsquare_avg&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+                    if group[&quotmomentum&quot] &gt; 0:
+                        state[&quotmomentum_buffer&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+                    if group[&quotcentered&quot]:
+                        state[&quotgrad_avg&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+
+                <a id="change">square_avgs.append(</a>state[&quotsquare_avg&quot]<a id="change">)</a>
+
+                if group[&quotmomentum&quot] &gt; 0:
+                    <a id="change">momentum_buffer_list.append(</a>state[&quotmomentum_buffer&quot]<a id="change">)</a>
+                if group[&quotcentered&quot]:
+                    grad_avgs.append(state[&quotgrad_avg&quot])
+
+                state[&quotstep&quot] += 1
+
+
+            F.rmsprop(params_with_grad,
+                      grads,
+                      square_avgs,
+                      grad_avgs,
+                      momentum_buffer_list,
+                      group[&quotlr&quot],
+                      group[&quotalpha&quot],
+                      group[&quoteps&quot],
+                      <a id="change">group[&quotweight_decay&quot]</a>,
+                      <a id="change">group[&quotmomentum&quot]</a>,
+                      group[&quotcentered&quot])
+
+        return loss</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 23</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/pytorch/pytorch/commit/ce1781d8db7ebe7d58f0a44160fa81b230aecdce#diff-30f6c6a0abd52337b895032577b0e61311f19123662dc69ce67446bf6ee4dfa1L68' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 109907725</div><div id='project'> Project Name: pytorch/pytorch</div><div id='commit'> Commit Name: ce1781d8db7ebe7d58f0a44160fa81b230aecdce</div><div id='time'> Time: 2021-01-21</div><div id='author'> Author: wanchaol@users.noreply.github.com</div><div id='file'> File Name: torch/optim/rmsprop.py</div><div id='m_class'> M Class Name: RMSprop</div><div id='n_method'> N Class Name: RMSprop</div><div id='m_method'> M Method Name: step(2)</div><div id='n_method'> N Method Name: step(2)</div><div id='m_parent_class'> M Parent Class: Optimizer</div><div id='n_parent_class'> N Parent Class: Optimizer</div><div id='m_file'> M File Name: torch/optim/rmsprop.py</div><div id='n_file'> N File Name: torch/optim/rmsprop.py</div><div id='m_start'> M Start Line: 68</div><div id='m_end'> M End Line: 110</div><div id='n_start'> N Start Line: 69</div><div id='n_end'> N End Line: 116</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            with torch.enable_grad():
+                loss = closure()
+
+        for <a id="change">group</a> in self.param_groups:
+            for <a id="change">p</a> in group[&quotparams&quot]:
+                if p.grad is None:
+                    continue
+                grad<a id="change"> = </a>p.grad
+                if grad.is_sparse:
+                    raise RuntimeError(&quotAdadelta does not support sparse gradients&quot)
+                state = self.state[p]
+
+                &#47&#47 State initialization
+                if len(state) == 0:
+                    state[&quotstep&quot] = 0
+                    state[&quotsquare_avg&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+                    state[&quotacc_delta&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+
+                square_avg, acc_delta = state[&quotsquare_avg&quot], state[&quotacc_delta&quot]
+                rho, eps = group[&quotrho&quot], group[&quoteps&quot]
+
+                state[&quotstep&quot] += 1
+
+                <a id="change">if group[&quotweight_decay&quot]</a> != 0:
+                    grad<a id="change"> = </a>grad.add(p, alpha=group[&quotweight_decay&quot])
+
+                <a id="change">square_avg.mul_(</a>rho<a id="change">)</a>.addcmul_(grad, grad, value=1 - rho)
+                std<a id="change"> = </a>square_avg.add(eps).sqrt_()
+                delta = acc_delta.add(eps).sqrt_().div_(std).mul_(grad)
+                p.add_(delta, alpha=-group[&quotlr&quot])
+                <a id="change">acc_delta.mul_(</a>rho<a id="change">)</a>.addcmul_(delta, delta, value=1 - rho)
+
+        return loss
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            with torch.enable_grad():
+                loss = closure()
+
+        for <a id="change">group</a> in self.param_groups:
+            params_with_grad<a id="change"> = </a><a id="change">[]</a>
+            grads<a id="change"> = []</a>
+            square_avgs<a id="change"> = []</a>
+            acc_deltas<a id="change"> = []</a>
+
+            for <a id="change">p</a> in group[&quotparams&quot]:
+                if p.grad is None:
+                    continue
+                <a id="change">params_with_grad.append(</a>p<a id="change">)</a>
+                if p.grad.is_sparse:
+                    raise RuntimeError(&quotAdadelta does not support sparse gradients&quot)
+                <a id="change">grads.append(</a>p.grad<a id="change">)</a>
+
+                state = self.state[p]
+
+                &#47&#47 Lazy state initialization
+                if len(state) == 0:
+                    state[&quotstep&quot] = 0
+                    state[&quotsquare_avg&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+                    state[&quotacc_delta&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+
+                <a id="change">square_avgs.append(</a>state[&quotsquare_avg&quot]<a id="change">)</a>
+                <a id="change">acc_deltas.append(</a>state[&quotacc_delta&quot]<a id="change">)</a>
+
+                lr, rho, eps, weight_decay = <a id="change">group[&quotlr&quot]</a>, group[&quotrho&quot], group[&quoteps&quot], <a id="change">group[&quotweight_decay&quot]</a>
+
+                state[&quotstep&quot] += 1
+
+            F.adadelta(params_with_grad,</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/pytorch/pytorch/commit/d6fb27ce72f357300abe65c2676f69a5848cb997#diff-1e3b06b7b465b89d72e773ead25aa5346022276d1e553494d03f6063cf71a8a8L39' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 109907709</div><div id='project'> Project Name: pytorch/pytorch</div><div id='commit'> Commit Name: d6fb27ce72f357300abe65c2676f69a5848cb997</div><div id='time'> Time: 2021-01-21</div><div id='author'> Author: wanchaol@users.noreply.github.com</div><div id='file'> File Name: torch/optim/adadelta.py</div><div id='m_class'> M Class Name: Adadelta</div><div id='n_method'> N Class Name: Adadelta</div><div id='m_method'> M Method Name: step(2)</div><div id='n_method'> N Method Name: step(2)</div><div id='m_parent_class'> M Parent Class: Optimizer</div><div id='n_parent_class'> N Parent Class: Optimizer</div><div id='m_file'> M File Name: torch/optim/adadelta.py</div><div id='n_file'> N File Name: torch/optim/adadelta.py</div><div id='m_start'> M Start Line: 51</div><div id='m_end'> M End Line: 78</div><div id='n_start'> N Start Line: 52</div><div id='n_end'> N End Line: 88</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            with torch.enable_grad():
+                loss = closure()
+
+        for <a id="change">group</a> in self.param_groups:
+            for <a id="change">p</a> in group[&quotparams&quot]:
+                if p.grad is None:
+                    continue
+                grad<a id="change"> = </a>p.grad
+                if grad.is_sparse:
+                    raise RuntimeError(&quotRMSprop does not support sparse gradients&quot)
+                state = self.state[p]
+
+                &#47&#47 State initialization
+                if len(state) == 0:
+                    state[&quotstep&quot] = 0
+                    state[&quotsquare_avg&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+                    if group[&quotmomentum&quot] &gt; 0:
+                        state[&quotmomentum_buffer&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+                    if group[&quotcentered&quot]:
+                        state[&quotgrad_avg&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+
+                square_avg = state[&quotsquare_avg&quot]
+                alpha = group[&quotalpha&quot]
+
+                state[&quotstep&quot] += 1
+
+                if group[&quotweight_decay&quot] != 0:
+                    grad<a id="change"> = </a>grad.add(p, alpha=group[&quotweight_decay&quot])
+
+                <a id="change">square_avg.mul_(</a>alpha<a id="change">)</a>.addcmul_(grad, grad, value=1 - alpha)
+
+                if group[&quotcentered&quot]:
+                    grad_avg = state[&quotgrad_avg&quot]
+                    <a id="change">grad_avg.mul_(</a>alpha<a id="change">)</a>.add_(grad, alpha=1 - alpha)
+                    avg = square_avg.addcmul(grad_avg, grad_avg, value=-1).sqrt_().add_(group[&quoteps&quot])
+                else:
+                    avg = square_avg.sqrt().add_(group[&quoteps&quot])
+
+                <a id="change">if </a>group[&quotmomentum&quot] &gt; 0:
+                    buf<a id="change"> = </a>state[&quotmomentum_buffer&quot]
+                    buf.mul_(<a id="change">group[&quotmomentum&quot]</a>).addcdiv_(grad, avg)
+                    p.add_(buf, alpha=-group[&quotlr&quot])
+                else:
+                    p.addcdiv_(grad, avg, value=-group[&quotlr&quot])</code></pre><h3>After Change</h3><pre><code class='java'>
+            with torch.enable_grad():
+                loss = closure()
+
+        for <a id="change">group</a> in self.param_groups:
+            params_with_grad<a id="change"> = []</a>
+            grads<a id="change"> = </a><a id="change">[]</a>
+            square_avgs<a id="change"> = []</a>
+            grad_avgs = []
+            momentum_buffer_list<a id="change"> = []</a>
+
+            for <a id="change">p</a> in group[&quotparams&quot]:
+                if p.grad is None:
+                    continue
+                <a id="change">params_with_grad.append(</a>p<a id="change">)</a>
+
+                if p.grad.is_sparse:
+                    raise RuntimeError(&quotRMSprop does not support sparse gradients&quot)
+                <a id="change">grads.append(</a>p.grad<a id="change">)</a>
+
+                state = self.state[p]
+
+                &#47&#47 State initialization
+                if len(state) == 0:
+                    state[&quotstep&quot] = 0
+                    state[&quotsquare_avg&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+                    if group[&quotmomentum&quot] &gt; 0:
+                        state[&quotmomentum_buffer&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+                    if group[&quotcentered&quot]:
+                        state[&quotgrad_avg&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+
+                <a id="change">square_avgs.append(</a>state[&quotsquare_avg&quot]<a id="change">)</a>
+
+                if group[&quotmomentum&quot] &gt; 0:
+                    <a id="change">momentum_buffer_list.append(</a>state[&quotmomentum_buffer&quot]<a id="change">)</a>
+                if group[&quotcentered&quot]:
+                    grad_avgs.append(state[&quotgrad_avg&quot])
+
+                state[&quotstep&quot] += 1
+
+
+            F.rmsprop(params_with_grad,
+                      grads,
+                      square_avgs,
+                      grad_avgs,
+                      momentum_buffer_list,
+                      group[&quotlr&quot],
+                      group[&quotalpha&quot],
+                      group[&quoteps&quot],
+                      group[&quotweight_decay&quot],
+                      <a id="change">group[&quotmomentum&quot]</a>,
+                      <a id="change">group[&quotcentered&quot]</a>)
+
+        return loss
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/pytorch/pytorch/commit/ce1781d8db7ebe7d58f0a44160fa81b230aecdce#diff-30f6c6a0abd52337b895032577b0e61311f19123662dc69ce67446bf6ee4dfa1L56' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 109907727</div><div id='project'> Project Name: pytorch/pytorch</div><div id='commit'> Commit Name: ce1781d8db7ebe7d58f0a44160fa81b230aecdce</div><div id='time'> Time: 2021-01-21</div><div id='author'> Author: wanchaol@users.noreply.github.com</div><div id='file'> File Name: torch/optim/rmsprop.py</div><div id='m_class'> M Class Name: RMSprop</div><div id='n_method'> N Class Name: RMSprop</div><div id='m_method'> M Method Name: step(2)</div><div id='n_method'> N Method Name: step(2)</div><div id='m_parent_class'> M Parent Class: Optimizer</div><div id='n_parent_class'> N Parent Class: Optimizer</div><div id='m_file'> M File Name: torch/optim/rmsprop.py</div><div id='n_file'> N File Name: torch/optim/rmsprop.py</div><div id='m_start'> M Start Line: 68</div><div id='m_end'> M End Line: 110</div><div id='n_start'> N Start Line: 69</div><div id='n_end'> N End Line: 116</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            with torch.enable_grad():
+                loss = closure()
+
+        for <a id="change">group</a> in self.param_groups:
+            for <a id="change">p</a> in group[&quotparams&quot]:
+                if p.grad is None:
+                    continue
+                grad<a id="change"> = </a>p.grad
+                if grad.is_sparse:
+                    raise RuntimeError(&quotAdamax does not support sparse gradients&quot)
+                state = self.state[p]
+
+                &#47&#47 State initialization
+                if len(state) == 0:
+                    state[&quotstep&quot] = 0
+                    state[&quotexp_avg&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+                    state[&quotexp_inf&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+
+                exp_avg, exp_inf = state[&quotexp_avg&quot], state[&quotexp_inf&quot]
+                beta1, beta2 = group[&quotbetas&quot]
+                eps = group[&quoteps&quot]
+
+                state[&quotstep&quot] += 1
+
+                <a id="change">if </a>group[&quotweight_decay&quot] != 0:
+                    grad<a id="change"> = </a>grad.add(p, alpha=group[&quotweight_decay&quot])
+
+                &#47&#47 Update biased first moment estimate.
+                <a id="change">exp_avg.mul_(</a>beta1<a id="change">)</a>.add_(grad, alpha=1 - beta1)
+                &#47&#47 Update the exponentially weighted infinity norm.
+                norm_buf = torch.cat([
+                    <a id="change">exp_inf.mul_(</a>beta2<a id="change">)</a>.unsqueeze(0),
+                    grad.abs().add_(eps).unsqueeze_(0)
+                ], 0)
+                torch.amax(norm_buf, 0, keepdim=False, out=exp_inf)
+
+                bias_correction<a id="change"> = </a>1 - beta1 ** state[&quotstep&quot]
+                clr = <a id="change">group[&quotlr&quot]</a> / bias_correction
+
+                p.addcdiv_(exp_avg, exp_inf, value=-clr)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            with torch.enable_grad():
+                loss = closure()
+
+        for <a id="change">group</a> in self.param_groups:
+            params_with_grad<a id="change"> = </a><a id="change">[]</a>
+            grads<a id="change"> = []</a>
+            exp_avgs<a id="change"> = []</a>
+            exp_infs = []
+            state_steps<a id="change"> = []</a>
+
+            beta1, beta2 = group[&quotbetas&quot]
+            eps = group[&quoteps&quot]
+            lr = <a id="change">group[&quotlr&quot]</a>
+            weight_decay = <a id="change">group[&quotweight_decay&quot]</a>
+
+            for <a id="change">p</a> in group[&quotparams&quot]:
+                if p.grad is None:
+                    continue
+                <a id="change">params_with_grad.append(</a>p<a id="change">)</a>
+                if p.grad.is_sparse:
+                    raise RuntimeError(&quotAdamax does not support sparse gradients&quot)
+                <a id="change">grads.append(</a>p.grad<a id="change">)</a>
+
+                state = self.state[p]
+
+                &#47&#47 State initialization
+                if len(state) == 0:
+                    state[&quotstep&quot] = 0
+                    state[&quotexp_avg&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+                    state[&quotexp_inf&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+
+                <a id="change">exp_avgs.append(</a>state[&quotexp_avg&quot]<a id="change">)</a>
+                exp_infs.append(state[&quotexp_inf&quot])
+
+                state[&quotstep&quot] += 1
+                <a id="change">state_steps.append(</a>state[&quotstep&quot]<a id="change">)</a>
+
+            F.adamax(params_with_grad,
+                     grads,
+                     exp_avgs,</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/pytorch/pytorch/commit/bb245b6444d3c5b9f586d93121730390985a0bae#diff-148b16d4bd6bab9a518cc1052160cb2dc47f014855087eca0fd3a2a65519e10eL40' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 109907723</div><div id='project'> Project Name: pytorch/pytorch</div><div id='commit'> Commit Name: bb245b6444d3c5b9f586d93121730390985a0bae</div><div id='time'> Time: 2021-04-15</div><div id='author'> Author: wanchaol@fb.com</div><div id='file'> File Name: torch/optim/adamax.py</div><div id='m_class'> M Class Name: Adamax</div><div id='n_method'> N Class Name: Adamax</div><div id='m_method'> M Method Name: step(2)</div><div id='n_method'> N Method Name: step(2)</div><div id='m_parent_class'> M Parent Class: Optimizer</div><div id='n_parent_class'> N Parent Class: Optimizer</div><div id='m_file'> M File Name: torch/optim/adamax.py</div><div id='n_file'> N File Name: torch/optim/adamax.py</div><div id='m_start'> M Start Line: 52</div><div id='m_end'> M End Line: 88</div><div id='n_start'> N Start Line: 53</div><div id='n_end'> N End Line: 96</div><BR>

@@ -1,0 +1,40 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+
+def run(gpu_id, resume_checkpoint, finetune, model_dir, resume):
+    <a id="change">if </a>gpu_id == "cpu":
+        os.environ["CUDA_VISIBLE_DEVICES"] = ""
+        device<a id="change"> = </a>torch.device("cpu")
+
+    else:
+        os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+        <a id="change">os.environ["CUDA_VISIBLE_DEVICES"] = </a>"{}".format(gpu_id)
+        device<a id="change"> = </a>torch.device("cuda")
+
+    torch.manual_seed(131714)
+    random.seed(131714)</code></pre><h3>After Change</h3><pre><code class='java'>
+        for index, train_set in enumerate(datasets):
+            instance_save_dir = model_save_dirs[index] + f"_iteration_{iteration}"
+            os.makedirs(instance_save_dir, exist_ok=True)
+            <a id="change">processes.append(</a><a id="change">torch.multiprocessing.Process(target=train_loop,
+                                                           kwargs={
+                                                               "net"               : individual_models[index],
+                                                               "train_dataset"     : train_set,
+                                                               "device"            : torch.device(f"cuda:{gpus_available[-1]}"),
+                                                               "save_directory"    : instance_save_dir,
+                                                               "steps"             : 1,
+                                                               "batch_size"        : 64,
+                                                               "epochs_per_save"   : 1,
+                                                               "lang"              : languages[index],
+                                                               "lr"                : 0.001,
+                                                               "path_to_checkpoint": meta_save_dir + "/best.pt",
+                                                               "fine_tune"         : True,
+                                                               "resume"            : resume
+                                                               }))</a>
+            processes[-1].start()
+            print(f"Starting {instance_save_dir} on cuda:{gpus_available[-1]}")
+            gpus_in_use.append(gpus_available.pop())
+            while len(gpus_available) == 0:</code></pre>

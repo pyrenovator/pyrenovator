@@ -1,0 +1,20 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    breakpoint()
+    warped_imgs = homography_warp(img_batch, homography, ref_batch.shape[-2:])
+    &#47&#47 Compute new PSNR:
+    mse_per_example = ((<a id="change">warped_imgs.detach()</a> - ref_batch)<a id="change">**</a>2).view(B, -1).mean(dim=1)
+    registered_psnrs<a id="change"> = </a>10 * torch.log10(factor**2 / mse_per_example)
+
+    &#47&#47 Return best of default and warped PSNR:
+    return torch.stack([default_psnrs, registered_psnrs]).max(dim=0)[0].mean()</code></pre><h3>After Change</h3><pre><code class='java'>
+    &#47&#47 If only this was parallelized, todo ...
+    for img, ref in zip(img_batch.detach(), ref_batch.detach()):
+        img, ref = img[None, ...], ref[None, ...]
+        mse<a id="change"> = </a><a id="change">((img - ref)**2).mean()</a>
+        default_psnrs += [10 * torch.log10(factor**2 / mse)]
+        &#47&#47 Align by homography:
+        registrator = ImageRegistrator(&quotsimilarity&quot, num_iterations=2500)
+        registrator.warper = partial(HomographyWarper,  padding_mode=&quotreflection&quot)</code></pre>

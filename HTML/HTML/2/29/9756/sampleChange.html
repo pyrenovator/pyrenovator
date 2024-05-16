@@ -1,0 +1,83 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        images, targets = batch[0], batch[1]
+        with torch.no_grad():
+            if cuda:
+                images<a id="change">  = torch</a><a id="change">.from_numpy(images).type(</a>torch.FloatTensor<a id="change">)</a>.cuda()
+                targets<a id="change"> = [torch.from_numpy(ann).type(torch.FloatTensor).cuda() for ann in targets]</a>
+            else:
+                images  = <a id="change">torch.from_numpy(</a>images<a id="change">)</a>.type(torch.FloatTensor)
+                targets<a id="change"> = </a><a id="change">[torch.from_numpy(ann).type(torch.FloatTensor) for ann in targets]</a>
+        &#47&#47----------------------&#47&#47
+        &#47&#47   清零梯度
+        &#47&#47----------------------&#47&#47
+        optimizer.zero_grad()
+        if not fp16:
+            &#47&#47----------------------&#47&#47
+            &#47&#47   前向传播
+            &#47&#47----------------------&#47&#47
+            outputs         = model_train(images)
+
+            &#47&#47----------------------&#47&#47
+            &#47&#47   计算损失
+            &#47&#47----------------------&#47&#47
+            loss_value = yolo_loss(outputs, targets)
+
+            &#47&#47----------------------&#47&#47
+            &#47&#47   反向传播
+            &#47&#47----------------------&#47&#47
+            loss_value.backward()
+            optimizer.step()
+        else:
+            from torch.cuda.amp import autocast
+            with autocast():
+                outputs = model_train(images)
+                &#47&#47----------------------&#47&#47
+                &#47&#47   计算损失
+                &#47&#47----------------------&#47&#47
+                loss_value = yolo_loss(outputs, targets)
+
+            &#47&#47----------------------&#47&#47
+            &#47&#47   反向传播
+            &#47&#47----------------------&#47&#47
+            scaler.scale(loss_value).backward()
+            scaler.step(optimizer)
+            scaler.update()
+
+        loss += loss_value.item()
+        
+        if local_rank == 0:
+            pbar.set_postfix(**{&quotloss&quot  : loss / (iteration + 1), 
+                                &quotlr&quot    : get_lr(optimizer)})
+            pbar.update(1)
+
+    if local_rank == 0:
+        pbar.close()
+        print(&quotFinish Train&quot)
+        print(&quotStart Validation&quot)
+        pbar = tqdm(total=epoch_step_val, desc=f&quotEpoch {epoch + 1}/{Epoch}&quot,postfix=dict,mininterval=0.3)
+
+    model_train.eval()
+    for iteration, batch in enumerate(gen_val):
+        if iteration &gt;= epoch_step_val:
+            break
+        images, targets = batch[0], batch[1]
+        with torch.no_grad():
+            if cuda:
+                images<a id="change">  = torch</a><a id="change">.from_numpy(images).type(</a>torch.FloatTensor<a id="change">)</a>.cuda()
+                targets<a id="change"> = </a>[<a id="change">torch.from_numpy(ann).type(torch.FloatTensor).cuda()</a> for ann in targets]
+            else:
+                images  = <a id="change">torch.from_numpy(</a>images<a id="change">)</a>.type(torch.FloatTensor)
+                targets = [<a id="change">torch.from_numpy(</a>ann<a id="change">)</a>.type(torch.FloatTensor) for ann in targets]
+            &#47&#47----------------------&#47&#47
+            &#47&#47   清零梯度
+            &#47&#47----------------------&#47&#47</code></pre><h3>After Change</h3><pre><code class='java'>
+        with torch.no_grad():
+            if cuda:
+                images  = images.cuda()
+                targets<a id="change"> = </a>[<a id="change">ann.cuda()</a> for ann in targets]
+        &#47&#47----------------------&#47&#47
+        &#47&#47   清零梯度
+        &#47&#47----------------------&#47&#47</code></pre>

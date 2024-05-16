@@ -1,0 +1,27 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        mask = Masks.get_ff_mask(height, width)
+        mask_all.append(mask)
+    mask = torch.from_numpy(np.asarray(mask_all)).unsqueeze(1).float()
+    ones = <a id="change">torch.ones(x.size(</a>0<a id="change">)</a>, 1, x.size(2), x.size(3)<a id="change">)</a>
+    mask<a id="change"> = </a>ones * mask
+    if x.is_cuda:
+        mask = mask.cuda()
+    result = x * (1. - mask)</code></pre><h3>After Change</h3><pre><code class='java'>
+    if x.is_cuda:
+        mask = mask.cuda()
+
+    <a id="change">if config[&quotmask_type&quot] == &quothole&quot</a>:
+        result = x * (1. - mask)
+    elif <a id="change">config[&quotmask_type&quot] == &quotmosaic&quot</a>:
+        &#47&#47 TODO: Matching the mosaic patch size and the mask size
+        mosaic_unit_size = config[&quotmosaic_unit_size&quot]
+        downsampled_image<a id="change"> = </a>F.interpolate(x, scale_factor=1. / mosaic_unit_size, mode=&quotnearest&quot)
+        upsampled_image = F.interpolate(downsampled_image, size=(height, width), mode=&quotnearest&quot)
+        result = upsampled_image * mask + x * (1. - mask)
+    else:
+        <a id="change">raise NotImplementedError(&quotNot implemented mask type.&quot</a><a id="change">)</a>
+
+    return result, mask</code></pre>

@@ -1,0 +1,52 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+      use_bfloat16=FLAGS.use_bfloat16)
+  test_datasets = {
+      &quotclean&quot:
+          <a id="change">strategy.experimental_distribute_datasets_from_function(
+              </a>imagenet_eval.input_fn<a id="change">)</a>,
+  }
+  if FLAGS.adaptive_mixup:
+    imagenet_confidence_eval = utils.ImageNetInput(
+        is_training=True,
+        data_dir=FLAGS.data_dir,
+        batch_size=per_core_batch_size * FLAGS.ensemble_size,
+        use_bfloat16=FLAGS.use_bfloat16,
+        validation=True)
+    imagenet_confidence_dataset = (
+        strategy.experimental_distribute_datasets_from_function(
+            imagenet_confidence_eval.input_fn))
+  if FLAGS.corruptions_interval &gt; 0:
+    corruption_types, max_intensity = utils.load_corrupted_test_info()
+    for name in corruption_types:
+      for intensity in range(1, max_intensity + 1):
+        dataset_name = &quot{0}_{1}&quot.format(name, intensity)
+        corrupt_input_fn = utils.corrupt_test_input_fn(
+            batch_size=per_core_batch_size,
+            corruption_name=name,
+            corruption_intensity=intensity,
+            use_bfloat16=FLAGS.use_bfloat16)
+        test_datasets[dataset_name] = (
+            strategy.experimental_distribute_datasets_from_function(
+                corrupt_input_fn))
+
+  train_dataset = <a id="change">strategy.experimental_distribute_datasets_from_function(
+      </a>imagenet_train.input_fn<a id="change">)</a>
+
+  if FLAGS.use_bfloat16:
+    policy = tf.keras.mixed_precision.experimental.Policy(&quotmixed_bfloat16&quot)
+    tf.keras.mixed_precision.experimental.set_policy(policy)</code></pre><h3>After Change</h3><pre><code class='java'>
+                                     use_bfloat16=FLAGS.use_bfloat16)
+  train_dataset = train_builder.as_dataset(split=tfds.Split.TRAIN,
+                                           batch_size=batch_size)
+  clean_test_dataset = <a id="change">test_builder.as_dataset(split=tfds.Split.TEST,
+                                               batch_size=batch_size)</a>
+  train_dataset<a id="change"> = strategy</a><a id="change">.experimental_distribute_dataset(</a>train_dataset<a id="change">)</a>
+  test_datasets = {
+      &quotclean&quot: <a id="change">strategy.experimental_distribute_dataset(</a>clean_test_dataset<a id="change">)</a>
+  }
+  if FLAGS.adaptive_mixup:
+    imagenet_confidence_dataset = test_builder.as_dataset(
+        split=tfds.Split.VALIDATION,</code></pre>

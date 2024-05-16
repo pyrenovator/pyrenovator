@@ -1,0 +1,20 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    input = input[0]
+    tmp_hooks = module._forward_hooks
+    module._forward_hooks = OrderedDict()
+    biases = <a id="change">module(input)[0, :, module.padding[0], module.padding[1]]</a>
+    module._forward_hooks = tmp_hooks
+    
+    zero_mask = input[0, :, 0, 0] != 0
+    module.bias.data = zero_mask * biases + (1 - zero_mask) * biases</code></pre><h3>After Change</h3><pre><code class='java'>
+    shape = module.weight.shape
+    zero_mask = module.weight.view(shape[0], -1).sum(dim=1) == 0
+    
+    <a id="change">output.mul_(</a>0.<a id="change">)</a>
+    if hasattr(module, "bias") and module.bias is not None:
+        output.view(output.shape[0], output.shape[1], -1).add_((module.bias * zero_mask)[None, :, None])
+
+</code></pre>

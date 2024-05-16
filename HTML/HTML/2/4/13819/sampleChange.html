@@ -1,0 +1,49 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        pytest.skip("Only SAC has gSDE support")
+
+    n_bits = 4
+    env<a id="change"> = </a><a id="change">BitFlippingEnv(n_bits=n_bits, continuous=not (model_class == DQN))</a>
+
+    kwargs = dict(use_sde=True) if use_sde else {}
+
+    &#47&#47 create model</code></pre><h3>After Change</h3><pre><code class='java'>
+    def env_fn():
+        return BitFlippingEnv(n_bits=n_bits, continuous=not (model_class == DQN))
+
+    env = <a id="change">make_vec_env(</a>env_fn, n_envs<a id="change">)</a>
+
+    kwargs = dict(use_sde=True) if use_sde else {}
+
+    &#47&#47 create model
+    model = model_class(
+        "MultiInputPolicy",
+        env,
+        replay_buffer_class=HerReplayBuffer,
+        replay_buffer_kwargs=dict(
+            n_sampled_goal=2,
+            goal_selection_strategy="future",
+        ),
+        verbose=0,
+        tau=0.05,
+        batch_size=128,
+        learning_rate=0.001,
+        policy_kwargs=dict(net_arch=[64]),
+        buffer_size=int(1e5),
+        gamma=0.98,
+        gradient_steps=n_envs,
+        train_freq=4,
+        learning_starts=100,
+        **kwargs
+    )
+
+    model.learn(total_timesteps=150)
+
+    env.reset()
+    action = np.array([env.action_space.sample() for _ in range(n_envs)])
+    observations<a id="change"> = </a>env.step(action)[0]
+
+    &#47&#47 Get dictionary of current parameters
+    params = deepcopy(model.policy.state_dict())</code></pre>

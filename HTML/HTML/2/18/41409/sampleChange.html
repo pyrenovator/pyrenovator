@@ -1,0 +1,48 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            self.agent_config["mqtt_config"]["MQTT_USER"],
+            self.agent_config["mqtt_config"]["MQTT_PWD"],
+            self.agent_config["mqtt_config"]["MQTT_KEEPALIVE"],
+            <a id="change">"ClientAgent_Comm_Client"</a><a id="change"> + str(</a><a id="change">uuid.uuid4())</a>,
+        )
+
+        self.client_mqtt_mgr.add_connected_listener(self.on_client_mqtt_connected)</code></pre><h3>After Change</h3><pre><code class='java'>
+        self.client_mqtt_lock.release()
+
+    def setup_client_mqtt_mgr(self):
+        <a id="change">if self.client_mqtt_mgr is not None</a>:
+            <a id="change">return</a>
+
+        if self.client_mqtt_lock is None:
+            self.client_mqtt_lock = threading.Lock()
+        if self.client_mqtt_mgr is not None:
+            self.client_mqtt_lock.acquire()
+            self.client_mqtt_mgr.remove_disconnected_listener(self.on_client_mqtt_disconnected)
+            self.client_mqtt_is_connected = False
+            self.client_mqtt_mgr.disconnect()
+            self.client_mqtt_mgr = None
+            self.client_mqtt_lock.release()
+
+        self.client_mqtt_mgr = MqttManager(
+            self.agent_config["mqtt_config"]["BROKER_HOST"],
+            self.agent_config["mqtt_config"]["BROKER_PORT"],
+            self.agent_config["mqtt_config"]["MQTT_USER"],
+            self.agent_config["mqtt_config"]["MQTT_PWD"],
+            self.agent_config["mqtt_config"]["MQTT_KEEPALIVE"],
+            <a id="change">"FedML_ClientAgent_Metrics_{}_{}".format(</a>self.args.current_device_id, <a id="change">str(</a><a id="change">os.getpid()))</a>
+        )
+
+        self.client_mqtt_mgr.add_connected_listener(self.on_client_mqtt_connected)
+        self.client_mqtt_mgr.add_disconnected_listener(self.on_client_mqtt_disconnected)
+        self.client_mqtt_mgr.connect()
+        self.client_mqtt_mgr.loop_start()
+
+        <a id="change">if self.mlops_metrics is None</a>:
+            self.mlops_metrics<a id="change"> = </a><a id="change">MLOpsMetrics()</a>
+        <a id="change">self.mlops_metrics.set_messenger(</a>self.client_mqtt_mgr<a id="change">)</a>
+        self.mlops_metrics.run_id<a id="change"> = </a>self.run_id
+
+    def release_client_mqtt_mgr(self, real_release=False):
+        if real_release:</code></pre>

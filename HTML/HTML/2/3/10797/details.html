@@ -1,0 +1,58 @@
+<html><h3>Pattern ID :10797
+</h3><img src='37163927.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                module.bias.data.fill_(0.0)
+
+    def forward(self, user, item):
+        user = torch.from_numpy(<a id="change">self.interaction_matrix[user.cpu()]</a>.todense()).to(self.device)
+        item = torch.from_numpy(self.interaction_matrix[:, item.cpu()].todense()).to(self.device).t()
+        user = self.user_linear(user)
+        item = self.item_linear(item)</code></pre><h3>After Change</h3><pre><code class='java'>
+        user = self.get_user_embedding(user)
+
+        &#47&#47 Following lines construct tensor of shape [B,n_users] using the tensor of shape [B,H]
+        col_indices<a id="change"> = </a>self.history_user_id[item].flatten()
+        row_indices = torch.arange(item.shape[0]).to(self.device).repeat_interleave(self.history_user_id.shape[1], dim=0)
+        matrix_01 = torch.zeros(1).to(self.device).repeat(item.shape[0], self.n_users)
+        <a id="change">matrix_01.index_put_(</a>(row_indices, col_indices), self.history_user_value[item].flatten()<a id="change">)</a>
+        item = self.item_linear(matrix_01)
+
+        user = self.user_fc_layers(user)
+        item = self.item_fc_layers(item)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/rucaibox/recbole/commit/a63051c31f6cacc489710809995b2610a52b96d6#diff-c0fe1d45c47ca036a8c10b653717b9e13ef033a28d761ee73169dd2741cf1ae5L73' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 37163927</div><div id='project'> Project Name: rucaibox/recbole</div><div id='commit'> Commit Name: a63051c31f6cacc489710809995b2610a52b96d6</div><div id='time'> Time: 2020-09-17</div><div id='author'> Author: 893833413@qq.com</div><div id='file'> File Name: recbox/model/general_recommender/dmf.py</div><div id='m_class'> M Class Name: DMF</div><div id='n_method'> N Class Name: DMF</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: GeneralRecommender</div><div id='n_parent_class'> N Parent Class: GeneralRecommender</div><div id='m_file'> M File Name: recbox/model/general_recommender/dmf.py</div><div id='n_file'> N File Name: recbox/model/general_recommender/dmf.py</div><div id='m_start'> M Start Line: 73</div><div id='m_end'> M End Line: 82</div><div id='n_start'> N Start Line: 90</div><div id='n_end'> N End Line: 106</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                    banned_tokens = [[] for bbsz_idx in range(bsz * beam_size)]
+
+                for bbsz_idx in range(bsz * beam_size):
+                    lprobs[bbsz_idx, <a id="change">banned_tokens[bbsz_idx]</a>] = -math.inf
+
+            cand_scores, cand_indices, cand_beams = self.search.step(
+                step,</code></pre><h3>After Change</h3><pre><code class='java'>
+                        banned_tokens.extend(calculate_banned_tokens(bbsz_idx))
+
+                if banned_tokens:
+                    banned_tokens<a id="change"> = </a>torch.LongTensor(banned_tokens)
+                    <a id="change">lprobs.index_put_(</a>tuple(banned_tokens.t()), lprobs.new_tensor([-math.inf] * len(banned_tokens))<a id="change">)</a>
+
+            cand_scores, cand_indices, cand_beams = self.search.step(
+                step,
+                lprobs.view(bsz, -1, self.vocab_size),</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/kssteven418/i-bert/commit/a84cb7866db1ea9107021ace21b0a9ee6f5670e3#diff-aadd8610630282593c1910ad7b0eec4f4b48f373d3d3ed15d8106849795e36afL96' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 37163926</div><div id='project'> Project Name: kssteven418/i-bert</div><div id='commit'> Commit Name: a84cb7866db1ea9107021ace21b0a9ee6f5670e3</div><div id='time'> Time: 2020-03-20</div><div id='author'> Author: yuyan2do@gmail.com</div><div id='file'> File Name: fairseq/sequence_generator.py</div><div id='m_class'> M Class Name: SequenceGenerator</div><div id='n_method'> N Class Name: SequenceGenerator</div><div id='m_method'> M Method Name: _generate(5)</div><div id='n_method'> N Method Name: _generate(5)</div><div id='m_parent_class'> M Parent Class: object</div><div id='n_parent_class'> N Parent Class: object</div><div id='m_file'> M File Name: fairseq/sequence_generator.py</div><div id='n_file'> N File Name: fairseq/sequence_generator.py</div><div id='m_start'> M Start Line: 118</div><div id='m_end'> M End Line: 360</div><div id='n_start'> N Start Line: 143</div><div id='n_end'> N End Line: 365</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        return self.forward(user, item)
+
+    def get_user_embedding(self, user):
+        user = torch.from_numpy(<a id="change">self.interaction_matrix[user.cpu()]</a>.todense()).to(self.device)
+        user = self.user_linear(user)
+        user = self.user_fc_layers(user)
+        return user</code></pre><h3>After Change</h3><pre><code class='java'>
+            output(torch.FloatTensor): The embedding tensor of a batch of user. shape of [B, embedding_size]
+        
+        &#47&#47 Following lines construct tensor of shape [B,n_items] using the tensor of shape [B,H]
+        col_indices<a id="change"> = </a>self.history_item_id[user].flatten()
+        row_indices = torch.arange(user.shape[0]).to(self.device).repeat_interleave(self.history_item_id.shape[1],
+                                                                                    dim=0)
+        matrix_01 = torch.zeros(1).to(self.device).repeat(user.shape[0], self.n_items)
+        <a id="change">matrix_01.index_put_(</a>(row_indices, col_indices), self.history_item_value[user].flatten()<a id="change">)</a>
+        user = self.user_linear(matrix_01)
+
+        return user
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/rucaibox/recbole/commit/a63051c31f6cacc489710809995b2610a52b96d6#diff-c0fe1d45c47ca036a8c10b653717b9e13ef033a28d761ee73169dd2741cf1ae5L106' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 37163928</div><div id='project'> Project Name: rucaibox/recbole</div><div id='commit'> Commit Name: a63051c31f6cacc489710809995b2610a52b96d6</div><div id='time'> Time: 2020-09-17</div><div id='author'> Author: 893833413@qq.com</div><div id='file'> File Name: recbox/model/general_recommender/dmf.py</div><div id='m_class'> M Class Name: DMF</div><div id='n_method'> N Class Name: DMF</div><div id='m_method'> M Method Name: get_user_embedding(2)</div><div id='n_method'> N Method Name: get_user_embedding(2)</div><div id='m_parent_class'> M Parent Class: GeneralRecommender</div><div id='n_parent_class'> N Parent Class: GeneralRecommender</div><div id='m_file'> M File Name: recbox/model/general_recommender/dmf.py</div><div id='n_file'> N File Name: recbox/model/general_recommender/dmf.py</div><div id='m_start'> M Start Line: 107</div><div id='m_end'> M End Line: 109</div><div id='n_start'> N Start Line: 141</div><div id='n_end'> N End Line: 146</div><BR>

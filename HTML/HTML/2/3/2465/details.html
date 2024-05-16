@@ -1,0 +1,61 @@
+<html><h3>Pattern ID :2465
+</h3><img src='10457242.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+def reverse_sort(x: torch.Tensor, dim: int) -&gt; torch.Tensor:
+    new_indices = torch.empty_like(x)
+    new_size = [1] * dim + [<a id="change">x.size(</a>dim<a id="change">)</a>] + [1] * (x.ndimension() - dim - 1)
+    arange<a id="change"> = </a>torch._dim_arange(x, dim=dim).reshape(new_size).expand_as(x)
+    new_indices.scatter_(dim=dim, index=x, src=arange)
+    return new_indices
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    new_size = [1] * dim + [size] + [1] * (indice.dim() - dim - 1)
+    arange = indice.new_empty(size=new_size)
+    torch.arange(size, out=arange)
+    arange = <a id="change">arange.expand_as(</a>indice<a id="change">)</a>
+    new_indice = torch.empty_like(indice)
+    new_indice.scatter_(dim=dim, index=indice, src=arange)
+    return new_indice</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/rick-mccoy/reformer-pytorch/commit/4a9cdeff95c63368659d9a6dfa09785a62bfc785#diff-5b1cba45685a6e56a49513d5ad916404e0bc128d21a8b605bbad1de8323e55d6L15' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 10457242</div><div id='project'> Project Name: rick-mccoy/reformer-pytorch</div><div id='commit'> Commit Name: 4a9cdeff95c63368659d9a6dfa09785a62bfc785</div><div id='time'> Time: 2020-01-30</div><div id='author'> Author: rickmccoy3141@gmail.com</div><div id='file'> File Name: model/attention.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: reverse_sort(2)</div><div id='n_method'> N Method Name: reverse_sort(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: model/attention.py</div><div id='n_file'> N File Name: model/attention.py</div><div id='m_start'> M Start Line: 15</div><div id='m_end'> M End Line: 19</div><div id='n_start'> N Start Line: 25</div><div id='n_end'> N End Line: 32</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        ht = hidden[-1]
+        c_global = ht
+
+        q1 = self.a_1(gru_out.contiguous().view(-1, self.hidden_size)).view(<a id="change">gru_out.size()</a>)
+        q2 = self.a_2(ht)
+        a = torch.tensor([1.]).to(self.device)
+        b = torch.tensor([0.]).to(self.device)
+        mask = torch.where(item_id_list&gt;0, a, b)
+        q2_expand = q2.unsqueeze(1).expand_as(q1)
+        q2_masked<a id="change"> = </a>mask.unsqueeze(2).expand_as(q1) * q2_expand
+
+        alpha = self.v_t(torch.sigmoid(q1+q2_masked).view(-1, self.hidden_size)).view(mask.size())
+        c_local = torch.sum(alpha.unsqueeze(2).expand_as(gru_out)*gru_out, 1)</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 fetch the last hidden state of last timestamp
+        c_global = ht = self.gather_indexes(gru_out, interaction[self.ITEM_LIST_LEN] - 1)
+
+        mask = <a id="change">item_id_list.gt(0).unsqueeze(2).expand_as(</a>gru_out<a id="change">)</a>
+        q1 = self.a_1(gru_out)
+        q2 = self.a_2(ht)
+        q2_expand = q2.unsqueeze(1).expand_as(q1)
+        alpha = self.v_t(mask * torch.sigmoid(q1 + q2_expand))</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/rucaibox/recbole/commit/ba22a2f7c50691f00501db48c524afeacca7d3fb#diff-307e63abec22600af104a8dbc42fb12688d997b677ad0c5898022038427c17e6L58' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 10457241</div><div id='project'> Project Name: rucaibox/recbole</div><div id='commit'> Commit Name: ba22a2f7c50691f00501db48c524afeacca7d3fb</div><div id='time'> Time: 2020-09-15</div><div id='author'> Author: houyupeng@ruc.edu.cn</div><div id='file'> File Name: recbox/model/sequential_recommender/narm.py</div><div id='m_class'> M Class Name: NARM</div><div id='n_method'> N Class Name: NARM</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: SequentialRecommender</div><div id='n_parent_class'> N Parent Class: SequentialRecommender</div><div id='m_file'> M File Name: recbox/model/sequential_recommender/narm.py</div><div id='n_file'> N File Name: recbox/model/sequential_recommender/narm.py</div><div id='m_start'> M Start Line: 59</div><div id='m_end'> M End Line: 87</div><div id='n_start'> N Start Line: 67</div><div id='n_end'> N End Line: 80</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        self.norm = torch.nn.BatchNorm1d(n_dim)
+
+    def forward(self, x):
+        x_ = x.view(-1,<a id="change">x.size(</a>-1<a id="change">)</a>)
+        x_normed = self.norm(x_)
+        x_p = torch.sigmoid(self.beta * x_normed)
+        print(x_p.shape)
+        output = (1.0-x_p) * x_ * self.alpha + x_p * x_
+        output<a id="change"> = </a>output.view(*x.shape)
+        return output
+
+&#47&#47 class FeedForwardAttention(torch.nn.Module):</code></pre><h3>After Change</h3><pre><code class='java'>
+        var_x = torch.var(x, dim=-1, keepdim=True)
+        x_std = (x - mean_x) / (torch.sqrt(var_x + self.epsilon))
+        p_x = torch.sigmoid(x_std)
+        f_x = p_x * x + (1-p_x) * x * <a id="change">self.weight.expand_as(</a>x<a id="change">)</a>
+        return f_x
+
+    def extra_repr(self) -&gt; str:
+        return &quotnum_parameters={}&quot.format(self.num_parameters)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/ustcml/recstudio/commit/41eaf8d3306045061591f4cd83d488cbd9afb1ed#diff-679f2f47157831f14d073b36c7d0056116ae30fcb4236442f93be583e7cbe5d4L336' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 10457237</div><div id='project'> Project Name: ustcml/recstudio</div><div id='commit'> Commit Name: 41eaf8d3306045061591f4cd83d488cbd9afb1ed</div><div id='time'> Time: 2022-08-21</div><div id='author'> Author: angus_huang@mail.ustc.edu.cn</div><div id='file'> File Name: recstudio/model/module/layers.py</div><div id='m_class'> M Class Name: Dice</div><div id='n_method'> N Class Name: Dice</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: torch.nn.Module</div><div id='n_parent_class'> N Parent Class: torch.nn.Module</div><div id='m_file'> M File Name: recstudio/model/module/layers.py</div><div id='n_file'> N File Name: recstudio/model/module/layers.py</div><div id='m_start'> M Start Line: 337</div><div id='m_end'> M End Line: 343</div><div id='n_start'> N Start Line: 390</div><div id='n_end'> N End Line: 395</div><BR>

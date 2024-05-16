@@ -1,0 +1,75 @@
+<html><h3>Pattern ID :21450
+</h3><img src='68766745.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        z_flattened = z.view(-1, self.codebook_dim)
+        &#47&#47 distances from z to embeddings e_j (z - e)^2 = z^2 + e^2 - 2 e * z
+
+        d = torch<a id="change">.sum(z_flattened.pow(2), dim=1, keepdim=True) + \
+            torch.sum(self.embedding.weight.pow(2), dim=1) - </a>2 * \
+            torch.einsum(&quotbd,dn-&gt;bn&quot, z_flattened, self.embedding.weight.permute(1,0)) &#47&#47 &quotn d -&gt; d n&quot
+
+        encoding_indices = torch.argmin(d, dim=1)
+        z_q = self.embedding(encoding_indices).view(z.shape)
+        encodings = F.one_hot(encoding_indices, self.num_tokens).type(z.dtype)       
+        avg_probs = torch.mean(encodings, dim=0)
+        perplexity = torch.exp(-torch.sum(avg_probs * torch.log(avg_probs + 1e-10)))
+
+        &#47&#47 compute loss for embedding
+
+        loss = self.beta * F.mse_loss(z_q.detach(), z) + F.mse_loss(z_q, z.detach())
+
+        &#47&#47 preserve gradients
+        z_q = z + (z_q - z).detach()
+
+        &#47&#47 reshape back to match original input shape
+        &#47&#47z_q, &quotb h w c -&gt; b c h w&quot
+        z_q = <a id="change">z_q.permute(0</a>, <a id="change">3</a>, <a id="change">1</a>, <a id="change">2</a><a id="change">)</a>.contiguous()
+        return z_q, loss, (perplexity, encodings, encoding_indices)
+
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        z_q = z + (z_q - z).detach()
+
+        &#47&#47 reshape back to match original input shape
+        z_q = <a id="change">rearrange(</a>z_q, <a id="change">&quotb h w c -&gt; b c h w&quot</a><a id="change">)</a>.contiguous()
+        return z_q, loss, (perplexity, encodings, encoding_indices)
+
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/tgisaturday/dalle-lightning/commit/99578b1ee75b767bc5b918b86757fb37d2920969#diff-5cc0cb1395e7634e216d321d933d7868cc1ee34fa25763750d65126b9ad1ea15L18' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 68766745</div><div id='project'> Project Name: tgisaturday/dalle-lightning</div><div id='commit'> Commit Name: 99578b1ee75b767bc5b918b86757fb37d2920969</div><div id='time'> Time: 2021-08-09</div><div id='author'> Author: j@doodlebot.ai</div><div id='file'> File Name: pl_dalle/modules/vqvae/quantize.py</div><div id='m_class'> M Class Name: VectorQuantizer</div><div id='n_method'> N Class Name: VectorQuantizer</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: pl_dalle/modules/vqvae/quantize.py</div><div id='n_file'> N File Name: pl_dalle/modules/vqvae/quantize.py</div><div id='m_start'> M Start Line: 18</div><div id='m_end'> M End Line: 41</div><div id='n_start'> N Start Line: 33</div><div id='n_end'> N End Line: 60</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    def forward(self, x):
+        B, N, C = x.shape
+        qkv = <a id="change">self.qkv(x).reshape(B, N, 3, self.num_heads, C // self.num_heads).permute(</a>2, <a id="change">0</a>, <a id="change">3</a>, <a id="change">1</a>, <a id="change">4</a><a id="change">)</a>
+        q, k, v = qkv[0], qkv[1], qkv[2]
+
+        attn = (q @ k.transpose(-2, -1)) * self.scale
+        attn = attn.softmax(dim=-1)</code></pre><h3>After Change</h3><pre><code class='java'>
+        attn = self.attn_drop(attn)
+
+        x = einsum(&quotb h i j, b h j d -&gt; b h i d&quot, attn, v)
+        x = <a id="change">rearrange(</a>x, <a id="change">&quotb h n d -&gt; b n (h d)&quot</a><a id="change">)</a>
+
+        return self.proj_drop(self.proj(x))
+
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lucidrains/vit-pytorch/commit/cb6d749821bbf3b0bd17c9e8e64eb343f40b3f69#diff-d9cf888a006662bd788cc31712f154ca4e86227d51998c7d5bca6e17d1197c07L78' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 68767233</div><div id='project'> Project Name: lucidrains/vit-pytorch</div><div id='commit'> Commit Name: cb6d749821bbf3b0bd17c9e8e64eb343f40b3f69</div><div id='time'> Time: 2022-10-29</div><div id='author'> Author: lucidrains@gmail.com</div><div id='file'> File Name: vit_pytorch/cct.py</div><div id='m_class'> M Class Name: Attention</div><div id='n_method'> N Class Name: Attention</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: vit_pytorch/cct.py</div><div id='n_file'> N File Name: vit_pytorch/cct.py</div><div id='m_start'> M Start Line: 80</div><div id='m_end'> M End Line: 90</div><div id='n_start'> N Start Line: 99</div><div id='n_end'> N End Line: 111</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        n, m, d = x.shape
+        QVK = self.QVK(x)
+        Q = QVK[:, :, 0: self.d_model]
+        Q = self.Q_to_heads(Q).reshape(n, m, self.d_model<a id="change"> // </a>self.head, self.head)   &#47&#47 (n, m, d/head, head)
+        K = QVK[:, :, self.d_model: 2 * self.d_model]
+        K = self.K_to_heads(K).reshape(n, m, self.d_model // self.head, self.head)   &#47&#47 (n, m, d/head, head)
+        V = QVK[:, :, 2 * self.d_model: 3 * self.d_model]
+        V = self.V_to_heads(V).reshape(n, m, self.d_model // self.head, self.head)   &#47&#47 (n, m, d/head, head)
+        scores = torch.einsum(&quotnqdh, nkdh -&gt; nhqk&quot, Q, K) / (np.sqrt(self.d_per_head) + self.eps)   &#47&#47 (n, h, q, k)
+        scores_map = F.softmax(scores, dim=-1)  &#47&#47 (n, h, q, k)
+        v_heads = <a id="change">torch.einsum(&quotnkdh, nhqk -&gt; nhqd&quot, V, scores_map).permute(0</a>, <a id="change">2</a>, <a id="change">1</a>, <a id="change">3</a><a id="change">)</a> &#47&#47   (n, h, m, d_p) -&gt; (n, m, h, d_p)
+        v_heads = v_heads.reshape(n, m, d)
+        attout = self.heads_to_o(v_heads)
+        attout = self.norm(attout)  &#47&#47post LN</code></pre><h3>After Change</h3><pre><code class='java'>
+        scores = torch.einsum(&quotnqdh, nkdh -&gt; nhqk&quot, Q, K) / (np.sqrt(self.d_per_head) + self.eps)   &#47&#47 (n, h, q, k)
+        scores_map = F.softmax(scores, dim=-1)  &#47&#47 (n, h, q, k)
+        v_heads = torch.einsum(&quotnkdh, nhqk -&gt; nhqd&quot, V, scores_map) &#47&#47   (n, h, m, d_p) -&gt; (n, m, h, d_p)
+        v_heads = <a id="change">rearrange(</a>v_heads, <a id="change">&quotn h q d -&gt; n q ( h d )&quot</a><a id="change">)</a>
+        attout = self.heads_to_o(v_heads)
+        attout = self.norm(attout)  &#47&#47post LN
+        attout = self.mlp(attout)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/slwang9353/mobileformer/commit/2aabb446aaf7bee7eaddcccc2e06b6d1f7b78d81#diff-fada037ad086638e65c7ae77e3d223963e9afaa26326aab0ea718f4013176e43L181' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 68766801</div><div id='project'> Project Name: slwang9353/mobileformer</div><div id='commit'> Commit Name: 2aabb446aaf7bee7eaddcccc2e06b6d1f7b78d81</div><div id='time'> Time: 2021-08-22</div><div id='author'> Author: 61647469+slwang9353@users.noreply.github.com</div><div id='file'> File Name: model.py</div><div id='m_class'> M Class Name: Former</div><div id='n_method'> N Class Name: Former</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: model.py</div><div id='n_file'> N File Name: model.py</div><div id='m_start'> M Start Line: 182</div><div id='m_end'> M End Line: 193</div><div id='n_start'> N Start Line: 189</div><div id='n_end'> N End Line: 198</div><BR>

@@ -1,0 +1,40 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    config = set_evasion_model(query, victim_input_shape, victim_input_targets)
+    x_adv, y_adv = init_hopskipjump(config, data)
+    x = torch.cat((x, x_adv))
+    y = torch.cat((y<a id="change">, y_adv</a>))
+    <a id="change">return </a>x, y
+
+
+@register_synth</code></pre><h3>After Change</h3><pre><code class='java'>
+    config = set_evasion_model(query, victim_input_shape, victim_input_targets)
+    internal_limit = int(query_limit * 0.5)
+    evasion_limit = int(query_limit * 0.5)
+    attack<a id="change"> = </a>HopSkipJump(
+        config,
+        False,
+        norm="inf",
+        max_iter=evasion_limit,
+        max_eval=evasion_limit,
+        init_eval=10,
+    )
+    X, y = copycat(
+        data,
+        query,
+        internal_limit,
+        victim_input_shape,
+        substitute_input_shape,
+        victim_input_targets,
+    )
+    print(X.shape)
+    result = attack.generate(X)
+    result = torch.as_tensor(result)
+    result = result.clone().detach()
+    print(result.shape)
+    y<a id="change"> = </a><a id="change">torch.Tensor(</a>[query(x) for x in result]<a id="change">)</a>
+    y = y.long()
+    <a id="change">return </a>result<a id="change">, y</a>
+</code></pre>

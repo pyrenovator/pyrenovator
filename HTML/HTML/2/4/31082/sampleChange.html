@@ -1,0 +1,23 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        min_slot_id = None
+        min_offset = None
+        for slot_id, (chunk_id, offset) in self.cached_chunk_table.items():
+            <a id="change">if </a>chunk_id &lt; min_chunk_id and chunk_id not in self.evict_backlist:
+                min_chunk_id = chunk_id
+                min_slot_id = slot_id
+                min_offset<a id="change"> = </a>offset
+
+        if min_slot_id is None:
+            raise RuntimeError("Can not evict a chunk")</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47
+        &#47&#47 if min_slot_id is None:
+        &#47&#47     raise RuntimeError("Can not evict a chunk")
+        mask = <a id="change">torch.logical_or(</a>torch.isin(self.cached_chunk_table[:, 0], self.evict_backlist),
+                                self.cached_chunk_table[:, 0] == -1<a id="change">)</a>
+        buf = self.cached_chunk_table[mask, 0].clone()
+        idx = torch.nonzero(mask).squeeze(1)
+        self.cached_chunk_table[:, 0].index_fill_(0, idx, self.chunk_num)
+        min_row, min_slot_id = torch.min(self.cached_chunk_table[:, 0], dim=0)</code></pre>

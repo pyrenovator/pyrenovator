@@ -1,0 +1,24 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        edge_slice = edge.get_edge_slice()
+        neighbors_slice = edge.get_start_node_neighbors_without_end_node()[0]
+        messages_from_the_other_neighbors = to.zeros(node.features.shape[0]).to(self.device)
+        <a id="change">for </a>reset_node_index in neighbors_slice<a id="change">:
+            </a>reset_node<a id="change"> = </a>self._create_node(node_features, adjacency_matrix, reset_node_index)
+            reset_edge = self._create_edge(node, reset_node)
+            reset_edge_slice = reset_edge.get_edge_slice()
+            reset_gate_output = self._pass_through_reset_gate(messages, node, reset_edge, node_features)</code></pre><h3>After Change</h3><pre><code class='java'>
+                                node_features: to.Tensor) -&gt; to.Tensor:
+        edge_slice = edge.get_edge_slice()
+        neighbors_slice = edge.get_start_node_neighbors_without_end_node()[0]
+        return self.u_gru_current_memory_message[edge_slice].matmul(sum([<a id="change">to.mul(</a>to.sigmoid(
+            to.add(
+                to.add(self.w_gru_update_gate_features[edge_slice].matmul(node_features[node.node_id]),
+                       self.u_gru_update_gate[edge_slice].matmul(messages[node.node_id, reset_node_index])),
+                self.b_gru_update_gate)).long(), messages[node.node_id, reset_node_index]<a id="change">)</a>
+                                                                         for reset_node_index in neighbors_slice]))
+
+    def _pass_through_reset_gate(self,
+                                 messages: to.Tensor,</code></pre>

@@ -1,0 +1,65 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    print(&quottraining...&quot)
+    loss_function = nn.MSELoss().to(args.device)
+    loss = 0
+    for <a id="change">epoch</a> in <a id="change">range(</a>args.E<a id="change">)</a>:
+        for (seq, label) in Dtr:
+            seq = seq.to(args.device)
+            label = label.to(args.device)
+            y_pred = model(seq)
+            optimizer.zero_grad()
+            &#47&#47 compute proximal_term
+            proximal_term = 0.0
+            for w, w_t in zip(model.parameters(), global_model.parameters()):
+                proximal_term += (w - w_t).norm(2)
+
+            loss = loss_function(y_pred, label) + (args.mu / 2) * proximal_term
+            loss.backward()
+            optimizer.step()
+        stepLR.step()
+
+        <a id="change">print(&quotepoch&quot</a>, <a id="change">epoch</a>, <a id="change">&quot:&quot</a>, loss.item()<a id="change">)</a>
+
+    return model
+
+</code></pre><h3>After Change</h3><pre><code class='java'>
+                                    momentum=0.9, weight_decay=args.weight_decay)
+    stepLR = StepLR(optimizer, step_size=args.step_size, gamma=args.gamma)
+    &#47&#47 training
+    min_epochs<a id="change"> = 10</a>
+    best_model = None
+    min_val_loss = 5
+    print(&quottraining...&quot)
+    loss_function = nn.MSELoss().to(args.device)
+    for <a id="change">epoch</a> in <a id="change">tqdm(</a><a id="change">range(</a>args.E<a id="change">))</a>:
+        <a id="change">train_loss = </a><a id="change">[]</a>
+        for (seq, label) in Dtr:
+            seq = seq.to(args.device)
+            label = label.to(args.device)
+            y_pred = model(seq)
+            optimizer.zero_grad()
+            &#47&#47 compute proximal_term
+            proximal_term = 0.0
+            for w, w_t in zip(model.parameters(), global_model.parameters()):
+                proximal_term += (w - w_t).norm(2)
+
+            loss = loss_function(y_pred, label) + (args.mu / 2) * proximal_term
+            <a id="change">train_loss.append(</a>loss.item()<a id="change">)</a>
+            loss.backward()
+            optimizer.step()
+        stepLR.step()
+        &#47&#47 validation
+        <a id="change">val_loss = </a><a id="change">get_val_loss(</a>args, <a id="change">model</a>, Val<a id="change">)</a>
+        <a id="change">if epoch + 1 &gt;= min_epochs</a><a id="change"> and val_loss &lt; min_val_loss</a>:
+            min_val_loss<a id="change"> = val_loss</a>
+            best_model<a id="change"> = copy.deepcopy(model</a><a id="change">)</a>
+
+        print(<a id="change">&quotepoch {:03d} train_loss {:.8f} val_loss {:.8f}&quot.format(epoch</a>, <a id="change">np.mean(train_loss</a><a id="change">)</a>, <a id="change">val_loss</a><a id="change">)</a>)
+        <a id="change">model.train()</a>
+
+    return best_model
+
+</code></pre>

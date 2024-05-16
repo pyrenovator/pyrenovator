@@ -1,0 +1,29 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+    def _poly(self, x):
+        &#47&#47 compute x^k
+        exponentials = torch.zeros(<a id="change">[</a>x.shape[0], x.shape[1], self.order + 1<a id="change"></a>])
+        for o in range(self.order + 1):
+            exponentials[:, :, o] = torch.pow(x, o)
+
+        &#47&#47 multiply by coefficients
+        exponentials = torch.multiply(exponentials, self.coeffs)
+
+        &#47&#47 Collapse dimensions
+        exponentials<a id="change"> = </a>torch.sum(exponentials, dim=2)
+
+        &#47&#47 sum all values for each dim
+        return torch.sum(exponentials, dim=1)</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 Compute all relevant x^k
+        &#47&#47 The shape of exponentials is (dim, N, order+1)
+        if infer_backend(x) != "tensorflow":
+            exponentials = x.reshape(x.shape + (1,)) ** <a id="change">anp.linspace(
+                0</a>, self.order, self.order + 1<a id="change">, like=x
+            )</a>
+            assert exponentials.dtype == x.dtype
+        else:
+            &#47&#47 Tensorflow&quots exponentiation gives float64 values if x are float32
+            &#47&#47 and the exponent are integer</code></pre>

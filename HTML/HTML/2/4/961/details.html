@@ -1,0 +1,101 @@
+<html><h3>Pattern ID :961
+</h3><img src='4605619.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        return score
+
+    def full_sort_predict(self, interaction):
+        <a id="change">pass</a>
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    def full_sort_predict(self, interaction):
+        user = interaction[self.USER_ID]
+        user_emb<a id="change"> = </a>self.UI_emb(user)
+        all_iu_emb<a id="change"> = </a>self.IU_emb.weight
+        mf = <a id="change">torch.matmul(</a>user_emb, all_iu_emb.transpose(0,1)<a id="change">)</a>
+        all_il_emb = self.IL_emb.weight
+        item_list = interaction[self.ITEM_ID_LIST]
+        item_list_emb = self.LI_emb(item_list)
+        fmc = torch.matmul(item_list_emb, all_il_emb.transpose(0,1))</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/rucaibox/recbole/commit/548056eaa5df9d1745d9e57b93a3ae5af4c07c50#diff-c75358951368795c804e85cfd3403059cb14b273d8ac070e32d25a487f0ec31cL117' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 4605619</div><div id='project'> Project Name: rucaibox/recbole</div><div id='commit'> Commit Name: 548056eaa5df9d1745d9e57b93a3ae5af4c07c50</div><div id='time'> Time: 2020-09-10</div><div id='author'> Author: 3301056761@qq.com</div><div id='file'> File Name: recbox/model/sequential_recommender/fpmc.py</div><div id='m_class'> M Class Name: FPMC</div><div id='n_method'> N Class Name: FPMC</div><div id='m_method'> M Method Name: full_sort_predict(2)</div><div id='n_method'> N Method Name: full_sort_predict(2)</div><div id='m_parent_class'> M Parent Class: SequentialRecommender</div><div id='n_parent_class'> N Parent Class: SequentialRecommender</div><div id='m_file'> M File Name: recbox/model/sequential_recommender/fpmc.py</div><div id='n_file'> N File Name: recbox/model/sequential_recommender/fpmc.py</div><div id='m_start'> M Start Line: 117</div><div id='m_end'> M End Line: 117</div><div id='n_start'> N Start Line: 117</div><div id='n_end'> N End Line: 127</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+  def forward(ctx, input, weight):
+    ctx.save_for_backward(input, weight)
+
+    <a id="change">pass</a>
+
+  @staticmethod
+  def backward(ctx, grad_output):
+    pass</code></pre><h3>After Change</h3><pre><code class='java'>
+  def forward(ctx, input, weight):
+    assert input.shape[1] == weight.shape[0]
+    isize = np.int32(input.shape[0])
+    msize<a id="change"> = </a>np.int32(input.shape[1])
+    osize = np.int32(weight.shape[1])
+    one = np.int32(1)
+    ret<a id="change"> = </a>buffer_new(ctx, (isize, osize))
+
+    prg = cl.Program(ctx.cl_ctx, 
+    __kernel void matmul(
+        __global const float *input,
+        __global const float *weight,
+        __global float *res,
+        int is0,
+        int is1,
+        int msize,
+        int ws0,
+        int ws1,
+        int osize
+        )
+    {
+      int X = get_global_id(0); // isize
+      int Y = get_global_id(1); // osize
+      
+      float ret = 0.0;
+      for (int x = 0; x &lt; msize; x++) {
+        ret += input[X * is0 + x * is1] * weight[Y * ws0 + x * ws1];
+      }
+
+      res[X * osize + Y] = ret;
+    }
+    ).build()
+    ctx.save_for_backward(input, weight, prg)
+    &#47&#47 (isize,msize) x (msize,osize) = (isize,osize)
+    <a id="change">prg.matmul(</a>ctx.cl_queue, [isize, osize], None,
+      input, weight, ret,
+      msize, one, msize, one, osize, osize<a id="change">)</a>
+    return ret
+
+  @staticmethod
+  def backward(ctx, grad_output):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/geohot/tinygrad/commit/5201a8e89f9a4ac82518fea4fff38e3ebfd75cb6#diff-b7e8a4d3462e65523c8cfd523079177ad58eb9176481ea76a4dedbe501683059L86' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 4605615</div><div id='project'> Project Name: geohot/tinygrad</div><div id='commit'> Commit Name: 5201a8e89f9a4ac82518fea4fff38e3ebfd75cb6</div><div id='time'> Time: 2020-11-01</div><div id='author'> Author: geohot@gmail.com</div><div id='file'> File Name: tinygrad/opsgpu.py</div><div id='m_class'> M Class Name: Dot</div><div id='n_method'> N Class Name: Dot</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: Function</div><div id='n_parent_class'> N Parent Class: Function</div><div id='m_file'> M File Name: tinygrad/opsgpu.py</div><div id='n_file'> N File Name: tinygrad/opsgpu.py</div><div id='m_start'> M Start Line: 89</div><div id='m_end'> M End Line: 89</div><div id='n_start'> N Start Line: 87</div><div id='n_end'> N End Line: 123</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+  @staticmethod
+  def backward(ctx, grad_output):
+    <a id="change">pass</a>
+register(&quotdot&quot, Dot, gpu=True)
+
+
+</code></pre><h3>After Change</h3><pre><code class='java'>
+  @staticmethod
+  def backward(ctx, grad_output):
+    input, weight, prg = ctx.saved_tensors
+    isize<a id="change"> = </a>np.int32(input.shape[0])
+    msize<a id="change"> = </a>np.int32(input.shape[1])
+    osize = np.int32(weight.shape[1])
+    one = np.int32(1)
+
+    grad_input = buffer_like(ctx, input)
+    grad_weight = buffer_like(ctx, weight)
+
+    &#47&#47 (isize,osize) x (msize,osize) = (isize,msize)
+    prg.matmul(ctx.cl_queue, [isize, msize], None,
+      grad_output, weight, grad_input,
+      osize, one, osize, osize, one, msize)
+
+    &#47&#47 (isize,msize) x (isize,osize) = (msize,osize)
+    <a id="change">prg.matmul(</a>ctx.cl_queue, [msize, osize], None,
+      input, grad_output, grad_weight,
+      one, msize, isize, one, isize, osize<a id="change">)</a>
+
+
+    &#47&#47prg.matmul(ctx.cl_queue, [msize, osize], None,
+    &#47&#47  input, grad_output, grad_weight,</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/geohot/tinygrad/commit/5201a8e89f9a4ac82518fea4fff38e3ebfd75cb6#diff-b7e8a4d3462e65523c8cfd523079177ad58eb9176481ea76a4dedbe501683059L92' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 4605612</div><div id='project'> Project Name: geohot/tinygrad</div><div id='commit'> Commit Name: 5201a8e89f9a4ac82518fea4fff38e3ebfd75cb6</div><div id='time'> Time: 2020-11-01</div><div id='author'> Author: geohot@gmail.com</div><div id='file'> File Name: tinygrad/opsgpu.py</div><div id='m_class'> M Class Name: Dot</div><div id='n_method'> N Class Name: Dot</div><div id='m_method'> M Method Name: backward(2)</div><div id='n_method'> N Method Name: backward(2)</div><div id='m_parent_class'> M Parent Class: Function</div><div id='n_parent_class'> N Parent Class: Function</div><div id='m_file'> M File Name: tinygrad/opsgpu.py</div><div id='n_file'> N File Name: tinygrad/opsgpu.py</div><div id='m_start'> M Start Line: 93</div><div id='m_end'> M End Line: 93</div><div id='n_start'> N Start Line: 127</div><div id='n_end'> N End Line: 151</div><BR>

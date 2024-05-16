@@ -1,0 +1,59 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    &#47&#47 We don&quott allow an empty split by virtue of the parameter declaration,
+    &#47&#47 so we always have a split.
+    read_config = dataclasses.replace(
+        <a id="change">kwargs.pop(&quotread_config&quot</a>, tfds.ReadConfig()<a id="change">)</a>)
+    &#47&#47 Add the &quottfds_id&quot key to the samples which we can then parse.
+    &#47&#47 From: https://www.tensorflow.org/datasets/api_docs/python/tfds/ReadConfig
+    read_config.add_tfds_id = True
+
+    dataset = self.base_dataset_builder.as_dataset(
+        split=split, shuffle_files=False, read_config=read_config, **kwargs)
+
+    element_spec = dataset.element_spec.copy()
+    element_spec[&quotid&quot] = tf.TensorSpec(shape=(), dtype=tf.int64, name=None)
+    logging.info(msg=f&quotelement_spec = {element_spec}; &quot
+                 f&quottype = {jax.tree_map(type, element_spec)}&quot)
+
+    dataset = tf.data.Dataset.from_generator(
+        _subset_generator(
+            dataset=dataset,
+            dataset_info=self.base_dataset_builder.info,
+            subset_ids=self.subset_ids,
+            splitwise_id=True),
+        output_signature=element_spec,
+    )
+
+    &#47&#47 This is a bit more complex: potentially cache before or after calling
+    &#47&#47 .shuffle. BUT don&quott cache for the pool set as it will be much larger than
+    &#47&#47 the training set.
+    reshuffle_each_iteration<a id="change"> = </a>shuffle_files and read_config.shuffle_reshuffle_each_iteration
+    cache_data = self.subset_ids is not None
+
+    if reshuffle_each_iteration and cache_data:
+      dataset = dataset.cache()
+    if shuffle_files:
+      if self.subset_ids is not None:
+        buffer_size = len(self.subset_ids)
+      else:
+        &#47&#47 TODO(andreas): what buffer size do we want actually for shuffling?
+        &#47&#47   10k seems like a safe thing.
+        buffer_size = 10000
+      dataset = dataset.shuffle(
+          buffer_size=buffer_size,
+          seed=read_config.shuffle_seed,
+          reshuffle_each_iteration=read_config.shuffle_reshuffle_each_iteration)
+    if <a id="change">not reshuffle_each_iteration and cache_data</a>:
+      dataset = dataset.cache()
+    return dataset
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    Constructs a dataset containing a subset of the original dataset.
+    &#47&#47 Add the &quottfds_id&quot key to the samples which we can then parse.
+    &#47&#47 From: https://www.tensorflow.org/datasets/api_docs/python/tfds/ReadConfig
+    <a id="change">if read_config is None</a>:
+      logging.info(&quotUsing an empty ReadConfig!&quot)
+      read_config = tfds.ReadConfig()
+    read_config = dataclasses.replace(read_config, add_tfds_id=True)</code></pre>

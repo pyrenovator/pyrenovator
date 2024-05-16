@@ -1,0 +1,58 @@
+<html><h3>Pattern ID :36805
+</h3><img src='104978087.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        loss.backward()
+
+        &#47&#47 gradient clipping
+        <a id="change">torch.nn.utils.clip_grad_norm_(</a>self.modules.parameters(), 5.0<a id="change">)</a>
+
+        self.optimizer.step()
+        self.optimizer.zero_grad()
+        stats["loss"] = loss.detach()</code></pre><h3>After Change</h3><pre><code class='java'>
+        if not hasattr(self, "step"):
+            self.step = 0
+        self.step = self.step + 1
+        <a id="change">if self.step % params.gradient_accumulation == 0</a>:
+            &#47&#47 gradient clipping
+            <a id="change">torch.nn.utils.clip_grad_norm_(</a>self.modules.parameters(), 5.0<a id="change">)</a>
+
+            self.optimizer.step()
+            self.optimizer.zero_grad()
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/speechbrain/speechbrain/commit/34c1b22b252b931a13183617f0c003f60978f69a#diff-f1cd97eb28ba9294128deb015c8d73c0b0f2328da9eaefffdc4ba435a03d619fL225' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 104978087</div><div id='project'> Project Name: speechbrain/speechbrain</div><div id='commit'> Commit Name: 34c1b22b252b931a13183617f0c003f60978f69a</div><div id='time'> Time: 2020-07-29</div><div id='author'> Author: jianyuan.zhong@server.mila.quebec</div><div id='file'> File Name: recipes/LibriSpeech/ASR_transformer/experiment.py</div><div id='m_class'> M Class Name: ASR</div><div id='n_method'> N Class Name: ASR</div><div id='m_method'> M Method Name: fit_batch(2)</div><div id='n_method'> N Method Name: fit_batch(2)</div><div id='m_parent_class'> M Parent Class: sb.core.Brain</div><div id='n_parent_class'> N Parent Class: sb.core.Brain</div><div id='m_file'> M File Name: recipes/LibriSpeech/ASR_transformer/experiment.py</div><div id='n_file'> N File Name: recipes/LibriSpeech/ASR_transformer/experiment.py</div><div id='m_start'> M Start Line: 226</div><div id='m_end'> M End Line: 233</div><div id='n_start'> N Start Line: 225</div><div id='n_end'> N End Line: 243</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    def _clip_grads(self, params, cfg):
+        params_with_grad = filter(
+            lambda p: p.requires_grad and p.grad is not None, params)
+        <a id="change">clip_grad.clip_grad_norm_(</a>params_with_grad<a id="change">, **cfg)</a>
+
+    def before_train_epoch(self, engine):
+        self._last_update_iter = 0
+        engine.optimizer.zero_grad()</code></pre><h3>After Change</h3><pre><code class='java'>
+    def _clip_grads(self, params, cfg):
+        params_with_grad = filter(
+            lambda p: p.requires_grad and p.grad is not None, params)
+        <a id="change">if len(params_with_grad) &gt; 0</a>:
+            <a id="change">clip_grad.clip_grad_norm_(</a>params_with_grad<a id="change">, **cfg)</a>
+
+    def before_train_epoch(self, engine):
+        self._last_update_iter = 0
+        engine.optimizer.zero_grad()</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/yeliudev/nncore/commit/f360ba667c7f9b1c3a35aebb46e0a2897d7f6c4d#diff-23b9582393e6ba66767e784b65708dd5e51b61d532879864659f81accf91558aL61' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 104978086</div><div id='project'> Project Name: yeliudev/nncore</div><div id='commit'> Commit Name: f360ba667c7f9b1c3a35aebb46e0a2897d7f6c4d</div><div id='time'> Time: 2020-04-07</div><div id='author'> Author: yeliudev@gmail.com</div><div id='file'> File Name: nncore/engine/hooks/optimizer.py</div><div id='m_class'> M Class Name: OptimizerHook</div><div id='n_method'> N Class Name: OptimizerHook</div><div id='m_method'> M Method Name: _clip_grads(3)</div><div id='n_method'> N Method Name: _clip_grads(3)</div><div id='m_parent_class'> M Parent Class: Hook</div><div id='n_parent_class'> N Parent Class: Hook</div><div id='m_file'> M File Name: nncore/engine/hooks/optimizer.py</div><div id='n_file'> N File Name: nncore/engine/hooks/optimizer.py</div><div id='m_start'> M Start Line: 64</div><div id='m_end'> M End Line: 64</div><div id='n_start'> N Start Line: 62</div><div id='n_end'> N End Line: 67</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        loss = self.loss(x).mean()
+        loss.backward()
+        &#47&#47 gradient clipping by global norm
+        <a id="change">nn.utils.clip_grad_norm_(</a>self.model.parameters()<a id="change">, max_norm=self.grad_norm)</a>
+        self.optimizer.step()
+        self.optimizer.zero_grad(set_to_none=True)
+        &#47&#47 adjust learning rate every step (warming up)
+        self.scheduler.step()</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 Mean-reduced loss should be used to avoid inconsistent learning rate issue when number of devices changes
+        loss = self.loss(x).mean()
+        loss.div(self.num_accum).backward()  &#47&#47 average over accumulated mini-batches
+        <a id="change">if global_steps % self.num_accum == 0</a>:
+            &#47&#47 gradient clipping by global norm
+            <a id="change">nn.utils.clip_grad_norm_(</a>self.model.parameters()<a id="change">, max_norm=self.grad_norm)</a>
+            self.optimizer.step()
+            self.optimizer.zero_grad(set_to_none=True)
+            &#47&#47 adjust learning rate every step (warming up)
+            self.scheduler.step()</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/tqch/ddpm-torch/commit/875d2ea5b11a7e58bb237822892ba6dc6781b6b7#diff-224fbf952bfa20d6bacac4aa1ff482e260225b426f41671e84b29058d14d3980L131' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 104978088</div><div id='project'> Project Name: tqch/ddpm-torch</div><div id='commit'> Commit Name: 875d2ea5b11a7e58bb237822892ba6dc6781b6b7</div><div id='time'> Time: 2022-11-12</div><div id='author'> Author: tqch2020@gmail.com</div><div id='file'> File Name: ddpm_torch/utils/train.py</div><div id='m_class'> M Class Name: Trainer</div><div id='n_method'> N Class Name: Trainer</div><div id='m_method'> M Method Name: step(3)</div><div id='n_method'> N Method Name: step(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: ddpm_torch/utils/train.py</div><div id='n_file'> N File Name: ddpm_torch/utils/train.py</div><div id='m_start'> M Start Line: 136</div><div id='m_end'> M End Line: 146</div><div id='n_start'> N Start Line: 133</div><div id='n_end'> N End Line: 149</div><BR>

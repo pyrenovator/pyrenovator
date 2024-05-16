@@ -1,0 +1,18 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    
+    def expand_like(self,v,m,a):
+        nsamples = a.shape[-2]//m.shape[-1]
+        expanded_v = <a id="change">v[...,None,:]</a>.repeat((1,)*len(v.shape[:-1])+(nsamples,1)) &#47&#47 (bs,n,c) -&gt; (bs,n,1,c) -&gt; (bs,n,ns,c)
+        expanded_v = expanded_v.reshape(*a.shape[:2],v.shape[-1]) &#47&#47 (bs,n,ns,c) -&gt; (bs,n*ns,c)
+        expanded_mask = m[...,None].repeat((1,)*len(v.shape[:-1])+(nsamples,)) &#47&#47 (bs,n) -&gt; (bs,n,ns)
+        expanded_mask = expanded_mask.reshape(*a.shape[:2]) &#47&#47 (bs,n,ns) -&gt; (bs,n*ns)</code></pre><h3>After Change</h3><pre><code class='java'>
+        nsamples = a.shape[-2]//m.shape[-1]
+        expanded_v = repeat(v, &quotb n c -&gt; b n m c&quot, m = nsamples) &#47&#47 (bs,n,c) -&gt; (bs,n,1,c) -&gt; (bs,n,ns,c)
+        expanded_v = rearrange(expanded_v, &quotb n m c -&gt; b (n m) c&quot) &#47&#47 (bs,n,ns,c) -&gt; (bs,n*ns,c)
+        expanded_mask = <a id="change">repeat(</a>m, <a id="change">&quotb n -&gt; b n m&quot</a><a id="change">, m = nsamples)</a> &#47&#47 (bs,n) -&gt; (bs,n,ns)
+        expanded_mask = rearrange(expanded_mask, &quotb n m -&gt; b (n m)&quot) &#47&#47 (bs,n,ns) -&gt; (bs,n*ns)
+        return expanded_v, expanded_mask
+    </code></pre>

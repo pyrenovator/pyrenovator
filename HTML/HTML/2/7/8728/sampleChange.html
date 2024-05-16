@@ -1,0 +1,37 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+        query_flat = query.view(batch, query.shape[1], -1).transpose(1, 2)
+        key_flat = key.view(batch, key.shape[1], -1).transpose(1, 2)
+        query = reshape(<a id="change">self.query(</a>query_flat<a id="change">)</a>)
+        key = reshape(self.key(key_flat)).transpose(2, 3)
+        value = reshape(self.value(key_flat))
+
+        attn = torch.matmul(query, key) / sqrt(self.dim_head)
+        mask, start_mask = causal_mask(height * width)
+        mask = mask.type_as(query)
+        start_mask = start_mask.type_as(query)
+        attn = attn.masked_fill(mask == 0, -1e4)
+        attn = torch.softmax(attn, 3) * start_mask
+        attn<a id="change"> = </a>self.dropout(attn)
+
+        out = attn @ value
+        out = out.transpose(1, 2).reshape(
+            batch, height, width, self.dim_head * self.n_head
+        )
+        out = out.permute(0, 3, 1, 2)
+
+        <a id="change">return </a>out
+
+class PixelBlock(HelperModule):
+    def build(</code></pre><h3>After Change</h3><pre><code class='java'>
+            k.view(batch_size, k.shape[1], -1).transpose(1, 2),
+        ], dim=-1)
+
+        <a id="change">q</a><a id="change">, k, v</a> = torch.chunk(self.to_qkv(qkv_f), chunks=3, dim=-1)
+        <a id="change">q</a><a id="change">, k, v</a> = reshape(q), reshape(k).transpose(2, 3), reshape(v)
+
+        attn = (q @ k) / sqrt(self.head_dim)
+        mask, start_mask = causal_mask(height*width)</code></pre>

@@ -1,0 +1,42 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+        subset_paths = []
+        for task, extractor_type, task_dir in cls._TASKS:
+            task_path = <a id="change">osp.join(</a>root_path, VocPath.SUBSETS_DIR, task_dir<a id="change">)</a>
+
+            if not osp.isdir(task_path):
+                continue
+            task_subsets = [p for p in <a id="change">glob(</a>osp.join(task_path, &quot*.txt&quot)<a id="change">)</a>
+                if &quot_&quot not in osp.basename(p)]
+            subset_paths += [(task, extractor_type, p) for p in task_subsets]
+        return subset_paths
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    @classmethod
+    def find_sources(cls, path):
+        subsets = <a id="change">[]</a>
+
+        &#47&#47 find root path for the dataset and use it for all tasks
+        root_path = None
+        for extractor_type, task_dir in cls._TASKS.values():
+            if osp.isfile(path) and \
+                    not osp.basename(osp.dirname(path)) == task_dir:
+                continue
+
+            task_subsets = cls._find_sources_recursive(root_path or path,
+                &quottxt&quot, extractor_type,
+                dirname=osp.join(VocPath.SUBSETS_DIR, task_dir),
+                file_filter=lambda p: &quot_&quot not in osp.basename(p),
+                max_depth=0 if root_path else 3)
+
+            if not task_subsets:
+                continue
+
+            <a id="change">subsets.extend(</a>task_subsets<a id="change">)</a>
+
+            if not root_path:
+                root_path = osp.dirname(osp.dirname(
+                    osp.dirname(task_subsets[0][&quoturl&quot])))</code></pre>

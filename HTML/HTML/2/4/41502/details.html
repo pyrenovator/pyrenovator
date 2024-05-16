@@ -1,0 +1,126 @@
+<html><h3>Pattern ID :41502
+</h3><img src='116627967.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        self.features.add_module(&quotgn&quot, module=getattr(_model.head, &quotgn&quot))
+        self.features.add_module(&quotrelu&quot, module=getattr(_model.head, &quotrelu&quot))
+        self.pool: nn.AdaptiveAvgPool2d = getattr(_model.head, &quotavg&quot)
+        final_layer: nn.Conv2d = <a id="change">getattr(</a>_model.head, &quotconv&quot<a id="change">)</a>
+        self.classifier = self.define_classifier(conv_dim=final_layer.in_channels,
+                                                 num_classes=self.num_classes, fc_depth=1)
+
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        model_name = name.split(&quot_&quot)[0].upper().replace(&quotBIT&quot, &quotBiT&quot).replace(&quotX&quot, &quotx&quot)
+        _model = KNOWN_MODELS[model_name](head_size=1)
+        self.features = nn.Sequential()
+        <a id="change">if </a>&quotcomp&quot in name:
+            <a id="change">assert </a>&quotofficial&quot not in name, name
+            conv: StdConv2d = _model.root.conv
+            self.features.add_module(&quotconv&quot, conv3x3(conv.in_channels, conv.out_channels))
+        else:
+            self.features.add_module(&quotconv&quot, _model.root.conv)
+            if &quotofficial&quot not in name:
+                pool: nn.MaxPool2d = _model.root.pool
+                _model.root.pool<a id="change"> = </a>nn.MaxPool2d(pool.kernel_size, pool.stride, padding=1)
+            else:
+                self.features.add_module(&quotpad&quot, _model.root.pad)
+            self.features.add_module(&quotpool&quot, _model.root.pool)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/ain-soph/trojanzoo/commit/96331dcace5be2d405ccb32ac4b2ca5c7d028e0a#diff-3f8e13546f522657c26e2ee7fa0a44d9136fcb4f75ac17958562051cbf6cc3efL19' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 116627967</div><div id='project'> Project Name: ain-soph/trojanzoo</div><div id='commit'> Commit Name: 96331dcace5be2d405ccb32ac4b2ca5c7d028e0a</div><div id='time'> Time: 2021-04-30</div><div id='author'> Author: ain-soph@live.com</div><div id='file'> File Name: trojanvision/models/normal/bit.py</div><div id='m_class'> M Class Name: _BiT</div><div id='n_method'> N Class Name: _BiT</div><div id='m_method'> M Method Name: __init__(2)</div><div id='n_method'> N Method Name: __init__(2)</div><div id='m_parent_class'> M Parent Class: _ImageModel</div><div id='n_parent_class'> N Parent Class: _ImageModel</div><div id='m_file'> M File Name: trojanvision/models/normal/bit.py</div><div id='n_file'> N File Name: trojanvision/models/normal/bit.py</div><div id='m_start'> M Start Line: 19</div><div id='m_end'> M End Line: 32</div><div id='n_start'> N Start Line: 20</div><div id='n_end'> N End Line: 39</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+        self.decoder_opts = DecoderOptions(
+            args[&quotbeam&quot],
+            int(<a id="change">getattr(</a>args, "beam_size_token", len(tgt_dict)<a id="change">)</a>),
+            args[&quotbeam_threshold&quot],
+            args[&quotlm_weight&quot],
+            args[&quotword_score&quot],</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        self.unit_lm = getattr(args, "unit_lm", False)
+
+        <a id="change">if </a>args[&quotlexicon&quot]:
+            self.lexicon = load_words(args[&quotlexicon&quot])
+            self.word_dict = create_word_dict(self.lexicon)
+            self.unk_word = self.word_dict.get_index("&lt;unk&gt;")
+
+            self.lm = KenLM(args[&quotkenlm_model&quot], self.word_dict)
+            self.trie = Trie(self.vocab_size, self.silence)
+
+            start_state = self.lm.start(False)
+            for i, (word, spellings) in enumerate(self.lexicon.items()):
+                word_idx = self.word_dict.get_index(word)
+                _, score = self.lm.score(start_state, word_idx)
+                for spelling in spellings:
+                    spelling_idxs = [tgt_dict.index(token) for token in spelling]
+                    assert (
+                        tgt_dict.unk() not in spelling_idxs
+                    ), f"{spelling} {spelling_idxs}"
+                    self.trie.insert(spelling_idxs, word_idx, score)
+            self.trie.smear(SmearingMode.MAX)
+
+            self.decoder_opts = LexiconDecoderOptions(
+                beam_size=args[&quotbeam&quot],
+                beam_size_token=int(getattr(args, "beam_size_token", len(tgt_dict))),
+                beam_threshold=args[&quotbeam_threshold&quot],
+                lm_weight=args[&quotlm_weight&quot],
+                word_score=args[&quotword_score&quot],
+                unk_score=args[&quotunk_weight&quot],
+                sil_score=args[&quotsil_weight&quot],
+                log_add=False,
+                criterion_type=self.criterion_type,
+            )
+
+            if self.asg_transitions is None:
+                N = 768
+                &#47&#47 self.asg_transitions = torch.FloatTensor(N, N).zero_()
+                self.asg_transitions = []
+
+            self.decoder = LexiconDecoder(
+                self.decoder_opts,
+                self.trie,
+                self.lm,
+                self.silence,
+                self.blank,
+                self.unk_word,
+                self.asg_transitions,
+                self.unit_lm,
+            )
+        else:
+            <a id="change">assert </a>args.unit_lm, "lexicon free decoding can only be done with a unit language model"
+            from flashlight.lib.text.decoder import LexiconFreeDecoder, LexiconFreeDecoderOptions
+
+            d<a id="change"> = </a>{w: [[w]] for w in tgt_dict.symbols}
+            self.word_dict = create_word_dict(d)
+            self.lm = KenLM(args.kenlm_model, self.word_dict)
+            self.decoder_opts = LexiconFreeDecoderOptions(</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/open-speech-ekstep/vakyansh-wav2vec2-experimentation/commit/ea475ace163f4cc82e00481c41a6c9bfca552f0c#diff-332f2c04f41dad05fa88b4afb1b63f615ad063e58b6a28cc1bf0c0340b03d8a8L113' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 116627975</div><div id='project'> Project Name: open-speech-ekstep/vakyansh-wav2vec2-experimentation</div><div id='commit'> Commit Name: ea475ace163f4cc82e00481c41a6c9bfca552f0c</div><div id='time'> Time: 2021-04-28</div><div id='author'> Author: Harveen</div><div id='file'> File Name: utils/inference/single_file_inference.py</div><div id='m_class'> M Class Name: W2lKenLMDecoder</div><div id='n_method'> N Class Name: W2lKenLMDecoder</div><div id='m_method'> M Method Name: __init__(3)</div><div id='n_method'> N Method Name: __init__(3)</div><div id='m_parent_class'> M Parent Class: W2lDecoder</div><div id='n_parent_class'> N Parent Class: W2lDecoder</div><div id='m_file'> M File Name: utils/inference/single_file_inference.py</div><div id='n_file'> N File Name: utils/inference/single_file_inference.py</div><div id='m_start'> M Start Line: 117</div><div id='m_end'> M End Line: 168</div><div id='n_start'> N Start Line: 170</div><div id='n_end'> N End Line: 242</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        if hasattr(self, check_criterion):
+            To run config check for criterion, make corresponding function name
+            (e.g. HintonKLD -&gt; HintonKLD)
+            <a id="change">getattr(</a>self, check_criterion<a id="change">)</a>(self.config["CRITERION_PARAMS"])
+
+    def HintonKLD(self, config: Dict[str, Any]) -&gt; None:
+        Check HintonKLD Criterion params.</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 Run criterion config check
+        params: Dict[str, Any] = self.config["CRITERION_PARAMS"]
+
+        <a id="change">if </a>self.config["CRITERION"] == "HintonKLD":
+            <a id="change">assert </a>"T" in params
+            assert params["T"] &gt; 0.0
+            assert isinstance(params["T"], float)
+
+            assert "alpha" in params
+            assert 0.0 &lt;= params["alpha"] &lt;= 1.0
+            assert isinstance(params["alpha"], float)
+
+            &#47&#47 check additional params(teacher) exist
+            assert "teacher_model_name" in params
+            assert isinstance("teacher_model_name", str)
+            assert "teacher_model_params" in params
+
+            assert "crossentropy_params" in params
+            &#47&#47 Hintonloss contains crossentropy
+            ce_params = params["crossentropy_params"]
+
+        elif self.config["CRITERION"] == "CrossEntropy":
+            ce_params<a id="change"> = </a>self.config["CRITERION_PARAMS"]
+
+        if ce_params:
+            assert "num_classes" in ce_params</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/j-marple-dev/model_compression/commit/55cbca4f89999f9502b15ef2d1ab36f04802a625#diff-e05a1e445093a28b357c5a9bb6cdfb7d70620e04dda56d23b31662e4081f6012L112' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 116627965</div><div id='project'> Project Name: j-marple-dev/model_compression</div><div id='commit'> Commit Name: 55cbca4f89999f9502b15ef2d1ab36f04802a625</div><div id='time'> Time: 2020-07-05</div><div id='author'> Author: hoonyyhoon@snu.ac.kr</div><div id='file'> File Name: config/config_validator.py</div><div id='m_class'> M Class Name: TrainConfigValidator</div><div id='n_method'> N Class Name: TrainConfigValidator</div><div id='m_method'> M Method Name: check_criterion(1)</div><div id='n_method'> N Method Name: check_criterion(1)</div><div id='m_parent_class'> M Parent Class: ConfigValidator</div><div id='n_parent_class'> N Parent Class: ConfigValidator</div><div id='m_file'> M File Name: config/config_validator.py</div><div id='n_file'> N File Name: config/config_validator.py</div><div id='m_start'> M Start Line: 115</div><div id='m_end'> M End Line: 130</div><div id='n_start'> N Start Line: 117</div><div id='n_end'> N End Line: 152</div><BR>

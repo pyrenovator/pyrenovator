@@ -1,0 +1,27 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 Eq before 2.14
+        &#47&#47 https://arxiv.org/pdf/physics/9806030.pdf
+        X1 = torch.cat([base, x], dim=1)
+        bx = <a id="change">base.t()</a>.mm(x)
+        xx = <a id="change">x.t()</a>.mm(x)
+        Id = torch.eye(base.size(1), dtype=base.dtype, device=base.device)
+        X2 = torch.cat([torch.cat([bx, -xx], dim=1), torch.cat([Id, bx], dim=1)])
+        eX2 = expm(X2)
+        embx = expm(<a id="change">-bx</a>)
+        zeros = torch.zeros_like(Id)
+        X3<a id="change"> = </a>torch.cat([embx, zeros])
+        &#47&#47 Order matters
+        ret<a id="change"> = </a>X1.mm(X2.mm(X3))
+        if self.inverted:
+            ret = ret.t()
+        return ret</code></pre><h3>After Change</h3><pre><code class='java'>
+        B = base
+        A = _tall_to_skew(self.fibr_aux)
+        T = base @ A + x
+        Q<a id="change">, R</a> = torch.qr(T - B @ (B.t() @ T))
+        Atilde = torch.cat([
+                   torch.cat([Asmall, -R.t()],       dim=1),
+                   torch.cat([R, torch.zeros(k, k)], dim=1)])</code></pre>

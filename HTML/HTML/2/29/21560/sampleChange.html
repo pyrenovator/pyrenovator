@@ -1,0 +1,60 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            print("=&gt; no checkpoint found at &quot{}&quot".format(args.resume))
+
+    if args.distributed:
+        model<a id="change">, optimizer</a> = bagua.bagua_init(
+            model,
+            optimizer,
+            distributed_algorithm=args.algorithm,</code></pre><h3>After Change</h3><pre><code class='java'>
+        weight_decay=args.weight_decay,
+    )
+
+    <a id="change">if args.algorithm == "gradient_allreduce"</a>:
+        from bagua.torch_api.algorithms import gradient_allreduce
+        algorithm<a id="change"> = </a><a id="change">gradient_allreduce.GradientAllReduceAlgorithm()</a>
+    elif <a id="change">args.algorithm == "decentralized"</a>:
+        from bagua.torch_api.algorithms import decentralized
+        algorithm<a id="change"> = </a><a id="change">decentralized.DecentralizedAlgorithm()</a>
+    elif <a id="change">args.algorithm == "bytegrad"</a>:
+        from bagua.torch_api.algorithms import bytegrad
+        algorithm<a id="change"> = </a><a id="change">bytegrad.ByteGradAlgorithm()</a>
+    elif <a id="change">args.algorithm == "onebit_adam"</a>:
+        from bagua.torch_api.algorithms import onebit_adam
+        <a id="change">optimizer = onebit_adam</a><a id="change">.OnebitAdamOptimizer(model.parameters()</a><a id="change">)</a>
+        algorithm<a id="change"> = onebit_adam</a><a id="change">.OnebitAdamAlgorithm(optimizer</a>, <a id="change">10</a><a id="change">)</a>
+    else:
+        <a id="change">raise </a>NotImplementedError
+
+    scaler = torch.cuda.amp.GradScaler(enabled=args.amp)
+
+    &#47&#47 optionally resume from a checkpoint
+    if args.resume:
+        if os.path.isfile(args.resume):
+            print("=&gt; loading checkpoint &quot{}&quot".format(args.resume))
+            &#47&#47 Map model to be loaded to specified single gpu.
+            loc = "cuda:{}".format(bagua.get_local_rank())
+            checkpoint = torch.load(args.resume, map_location=loc)
+            args.start_epoch = checkpoint["epoch"]
+            best_acc1 = checkpoint["best_acc1"]
+            if bagua.get_local_rank() is not None:
+                &#47&#47 best_acc1 may be from a checkpoint from a different GPU
+                best_acc1 = best_acc1.to(bagua.get_local_rank())
+            model.load_state_dict(checkpoint["state_dict"])
+            optimizer.load_state_dict(checkpoint["optimizer"])
+            print(
+                "=&gt; loaded checkpoint &quot{}&quot (epoch {})".format(
+                    args.resume, checkpoint["epoch"]
+                )
+            )
+        else:
+            print("=&gt; no checkpoint found at &quot{}&quot".format(args.resume))
+
+    if args.distributed:
+        model = model.with_bagua(
+            <a id="change">[optimizer</a>],
+            algorithm,
+        )
+</code></pre>

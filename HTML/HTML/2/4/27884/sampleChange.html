@@ -1,0 +1,70 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+        file_name = dataset.imgs[dataset.image_ids[item]][&quotfile_name&quot]
+
+        sample<a id="change"> = </a>dataset.__getitem__(item)
+        keypoints3D = sample[1]
+        imgs_orig = sample[0]
+        img_size = imgs_orig[0].shape
+        dataset_name = sample[-1]
+        reproTool = reproTools[dataset_name]
+        num_cameras = imgs_orig.shape[0]
+
+        imgs = <a id="change">torch.from_numpy(</a>imgs_orig<a id="change">)</a>.cuda().float().permute(0,3,1,2)
+
+        points3D_net = jarvisPredictor(imgs, reproTool.cameraMatrices.cuda(), reproTool.intrinsicMatrices.cuda(), reproTool.distortionCoefficients.cuda())
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    pointsNet = []
+    pointsGT = []
+    filenames = <a id="change">[]</a>
+    data_generator = DataLoader(
+                dataset,
+                batch_size = 1,
+                shuffle = False,
+                num_workers =  cfg.DATALOADER_NUM_WORKERS,
+                pin_memory = True)
+
+
+    for item, sample in enumerate(tqdm(data_generator)):
+        if progress_bar != None:
+            progress_bar.progress(float(item+1)/len(dataset.image_ids))
+
+        keypoints3D = sample[1][0].numpy()
+        imgs_orig = sample[0][0]
+        img_size = imgs_orig[0].shape
+        num_cameras = imgs_orig.shape[0]
+        dataset_name = sample[-2][0]
+        reproTool = reproTools[dataset_name]
+        file_name = sample[-1][0]
+
+        imgs = imgs_orig.cuda().float().permute(0,3,1,2)
+
+        points3D_net = jarvisPredictor(imgs,
+                    reproTool.cameraMatrices.cuda(),
+                    reproTool.intrinsicMatrices.cuda(),
+                    reproTool.distortionCoefficients.cuda())
+
+        if points3D_net != None:
+            points3D_net = points3D_net[0].cpu().detach().numpy()
+            pointsNet.append(points3D_net)
+            pointsGT.append(keypoints3D)
+            filenames.append(file_name)
+
+    print (f&quot{CLIColors.OKGREEN}Successfully analysed all validation &quot
+                f&quotframes!{CLIColors.ENDC}&quot)
+    if len(pointsNet) != len(dataset.image_ids):
+        print (f&quot{CLIColors.WARNING}Network could not detect instance in &quot
+                    f&quot{len(dataset.image_ids) - len(pointsNet)} frameSets. &quot
+                    f&quotThose were not included in the output &quot
+                    f&quotfiles!{CLIColors.ENDC}&quot)
+
+
+    savetxt(os.path.join(output_dir, &quotframe_names.csv&quot),
+                <a id="change">np.array(</a>filenames<a id="change">)</a>, delimiter=&quot,&quot, fmt=&quot%s&quot)
+
+    savetxt(os.path.join(output_dir, &quotpoints_HybridNet.csv&quot),
+                np.array(pointsNet).reshape(</code></pre>

@@ -1,0 +1,71 @@
+<html><h3>Pattern ID :5115
+</h3><img src='17994513.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    if padding_mode == &quotreplicate&quot:
+        &#47&#47 replication padding has some strange constraints...
+        assert len(tensor.shape) - dim &lt;= 2
+        padding = <a id="change">padding[:(len(tensor.shape) - 2) * 2]</a>
+
+    tensor_ = F.pad(tensor, padding, padding_mode, padding_value)
+
+    &#47&#47 create gaussian kernel from grid using current sigma</code></pre><h3>After Change</h3><pre><code class='java'>
+    assert tensor.shape[-1] == source_shape[dim]
+
+    &#47&#47 we need reshape instead of view for batches like B x C x H x W
+    tensor = <a id="change">tensor.reshape(-1</a>, <a id="change">1</a>, source_shape[dim]<a id="change">)</a>
+
+    padding = (math.ceil((kernel_size_int - 1) / 2), math.ceil((kernel_size_int - 1) / 2))
+    tensor_ = F.pad(tensor, padding, padding_mode, padding_value)
+
+    &#47&#47 create gaussian kernel from grid using current sigma
+    kernel = torch.exp(-0.5 * (grid / sigma) ** 2)
+    kernel = kernel / kernel.sum()
+
+    &#47&#47 convolve input with gaussian kernel
+    tensor_<a id="change"> = </a>F.conv1d(tensor_, kernel)
+    tensor_<a id="change"> = </a>tensor_.view(dim_last_shape)
+    tensor_<a id="change"> = </a>torch.movedim(tensor_, len(source_shape)-1, dim)
+
+    assert tensor_.shape == source_shape
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 5</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/matthias-k/deepgaze/commit/a2f6037f9ae20086ff19775583ed036167449172#diff-8cfdb877f7ff2043ef6f90638b5f54cc4cd035e95961a7b9da1ddebee120c34fL128' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 17994513</div><div id='project'> Project Name: matthias-k/deepgaze</div><div id='commit'> Commit Name: a2f6037f9ae20086ff19775583ed036167449172</div><div id='time'> Time: 2022-06-20</div><div id='author'> Author: matthias.kuemmerer@bethgelab.org</div><div id='file'> File Name: deepgaze_pytorch/layers.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: gaussian_filter_1d(7)</div><div id='n_method'> N Method Name: gaussian_filter_1d(7)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: deepgaze_pytorch/layers.py</div><div id='n_file'> N File Name: deepgaze_pytorch/layers.py</div><div id='m_start'> M Start Line: 130</div><div id='m_end'> M End Line: 160</div><div id='n_start'> N Start Line: 128</div><div id='n_end'> N End Line: 164</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            mask_positions_after_reshaped.append(batch * seq_len + pos)
+    
+    logits = logits.reshape(batch_size * seq_len, -1)                           &#47&#47 (batch_size * seq_len, vocab_size)
+    mask_logits = <a id="change">logits[mask_positions_after_reshaped]</a>                         &#47&#47 (batch * label_num, vocab_size)
+    mask_labels = mask_labels.reshape(-1, 1).squeeze()                          &#47&#47 (batch * label_num)
+    loss = cross_entropy_criterion(mask_logits, mask_labels)
+    </code></pre><h3>After Change</h3><pre><code class='java'>
+        single_mask_logits = single_mask_logits.repeat(len(single_sub_mask_labels), 1, 1)   &#47&#47 (sub_label_num, mask_label_num, vocab_size)
+        single_mask_logits = single_mask_logits.reshape(-1, vocab_size)                     &#47&#47 (sub_label_num * mask_label_num, vocab_size)
+        single_sub_mask_labels = torch.LongTensor(single_sub_mask_labels).to(device)        &#47&#47 (sub_label_num, mask_label_num)
+        single_sub_mask_labels<a id="change"> = </a><a id="change">single_sub_mask_labels.reshape(-1</a>, <a id="change">1</a><a id="change">)</a>.squeeze()            &#47&#47 (sub_label_num * mask_label_num)
+        cur_loss<a id="change"> = </a>cross_entropy_criterion(single_mask_logits, single_sub_mask_labels)
+        cur_loss = cur_loss / len(single_sub_mask_labels)
+        if not loss:
+            loss<a id="change"> = </a>cur_loss
+        else:
+            loss += cur_loss
+    loss = loss / batch_size                                                                &#47&#47 (1,)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/harderthenharder/transformers_tasks/commit/bf825bb22c43795f1e3a08cf8969ddc613051e76#diff-8c36ce9e3ab2da910c520055f7c89509da251069c3ed661eb343bdade6fe30edL181' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 17994007</div><div id='project'> Project Name: harderthenharder/transformers_tasks</div><div id='commit'> Commit Name: bf825bb22c43795f1e3a08cf8969ddc613051e76</div><div id='time'> Time: 2022-11-30</div><div id='author'> Author: pankeyu@pankeyus-MacBook-Pro.local</div><div id='file'> File Name: prompt_tasks/p-tuning/utils.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: mlm_loss(6)</div><div id='n_method'> N Method Name: mlm_loss(6)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: prompt_tasks/p-tuning/utils.py</div><div id='n_file'> N File Name: prompt_tasks/p-tuning/utils.py</div><div id='m_start'> M Start Line: 204</div><div id='m_end'> M End Line: 212</div><div id='n_start'> N Start Line: 190</div><div id='n_end'> N End Line: 203</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        loc_len = batch.get_origin_len(&quotcurrent_loc&quot)
+        for i in range(score.shape[0]):
+            if i == 0:
+                true_scores = <a id="change">score[i]</a>[loc_len[i] - 1].reshape(1, -1)
+            else:
+                true_scores = torch.cat(
+                    (true_scores, score[i][loc_len[i] - 1].reshape(1, -1)), 0)</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 out = out.permute(1, 0, 2)
+        origin_len = batch.get_origin_len(&quotcurrent_loc&quot)
+        final_out_index = torch.tensor(origin_len) - 1
+        final_out_index<a id="change"> = </a><a id="change">final_out_index.reshape(</a>final_out_index.shape[0], <a id="change">1</a>, <a id="change">-1</a><a id="change">)</a>
+        final_out_index = final_out_index.repeat(1, 1, self.hidden_size).to(self.device)
+        out<a id="change"> = </a>torch.gather(out, 1, final_out_index).squeeze(1)  &#47&#47 batch_size * hidden_size
+        out = F.selu(out)
+        out = self.dropout(out)
+
+        y = self.fc(out)
+        score<a id="change"> = </a>F.log_softmax(y, dim=1)  &#47&#47 calculate loss by NLLoss
+        return score
+
+    def predict(self, batch):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/libcity/bigscity-libcity/commit/ec61c9cd984d1c86ee715380ed3b65b4222c8d1f#diff-f7e6a5cf5965e29788168874ecb4a6a81ecf849824f4f08f81428bfb514f6906L60' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 17994519</div><div id='project'> Project Name: libcity/bigscity-libcity</div><div id='commit'> Commit Name: ec61c9cd984d1c86ee715380ed3b65b4222c8d1f</div><div id='time'> Time: 2021-05-06</div><div id='author'> Author: 33283819+WenMellors@users.noreply.github.com</div><div id='file'> File Name: trafficdl/model/trajectory_loc_prediction/RNN.py</div><div id='m_class'> M Class Name: RNN</div><div id='n_method'> N Class Name: RNN</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: AbstractModel</div><div id='n_parent_class'> N Parent Class: AbstractModel</div><div id='m_file'> M File Name: trafficdl/model/trajectory_loc_prediction/RNN.py</div><div id='n_file'> N File Name: trafficdl/model/trajectory_loc_prediction/RNN.py</div><div id='m_start'> M Start Line: 87</div><div id='m_end'> M End Line: 97</div><div id='n_start'> N Start Line: 84</div><div id='n_end'> N End Line: 94</div><BR>

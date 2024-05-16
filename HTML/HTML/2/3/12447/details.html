@@ -1,0 +1,74 @@
+<html><h3>Pattern ID :12447
+</h3><img src='42370976.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        x.requires_grad_()
+        output = self.prunner.forward(_input)
+        loss = self.model.criterion(output, _label)
+        <a id="change">loss.backward()</a>
+        x.requires_grad = False
+
+        return self.get_prunning_plan()
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        _input, _label = self.model.get_data(next(self.dataset.loader[&quottrain&quot]))
+        x = _input.detach()
+        x.requires_grad_()
+        output<a id="change"> = </a>self.helper.forward(_input)
+        loss = self.model.criterion(output, _label)
+        <a id="change">torch.autograd.grad(</a>loss, x<a id="change">)</a>    &#47&#47 not using backward() to avoid gradient saving in tensor
+        x.requires_grad_(False)
+        prune_num = int(self.prune_ratio * self.filter_num)
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/ain-soph/trojanzoo/commit/2efb7c1e87ec942d11c0b113c9069a40508c97d6#diff-c3fcaa1c628e6b9b55c23cd420580d65ec905c1e0e441e733d799b6093833046L94' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 42370976</div><div id='project'> Project Name: ain-soph/trojanzoo</div><div id='commit'> Commit Name: 2efb7c1e87ec942d11c0b113c9069a40508c97d6</div><div id='time'> Time: 2020-11-09</div><div id='author'> Author: ain-soph@live.com</div><div id='file'> File Name: trojanzoo/defense/backdoor/fine_pruning.py</div><div id='m_class'> M Class Name: Fine_Pruning</div><div id='n_method'> N Class Name: Fine_Pruning</div><div id='m_method'> M Method Name: get_candidates_to_prune(1)</div><div id='n_method'> N Method Name: get_candidates_to_prune(1)</div><div id='m_parent_class'> M Parent Class: Defense_Backdoor</div><div id='n_parent_class'> N Parent Class: Defense_Backdoor</div><div id='m_file'> M File Name: trojanzoo/defense/backdoor/fine_pruning.py</div><div id='n_file'> N File Name: trojanzoo/defense/backdoor/fine_pruning.py</div><div id='m_start'> M Start Line: 129</div><div id='m_end'> M End Line: 136</div><div id='n_start'> N Start Line: 94</div><div id='n_end'> N End Line: 109</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+		preds = torch.stack(output_list, dim=1)
+		loss = criterion(preds, targets)
+		optimizer.zero_grad()
+		<a id="change">loss.backward()</a>
+		optimizer.step()
+		p_bar.set_description(f"Loss: {loss.item():.4f}")
+	return torch.squeeze(preds)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+		device=targets.device
+	).build()
+	feedback_weights = torch.randn_like(layer.forward_weights)
+	param<a id="change"> = </a>layer.forward_weights
+	optimizer = torch.optim.Adam(layer.parameters(), lr=0.1, maximize=True)
+	criterion = PVarianceLoss()
+	preds = None
+	p_bar = tqdm(range(100))
+	for i in p_bar:
+		eligibility_trace = []
+		output_list, hh_list = [targets[:, 0]], [None]
+		for t in range(1, targets.shape[1]):
+			out, hh = unpack_out_hh(layer(output_list[t-1], hh_list[t-1]))
+			output_list.append(out)
+			hh_list.append(hh)
+			
+			instantaneous_eligibility_trace = torch.zeros_like(param)
+			grad_outputs = torch.eye(out.shape[-1], device=targets.device)
+			for g_idx in range(grad_outputs.shape[0]):
+				param.grad.zero_()
+				instantaneous_eligibility_trace[g_idx] = <a id="change">torch.autograd.grad(</a>out[:, g_idx], param<a id="change">, retain_graph=True)</a>[0][g_idx]
+			eligibility_trace.append(instantaneous_eligibility_trace)
+		preds = torch.stack(output_list, dim=1)
+		mean_error = targets - preds</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/neurotorch/neurotorch/commit/4028f8f7fcb44b43d6235c1d12c734f809b1e629#diff-e6c8fac3a6216017c8602da4fb676a8fa4863da3f367703767d4a4defbe277adL44' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 42370974</div><div id='project'> Project Name: neurotorch/neurotorch</div><div id='commit'> Commit Name: 4028f8f7fcb44b43d6235c1d12c734f809b1e629</div><div id='time'> Time: 2022-11-28</div><div id='author'> Author: 50332514+JeremieGince@users.noreply.github.com</div><div id='file'> File Name: src/neurotorch/learning_algorithms/debug_e_prop.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: dummy_train(1)</div><div id='n_method'> N Method Name: dummy_train(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/neurotorch/learning_algorithms/debug_e_prop.py</div><div id='n_file'> N File Name: src/neurotorch/learning_algorithms/debug_e_prop.py</div><div id='m_start'> M Start Line: 51</div><div id='m_end'> M End Line: 64</div><div id='n_start'> N Start Line: 45</div><div id='n_end'> N End Line: 76</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            for i in range(nsystems):
+                for ene in pot[i]:
+                    if pot[i][ene].requires_grad:
+                        <a id="change">pot[i][ene].backward(retain_graph=True)</a>
+            forces[:] = -pos.grad
+            pos.grad.zero_()
+
+        if returnDetails:</code></pre><h3>After Change</h3><pre><code class='java'>
+                forces += ext_force
+
+        if not explicit_forces:
+            enesum<a id="change"> = </a>torch.zeros(1, device=pos.device, dtype=pos.dtype)
+            for i in range(nsystems):
+                for ene in pot[i]:
+                    if pot[i][ene].requires_grad:
+                        enesum += pot[i][ene]
+            forces[:] = -<a id="change">torch.autograd.grad(</a>enesum, pos<a id="change">, only_inputs=True)</a>[0]
+
+        if returnDetails:
+            return [{k: v.cpu().item() for k, v in pp.items()} for pp in pot]</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/torchmd/torchmd/commit/66bce98415a99ce90e8bafc123be72b2b3f404c7#diff-23a2781b7aa930998c4060b6a78ef1ed15f6d7f2705c5480adaf64463e7c005cL83' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 42370971</div><div id='project'> Project Name: torchmd/torchmd</div><div id='commit'> Commit Name: 66bce98415a99ce90e8bafc123be72b2b3f404c7</div><div id='time'> Time: 2020-05-28</div><div id='author'> Author: stefdoerr@gmail.com</div><div id='file'> File Name: torchmd/forces.py</div><div id='m_class'> M Class Name: Forces</div><div id='n_method'> N Class Name: Forces</div><div id='m_method'> M Method Name: compute(5)</div><div id='n_method'> N Method Name: compute(5)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: torchmd/forces.py</div><div id='n_file'> N File Name: torchmd/forces.py</div><div id='m_start'> M Start Line: 84</div><div id='m_end'> M End Line: 294</div><div id='n_start'> N Start Line: 84</div><div id='n_end'> N End Line: 300</div><BR>

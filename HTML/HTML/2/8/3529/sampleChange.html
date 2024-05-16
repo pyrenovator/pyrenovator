@@ -1,0 +1,45 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+        &#47&#47 compute the spatial mean and instance fields by scattering with the
+        &#47&#47 target tensor
+        cluster_means_spatial<a id="change"> = </a>cluster_means[target]
+        instance_sizes_spatial = instance_counts[target]
+
+        &#47&#47 permute the embedding dimension to axis 0
+        if target.dim() == 2:
+            cluster_means_spatial = cluster_means_spatial.permute(2, 0, 1)
+        else:
+            cluster_means_spatial = <a id="change">cluster_means_spatial.permute(3</a>, <a id="change">0</a>, <a id="change">1</a>, <a id="change">2</a><a id="change">)</a>
+
+        &#47&#47 compute the distance to cluster means
+        dist_to_mean = torch.norm(embeddings - cluster_means_spatial, self.norm, dim=0)
+
+        if ignore_zero_label:
+            &#47&#47 zero out distances corresponding to 0-label cluster, so that it does not contribute to the loss
+            dist_mask = torch.ones_like(dist_to_mean)
+            dist_mask[target == 0] = 0
+            dist_to_mean = dist_to_mean * dist_mask
+            &#47&#47 decrease number of instances
+            n_instances -= 1
+            &#47&#47 if there is only 0-label in the target return 0
+            if n_instances == 0:
+                return 0.0
+
+        &#47&#47 zero out distances less than delta_var (hinge)
+        hinge_dist = torch.clamp(dist_to_mean - self.delta_var, min=0) ** 2
+
+        &#47&#47 normalize the variance by instance sizes and number of instances and sum it up
+        variance_term<a id="change"> = </a>torch.sum(hinge_dist / instance_sizes_spatial) / n_instances
+        return variance_term
+
+    def _compute_unlabeled_push(self, cluster_means, embeddings, target):</code></pre><h3>After Change</h3><pre><code class='java'>
+            ignore_zero_label: if True ignores the cluster corresponding to the 0-label
+        
+        assert target.dim() in (2, 3)
+        ignore_labels = <a id="change">[</a>0<a id="change"></a>] if ignore_zero_label else None
+        return cimpl._compute_variance_term_scatter(
+            cluster_means, embeddings.unsqueeze(0), target.unsqueeze(0),
+            self.norm, self.delta_var, instance_counts, ignore_labels</code></pre>

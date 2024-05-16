@@ -1,0 +1,74 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        super().__init__(tgt_dict)
+
+        self.silence = (
+            tgt_dict.index("&lt;ctc_blank&gt;")<a id="change">
+            if "&lt;ctc_blank&gt;" in tgt_dict.indices</a><a id="change">
+            else </a>tgt_dict.bos()
+        )
+        
+        self.lexicon = load_words(args[&quotlexicon&quot])</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        self.unit_lm = getattr(args, "unit_lm", False)
+
+        <a id="change">if </a>args[&quotlexicon&quot]:
+            self.lexicon = load_words(args[&quotlexicon&quot])
+            self.word_dict = create_word_dict(self.lexicon)
+            self.unk_word = self.word_dict.get_index("&lt;unk&gt;")
+
+            self.lm = KenLM(args[&quotkenlm_model&quot], self.word_dict)
+            self.trie = Trie(self.vocab_size, self.silence)
+
+            start_state = self.lm.start(False)
+            for i, (word, spellings) in enumerate(self.lexicon.items()):
+                word_idx = self.word_dict.get_index(word)
+                _, score = self.lm.score(start_state, word_idx)
+                for spelling in spellings:
+                    spelling_idxs = [tgt_dict.index(token) for token in spelling]
+                    assert (
+                        tgt_dict.unk() not in spelling_idxs
+                    ), f"{spelling} {spelling_idxs}"
+                    self.trie.insert(spelling_idxs, word_idx, score)
+            self.trie.smear(SmearingMode.MAX)
+
+            self.decoder_opts = LexiconDecoderOptions(
+                beam_size=args[&quotbeam&quot],
+                beam_size_token=int(getattr(args, "beam_size_token", len(tgt_dict))),
+                beam_threshold=args[&quotbeam_threshold&quot],
+                lm_weight=args[&quotlm_weight&quot],
+                word_score=args[&quotword_score&quot],
+                unk_score=args[&quotunk_weight&quot],
+                sil_score=args[&quotsil_weight&quot],
+                log_add=False,
+                criterion_type=self.criterion_type,
+            )
+
+            if self.asg_transitions is None:
+                N = 768
+                &#47&#47 self.asg_transitions = torch.FloatTensor(N, N).zero_()
+                self.asg_transitions = []
+
+            self.decoder = LexiconDecoder(
+                self.decoder_opts,
+                self.trie,
+                self.lm,
+                self.silence,
+                self.blank,
+                self.unk_word,
+                self.asg_transitions,
+                self.unit_lm,
+            )
+        else:
+            <a id="change">assert </a>args.unit_lm, "lexicon free decoding can only be done with a unit language model"
+            from flashlight.lib.text.decoder import LexiconFreeDecoder, LexiconFreeDecoderOptions
+
+            d<a id="change"> = </a>{w: [[w]] for w in tgt_dict.symbols}
+            self.word_dict = create_word_dict(d)
+            self.lm = KenLM(args.kenlm_model, self.word_dict)
+            self.decoder_opts<a id="change"> = </a>LexiconFreeDecoderOptions(
+                beam_size=args.beam,
+                beam_size_token=int(getattr(args, "beam_size_token", len(tgt_dict))),
+                beam_threshold=args.beam_threshold,</code></pre>

@@ -1,0 +1,45 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                     "specs.")
+        start_indices = tuple(o.start for o in offset)
+        slice_sizes = tuple(o.stop - o.start for o in offset)
+        src_buffer<a id="change"> = </a><a id="change">jax_tensor_index(
+            </a><a id="change">xla_buffer_to_jax_tensor(</a>worker.buffers[uuid]<a id="change">)</a>, start_indices,
+            slice_sizes<a id="change">)</a>
+        to_send = jax_tensor_to_cupy(src_buffer)
+        col.send_multigpu(to_send, dst_rank, dst_gpu_idx, group_name)
+
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        dst_gpu_idx: the gpu index on the destination rank.
+        group_name: collective group name
+    
+    buffer<a id="change"> = </a>worker.buffers[uuid][device_id]
+    tensor_shape = buffer.shape
+    if is_continuous_subset(offset, tensor_shape):
+        &#47&#47 fast path, two cases: (1) same shape, (2) continuous subset.
+        slice_shape = tuple(ind.stop - ind.start for ind in offset)
+        to_send = xla_buffer_to_cupy(buffer)
+        if slice_shape == tensor_shape:
+            col.send_multigpu(to_send, dst_rank, dst_gpu_idx, group_name)
+        else:
+            ind, n_elements = infer_offset_and_n_elements(offset)
+            col.send_multigpu(to_send[ind],
+                              dst_rank,
+                              dst_gpu_idx,
+                              group_name,
+                              n_elements=n_elements)
+    else:
+        &#47&#47 slower path, because of indexing.
+        logger.debug("Send goes along the slowest path. "
+                     "If this is for transformers, please check the resharding "
+                     "specs.")
+        start_indices = tuple(o.start for o in offset)
+        slice_sizes = tuple(o.stop - o.start for o in offset)
+        src_buffer<a id="change"> = </a><a id="change">jax_tensor_index(xla_buffer_to_jax_tensor(</a>buffer<a id="change">)</a>,
+                                      start_indices, slice_sizes<a id="change">)</a>
+        to_send = jax_tensor_to_cupy(src_buffer)
+        col.send_multigpu(to_send, dst_rank, dst_gpu_idx, group_name)
+
+</code></pre>

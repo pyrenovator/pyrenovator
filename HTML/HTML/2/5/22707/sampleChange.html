@@ -1,0 +1,47 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        end = torch.zeros_like(program)
+        end[-pad-1:] = 1
+
+        mask<a id="change"> = </a><a id="change">torch.zeros_like(</a>program<a id="change">)</a>
+        if pad &gt; 0:
+            mask[-pad:] = 1
+
+        &#47&#47 random slice</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 compute delta time
+        time, idx = time.sort()
+        time = torch.cat((time.new_zeros((1,)), time)).diff(1)
+        program<a id="change"> = program[idx]</a>
+        pitch = pitch[idx]
+        velocity = velocity[idx]
+
+        &#47&#47 pad with start tokens, zeros
+        &#47&#47 always pad with batch_len so that end tokens don&quott appear in a biased
+        &#47&#47 location
+        pad = self.batch_len-1&#47&#47max(0, self.batch_len-len(pitch))
+        program = torch.cat((
+            program.new_full((1,), self.prog_start_token),
+            program,
+            program.new_zeros((pad,))))
+        pitch = torch.cat((
+            pitch.new_full((1,), self.start_token),
+            pitch,
+            pitch.new_zeros((pad,))))
+        time = torch.cat((
+            time.new_zeros((1,)),
+            time,
+            time.new_zeros((pad,))))
+        velocity = torch.cat((
+            velocity.new_zeros((1,)),
+            velocity,
+            velocity.new_zeros((pad,))))
+        &#47&#47 end signal: nonzero for last event
+        end = torch.zeros_like(program)
+        end[-pad-1:] = 1
+        &#47&#47 compute binary mask for the loss
+        mask<a id="change"> = </a>torch.ones_like(program, dtype=torch.bool)
+        if pad &gt; 0:
+            mask[-pad:] = False
+</code></pre>

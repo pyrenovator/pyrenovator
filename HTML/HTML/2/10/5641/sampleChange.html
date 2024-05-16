@@ -1,0 +1,30 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        calibrate_logits = pmi_calibrate(model, max_seq_length=config.dataloader.max_seq_length)
+        model.register_calibrate_logits(calibrate_logits)
+    elif config.calibrate_type == "contextualized_calibrate":
+        <a id="change">if config.contextualized_calibrate.use_split == "train"</a>:
+            context_dataset = train_dataset
+        elif config.contextualized_calibrate.use_split == "valid":
+            context_dataset = valid_dataset
+        elif config.contextualized_calibrate.use_split is None and config.contextualized_calibrate.num_example is not None:
+            sampler<a id="change"> = </a>FewShotSampler(num_examples_total=config.contextualized_calibrate.num_example,
+                                also_sample_dev=False)
+            context_dataset = sampler(train_dataset)
+        calibrate_logits = contextualized_calibrate(model, context=context_dataset, max_seq_length=config.dataloader.max_seq_length)</code></pre><h3>After Change</h3><pre><code class='java'>
+    Return:
+        (:obj:`torch.Tensor`) A tensor of shape  (vocabsize) or (mask_num, vocabsize), the logits calculated for each word in the vocabulary
+    
+    <a id="change">all_logits</a> = <a id="change">[]</a>
+    prompt_model.eval()
+    <a id="change">for </a>batch in tqdm(dataloader,desc=&quotContextCali&quot)<a id="change">:
+        </a>batch = batch.to(prompt_model.device)
+        logits = prompt_model.forward_without_verbalize(batch)
+        <a id="change">all_logits.append(</a>logits.detach()<a id="change">)</a>
+    all_logits<a id="change"> = </a><a id="change">torch.cat(all_logits</a><a id="change">, dim=0)</a>
+    return all_logits.mean(dim=0)
+
+
+&#47&#47 def calibrate(model: PromptForClassification, calibrate_method: str=None, config: CfgNode =None , train_dataset: Optional[List]=None, valid_dataset: Optional[List]=None):</code></pre>

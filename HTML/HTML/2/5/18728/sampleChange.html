@@ -1,0 +1,30 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            negative_distance = distance * (1 - labels)
+            loss = (self.loss_margin - positive_distance) + (self.loss_margin - negative_distance)
+            loss = loss.mean()
+        elif <a id="change"></a>self.contrastive_loss_type == &quotsoftmax&quot:
+            distance_matrix /= self.temperature
+            loss<a id="change"> = </a>- <a id="change">F.log_softmax(</a>distance_matrix<a id="change">)</a>.sum()
+        else:
+            raise ValueError(f"Contrastive loss type {self.contrastive_loss_type} not supported")
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            negative_distance = distance * (1 - labels)
+            loss = (self.loss_margin - positive_distance) + (self.loss_margin - negative_distance)
+            loss = loss.mean()
+        elif <a id="change"></a>self.contrastive_loss_type == &quotsimclr&quot:
+            distance_matrix /= self.temperature
+            positive_examples_1 = torch.diag(distance_matrix, self.batch_size)
+            positive_examples_2 = torch.diag(distance_matrix, -self.batch_size)
+            positive_examples = torch.cat([positive_examples_1, positive_examples_2], dim=0)
+            mask = (~torch.eye(self.batch_size * 2, self.batch_size * 2, dtype=torch.bool)).to(self.device)
+            numerator = torch.exp(positive_examples)
+            denominator = (mask * torch.exp(distance_matrix)).sum(dim=1)
+            softmax = numerator / denominator
+            loss = - torch.log(softmax)
+            loss<a id="change"> = </a>loss.mean()
+        else:
+            raise ValueError(f"Contrastive loss type {self.contrastive_loss_type} not supported")
+</code></pre>

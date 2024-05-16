@@ -1,0 +1,44 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                              &quotlog_std_init&quot: log_std_init})
+
+        policy = policy_class(**policy_kwargs)
+    elif <a id="change">policy_class == CnnPolicy</a>:
+        policy_kwargs.update({&quotoptimizer_class&quot: optimizer_class,
+                              &quotoptimizer_kwargs&quot: optimizer_kwargs,
+                              })
+
+        policy<a id="change"> = </a>policy_class(**policy_kwargs)
+    else:
+        raise NotImplementedError
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        freeze=freeze_pol_encoder,
+        policy_continue_path=policy_continue_path)
+
+    <a id="change">if </a>isinstance(encoder_or_policy, policy_class):
+        &#47&#47 Loading an existing policy
+        policy = encoder_or_policy
+    else:
+        &#47&#47 Loading a repl pretrained encoder
+        encoder = encoder_or_policy
+        &#47&#47 Normally the last layer of an encoder is a linear layer, but in
+        &#47&#47 some special cases like Jigsaw, we only train the convolution
+        &#47&#47 layers (with linearity handled by the decoder). In BC
+        &#47&#47 training we still need the full encoder (linear layers included),
+        &#47&#47 so here we load the weights for conv layers, and leave linear
+        &#47&#47 layers randomly initialized.
+        if hasattr(encoder, &quotnetwork&quot) and \
+           not isinstance(encoder.network.shared_network[-1], th.nn.Linear):
+            full_encoder = BaseEncoder(observation_space,
+                                       **encoder_kwargs)
+
+            partial_encoder_dict = <a id="change">encoder.state_dict()</a>
+            full_encoder_dict<a id="change"> = </a>full_encoder.state_dict()
+
+            &#47&#47 pretrained_dict contains weights & bias for conv layers only.
+            pretrained_dict<a id="change"> = </a>{k: v for k, v in partial_encoder_dict.items() if
+                               k in full_encoder_dict}
+            full_encoder_dict.update(pretrained_dict)
+            full_encoder.load_state_dict(full_encoder_dict)</code></pre>

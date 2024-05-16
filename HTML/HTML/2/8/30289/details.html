@@ -1,0 +1,69 @@
+<html><h3>Pattern ID :30289
+</h3><img src='89741353.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+      beliefs, states = [belief], [state]
+      actions = action_distribution.sample([self.candidates]) &#47&#47 Sample actions
+      &#47&#47 Sample next states
+      <a id="change">for t</a> in <a id="change">range(</a>self.planning_horizon<a id="change">):
+        </a>next_belief, next_state, _, _ = transition_model(states[-1], <a id="change">actions</a>[:, <a id="change">t</a>], beliefs[-1])
+        beliefs.append(next_belief)
+        states.append(next_state)
+      &#47&#47 Calculate expected returns (batched over time x batch)</code></pre><h3>After Change</h3><pre><code class='java'>
+    action_distribution = Normal(torch.zeros(self.planning_horizon, self.action_size, device=belief.device), torch.ones(self.planning_horizon, self.action_size, device=belief.device))
+    for i in range(self.optimisation_iters):
+      &#47&#47 Evaluate J action sequences from the current belief (over entire sequence at once, batched over particles)
+      actions = <a id="change">action_distribution.sample([self.candidates]).transpose(0</a>, <a id="change">1</a><a id="change">)</a> &#47&#47 Sample actions (and flip to time x batch)
+      &#47&#47 Sample next states
+      beliefs<a id="change">, states, _, _ = </a>transition_model(state, actions, belief)
+      &#47&#47 Calculate expected returns (technically sum of rewards over plannign horizon)
+      returns = bottle(reward_model, (beliefs, states)).sum(dim=0)
+      &#47&#47 Re-fit belief to the K best action sequences</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 5</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/yusukeurakami/dreamer-pytorch/commit/4699e17b9fd38f5148e546f1cbdf1fcc7944bf1e#diff-0bb85705ddb8c67d4828c73131f301740229cee289742aa27fc56f671324f335L19' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 89741353</div><div id='project'> Project Name: yusukeurakami/dreamer-pytorch</div><div id='commit'> Commit Name: 4699e17b9fd38f5148e546f1cbdf1fcc7944bf1e</div><div id='time'> Time: 2019-04-25</div><div id='author'> Author: design@kaixhin.com</div><div id='file'> File Name: planner.py</div><div id='m_class'> M Class Name: MPCPlanner</div><div id='n_method'> N Class Name: MPCPlanner</div><div id='m_method'> M Method Name: __call__(5)</div><div id='n_method'> N Method Name: __call__(5)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: planner.py</div><div id='n_file'> N File Name: planner.py</div><div id='m_start'> M Start Line: 19</div><div id='m_end'> M End Line: 29</div><div id='n_start'> N Start Line: 20</div><div id='n_end'> N End Line: 27</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        scene_1 = self.convScene_1(scene)
+        scene_2 = self.convScene_2(scene_1)
+
+        <a id="change">for i</a> in <a id="change">range(</a>dim_batch<a id="change">):
+            </a>weight_read[i] = self.similarity(self.memory_past, <a id="change">state_past</a>[:, i]).unsqueeze(0)
+
+        &#47&#47 weight_read[torch.arange(dim_batch)] = self.similarity(self.memory_past, state_past[:,torch.arange(dim_batch)]).unsqueeze(0)
+        index_max = torch.sort(weight_read, descending=True)[1].cpu()</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 Cosine similarity
+        past_normalized = F.normalize(self.memory_past, p=2, dim=1)
+        state_normalized = F.normalize(state_past.squeeze(), p=2, dim=1)
+        weight_read<a id="change"> = </a>torch.matmul(past_normalized, <a id="change">state_normalized.transpose(0</a>,<a id="change">1</a><a id="change">)</a>).transpose(0,1)
+
+        index_max = torch.sort(weight_read, descending=True)[1].cpu()
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/marchetz/mantra-cvpr20/commit/433bba3b3cf57d5cf7723c46a7fcfd17c1bac858#diff-49be5c461c82a3158fa4c2d730aea004906ad89beca9402cf670d0f93c208dabL116' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 89741352</div><div id='project'> Project Name: marchetz/mantra-cvpr20</div><div id='commit'> Commit Name: 433bba3b3cf57d5cf7723c46a7fcfd17c1bac858</div><div id='time'> Time: 2019-07-28</div><div id='author'> Author: fede.becat@gmail.com</div><div id='file'> File Name: models/model_memory_single.py</div><div id='m_class'> M Class Name: model_memory_single</div><div id='n_method'> N Class Name: model_memory_single</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: models/model_memory_single.py</div><div id='n_file'> N File Name: models/model_memory_single.py</div><div id='m_start'> M Start Line: 118</div><div id='m_end'> M End Line: 139</div><div id='n_start'> N Start Line: 134</div><div id='n_end'> N End Line: 136</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        device = feats.device
+        V = self.v(feats) &#47&#47 N x V, unsorted
+        Q = self.q(feats).view(feats.shape[0], -1)
+        <a id="change">for i</a> in <a id="change">range(</a>c.shape[1]<a id="change">):
+            </a>_, indices = torch.sort(<a id="change">c</a>[:, i], 0, True)         
+            feats = torch.index_select(feats, 0, indices) &#47&#47 N x K, sorted
+            q_max = self.q(feats[0].view(1, -1)) &#47&#47 1 x 1 x Q
+            temp = torch.mm(Q, q_max.view(-1, 1)) / torch.sqrt(torch.tensor(Q.shape[1], dtype=torch.float32, device=device))</code></pre><h3>After Change</h3><pre><code class='java'>
+        q_max = self.q(m_feats) &#47&#47 compute queries of critical instances, q_max in shape C x Q
+        A = torch.mm(Q, q_max.transpose(0, 1)) &#47&#47 compute inner product of Q to each entry of q_max, A in shape N x C, each column contains unnormalized attention scores
+        A = F.softmax( A / torch.sqrt(torch.tensor(Q.shape[1], dtype=torch.float32, device=device)), 0) &#47&#47 normalize attention scores, A in shape N x C, 
+        B<a id="change"> = </a>torch.mm(<a id="change">A.transpose(0</a>, <a id="change">1</a><a id="change">)</a>, V) &#47&#47 compute bag representation, B in shape C x V
+        
+        
+&#47&#47         for i in range(c.shape[1]):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/binli123/dsmil-wsi/commit/37d945844a0af37d411b5f1d3fca75a72b4aa979#diff-9e0566f16ab655f2628f501def0fa7733ba800cbec4ac891c3527ff8f63310cbL40' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 89741349</div><div id='project'> Project Name: binli123/dsmil-wsi</div><div id='commit'> Commit Name: 37d945844a0af37d411b5f1d3fca75a72b4aa979</div><div id='time'> Time: 2021-04-21</div><div id='author'> Author: bli346@wisc.edu</div><div id='file'> File Name: dsmil.py</div><div id='m_class'> M Class Name: BClassifier</div><div id='n_method'> N Class Name: BClassifier</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: dsmil.py</div><div id='n_file'> N File Name: dsmil.py</div><div id='m_start'> M Start Line: 42</div><div id='m_end'> M End Line: 56</div><div id='n_start'> N Start Line: 42</div><div id='n_end'> N End Line: 51</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+      beliefs, states = [belief], [state]
+      actions = action_distribution.sample([self.candidates]) &#47&#47 Sample actions
+      &#47&#47 Sample next states
+      <a id="change">for t</a> in <a id="change">range(</a>self.planning_horizon<a id="change">):
+        </a>next_belief, next_state, _, _ = transition_model(states[-1], <a id="change">actions</a>[:, t], beliefs[-1])
+        beliefs.append(next_belief)
+        states.append(next_state)
+      &#47&#47 Calculate expected returns (batched over time x batch)</code></pre><h3>After Change</h3><pre><code class='java'>
+    action_distribution = Normal(torch.zeros(self.planning_horizon, self.action_size, device=belief.device), torch.ones(self.planning_horizon, self.action_size, device=belief.device))
+    for i in range(self.optimisation_iters):
+      &#47&#47 Evaluate J action sequences from the current belief (over entire sequence at once, batched over particles)
+      actions = <a id="change">action_distribution.sample([self.candidates]).transpose(0</a>, <a id="change">1</a><a id="change">)</a> &#47&#47 Sample actions (and flip to time x batch)
+      &#47&#47 Sample next states
+      beliefs<a id="change">, states, _, _ = </a>transition_model(state, actions, belief)
+      &#47&#47 Calculate expected returns (technically sum of rewards over plannign horizon)
+      returns = bottle(reward_model, (beliefs, states)).sum(dim=0)
+      &#47&#47 Re-fit belief to the K best action sequences</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/yusukeurakami/dreamer-pytorch/commit/4699e17b9fd38f5148e546f1cbdf1fcc7944bf1e#diff-0bb85705ddb8c67d4828c73131f301740229cee289742aa27fc56f671324f335L13' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 89741350</div><div id='project'> Project Name: yusukeurakami/dreamer-pytorch</div><div id='commit'> Commit Name: 4699e17b9fd38f5148e546f1cbdf1fcc7944bf1e</div><div id='time'> Time: 2019-04-25</div><div id='author'> Author: design@kaixhin.com</div><div id='file'> File Name: planner.py</div><div id='m_class'> M Class Name: MPCPlanner</div><div id='n_method'> N Class Name: MPCPlanner</div><div id='m_method'> M Method Name: __call__(5)</div><div id='n_method'> N Method Name: __call__(5)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: planner.py</div><div id='n_file'> N File Name: planner.py</div><div id='m_start'> M Start Line: 19</div><div id='m_end'> M End Line: 29</div><div id='n_start'> N Start Line: 20</div><div id='n_end'> N End Line: 27</div><BR>

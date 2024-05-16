@@ -1,0 +1,57 @@
+<html><h3>Pattern ID :9216
+</h3><img src='33306077.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    elif len(weight_list.shape) != 2:
+        raise ValueError("The weight list should be a 2d tensor!")
+
+    feat_reshape = <a id="change">torch.stack(</a>feat_list<a id="change">, dim=2)</a>
+    weight_reshape = weight_list.unsqueeze(dim=2)
+    weighted_feat = torch.bmm(feat_reshape, weight_reshape).squeeze(dim=2)
+    return weighted_feat
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        raise ValueError("The weight list should be a 2d tensor!")
+
+    num_node = feat_list[0].shape[0]
+    weighted_feat = torch.mul(feat_list[0], <a id="change">weight_list[:, 0].view(</a>num_node, <a id="change">1</a><a id="change">)</a>)
+    for i in range(1, len(feat_list)):
+        weighted_feat = weighted_feat<a id="change"> + </a>torch.mul(feat_list[i], <a id="change">weight_list</a>[:, i].view(num_node, 1))
+
+    &quot&quot&quotfeat_reshape = torch.stack(feat_list, dim=2)
+    weight_reshape = weight_list.unsqueeze(dim=2)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/pku-dair/sgl/commit/cebdac589727fff315575d9fc063abcc222ddcf6#diff-180d11519347b16a39dbe55e0651b86403aedbf6172aa239536d6610341f0445L54' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 33306077</div><div id='project'> Project Name: pku-dair/sgl</div><div id='commit'> Commit Name: cebdac589727fff315575d9fc063abcc222ddcf6</div><div id='time'> Time: 2022-02-24</div><div id='author'> Author: shengzeang@live.com</div><div id='file'> File Name: models/utils.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: two_dim_weighted_add(2)</div><div id='n_method'> N Method Name: two_dim_weighted_add(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: models/utils.py</div><div id='n_file'> N File Name: models/utils.py</div><div id='m_start'> M Start Line: 54</div><div id='m_end'> M End Line: 56</div><div id='n_start'> N Start Line: 54</div><div id='n_end'> N End Line: 59</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            r[t, 0] = r[t, 0] + x_inflate[0, t]
+            &#47&#47 2. p(h|cur step is blank) = [p(prev step is blank) + p(prev step is nonblank)] * p(blank)
+            r[t, 1] = torch.logsumexp(
+                <a id="change">torch.stack(</a>(r[t - 1, 0], r[t - 1, 1])<a id="change">, dim=0)</a>, dim=0
+            )
+            r[t, 1] = r[t, 1] + x_inflate[1, t]
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        for t in range(start, end):
+            rnb_prev = r[t - 1, 0]
+            rb_prev = r[t - 1, 1]
+            r_ = <a id="change">torch.stack([rnb_prev, phi[t - 1], rnb_prev, rb_prev]).view(
+                </a>2, <a id="change">2</a>, self.batch_size * self.beam_size, self.num_candidates<a id="change">
+            )</a>
+            r[t] = torch.logsumexp(r_, 1)<a id="change"> + x_inflate</a>[:, t]
+
+        &#47&#47 Compute the predix prob, psi
+        psi_init = r[start - 1, 0].unsqueeze(0)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/speechbrain/speechbrain/commit/f4ecd17ce143ffc714823e1ee81742dbac3eec2b#diff-9c719e15d4b41bc93b052985fd97abbbd5a2d649ec263a4df137b7fdff9bbc7bL54' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 33306078</div><div id='project'> Project Name: speechbrain/speechbrain</div><div id='commit'> Commit Name: f4ecd17ce143ffc714823e1ee81742dbac3eec2b</div><div id='time'> Time: 2020-10-12</div><div id='author'> Author: ff936tw@gmail.com</div><div id='file'> File Name: speechbrain/decoders/ctc.py</div><div id='m_class'> M Class Name: CTCPrefixScorer</div><div id='n_method'> N Class Name: CTCPrefixScorer</div><div id='m_method'> M Method Name: forward_step(4)</div><div id='n_method'> N Method Name: forward_step(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: speechbrain/decoders/ctc.py</div><div id='n_file'> N File Name: speechbrain/decoders/ctc.py</div><div id='m_start'> M Start Line: 118</div><div id='m_end'> M End Line: 160</div><div id='n_start'> N Start Line: 61</div><div id='n_end'> N End Line: 159</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    for i in range(n_samples):
+        res.append(simple_returns[i] @ weights[i])  &#47&#47 (horizon, n_assets)x(n_assets)=(horizon,)
+
+    out = <a id="change">torch.stack(</a>res<a id="change">, dim=0)</a>
+
+    if output_type == &quotlog&quot:
+        return simple2log(out)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    n_samples, horizon, n_assets = simple_returns.shape
+
+    weights_ = <a id="change">weights.view(</a>n_samples, <a id="change">1</a>, n_assets<a id="change">)</a>.repeat(1, horizon, 1)  &#47&#47 (n_samples, horizon, n_assets)
+
+    if not rebalance:
+        weights_unscaled = <a id="change">(</a>1 + simple_returns).cumprod(1)[:, :-1, :]<a id="change"> * </a>weights_[:, 1:, :]
+        weights_[:, 1:, :] = weights_unscaled / weights_unscaled.sum(2, keepdim=True)
+
+    out = (simple_returns * weights_).sum(-1)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/jankrepl/deepdow/commit/f641c531de3bbae674357327fc5dfa6335164d94#diff-3f029b2b34e04c2a1bbefd671803f477e31f960c2fd68af03be780a811407a3dL48' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 33306079</div><div id='project'> Project Name: jankrepl/deepdow</div><div id='commit'> Commit Name: f641c531de3bbae674357327fc5dfa6335164d94</div><div id='time'> Time: 2020-05-01</div><div id='author'> Author: jankrepl@yahoo.com</div><div id='file'> File Name: deepdow/losses.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: portfolio_returns(5)</div><div id='n_method'> N Method Name: portfolio_returns(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: deepdow/losses.py</div><div id='n_file'> N File Name: deepdow/losses.py</div><div id='m_start'> M Start Line: 82</div><div id='m_end'> M End Line: 87</div><div id='n_start'> N Start Line: 48</div><div id='n_end'> N End Line: 92</div><BR>

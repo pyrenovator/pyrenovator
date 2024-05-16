@@ -1,0 +1,50 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+&#47&#47 validation function
+def test(netG_B2A, netGaze):
+    <a id="change">correct</a><a id="change"> = 0</a>
+    if netG_B2A is not None:
+        netG_B2A.eval()
+    netGaze.eval()
+    pred_all = np.array([], dtype=&quotint64&quot)
+    target_all = np.array([], dtype=&quotint64&quot)
+    
+    for idx, (data, target) in enumerate(test_loader):
+        if args.cuda:
+            data, target = data[:, :args.nc, :, :].cuda(), target.cuda()
+        data, target = Variable(data), Variable(target)
+
+        &#47&#47 do the forward pass
+        if netG_B2A is not None:
+            data = gaze2gan(data, test_loader.dataset.mean[0:args.nc], test_loader.dataset.std[0:args.nc])
+            fake_data = netG_B2A(data)
+            fake_data = gan2gaze(fake_data, test_loader.dataset.mean[0:args.nc], test_loader.dataset.std[0:args.nc])
+            scores = netGaze(fake_data.repeat(1, int(3 / args.nc), 1, 1))[0]
+        else:
+            scores = netGaze(data.repeat(1, int(3 / args.nc), 1, 1))[0]
+        scores = scores.view(-1, args.num_classes)
+        pred = scores.data.max(1)[1]  &#47&#47 got the indices of the maximum, match them
+        correct<a id="change"> += pred.eq(target.data).cpu().sum()</a>
+        print(&quotDone with image {} out {}...&quot.format(min(args.batch_size*(idx+1), len(test_loader.dataset)), len(test_loader.dataset)))
+        pred_all   = np.append(pred_all, pred.cpu().numpy())
+        target_all = np.append(target_all, target.cpu().numpy())
+
+    print(<a id="change">"------------------------\nPredicted {} out of {}".format(correct</a>, <a id="change">len(</a>test_loader.dataset<a id="change">)</a><a id="change">)</a>)
+    test_accuracy<a id="change"> = </a><a id="change">100.0</a><a id="change">*float(correct)/len(</a>test_loader.dataset<a id="change">)</a>
+    print("Test accuracy = {:.2f}%\n------------------------".format(test_accuracy))
+    with open(os.path.join(args.output_dir, "logs.txt"), "a") as f:
+        f.write(<a id="change">"\n------------------------\nPredicted {} out of {}\n".format(correct</a>, <a id="change">len(</a>test_loader.dataset<a id="change">)</a><a id="change">)</a>)
+        f.write("Test accuracy = {:.2f}%\n------------------------\n".format(test_accuracy))
+
+    plot_confusion_matrix(target_all, pred_all, activity_classes)</code></pre><h3>After Change</h3><pre><code class='java'>
+        pred_all   = np.append(pred_all, pred.cpu().numpy())
+        target_all = np.append(target_all, target.cpu().numpy())
+
+    test_accuracy<a id="change"> =  </a><a id="change">plot_confusion_matrix(</a>target_all, pred_all, merged_activity_classes, args.output_dir<a id="change">)</a>
+    print("\n------------------------")
+    print("Test accuracy = {:.2f}%\n------------------------".format(test_accuracy))
+    with open(os.path.join(args.output_dir, "logs.txt"), "a") as f:
+        f.write("\n------------------------\n")</code></pre>

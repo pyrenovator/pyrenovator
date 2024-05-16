@@ -1,0 +1,32 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        self.coord_conv = coord_conv
+
+    def forward(self, input):
+        <a id="change">if </a>not self.coord_conv:
+            return input
+        b = input.shape[0]
+        h = input.shape[2]
+        w = input.shape[3]
+        x_range = <a id="change">T.arange(</a>0, w<a id="change">, dtype=T.float32, device=input.device)</a> / (w - 1) * 2.0 - 1
+        y_range = <a id="change">T.arange(</a>0, h<a id="change">, dtype=T.float32, device=input.device)</a> / (h - 1) * 2.0 - 1
+        x_range = x_range[np.newaxis, np.newaxis, np.newaxis, :].repeat((b, 1, h, 1))
+        y_range = y_range[np.newaxis, np.newaxis, :, np.newaxis].repeat((b, 1, 1, w))
+        offset<a id="change"> = T</a><a id="change">.cat(</a><a id="change">[</a>input, x_range, y_range<a id="change"></a>]<a id="change">, dim=1)</a>
+        return offset
+
+
+class SPP(torch.nn.Module):</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    def forward(self, x):
+        gx, gy = add_coord(x, self.data_format)
+        <a id="change">if self.data_format == &quotNCHW&quot</a>:
+            y = torch.cat([x, gx, gy], 1)
+        else:
+            y<a id="change"> = </a><a id="change">torch.cat([</a>x, gx, gy<a id="change"></a>], -1<a id="change">)</a>
+        y = self.conv(y)
+        return y
+
+</code></pre>

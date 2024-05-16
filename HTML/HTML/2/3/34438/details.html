@@ -1,0 +1,74 @@
+<html><h3>Pattern ID :34438
+</h3><img src='98797858.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+  def processing_op(x,op,w,C):
+    assert op == ProcessingOps.CONV, f"{op} isn&quott supported"
+    x = x.movement_op(MovementOps.SLICE, ((0, x.shape[0]), (0, x.shape[1]), (-C.py, x.shape[2]+C.py_), (-C.px, x.shape[3]+C.px_)))
+    gx = <a id="change">x.ravel()</a>.reshape(C.bs,C.groups,C.cin,x.shape[2],x.shape[3])
+    tx = np.lib.stride_tricks.as_strided(gx,
+      shape=(C.bs, C.groups, C.cin, C.H, C.W, C.oy, C.ox),
+      strides=(*gx.strides[0:3], gx.strides[3]*C.dy, gx.strides[4]*C.dx, gx.strides[3]*C.sy, gx.strides[4]*C.sx))
+    tw = w.reshape(C.groups, C.rcout, C.cin, C.H, C.W)
+
+    &#47&#47 too bad this doesn&quott mix with stride_tricks, it can be very slow
+    &#47&#47out = np.einsum("nGCHWhw, GkCHW -&gt; nGkhw", tx, tw)
+
+    &#47&#47 3 lines is faster than 1
+    tmp = np.empty((C.groups,C.rcout,C.bs,C.oy,C.ox), dtype=x.dtype)
+    for g in range(C.groups): tmp[g]<a id="change"> = </a>np.tensordot(tw[g], tx[:,g], ((1,2,3),(1,2,3)))
+    out = np.einsum("Gknhw -&gt; nGkhw", tmp)
+
+    return out.reshape(C.bs, C.groups*C.rcout, C.oy, C.ox).view(CPUBuffer)</code></pre><h3>After Change</h3><pre><code class='java'>
+    x = x.movement_op(MovementOps.SLICE, ((0, x.shape[0]), (0, x.shape[1]), (-C.py, x.shape[2]+C.py_), (-C.px, x.shape[3]+C.px_)))
+    tx = x.movement_op(MovementOps.STRIDED, (
+      (C.bs, C.groups*C.cin*x.shape[2]*x.shape[3]), (C.groups, C.cin*x.shape[2]*x.shape[3]),
+      (C.oy, C.sy*x.shape[3]), (C.ox<a id="change">, C.sx</a>), (C.cin, x.shape[2]*x.shape[3]), (C.H, C.dy*x.shape[3]), (C.W, C.dx)))
+    tw = w.reshape(C.groups, C.rcout, C.cin, C.H, C.W)
+    out = np.einsum("nGhwCHW, GkCHW -&gt; nGkhw", tx.contiguous(), tw.contiguous())
+    return out.reshape(C.bs, C.groups*C.rcout, C.oy, C.ox).view(CPUBuffer)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/geohot/tinygrad/commit/bcf422dfdd9a507df433973d86a89a75656f6aa1#diff-f95ebbe862be0c2efafe626875b5d1e1f16f69b87b564849abbfa2ee7b4adb68L51' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 98797858</div><div id='project'> Project Name: geohot/tinygrad</div><div id='commit'> Commit Name: bcf422dfdd9a507df433973d86a89a75656f6aa1</div><div id='time'> Time: 2022-07-16</div><div id='author'> Author: 72895+geohot@users.noreply.github.com</div><div id='file'> File Name: tinygrad/llops/ops_cpu.py</div><div id='m_class'> M Class Name: CPUBuffer</div><div id='n_method'> N Class Name: CPUBuffer</div><div id='m_method'> M Method Name: processing_op(4)</div><div id='n_method'> N Method Name: processing_op(4)</div><div id='m_parent_class'> M Parent Class: np.ndarray</div><div id='n_parent_class'> N Parent Class: np.ndarray</div><div id='m_file'> M File Name: tinygrad/llops/ops_cpu.py</div><div id='n_file'> N File Name: tinygrad/llops/ops_cpu.py</div><div id='m_start'> M Start Line: 51</div><div id='m_end'> M End Line: 64</div><div id='n_start'> N Start Line: 52</div><div id='n_end'> N End Line: 57</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    zvalues = []
+
+    X,Y = np.where(img &gt; 0)
+    P<a id="change"> = </a><a id="change">img[X,Y].ravel()</a>
+
+&#47&#47 Normalize the coordinates to the center of mass and normalize
+&#47&#47  pixel distances using the maximum radius argument (radius)
+    cofx,cofy = center_of_mass(img)</code></pre><h3>After Change</h3><pre><code class='java'>
+    c0,c1 = center_of_mass(img)
+
+    Y,X = np.where(img &gt; 0)
+    P = img[Y<a id="change">,X</a>].ravel()
+    def rescale(C, centre):
+        Cn = C.astype(np.double)
+        Cn -= centre</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/luispedro/mahotas/commit/6ebd7769b31300ab5af9128c47c50b5746316c88#diff-974bd528f843a4788c31745fb5c27e8de171ad51c6c3d5ada1f852d79cf0cd6aL37' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 98797851</div><div id='project'> Project Name: luispedro/mahotas</div><div id='commit'> Commit Name: 6ebd7769b31300ab5af9128c47c50b5746316c88</div><div id='time'> Time: 2010-08-23</div><div id='author'> Author: lpc@cmu.edu</div><div id='file'> File Name: mahotas/zernike.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: zernike(3)</div><div id='n_method'> N Method Name: zernike(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: mahotas/zernike.py</div><div id='n_file'> N File Name: mahotas/zernike.py</div><div id='m_start'> M Start Line: 37</div><div id='m_end'> M End Line: 79</div><div id='n_start'> N Start Line: 54</div><div id='n_end'> N End Line: 74</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    y_test = dataset.prepare("test", col_set="label")
+    pred_score, y_test, __ = drop_nan_by_y_index(pred_score, y_test)
+    model_pearsonr<a id="change"> = </a>pearsonr(np.ravel(pred_score.values), <a id="change">np.ravel(</a>y_test.values<a id="change">)</a>)[0]
+
+    return pred_score, {"model_pearsonr": model_pearsonr}, rid
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        ic = sar.load(sar.get_path("ic.pkl"))
+        ric = sar.load(sar.get_path("ric.pkl"))
+
+    return pred_score<a id="change">, {"ic": ic, "ric": ric}, rid</a>
+
+
+def backtest_analysis(pred, rid):
+    backtest and analysis</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/microsoft/qlib/commit/89586562226b1f3aaf4b38ef283af92ffe105e71#diff-e85369ca90d47fb4376b973050e0f2bd66cca8aa16ab93949415c3af58b2a288L99' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 98797832</div><div id='project'> Project Name: microsoft/qlib</div><div id='commit'> Commit Name: 89586562226b1f3aaf4b38ef283af92ffe105e71</div><div id='time'> Time: 2020-11-21</div><div id='author'> Author: dw1920@nyu.edu</div><div id='file'> File Name: tests/test_all_pipeline.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train(0)</div><div id='n_method'> N Method Name: train(0)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: tests/test_all_pipeline.py</div><div id='n_file'> N File Name: tests/test_all_pipeline.py</div><div id='m_start'> M Start Line: 112</div><div id='m_end'> M End Line: 130</div><div id='n_start'> N Start Line: 119</div><div id='n_end'> N End Line: 131</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                    gx.strides[3], gx.strides[4]),
+           writeable=False,
+         )
+    tx<a id="change"> = </a><a id="change">np.ravel(</a>tx<a id="change">)</a>.reshape(tx.shape)
+    tw = w.reshape(ctx.groups, rcout, cin, H, W)
+    ctx.save_for_backward(tx, tw, x.shape)
+    return np.einsum(&quotigjYXyx,gkjyx -&gt; igkYX&quot, tx, tw).reshape(bs, cout, oy, ox)</code></pre><h3>After Change</h3><pre><code class='java'>
+    ret = np.zeros((bs,ctx.groups,rcout,oy,ox),dtype=x.dtype)
+    for g in range(ctx.groups):
+      &#47&#47ijYXyx,kjyx -&gt; iYXk -&gt;ikYX
+      ret[:,g]+=np.moveaxis(np.tensordot(tx[:,g], tw[g],((1<a id="change">,4,5</a>),(1,2,3))),3,1)
+    return ret.reshape(bs, cout, oy, ox) 
+
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/geohot/tinygrad/commit/af5a4e0f5a3be62bd29e0220e1acee09be808645#diff-5736814df0b2c07a42d5c1bfef6b5aa5635ce18043f4aa030e21768694259ca3L163' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 98797836</div><div id='project'> Project Name: geohot/tinygrad</div><div id='commit'> Commit Name: af5a4e0f5a3be62bd29e0220e1acee09be808645</div><div id='time'> Time: 2020-11-02</div><div id='author'> Author: 65973015+marcelbischoff@users.noreply.github.com</div><div id='file'> File Name: tinygrad/ops.py</div><div id='m_class'> M Class Name: Conv2D</div><div id='n_method'> N Class Name: Conv2D</div><div id='m_method'> M Method Name: forward(5)</div><div id='n_method'> N Method Name: forward(5)</div><div id='m_parent_class'> M Parent Class: Function</div><div id='n_parent_class'> N Parent Class: Function</div><div id='m_file'> M File Name: tinygrad/ops.py</div><div id='n_file'> N File Name: tinygrad/ops.py</div><div id='m_start'> M Start Line: 175</div><div id='m_end'> M End Line: 185</div><div id='n_start'> N Start Line: 172</div><div id='n_end'> N End Line: 189</div><BR>

@@ -1,0 +1,30 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    def calc_qparams(self):
+        qmin, qmax = self.qdesc.qrange
+        min_val, max_val = self.calc_minmax()
+        min_val_neg<a id="change"> = </a><a id="change">torch.minimum(</a>min_val, torch.zeros_like(min_val)<a id="change">)</a>
+        max_val_pos<a id="change"> = </a>torch.maximum(max_val, torch.zeros_like(max_val))
+        device = min_val_neg.device
+        scale = torch.ones(min_val_neg.size(), dtype=torch.float32, device=device)
+        zero_point = torch.zeros(min_val_neg.size(), dtype=torch.float32, device=device)
+        if self.is_symmetric:
+            max_val_pos = torch.maximum(-min_val_neg, max_val_pos)
+            scale = max_val_pos * 2 / float(qmax - qmin)
+            scale = torch.maximum(scale, torch.tensor(1e-6))
+        else:
+            scale = (max_val_pos - min_val_neg) / float(qmax - qmin)
+            scale = torch.maximum(scale, torch.tensor(1e-6))
+            zero_point<a id="change"> = </a>torch.round(-min_val_neg / scale)
+        assert len(self._data_cache) == 0, "free data cache after calc_qparams"
+        return scale, zero_point
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    def calc_qparams(self):
+        min_val, max_val = self.calc_minmax()
+        scale<a id="change">, zero_point</a> = self.calc_qparams_with_minmax(min_val, max_val)
+        return scale, zero_point
+
+    def calc_qparams_with_minmax(self, min_val, max_val):</code></pre>

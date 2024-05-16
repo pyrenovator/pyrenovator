@@ -1,0 +1,140 @@
+<html><h3>Pattern ID :35954
+</h3><img src='102284184.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            loss = sum(
+                [
+                    loss_bbox * self._train_config[&quotloss_coefs&quot][&quotbbox_loss_coef&quot],
+                    loss_giou * <a id="change">self._train_config[&quotloss_coefs&quot][&quotgiou_loss_coef&quot]</a>,
+                    loss_cls * self._train_config[&quotloss_coefs&quot][&quotcls_loss_coef&quot],
+                ]
+            )</code></pre><h3>After Change</h3><pre><code class='java'>
+
+            &#47&#47 Create absolute loss and mult with loss coefficient
+            loss_abs = 0
+            <a id="change">for </a>loss_key, <a id="change">loss_val</a> in <a id="change">loss_dict.items():
+                </a>loss_abs<a id="change"> += loss_val</a><a id="change"> * </a><a id="change">self._loss_coefs[loss_key.split(&quot_&quot)[0]]</a>
+
+            self._optimizer.zero_grad()
+            loss_abs.backward()
+
+            &#47&#47 Clip grads to counter exploding grads
+            max_norm = self._train_config[&quotclip_max_norm&quot]
+            if max_norm &gt; 0:
+                torch.nn.utils.clip_grad_norm_(self._model.parameters(), max_norm)
+
+            self._optimizer.step()
+
+            loss_agg += loss_abs.item()
+            loss_bbox_agg += <a id="change">loss_dict[&quotbbox&quot].item()</a>
+            loss_giou_agg += loss_dict[&quotgiou&quot].item()
+            loss_cls_agg<a id="change"> += loss_dict[&quotcls&quot]</a><a id="change">.item()</a>
+
+        loss = loss_agg / len(self._train_loader)
+        loss_bbox = loss_bbox_agg / len(self._train_loader)
+        loss_giou = loss_giou_agg / len(self._train_loader)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 15</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/bwittmann/transoar/commit/b168360cfaa2ea2a6bf4d82849fc82381329de4a#diff-28ec89610fef11ba86f164936f92f63b62628c7ca9c19bc8d8bea1346cff4ec9L42' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 102284184</div><div id='project'> Project Name: bwittmann/transoar</div><div id='commit'> Commit Name: b168360cfaa2ea2a6bf4d82849fc82381329de4a</div><div id='time'> Time: 2021-12-02</div><div id='author'> Author: bastian.wittmann@tum.de</div><div id='file'> File Name: transoar/trainer.py</div><div id='m_class'> M Class Name: Trainer</div><div id='n_method'> N Class Name: Trainer</div><div id='m_method'> M Method Name: _train_one_epoch(2)</div><div id='n_method'> N Method Name: _train_one_epoch(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: transoar/trainer.py</div><div id='n_file'> N File Name: transoar/trainer.py</div><div id='m_start'> M Start Line: 42</div><div id='m_end'> M End Line: 82</div><div id='n_start'> N Start Line: 45</div><div id='n_end'> N End Line: 83</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                [
+                    loss_bbox * self._train_config[&quotloss_coefs&quot][&quotbbox_loss_coef&quot],
+                    loss_giou * self._train_config[&quotloss_coefs&quot][&quotgiou_loss_coef&quot],
+                    loss_cls * <a id="change">self._train_config[&quotloss_coefs&quot][&quotcls_loss_coef&quot]</a>,
+                ]
+            )
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+            &#47&#47 Make prediction 
+            out = self._model(data, mask)
+            <a id="change">loss_dict</a> = self._criterion(out, targets)
+
+            &#47&#47 Create absolute loss and mult with loss coefficient
+            loss_abs = 0
+            <a id="change">for </a>loss_key, <a id="change">loss_val</a> in <a id="change">loss_dict.items():
+                </a>loss_abs<a id="change"> += </a>loss_val<a id="change"> * </a><a id="change">self._loss_coefs[loss_key.split(&quot_&quot)[0]]</a>
+
+            &#47&#47 Evaluate validation predictions based on metric
+            pred_boxes, pred_classes, pred_scores = inference(out)
+            self._evaluator.add(
+                pred_boxes=pred_boxes,
+                pred_classes=pred_classes,
+                pred_scores=pred_scores,
+                gt_boxes=[target[&quotboxes&quot].detach().cpu().numpy() for target in targets],
+                gt_classes=[target[&quotlabels&quot].detach().cpu().numpy() for target in targets]
+            )
+
+            loss_agg += loss_abs.item()
+            loss_bbox_agg += <a id="change">loss_dict[&quotbbox&quot].item()</a>
+            loss_giou_agg += loss_dict[&quotgiou&quot].item()
+            loss_cls_agg<a id="change"> += </a><a id="change">loss_dict[&quotcls&quot].item()</a>
+
+        loss = loss_agg / len(self._val_loader)
+        loss_bbox = loss_bbox_agg / len(self._val_loader)
+        loss_giou = loss_giou_agg / len(self._val_loader)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/bwittmann/transoar/commit/b168360cfaa2ea2a6bf4d82849fc82381329de4a#diff-28ec89610fef11ba86f164936f92f63b62628c7ca9c19bc8d8bea1346cff4ec9L98' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 102284187</div><div id='project'> Project Name: bwittmann/transoar</div><div id='commit'> Commit Name: b168360cfaa2ea2a6bf4d82849fc82381329de4a</div><div id='time'> Time: 2021-12-02</div><div id='author'> Author: bastian.wittmann@tum.de</div><div id='file'> File Name: transoar/trainer.py</div><div id='m_class'> M Class Name: Trainer</div><div id='n_method'> N Class Name: Trainer</div><div id='m_method'> M Method Name: _validate(2)</div><div id='n_method'> N Method Name: _validate(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: transoar/trainer.py</div><div id='n_file'> N File Name: transoar/trainer.py</div><div id='m_start'> M Start Line: 102</div><div id='m_end'> M End Line: 142</div><div id='n_start'> N Start Line: 103</div><div id='n_end'> N End Line: 141</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            for item in bboxes:
+                targets[&quottarget_boxes&quot].append(item[0].to(dtype=torch.float, device=self._device))
+                targets[&quottarget_classes&quot].append(item[1].to(device=self._device))
+            <a id="change">targets[&quottarget_seg&quot]</a> = seg_mask.squeeze().to(device=self._device)
+
+            &#47&#47 Make prediction 
+            with autocast():</code></pre><h3>After Change</h3><pre><code class='java'>
+
+            &#47&#47 Make prediction 
+            out = self._model(data, mask)
+            <a id="change">loss_dict</a> = self._criterion(out, targets)
+
+            &#47&#47 Create absolute loss and mult with loss coefficient
+            loss_abs = 0
+            <a id="change">for </a>loss_key, <a id="change">loss_val</a> in <a id="change">loss_dict.items():
+                </a>loss_abs<a id="change"> += </a>loss_val<a id="change"> * </a><a id="change">self._config[&quotloss_coefs&quot][loss_key.split(&quot_&quot)[0]]</a>
+
+            &#47&#47 Evaluate validation predictions based on metric
+            pred_boxes, pred_classes, pred_scores = inference(out)
+            self._evaluator.add(
+                pred_boxes=pred_boxes,
+                pred_classes=pred_classes,
+                pred_scores=pred_scores,
+                gt_boxes=[target[&quotboxes&quot].detach().cpu().numpy() for target in targets],
+                gt_classes=[target[&quotlabels&quot].detach().cpu().numpy() for target in targets]
+            )
+
+            loss_agg += loss_abs.item()
+            loss_bbox_agg<a id="change"> += </a><a id="change">loss_dict[&quotbbox&quot].item()</a>
+            loss_giou_agg += <a id="change">loss_dict[&quotgiou&quot].item()</a>
+            loss_cls_agg += loss_dict[&quotcls&quot].item()
+
+        loss = loss_agg / len(self._val_loader)
+        loss_bbox = loss_bbox_agg / len(self._val_loader)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/bwittmann/transoar/commit/d1d610ce7014a86c72c7d5625dbe82be40b2c340#diff-28ec89610fef11ba86f164936f92f63b62628c7ca9c19bc8d8bea1346cff4ec9L100' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 102284188</div><div id='project'> Project Name: bwittmann/transoar</div><div id='commit'> Commit Name: d1d610ce7014a86c72c7d5625dbe82be40b2c340</div><div id='time'> Time: 2022-06-24</div><div id='author'> Author: bastian.wittmann@tum.de</div><div id='file'> File Name: transoar/trainer.py</div><div id='m_class'> M Class Name: Trainer</div><div id='n_method'> N Class Name: Trainer</div><div id='m_method'> M Method Name: _validate(2)</div><div id='n_method'> N Method Name: _validate(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: transoar/trainer.py</div><div id='n_file'> N File Name: transoar/trainer.py</div><div id='m_start'> M Start Line: 105</div><div id='m_end'> M End Line: 146</div><div id='n_start'> N Start Line: 100</div><div id='n_end'> N End Line: 141</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            loss = sum(
+                [
+                    loss_bbox * self._train_config[&quotloss_coefs&quot][&quotbbox_loss_coef&quot],
+                    loss_giou * <a id="change">self._train_config[&quotloss_coefs&quot][&quotgiou_loss_coef&quot]</a>,
+                    loss_cls * self._train_config[&quotloss_coefs&quot][&quotcls_loss_coef&quot],
+                ]
+            )</code></pre><h3>After Change</h3><pre><code class='java'>
+
+            &#47&#47 Make prediction 
+            out = self._model(data, mask)
+            <a id="change">loss_dict</a> = self._criterion(out, targets)
+
+            &#47&#47 Create absolute loss and mult with loss coefficient
+            loss_abs = 0
+            <a id="change">for </a>loss_key, <a id="change">loss_val</a> in <a id="change">loss_dict.items():
+                </a>loss_abs<a id="change"> += </a>loss_val<a id="change"> * </a><a id="change">self._loss_coefs[loss_key.split(&quot_&quot)[0]]</a>
+
+            self._optimizer.zero_grad()
+            loss_abs.backward()
+
+            &#47&#47 Clip grads to counter exploding grads
+            max_norm = self._train_config[&quotclip_max_norm&quot]
+            if max_norm &gt; 0:
+                torch.nn.utils.clip_grad_norm_(self._model.parameters(), max_norm)
+
+            self._optimizer.step()
+
+            loss_agg += loss_abs.item()
+            loss_bbox_agg += loss_dict[&quotbbox&quot].item()
+            loss_giou_agg += <a id="change">loss_dict[&quotgiou&quot].item()</a>
+            loss_cls_agg<a id="change"> += </a><a id="change">loss_dict[&quotcls&quot].item()</a>
+
+        loss = loss_agg / len(self._train_loader)
+        loss_bbox = loss_bbox_agg / len(self._train_loader)
+        loss_giou = loss_giou_agg / len(self._train_loader)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/bwittmann/transoar/commit/b168360cfaa2ea2a6bf4d82849fc82381329de4a#diff-28ec89610fef11ba86f164936f92f63b62628c7ca9c19bc8d8bea1346cff4ec9L38' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 102284183</div><div id='project'> Project Name: bwittmann/transoar</div><div id='commit'> Commit Name: b168360cfaa2ea2a6bf4d82849fc82381329de4a</div><div id='time'> Time: 2021-12-02</div><div id='author'> Author: bastian.wittmann@tum.de</div><div id='file'> File Name: transoar/trainer.py</div><div id='m_class'> M Class Name: Trainer</div><div id='n_method'> N Class Name: Trainer</div><div id='m_method'> M Method Name: _train_one_epoch(2)</div><div id='n_method'> N Method Name: _train_one_epoch(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: transoar/trainer.py</div><div id='n_file'> N File Name: transoar/trainer.py</div><div id='m_start'> M Start Line: 42</div><div id='m_end'> M End Line: 82</div><div id='n_start'> N Start Line: 45</div><div id='n_end'> N End Line: 83</div><BR>

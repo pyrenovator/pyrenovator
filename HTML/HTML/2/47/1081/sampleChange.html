@@ -1,0 +1,48 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                    ideal_mask = ideal_mask.cuda()
+                    threshold_weight = threshold_weight.cuda()
+                
+                real, imag = <a id="change">mixture[:,:,:F_bin], mixture[:,:,F_bin:]</a>
+                mixture_amplitude = torch.sqrt(real**2+imag**2) &#47&#47 -&gt; (1, 1, F_bin, T_bin)
+                real, imag = <a id="change">sources[:,:,:F_bin], sources[:,:,F_bin:]</a>
+                sources_amplitude = torch.sqrt(real**2+imag**2)
+                
+                output = self.model(mixture_amplitude, assignment=None, threshold_weight=threshold_weight, n_sources=n_sources)
+                loss, perm_idx = self.pit_criterion(output, sources_amplitude, batch_mean=False)
+                loss = loss.sum(dim=0)
+                
+                mixture = mixture[0].cpu()
+                sources = sources[0].cpu()
+    
+                mixture_amplitude = mixture_amplitude[0].cpu() &#47&#47 -&gt; (1, F_bin, T_bin)
+                estimated_sources_amplitude = output[0].cpu() &#47&#47 -&gt; (n_sources, F_bin, T_bin)
+                ratio = estimated_sources_amplitude / mixture_amplitude
+                real, imag = <a id="change">mixture[:,:F_bin]</a><a id="change">, mixture[:,F_bin:]</a> &#47&#47 -&gt; (1, F_bin, T_bin), (1, F_bin, T_bin)
+                real, imag = ratio * real, ratio * imag &#47&#47 -&gt; (n_sources, F_bin, T_bin), (n_sources, F_bin, T_bin)
+                estimated_sources = torch.cat([real, imag], dim=1) &#47&#47 -&gt; (n_sources, 2*F_bin, T_bin)
+                </code></pre><h3>After Change</h3><pre><code class='java'>
+                    ideal_mask = ideal_mask.cuda()
+                    threshold_weight = threshold_weight.cuda()
+                
+                real, imag = <a id="change">mixture[...,0]</a>, <a id="change">mixture[...,1]</a>
+                mixture_amplitude = torch.sqrt(real**2+imag**2) &#47&#47 -&gt; (1, 1, F_bin, T_bin)
+                real, imag = <a id="change">sources[...,0], sources[...,1]</a>
+                sources_amplitude = torch.sqrt(real**2+imag**2)
+                
+                output = self.model(mixture_amplitude, assignment=None, threshold_weight=threshold_weight, n_sources=n_sources)
+                loss, perm_idx = self.pit_criterion(output, sources_amplitude, batch_mean=False)
+                loss = loss.sum(dim=0)
+                
+                mixture = mixture[0].cpu()
+                sources = sources[0].cpu()
+    
+                mixture_amplitude = mixture_amplitude[0].cpu() &#47&#47 -&gt; (1, F_bin, T_bin)
+                estimated_sources_amplitude = output[0].cpu() &#47&#47 -&gt; (n_sources, F_bin, T_bin)
+                ratio = estimated_sources_amplitude / mixture_amplitude
+                real, imag = <a id="change">mixture[...,0], mixture[...,1]</a> &#47&#47 -&gt; (1, F_bin, T_bin), (1, F_bin, T_bin)
+                real, imag = ratio * real, ratio * imag &#47&#47 -&gt; (n_sources, F_bin, T_bin), (n_sources, F_bin, T_bin)
+                estimated_sources = torch.cat([real.unsqueeze(dim=3), imag.unsqueeze(dim=3)], dim=3) &#47&#47 -&gt; (n_sources, F_bin, T_bin, 2)
+                </code></pre>

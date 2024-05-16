@@ -1,0 +1,22 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        if not AllToAllStatus.initialized or AllToAllStatus.world_size &lt;= 1:
+            return (input,)
+        output = [
+            <a id="change">torch.empty(AllToAllStatus.scatter_tensor_shape, device=input.device).contiguous()</a>
+            for _ in range(AllToAllStatus.num_split)
+        ]
+        tutel_custom_kernel.nccl_all_to_all_scatter_async(input, output, False)
+        <a id="change">return </a>tuple(output)
+
+    @staticmethod
+    def backward(ctx: Any, *grad_output) -&gt; Tensor:</code></pre><h3>After Change</h3><pre><code class='java'>
+            return (input,)
+        ctx.input_shape = input.shape
+        output_shape = torch.Size([
+            x<a id="change"> if i != AllToAllStatus.split_dim</a><a id="change"> else </a>x // AllToAllStatus.num_split
+            for i, x in enumerate(ctx.input_shape)
+        ])
+        ctx.num_slices_per_split = ctx.input_shape[:AllToAllStatus.split_dim].numel()</code></pre>

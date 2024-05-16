@@ -1,0 +1,70 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+)
+@pytest.mark.parametrize(&quotdocker_images&quot, [[&quotslow-process-executor&quot]], indirect=True)
+async def test_no_message_lost_during_scaling(logger, docker_images):
+    flow = <a id="change">Flow(
+        name=&quottest-flow-slow-process-executor&quot,
+        infrastructure=&quotK8S&quot,
+        timeout_ready=120000,
+        k8s_namespace=&quottest-flow-slow-process-executor-ns&quot,
+    )</a>.add(
+        name=&quotslow_process_executor&quot,
+        uses=docker_images[0],
+        timeout_ready=360000,</code></pre><h3>After Change</h3><pre><code class='java'>
+    &quotdocker_images&quot, [[&quotslow-process-executor&quot, &quotjinaai/jina&quot]], indirect=True
+)
+async def test_no_message_lost_during_scaling(logger, docker_images, tmpdir):
+    flow = <a id="change">Flow(name=&quottest-flow-slow-process-executor&quot,)</a>.add(
+        name=&quotslow_process_executor&quot,
+        uses=f&quotdocker://{docker_images[0]}&quot,
+        replicas=3,
+    )
+
+    dump_path = os.path.join(str(tmpdir), &quottest_flow_k8s&quot)
+    namespace = &quottest-flow-slow-process-executor-ns&quot
+    flow.to_k8s_yaml(dump_path, k8s_namespace=namespace)
+    from kubernetes import client
+
+    api_client = client.ApiClient()
+    core_client = client.CoreV1Api(api_client=api_client)
+    app_client = client.AppsV1Api(api_client=api_client)
+    await create_all_flow_pods_and_wait_ready(
+        dump_path,
+        namespace=namespace,
+        api_client=api_client,
+        app_client=app_client,
+        core_client=core_client,
+    )
+
+    &#47&#47 start port forwarding
+    gateway_pod_name = (
+        core_client.list_namespaced_pod(
+            namespace=namespace, label_selector=&quotapp=gateway&quot
+        )
+        .items[0]
+        .metadata.name
+    )
+    config_path = os.environ[&quotKUBECONFIG&quot]
+    import portforward
+
+    with portforward.forward(
+        namespace, gateway_pod_name, flow.port_expose, flow.port_expose, config_path
+    ):
+        &#47&#47 send requests and validate
+        time.sleep(0.1)
+        client_kwargs = dict(
+            host=&quotlocalhost&quot,
+            port=flow.port_expose,
+        )
+        client_kwargs.update(flow._common_kwargs)
+
+        stop_event = multiprocessing.Event()
+        scale_event = multiprocessing.Event()
+        received_responses = multiprocessing.Queue()
+        response_arrival_times<a id="change"> = </a>multiprocessing.Queue()
+        process = multiprocessing.Process(
+            target=send_requests,
+            kwargs={</code></pre>

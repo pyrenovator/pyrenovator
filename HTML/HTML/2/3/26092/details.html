@@ -1,0 +1,76 @@
+<html><h3>Pattern ID :26092
+</h3><img src='78684594.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        value_loss_buffer = []
+        for _ in range(self.value_update_iter):
+            value = self.value_net.forward(obs)
+            value_loss = <a id="change">(ret - value).pow(2).mean()</a>
+            value_loss_buffer.append(value_loss.item())
+            self.value_optimizer.zero_grad()
+            value_loss.backward()
+            self.value_optimizer.step()</code></pre><h3>After Change</h3><pre><code class='java'>
+        value_loss_buffer = []
+        policy_loss_buffer = []
+        for _ in range(self.value_update_iter):
+            td_target = rew + self.gamma * <a id="change">self.value_net.forward(</a>next_obs<a id="change">)</a> * (1 - don)
+            delta = td_target - self.value_net.forward(obs)
+            delta = delta.detach().numpy()
+
+            advantage_lst = []
+            advantage = 0.0
+            for delta_t in delta[::-1]:
+                advantage = self.gamma * self.lam * advantage + delta_t[0]
+                advantage_lst.append([advantage])
+
+            advantage_lst.reverse()
+            advantage = torch.FloatTensor(advantage_lst)
+
+            value = self.value_net.forward(obs)
+            &#47&#47value_loss = (ret - value).pow(2).mean()
+            value_loss = F.smooth_l1_loss(td_target.detach(), value)
+            value_loss_buffer.append(value_loss.item())
+            self.value_optimizer.zero_grad()
+            value_loss.backward()
+            self.value_optimizer.step()
+            if self.log:
+                self.writer.add_scalar(&quotvalue_loss&quot, np.mean(value_loss_buffer), self.train_count)
+
+            probs = self.policy_net.forward(obs)
+            probs = probs.gather(1, act).squeeze(1)
+            ratio = probs / old_probs
+            surr1<a id="change"> = </a>ratio * advantage
+            surr2 = torch.clamp(ratio, 1. - self.epsilon, 1. + self.epsilon) * advantage
+            policy_loss = - torch.min(surr1, surr2).mean()
+            policy_loss_buffer.append(policy_loss.item())</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/deligentfool/policy_based_rl/commit/3ee3f4f7f6374ecc0a4efef5d67cc2399eab43a4#diff-b41d7291908ffbc2ef8802c64617b48dda2a61a944b3a415d9f9b4564c13b595L106' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 78684594</div><div id='project'> Project Name: deligentfool/policy_based_rl</div><div id='commit'> Commit Name: 3ee3f4f7f6374ecc0a4efef5d67cc2399eab43a4</div><div id='time'> Time: 2020-05-30</div><div id='author'> Author: 1027660817@qq.com</div><div id='file'> File Name: PPO_CLIP/ppo_cartpole.py</div><div id='m_class'> M Class Name: ppo_clip</div><div id='n_method'> N Class Name: ppo_clip</div><div id='m_method'> M Method Name: train(1)</div><div id='n_method'> N Method Name: train(1)</div><div id='m_parent_class'> M Parent Class: object</div><div id='n_parent_class'> N Parent Class: object</div><div id='m_file'> M File Name: PPO_CLIP/ppo_cartpole.py</div><div id='n_file'> N File Name: PPO_CLIP/ppo_cartpole.py</div><div id='m_start'> M Start Line: 121</div><div id='m_end'> M End Line: 159</div><div id='n_start'> N Start Line: 106</div><div id='n_end'> N End Line: 156</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        attention_cache_handle = int(cache_metadata[0, 0].item())
+        current_sequence_length = int(cache_metadata[0, 1].item())
+        with self.memory_cache.use_cache(attention_cache_handle) as cache:
+            print(&quotMETADATA:&quot, cache_metadata, "CACHE", <a id="change">cache.mean()</a>, "CACHE ENTRIES:", len(self.memory_cache._allocated_tensors))
+            cache[...] += 1
+            return (inputs[0] + cache.flatten()[0],)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            assert isinstance(self.module, BloomBlock) and cache.shape[0] == 2 and cache.ndim == 5
+            layer_past = past_k, past_v = cache[0, :, :prefix_length], cache[1, :, :prefix_length]
+            print(past_k.shape, past_v.shape)
+            hidden_states<a id="change">, (new_k, new_v) = </a><a id="change">self.module.forward(</a>hidden_states<a id="change">, layer_past=layer_past, use_cache=True)</a>
+
+
+            &#47&#47 todo remove these debugprints
+            new_length = new_v.shape[1]</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/bigscience-workshop/distributed-bloom/commit/33358bc52b91b452f26e87a653aae8fec88787ab#diff-2e1d320aa2c8e999003e1c5d13022ac3c54664133b82d112204c59dc2b6ed053L29' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 78684598</div><div id='project'> Project Name: bigscience-workshop/distributed-bloom</div><div id='commit'> Commit Name: 33358bc52b91b452f26e87a653aae8fec88787ab</div><div id='time'> Time: 2022-06-19</div><div id='author'> Author: justheuristic@gmail.com</div><div id='file'> File Name: src/server/backend.py</div><div id='m_class'> M Class Name: TransformerBackend</div><div id='n_method'> N Class Name: TransformerBackend</div><div id='m_method'> M Method Name: inference_step(2)</div><div id='n_method'> N Method Name: inference_step(2)</div><div id='m_parent_class'> M Parent Class: ModuleBackend</div><div id='n_parent_class'> N Parent Class: ModuleBackend</div><div id='m_file'> M File Name: src/server/backend.py</div><div id='n_file'> N File Name: src/server/backend.py</div><div id='m_start'> M Start Line: 32</div><div id='m_end'> M End Line: 37</div><div id='n_start'> N Start Line: 30</div><div id='n_end'> N End Line: 54</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        value_loss_buffer = []
+        for _ in range(self.value_update_iter):
+            value = self.value_net.forward(obs)
+            value_loss = <a id="change">(ret - value).pow(2).mean()</a>
+            value_loss_buffer.append(value_loss.item())
+            self.value_optimizer.zero_grad()
+            value_loss.backward()</code></pre><h3>After Change</h3><pre><code class='java'>
+        value_loss_buffer = []
+        for _ in range(self.value_update_iter):
+            value = self.value_net.forward(obs)
+            td_target = rew + self.gamma * <a id="change">self.value_net.forward(</a>next_obs<a id="change">)</a> * (1 - don)
+            value_loss<a id="change"> = </a>F.smooth_l1_loss(td_target.detach(), value)
+            value_loss_buffer.append(value_loss.item())
+            self.value_optimizer.zero_grad()
+            value_loss.backward()</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/deligentfool/policy_based_rl/commit/3ee3f4f7f6374ecc0a4efef5d67cc2399eab43a4#diff-f5cfcaf6232b17aacabfd02a603f9667d81a3c94ae1317aa1af3069a611ef466L197' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 78684587</div><div id='project'> Project Name: deligentfool/policy_based_rl</div><div id='commit'> Commit Name: 3ee3f4f7f6374ecc0a4efef5d67cc2399eab43a4</div><div id='time'> Time: 2020-05-30</div><div id='author'> Author: 1027660817@qq.com</div><div id='file'> File Name: ICM_PPO/icm.py</div><div id='m_class'> M Class Name: icm_ppo</div><div id='n_method'> N Class Name: icm_ppo</div><div id='m_method'> M Method Name: train(1)</div><div id='n_method'> N Method Name: train(1)</div><div id='m_parent_class'> M Parent Class: object</div><div id='n_parent_class'> N Parent Class: object</div><div id='m_file'> M File Name: ICM_PPO/icm.py</div><div id='n_file'> N File Name: ICM_PPO/icm.py</div><div id='m_start'> M Start Line: 206</div><div id='m_end'> M End Line: 215</div><div id='n_start'> N Start Line: 205</div><div id='n_end'> N End Line: 219</div><BR>

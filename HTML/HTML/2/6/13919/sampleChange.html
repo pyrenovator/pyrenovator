@@ -1,0 +1,52 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 get generator output and get mpp loss
+        logits = self.transformer(masked_input, **kwargs)
+
+        mpp_loss<a id="change"> = </a>F.cross_entropy(
+            <a id="change">logits.transpose(1</a>, <a id="change">2</a><a id="change">)</a>,
+            labels,
+        )
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    def forward(self, input, **kwargs):
+        &#47&#47 clone original image for loss
+        img = <a id="change">input.clone().detach()</a>
+
+        &#47&#47 reshape raw image to patches
+        p = self.patch_size
+        input = rearrange(input, &quotb c (h p1) (w p2) -&gt; b (h w) (p1 p2 c)&quot, p1 = p, p2 = p)
+
+        mask = get_mask_subset_with_prob(input, self.mask_prob)
+
+        &#47&#47 mask input with mask patches with probability of `replace_prob` (keep patches the same with probability 1 - replace_prob)
+        masked_input = input.clone().detach()
+
+         &#47&#47 if random token probability &gt; 0 for mpp
+        if self.random_patch_prob &gt; 0:
+            random_patch_sampling_prob = self.random_patch_prob / (1 - self.replace_prob)
+            random_patch_prob = prob_mask_like(input, random_patch_sampling_prob)
+            bool_random_patch_prob = mask * random_patch_prob == True
+            random_patches = torch.randint(0, input.shape[1], (input.shape[0], input.shape[1]), device=input.device)
+            randomized_input = masked_input[torch.arange(masked_input.shape[0]).unsqueeze(-1), random_patches]
+            masked_input[bool_random_patch_prob] = randomized_input[bool_random_patch_prob]
+
+        &#47&#47 [mask] input
+        replace_prob = prob_mask_like(input, self.replace_prob)
+        bool_mask_replace = (mask * replace_prob) == True
+        masked_input[bool_mask_replace] = self.mask_token
+
+        &#47&#47 get labels for input patches that were masked
+        bool_mask = mask == True
+        labels = input[bool_mask]
+
+        &#47&#47 get generator output and get mpp loss
+        cls_logits = self.transformer(masked_input, mpp=True, **kwargs)
+        logits = cls_logits[:,1:,:]
+
+        mpp_loss<a id="change"> = </a>self.loss(logits, img, mask)
+
+        return mpp_loss
+</code></pre>

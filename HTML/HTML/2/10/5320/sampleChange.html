@@ -1,0 +1,35 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+        D, N = normed_x.shape
+
+        dx = 1.0 / N * inv_var * (N * dxhat - dxhat.sum(dim = 1, keepdim = True) - normed_x * <a id="change">(dxhat * normed_x).sum(dim = 1, keepdim = True)</a>)
+
+        dx = dx.view(*shape)
+        return dx, dgamma, dbeta, None</code></pre><h3>After Change</h3><pre><code class='java'>
+        BLOCK_SIZE = triton.next_power_of_2(n_cols)
+        num_warps = calc_num_warps(BLOCK_SIZE)
+
+        dx<a id="change"> = </a><a id="change">torch.empty_like(</a>dy<a id="change">)</a>
+
+        <a id="change">layernorm_kernel_backward[(n_rows,)](
+            </a>dx,
+            dxhat,
+            normed_x,
+            <a id="change">scaled_x</a>,
+            inv_var,
+            dx.stride(0),
+            dxhat.stride(0),
+            normed_x.stride(0),
+            <a id="change">scaled_x.stride(0</a><a id="change">)</a>,
+            <a id="change">inv_var.stride(0</a><a id="change">)</a>,
+            n_cols<a id="change">,
+            num_warps = num_warps,
+            BLOCK_SIZE = BLOCK_SIZE,
+        )</a>
+
+        dx = dx.view(*shape)
+        return dx, dgamma, dbeta, None
+</code></pre>

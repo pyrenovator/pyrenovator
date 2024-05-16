@@ -1,0 +1,154 @@
+<html><h3>Pattern ID :19099
+</h3><img src='62214625.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            epoch_iter.set_description(desc=&quotepoch {} ,loss {:.4f}&quot.format(epoch + 1, train_loss))
+
+            if (step + 1) % gradient_accumulation_steps == 0:
+                <a id="change">trainer.train_step()</a>
+                trainer.zero_grad()
+                if trainer.global_step % logging_steps == 0 or trainer.global_step == t_total:
+                    y_true, y_pred = predict(trainer, num_dev_batch, &quotdev&quot)
+                    p, r, f = prf_score(y_true, y_pred)</code></pre><h3>After Change</h3><pre><code class='java'>
+    for epoch in range(epochs):
+        epoch_iter = bar_fn(range(num_train_batch), desc=&quotepoch {} &quot.format(epoch + 1))
+        for step in epoch_iter:
+            <a id="change">if use_torch_mode</a>:
+                train_loss = trainer.backward()
+            else:
+                train_loss<a id="change"> = trainer</a><a id="change">.train_step()</a>
+            epoch_iter.set_description(desc=&quotepoch {} ,loss {:.4f}&quot.format(epoch + 1, train_loss))
+
+            if (step + 1) % gradient_accumulation_steps == 0:
+                <a id="change">if use_torch_mode</a>:
+                    <a id="change">trainer.train_step()</a>
+                    trainer.zero_grad()
+                if trainer.global_step % logging_steps == 0 or trainer.global_step == t_total:
+                    y_true, y_pred = predict(trainer, num_dev_batch, &quotdev&quot)
+                    p, r, f = prf_score(y_true, y_pred)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 6</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/huanghuidmml/tfbert/commit/80f077f158de323bc353e7b2eef813fafa83bc35#diff-e3db313ea51363bf31a5835c488e1fc8b58b335879bd6c3fdb371ffada8ab7dbL157' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 62214625</div><div id='project'> Project Name: huanghuidmml/tfbert</div><div id='commit'> Commit Name: 80f077f158de323bc353e7b2eef813fafa83bc35</div><div id='time'> Time: 2020-11-13</div><div id='author'> Author: m13021933043@163.com</div><div id='file'> File Name: examples/ner/run_ptm.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(0)</div><div id='n_method'> N Method Name: main(0)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples/ner/run_ptm.py</div><div id='n_file'> N File Name: examples/ner/run_ptm.py</div><div id='m_start'> M Start Line: 190</div><div id='m_end'> M End Line: 195</div><div id='n_start'> N Start Line: 157</div><div id='n_end'> N End Line: 205</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            epoch_iter.set_description(desc=&quotepoch {} ,loss {:.4f}&quot.format(epoch + 1, train_loss))
+
+            if (step + 1) % gradient_accumulation_steps == 0:
+                <a id="change">trainer.train_step()</a>
+                trainer.zero_grad()
+
+                if trainer.global_step % logging_steps == 0 or trainer.global_step == t_total:
+                    y_true, y_pred = predict(trainer, num_dev_batch, &quotdev&quot)</code></pre><h3>After Change</h3><pre><code class='java'>
+    output_types, output_shapes = return_types_and_shapes(for_trainer=True)
+
+    &#47&#47 初始化trainer
+    <a id="change">trainer</a> = Trainer(
+        model_type, output_types, output_shapes, device=&quotgpu&quot, use_xla=use_xla, use_torch_mode=use_torch_mode
+    )
+
+    &#47&#47 构建模型
+    trainer.build_model(get_model_fn(model_type, config, num_classes=len(labels)))
+
+    t_total = num_train_batch * epochs // gradient_accumulation_steps
+    &#47&#47 创建train op
+    train_op = create_optimizer(init_lr=learning_rate,
+                                gradients=trainer.gradients,
+                                variables=trainer.variables,
+                                num_train_steps=t_total,
+                                num_warmup_steps=int(t_total * epochs * 0.1))
+
+    &#47&#47 配置trainer，将train op、模型保存最大数量传入
+    trainer.compile(train_op, max_checkpoints=1)
+
+    trainer.build_handle(train_dataset, &quottrain&quot)
+    trainer.build_handle(dev_dataset, &quotdev&quot)
+    trainer.build_handle(test_dataset, &quottest&quot)
+
+    &#47&#47 预训练模型加载预训练参数，若不加载，调用trainer.init_variables()
+    trainer.from_pretrained(model_dir)
+
+    best_score = 0.
+
+    tf.logging.info("***** Running training *****")
+    tf.logging.info("  Num epochs = {}".format(epochs))
+    tf.logging.info("  batch size = {}".format(batch_size))
+    tf.logging.info("  Gradient Accumulation steps = {}".format(gradient_accumulation_steps))
+    tf.logging.info("  Total train batch size (accumulation) = {}".format(batch_size * gradient_accumulation_steps))
+    tf.logging.info("  optimizer steps = %d", t_total)
+    tf.logging.info("  Num devices = {}".format(trainer.num_devices))
+    tf.logging.info("  Num params = {}".format(trainer.num_params))
+
+    for epoch in range(epochs):
+        epoch_iter = bar_fn(range(num_train_batch), desc=&quotepoch {} &quot.format(epoch + 1))
+        for step in epoch_iter:
+            <a id="change">if use_torch_mode</a>:
+                train_loss = trainer.backward()
+            else:
+                train_loss<a id="change"> = </a><a id="change">trainer.train_step()</a>
+            epoch_iter.set_description(desc=&quotepoch {} ,loss {:.4f}&quot.format(epoch + 1, train_loss))
+
+            if (step + 1) % gradient_accumulation_steps == 0:
+                <a id="change">if use_torch_mode</a>:
+                    <a id="change">trainer.train_step()</a>
+                    trainer.zero_grad()
+
+                if trainer.global_step % logging_steps == 0 or trainer.global_step == t_total:
+                    y_true, y_pred = predict(trainer, num_dev_batch, &quotdev&quot)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/huanghuidmml/tfbert/commit/80f077f158de323bc353e7b2eef813fafa83bc35#diff-3fc70012f5c97ffd04394fc9a7e7935b14e5c845cfdb68082d251f01d7f92038L104' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 62214624</div><div id='project'> Project Name: huanghuidmml/tfbert</div><div id='commit'> Commit Name: 80f077f158de323bc353e7b2eef813fafa83bc35</div><div id='time'> Time: 2020-11-13</div><div id='author'> Author: m13021933043@163.com</div><div id='file'> File Name: examples/classification/run_ptm.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(0)</div><div id='n_method'> N Method Name: main(0)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples/classification/run_ptm.py</div><div id='n_file'> N File Name: examples/classification/run_ptm.py</div><div id='m_start'> M Start Line: 156</div><div id='m_end'> M End Line: 161</div><div id='n_start'> N Start Line: 122</div><div id='n_end'> N End Line: 172</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            epoch_iter.set_description(desc=&quotepoch {} ,loss {:.4f}&quot.format(epoch + 1, train_loss))
+
+            if (step + 1) % gradient_accumulation_steps == 0:
+                <a id="change">trainer.train_step()</a>
+                trainer.zero_grad()
+                if trainer.global_step % logging_steps == 0 or trainer.global_step == t_total:
+                    y_true, y_pred = predict(trainer, num_dev_batch, &quotdev&quot)
+                    p, r, f = prf_score(y_true, y_pred)</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    output_types, output_shapes = return_types_and_shapes(for_trainer=True)
+
+    <a id="change">trainer</a> = Trainer(
+        model_type, output_types, output_shapes, device=&quotgpu&quot, use_xla=use_xla, use_torch_mode=use_torch_mode
+    )
+
+    trainer.build_model(get_model_fn(model_type, config, len(labels), add_crf))
+
+    t_total = num_train_batch * epochs // gradient_accumulation_steps
+
+    train_op = create_optimizer(
+        init_lr=learning_rate,
+        gradients=trainer.gradients,
+        variables=trainer.variables,
+        num_train_steps=t_total,
+        num_warmup_steps=t_total * 0.1)
+
+    trainer.compile(
+        train_op=train_op, max_checkpoints=1)
+
+    trainer.build_handle(train_dataset, &quottrain&quot)
+    trainer.build_handle(dev_dataset, &quotdev&quot)
+    trainer.build_handle(test_dataset, &quottest&quot)
+
+    trainer.from_pretrained(bert_dir)
+
+    best_score = 0.
+
+    tf.logging.info("***** Running training *****")
+    tf.logging.info("  Num epochs = {}".format(epochs))
+    tf.logging.info("  batch size = {}".format(batch_size))
+    tf.logging.info("  Gradient Accumulation steps = {}".format(gradient_accumulation_steps))
+    tf.logging.info("  Total train batch size (accumulation) = {}".format(batch_size * gradient_accumulation_steps))
+    tf.logging.info("  optimizer steps = %d", t_total)
+    tf.logging.info("  Num devices = {}".format(trainer.num_devices))
+    tf.logging.info("  Num params = {}".format(trainer.num_params))
+
+    for epoch in range(epochs):
+        epoch_iter = bar_fn(range(num_train_batch), desc=&quotepoch {} &quot.format(epoch + 1))
+        for step in epoch_iter:
+            <a id="change">if use_torch_mode</a>:
+                train_loss = trainer.backward()
+            else:
+                train_loss<a id="change"> = </a><a id="change">trainer.train_step()</a>
+            epoch_iter.set_description(desc=&quotepoch {} ,loss {:.4f}&quot.format(epoch + 1, train_loss))
+
+            if (step + 1) % gradient_accumulation_steps == 0:
+                <a id="change">if use_torch_mode</a>:
+                    <a id="change">trainer.train_step()</a>
+                    trainer.zero_grad()
+                if trainer.global_step % logging_steps == 0 or trainer.global_step == t_total:
+                    y_true, y_pred = predict(trainer, num_dev_batch, &quotdev&quot)
+                    p, r, f = prf_score(y_true, y_pred)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/huanghuidmml/texttoy/commit/80f077f158de323bc353e7b2eef813fafa83bc35#diff-e3db313ea51363bf31a5835c488e1fc8b58b335879bd6c3fdb371ffada8ab7dbL140' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 62214627</div><div id='project'> Project Name: huanghuidmml/texttoy</div><div id='commit'> Commit Name: 80f077f158de323bc353e7b2eef813fafa83bc35</div><div id='time'> Time: 2020-11-13</div><div id='author'> Author: m13021933043@163.com</div><div id='file'> File Name: examples/ner/run_ptm.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(0)</div><div id='n_method'> N Method Name: main(0)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples/ner/run_ptm.py</div><div id='n_file'> N File Name: examples/ner/run_ptm.py</div><div id='m_start'> M Start Line: 190</div><div id='m_end'> M End Line: 195</div><div id='n_start'> N Start Line: 157</div><div id='n_end'> N End Line: 205</div><BR>

@@ -1,0 +1,70 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        return {**out, "z": z}
+
+    def training_step(self, batch, batch_idx):
+        indexes<a id="change">, (X1, X2), target</a> = batch
+
+        <a id="change">out1</a> = <a id="change">self(X1</a><a id="change">)</a>
+        <a id="change">out2</a> = <a id="change">self(X2</a><a id="change">)</a>
+
+        z1 = <a id="change">out1["z"]</a>
+        z2 = <a id="change">out2["z"]</a>
+        logits1<a id="change"> = out1["logits"]</a>
+        logits2<a id="change"> = out2["logits"]</a>
+
+        &#47&#47 ------- loss -------
+        vicreg_loss = vicreg_loss_func(
+            z1,
+            z2,
+            sim_loss_weight=self.sim_loss_weight,
+            var_loss_weight=self.var_loss_weight,
+            cov_loss_weight=self.cov_loss_weight,
+        )
+
+        &#47&#47 ------- classification loss -------
+        <a id="change">logits = </a><a id="change">torch.cat(</a>(logits1<a id="change">, logits2</a>)<a id="change">)</a>
+        <a id="change">target = </a><a id="change">target.repeat(2</a><a id="change">)</a>
+        class_loss<a id="change"> = </a><a id="change">F.cross_entropy(logits</a>, <a id="change">target</a><a id="change">, ignore_index=-1)</a>
+
+        &#47&#47 just add together the losses to do only one backward()
+        &#47&#47 we have stop gradients on the output y of the model
+        loss<a id="change"> = </a>vicreg_loss<a id="change"> + </a>class_loss
+
+        &#47&#47 ------- metrics -------
+        acc1<a id="change">, acc5 = </a><a id="change">accuracy_at_k(logits</a>, <a id="change">target</a><a id="change">, top_k=(1, 5))</a>
+
+        metrics = {
+            "train_vicreg_loss": vicreg_loss,
+            "train_class_loss": class_loss,
+            "train_acc1": acc1,
+            "train_acc5": acc5,
+        }
+        self.log_dict(metrics, on_epoch=True, sync_dist=True)
+        <a id="change">return </a>loss
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        return {**out, "z": z}
+
+    def training_step(self, batch, batch_idx):
+        <a id="change">out</a> = <a id="change">super().training_step(</a>batch, batch_idx<a id="change">)</a>
+        class_loss = <a id="change">out["loss"]</a>
+        <a id="change">feats1</a><a id="change">, feats2</a> = <a id="change">out["feats"]</a>
+
+        z1 = <a id="change">self.projector(feats1</a><a id="change">)</a>
+        z2 = <a id="change">self.projector(feats2</a><a id="change">)</a>
+
+        &#47&#47 ------- barlow twins loss -------
+        vicreg_loss = vicreg_loss_func(
+            z1,
+            z2,
+            sim_loss_weight=self.sim_loss_weight,
+            var_loss_weight=self.var_loss_weight,
+            cov_loss_weight=self.cov_loss_weight,
+        )
+
+        self.log("train_vicreg_loss", vicreg_loss, on_epoch=True, sync_dist=True)
+
+        <a id="change">return </a>vicreg_loss<a id="change"> + </a>class_loss
+</code></pre>

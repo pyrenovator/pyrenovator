@@ -1,0 +1,93 @@
+<html><h3>Pattern ID :39535
+</h3><img src='112509940.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+        output = (start_logits, end_logits) + outputs[2:]
+
+        <a id="change">return </a>output
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        start_logits, end_logits = paddle.unstack(x=logits, axis=0)
+
+        total_loss<a id="change"> = </a>None
+        if start_positions is not None and end_positions is not None:
+            &#47&#47 If we are on multi-GPU, split add a dimension
+            if start_positions.ndim &gt; 1:
+                start_positions = start_positions.squeeze(-1)
+            if start_positions.ndim &gt; 1:
+                end_positions = end_positions.squeeze(-1)
+            &#47&#47 sometimes the start/end positions are outside our model inputs, we ignore these terms
+            ignored_index<a id="change"> = </a>paddle.shape(start_logits)[1]
+            start_positions = <a id="change">start_positions.clip(</a>0, ignored_index<a id="change">)</a>
+            end_positions = end_positions.clip(0, ignored_index)
+
+            loss_fct = paddle.nn.CrossEntropyLoss(ignore_index=ignored_index)
+            start_loss<a id="change"> = </a>loss_fct(start_logits, start_positions)
+            end_loss = loss_fct(end_logits, end_positions)
+            total_loss = (start_loss + end_loss) / 2
+        if not return_dict:
+            output = (start_logits, end_logits) + outputs[2:]
+            <a id="change">return </a>((total_loss,) + output) if total_loss is not None else output
+
+        return QuestionAnsweringModelOutput(
+            loss=total_loss,</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 6</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/paddlepaddle/paddlenlp/commit/d812834bf689d09b5531ec29b8c0a2c5eb5cbd67#diff-fc75b16a7db93e6aa70d81ee1d491652a9d41789b0815a1a28e35315afbe8c1bL1094' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 112509940</div><div id='project'> Project Name: paddlepaddle/paddlenlp</div><div id='commit'> Commit Name: d812834bf689d09b5531ec29b8c0a2c5eb5cbd67</div><div id='time'> Time: 2023-02-23</div><div id='author'> Author: wanghuijuan03@baidu.com</div><div id='file'> File Name: paddlenlp/transformers/mobilebert/modeling.py</div><div id='m_class'> M Class Name: MobileBertForQuestionAnswering</div><div id='n_method'> N Class Name: MobileBertForQuestionAnswering</div><div id='m_method'> M Method Name: forward(12)</div><div id='n_method'> N Method Name: forward(11)</div><div id='m_parent_class'> M Parent Class: MobileBertPretrainedModel</div><div id='n_parent_class'> N Parent Class: MobileBertPretrainedModel</div><div id='m_file'> M File Name: paddlenlp/transformers/mobilebert/modeling.py</div><div id='n_file'> N File Name: paddlenlp/transformers/mobilebert/modeling.py</div><div id='m_start'> M Start Line: 1390</div><div id='m_end'> M End Line: 1392</div><div id='n_start'> N Start Line: 1094</div><div id='n_end'> N End Line: 1192</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    def forward(self, state):
+        a = F.relu(self.l1(state))
+        a = F.relu(self.l2(a))
+        <a id="change">return </a>self.max_action * torch.tanh(self.l3(a))
+
+
+class Critic(nn.Module):</code></pre><h3>After Change</h3><pre><code class='java'>
+    def forward(self, state):
+        a = F.relu(self.fc1(state))
+        a = F.relu(self.fc2(a))
+        mu<a id="change"> = </a>self.mu_head(a)
+        mu<a id="change"> = </a><a id="change">torch.clip(</a>mu, MEAN_MIN, MEAN_MAX<a id="change">)</a>
+        log_sigma<a id="change"> = </a>self.sigma_head(a)
+        log_sigma = torch.clip(log_sigma, LOG_STD_MIN, LOG_STD_MAX)
+        sigma = torch.exp(log_sigma)
+
+        a_distribution = Normal(mu, sigma)
+        action = a_distribution.rsample()
+
+        logp_pi = a_distribution.log_prob(action).sum(axis=-1)
+        logp_pi -= (2 * (np.log(2) - action - F.softplus(-2 * action))).sum(axis=1)
+        logp_pi = torch.unsqueeze(logp_pi, dim=1)
+
+        action = self.max_action * torch.tanh(action)
+        mu = torch.tanh(mu) * self.max_action
+        <a id="change">return </a>action, logp_pi, mu
+
+    def get_log_density(self, state, action):
+        a = F.relu(self.fc1(state))</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/ryanxhr/dwbc/commit/7bf8e90c7bbf238b9a80c6c033844d37a17e898e#diff-75aa8d0a222c16ec3e4bb78749eef436b3d51c25ea931fe019fed10965e94549L20' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 112509885</div><div id='project'> Project Name: ryanxhr/dwbc</div><div id='commit'> Commit Name: 7bf8e90c7bbf238b9a80c6c033844d37a17e898e</div><div id='time'> Time: 2022-06-24</div><div id='author'> Author: xuhaoran8@jd.com</div><div id='file'> File Name: algos/DWBC.py</div><div id='m_class'> M Class Name: Actor</div><div id='n_method'> N Class Name: Actor</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: algos/DWBC.py</div><div id='n_file'> N File Name: algos/DWBC.py</div><div id='m_start'> M Start Line: 22</div><div id='m_end'> M End Line: 23</div><div id='n_start'> N Start Line: 36</div><div id='n_end'> N End Line: 52</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        image = np.concatenate(
+            [self.vae_decoder(latent_sample=latents[i : i + 1])[0] for i in range(latents.shape[0])]
+        )
+        image<a id="change"> = </a>np.clip(image / 2 + 0.5, 0, 1)
+        image = image.transpose([0, 2, 3, 1])
+        <a id="change">return </a>image
+
+    def prepare_extra_step_kwargs(self, eta):
+        &#47&#47 prepare extra kwargs for the scheduler step, since not all schedulers have the same signature</code></pre><h3>After Change</h3><pre><code class='java'>
+        latents = 1 / 0.18215 * latents
+        latents_shape = latents.shape
+        vae_output_shape = [latents_shape[0], 3, latents_shape[2] * 8, latents_shape[3] * 8]
+        images_vae<a id="change"> = </a>paddle.zeros(vae_output_shape, dtype="float32")
+
+        vae_input_name = self.vae_decoder.model.get_input_info(0).name
+        vae_output_name = self.vae_decoder.model.get_output_info(0).name
+
+        self.vae_decoder.zero_copy_infer(
+            prebinded_inputs={vae_input_name: latents},
+            prebinded_outputs={vae_output_name: images_vae},
+            share_with_raw_ptr=True,
+        )
+
+        images_vae<a id="change"> = </a><a id="change">paddle.clip(</a>images_vae / 2 + 0.5, 0, 1<a id="change">)</a>
+        images = images_vae.transpose([0, 2, 3, 1])
+        <a id="change">return </a>images.numpy()
+
+    def prepare_extra_step_kwargs(self, eta):
+        &#47&#47 prepare extra kwargs for the scheduler step, since not all schedulers have the same signature</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/paddlepaddle/paddlenlp/commit/2b96999ecd879f98d65a0f91c0279cf23d8e2abe#diff-a56d67e76640117d89bb6334825aace1b01ed2319da32f5107a1b86bdd54dab1L220' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 112509949</div><div id='project'> Project Name: paddlepaddle/paddlenlp</div><div id='commit'> Commit Name: 2b96999ecd879f98d65a0f91c0279cf23d8e2abe</div><div id='time'> Time: 2023-02-14</div><div id='author'> Author: 105858416+wwbitejotunn@users.noreply.github.com</div><div id='file'> File Name: ppdiffusers/ppdiffusers/pipelines/stable_diffusion/pipeline_fastdeploy_stable_diffusion.py</div><div id='m_class'> M Class Name: FastDeployStableDiffusionPipeline</div><div id='n_method'> N Class Name: FastDeployStableDiffusionPipeline</div><div id='m_method'> M Method Name: decode_latents(2)</div><div id='n_method'> N Method Name: decode_latents(2)</div><div id='m_parent_class'> M Parent Class: DiffusionPipeline</div><div id='n_parent_class'> N Parent Class: DiffusionPipeline</div><div id='m_file'> M File Name: ppdiffusers/ppdiffusers/pipelines/stable_diffusion/pipeline_fastdeploy_stable_diffusion.py</div><div id='n_file'> N File Name: ppdiffusers/ppdiffusers/pipelines/stable_diffusion/pipeline_fastdeploy_stable_diffusion.py</div><div id='m_start'> M Start Line: 221</div><div id='m_end'> M End Line: 227</div><div id='n_start'> N Start Line: 221</div><div id='n_end'> N End Line: 237</div><BR>

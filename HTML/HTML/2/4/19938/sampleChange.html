@@ -1,0 +1,39 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+        total_loss += loss
+        waste_time = time.time() - start_time
+        <a id="change">print(</a>&quot\nEpoch:&quot+ str(epoch+1) + &quot/&quot + str(Epoch)<a id="change">)</a>
+        print(&quotiter:&quot + str(iteration) + &quot/&quot + str(epoch_size) + &quot || Total Loss: %.4f || %.4fs/step&quot % (total_loss/(iteration+1),waste_time))
+        start_time = time.time()
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            start_time = time.time()
+
+    print(&quotStart Validation&quot)
+    <a id="change">with </a>tqdm<a id="change">(total=epoch_size_val, desc=f&quotEpoch {epoch + 1}/{Epoch}&quot,postfix=dict,mininterval=0.3) as pbar:
+        </a>for iteration, batch in enumerate(genval):
+            if iteration &gt;= epoch_size_val:
+                break
+            images_val, targets_val = batch[0], batch[1]
+
+            with torch.no_grad():
+                if cuda:
+                    images_val = Variable(torch.from_numpy(images_val).type(torch.FloatTensor)).cuda()
+                    targets_val = [Variable(torch.from_numpy(ann).type(torch.FloatTensor)) for ann in targets_val]
+                else:
+                    images_val = Variable(torch.from_numpy(images_val).type(torch.FloatTensor))
+                    targets_val = [Variable(torch.from_numpy(ann).type(torch.FloatTensor)) for ann in targets_val]
+                optimizer.zero_grad()
+                outputs = net(images_val)
+                losses = []
+                for i in range(3):
+                    loss_item = yolo_losses[i](outputs[i], targets_val)
+                    losses.append(loss_item[0])
+                loss = sum(losses)
+                val_loss += loss
+            <a id="change">pbar.set_postfix(**{&quottotal_loss&quot: val_loss.item() / (iteration + 1)})</a>
+            pbar.update(1)
+            
+    print(&quotFinish Validation&quot)</code></pre>

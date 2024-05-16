@@ -1,0 +1,21 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    num_pred = 0
+    for logits, idx in zip(roll_logits, roll_idx):
+        roll_targets = targets[..., idx : idx + H]
+        ce<a id="change"> = </a>F.cross_entropy(logits, roll_targets, reduction="sum")
+        sum_loss = sum_loss<a id="change"> + </a>ce
+        num_pred<a id="change"> = </a>num_pred<a id="change"> + </a><a id="change">roll_targets.numel()</a>
+    return sum_loss<a id="change"> / </a>num_pred
+
+
+def rolling_origin_accuracy(</code></pre><h3>After Change</h3><pre><code class='java'>
+    &#47&#47 roll_idx: (R,)
+    &#47&#47 targets: (B,T)
+    R, B, Q, H = roll_logits.shape
+    roll_logits = <a id="change">roll_logits.reshape(</a>R * B, Q, H<a id="change">)</a>  &#47&#47 (R*B,Q,H)
+    targets = targets.unfold(-1, H, 1).permute(1, 0, 2)  &#47&#47 (W,B,H)
+    targets = targets[roll_idx].reshape(R * B, H)  &#47&#47 (R*B,H)
+    return F.cross_entropy(roll_logits, targets, reduction=reduction)</code></pre>

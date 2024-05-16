@@ -1,0 +1,29 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+def input_embed(ctx: Context, inp: jnp.ndarray) -&gt; jnp.ndarray:
+    ctx = ctx.add_to_prefix("input_embed")
+    spec = base_spec(inp)
+    <a id="change">return </a>jnp.einsum(f"{spec}x,xyz-&gt;{spec}yz", one_hot(inp, ctx.data.vocab_size),
+                      get_param(ctx, "weight", [ctx.dims.vocab, ctx.dims.heads, ctx.dims.features_per_head],
+                                ctx.embedding_std))
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    ctx = ctx.add_to_prefix("input_embed")
+
+    spec = base_spec(inp)
+    embd<a id="change"> = </a>get_param(ctx, "weight", [ctx.dims.vocab, ctx.dims.heads, ctx.dims.features_per_head], ctx.embedding_std)
+    out<a id="change"> = </a>jnp.einsum(f"{spec}x,xyz-&gt;{spec}yz", one_hot(inp, ctx.data.vocab_size), embd)
+
+    position_shape = dims_to_shape(ctx, [ctx.dims.sequence])
+    feature_shape = dims_to_shape(ctx, [ctx.dims.heads, ctx.dims.features_per_head])
+    position_count = util.prod(position_shape)
+    feature_count = util.prod(feature_shape)
+    positions<a id="change"> = </a>jnp.reshape(jnp.arange(0, position_shape), (-1, 1, 1))
+    features = jnp.arange(0, feature_count)
+    features = jnp.reshape(features, [1] + feature_shape) * 4 / feature_count
+    features<a id="change"> = </a><a id="change">jnp.exp(</a>features - math.log(position_count<a id="change"> / </a>2 / math.pi)<a id="change">)</a>
+    <a id="change">return </a>out + jnp.sin(features<a id="change"> * </a>positions)
+
+
+def output_embed(ctx: Context, inp: jnp.ndarray) -&gt; jnp.ndarray:</code></pre>

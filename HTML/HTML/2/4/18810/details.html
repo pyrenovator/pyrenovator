@@ -1,0 +1,73 @@
+<html><h3>Pattern ID :18810
+</h3><img src='61099014.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+def calc_bandwidth(kernel, kernel_num=10, max_scale=2, min_scale=0.1):
+    &#47&#47 * kernel: [batch_size, particle_num, particle_num]
+    kernel_mean = kernel.mean(-1).max(-1)[0]
+    scale_list = <a id="change">list(</a>np.linspace(min_scale, max_scale, kernel_num)<a id="change">)</a>
+    bandwidth_list = [(kernel_mean * scale).view(-1, 1, 1).detach() for scale in scale_list]
+    return bandwidth_list
+</code></pre><h3>After Change</h3><pre><code class='java'>
+def calc_bandwidth(set1, set2, kernel_num=10):
+    batch_size = set1.size(0)
+    seq_len = set2.size(0)
+    set1_centre = <a id="change">set1.mean(-1).view(-1</a>, 1<a id="change">)</a>
+    set2_centre = set2.mean(-1).view(1, -1)
+    distance = (set1_centre - set2_centre).pow(2).pow(0.5).max(-1)[0].max(-1)[0]
+    delta_list<a id="change"> = </a>[distance / np.sqrt(2 * (i + 1)) for i in range(kernel_num)]
+    bandwidth_list = [((2 * delta ** 2)).detach() for delta in delta_list]
+    return bandwidth_list
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/deligentfool/dqn_zoo/commit/23f02caeca29f856c16efb0b1f26b0bfbf15efe9#diff-a3e85498ee9bd41175d1c0b181ebc32feaa59a654db95d7021e3167b795c0a05L10' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 61099014</div><div id='project'> Project Name: deligentfool/dqn_zoo</div><div id='commit'> Commit Name: 23f02caeca29f856c16efb0b1f26b0bfbf15efe9</div><div id='time'> Time: 2020-10-28</div><div id='author'> Author: 1027660817@qq.com</div><div id='file'> File Name: MMD_DQN/mmd_dqn.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: calc_bandwidth(3)</div><div id='n_method'> N Method Name: calc_bandwidth(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: MMD_DQN/mmd_dqn.py</div><div id='n_file'> N File Name: MMD_DQN/mmd_dqn.py</div><div id='m_start'> M Start Line: 10</div><div id='m_end'> M End Line: 14</div><div id='n_start'> N Start Line: 32</div><div id='n_end'> N End Line: 39</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    else:
+        m_parameter = torch.Tensor([0])
+
+    for parameter in <a id="change">list(</a>model.parameters()<a id="change">)</a>:
+        m_parameter = torch.cat((m_parameter, parameter.data.view(-1)))
+
+    return m_parameter[1:]</code></pre><h3>After Change</h3><pre><code class='java'>
+    
+    Squash model parameters or gradients into a single tensor.
+    
+    parameters = [<a id="change">param.data.view(-1</a><a id="change">)</a> for param in model.parameters()
+                  ]  &#47&#47 vectorize each model parameter
+    m_parameters = torch.cat(parameters)
+
+    if cuda:
+        m_parameters<a id="change"> = </a>m_parameters.cuda()
+
+    return m_parameters
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/smilelab-fl/fedlab/commit/12925dd3ac83f8a9e1fbd4ed32fb3ec602217a77#diff-3f9658bd0898d77d8d23be9f67b244ede72a902b683904801797bba2c7b6793fL3' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 61099020</div><div id='project'> Project Name: smilelab-fl/fedlab</div><div id='commit'> Commit Name: 12925dd3ac83f8a9e1fbd4ed32fb3ec602217a77</div><div id='time'> Time: 2021-04-09</div><div id='author'> Author: 928255708@qq.com</div><div id='file'> File Name: fedlab_core/utils/serialization.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: ravel_model_params(2)</div><div id='n_method'> N Method Name: ravel_model_params(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: fedlab_core/utils/serialization.py</div><div id='n_file'> N File Name: fedlab_core/utils/serialization.py</div><div id='m_start'> M Start Line: 10</div><div id='m_end'> M End Line: 19</div><div id='n_start'> N Start Line: 8</div><div id='n_end'> N End Line: 15</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        torch.nn.init.orthogonal_(self.weight)
+
+    def forward(self, inp):
+        size = <a id="change">list(</a>inp.size()<a id="change">)</a>
+        size[1] = self.out_features
+        data = self.unfold(inp)
+        data = self.weight.unsqueeze(0).expand(size[0], -1, -1).bmm(data)
+        data = data.view(*size)</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    def forward(self, inp):
+        batch, feat, width, height = inp.size()
+        output = torch.cat([torch.zeros((batch, 1), device=inp.device, dtype=inp.dtype), <a id="change">inp.view(</a>batch, <a id="change">-1</a><a id="change">)</a>], 1)
+        output = output.gather(1, self.kernel.expand(batch, -1))
+        data<a id="change"> = </a>output.view(batch, feat * 9, width * height)
+        data = self.weight.unsqueeze(0).expand(batch, -1, -1).bmm(data)
+        data = data.view(batch, self.weight.size(0), width, height)
+        return data</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/clashluke/perftorch/commit/5c6b4d3d242e097e6f09800a68bfbe2275d9b16f#diff-425e5068411b5655af62f9ef9caa4fb8a396ad7f5884fb36156ed0a33e938cb4L53' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 61099021</div><div id='project'> Project Name: clashluke/perftorch</div><div id='commit'> Commit Name: 5c6b4d3d242e097e6f09800a68bfbe2275d9b16f</div><div id='time'> Time: 2020-09-05</div><div id='author'> Author: 39779310+ClashLuke@users.noreply.github.com</div><div id='file'> File Name: dilatedconv.py</div><div id='m_class'> M Class Name: DilatedConv</div><div id='n_method'> N Class Name: DilatedConv</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: torch.jit.ScriptModule</div><div id='n_parent_class'> N Parent Class: torch.jit.ScriptModule</div><div id='m_file'> M File Name: dilatedconv.py</div><div id='n_file'> N File Name: dilatedconv.py</div><div id='m_start'> M Start Line: 54</div><div id='m_end'> M End Line: 58</div><div id='n_start'> N Start Line: 41</div><div id='n_end'> N End Line: 46</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    def test_encode_graph_returns_the_expected_shape(self):
+        &#47&#47 Given
+        time_steps = 1
+        encoded_graph_shape_expected = <a id="change">list(</a>BASE_GRAPH_NODE_FEATURES.shape<a id="change">)</a>
+
+        &#47&#47 When
+        encoded_graph_shape = rnn_cpp.encode(time_steps,
+                                             self.number_of_nodes,</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 Given
+        time_steps = 1
+        batch_size = 1
+        encoded_graph_shape_expected<a id="change"> = </a>list(<a id="change">BASE_GRAPH_NODE_FEATURES.view(1</a>, -1<a id="change">)</a>.shape)
+
+        &#47&#47 When
+        _, _, encodings, _, _ = rnn_cpp.forward(time_steps,</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/kovanostra/message-passing-neural-network/commit/0a1546bfb68f5863677f05e18f6aa41ea7816813#diff-153fe49c5f16c8be19469fd080806ae0d41ae01eeb4039dfc8c9adba2278a5c1L66' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 61099016</div><div id='project'> Project Name: kovanostra/message-passing-neural-network</div><div id='commit'> Commit Name: 0a1546bfb68f5863677f05e18f6aa41ea7816813</div><div id='time'> Time: 2020-06-22</div><div id='author'> Author: kovanostra@gmail.com</div><div id='file'> File Name: tests/model/test_graph_rnn_encoder.py</div><div id='m_class'> M Class Name: TestGraphRNNEncoder</div><div id='n_method'> N Class Name: TestGraphRNNEncoder</div><div id='m_method'> M Method Name: test_encode_graph_returns_the_expected_shape(1)</div><div id='n_method'> N Method Name: test_encode_graph_returns_the_expected_shape(1)</div><div id='m_parent_class'> M Parent Class: TestCase</div><div id='n_parent_class'> N Parent Class: TestCase</div><div id='m_file'> M File Name: tests/model/test_graph_rnn_encoder.py</div><div id='n_file'> N File Name: tests/model/test_graph_rnn_encoder.py</div><div id='m_start'> M Start Line: 68</div><div id='m_end'> M End Line: 83</div><div id='n_start'> N Start Line: 74</div><div id='n_end'> N End Line: 94</div><BR>

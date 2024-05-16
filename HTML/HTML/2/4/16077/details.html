@@ -1,0 +1,63 @@
+<html><h3>Pattern ID :16077
+</h3><img src='53893074.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                out = _stateless.functional_call(self._model, {n: p for n, p in zip(keys, params)}, x)
+                return out
+            self._j_list: tuple[torch.Tensor] = torch.autograd.functional.jacobian(func, values, create_graph=True)
+            self._j_list = <a id="change">[j.squeeze(1).flatten(start_dim=1) for j in self._j_list]</a> &#47&#47 remove hidden and predict bias dimensions
+
+            &#47&#47 vectorized hessian (https://github.com/pytorch/pytorch/issues/49171)
+            def loss(*params):</code></pre><h3>After Change</h3><pre><code class='java'>
+                    return out.square().sum()
+                self._h_list: tuple[torch.Tensor] = torch.autograd.functional.hessian(func, tuple(self._model.parameters()), create_graph=False)
+                self._h_list = [self._h_list[i][i] for i in range(len(self._h_list))] &#47&#47 filter j-th element
+                self._h_list<a id="change"> = </a>[<a id="change">h.flatten(end_dim=len(self._h_list[i].shape)-len(d_p_list[i].shape)-1).flatten(start_dim=1)</a> for i, h in enumerate(self._h_list)] &#47&#47 (NC)x(BCHW)
+
+            self.gna_update(
+                params_with_grad,</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/hahnec/torchimize/commit/d65b33c9e39df589093da6cf91b8998beb6aead2#diff-cf9a1e9bfb69bdf33a7cd99ce087c7d7f64730b5db5485b7d221927020235390L58' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 53893074</div><div id='project'> Project Name: hahnec/torchimize</div><div id='commit'> Commit Name: d65b33c9e39df589093da6cf91b8998beb6aead2</div><div id='time'> Time: 2022-07-23</div><div id='author'> Author: christopher.hahne@unibe.ch</div><div id='file'> File Name: torchimize/optimizer/gna_opt.py</div><div id='m_class'> M Class Name: GNA</div><div id='n_method'> N Class Name: GNA</div><div id='m_method'> M Method Name: step(3)</div><div id='n_method'> N Method Name: step(3)</div><div id='m_parent_class'> M Parent Class: Optimizer</div><div id='n_parent_class'> N Parent Class: Optimizer</div><div id='m_file'> M File Name: torchimize/optimizer/gna_opt.py</div><div id='n_file'> N File Name: torchimize/optimizer/gna_opt.py</div><div id='m_start'> M Start Line: 58</div><div id='m_end'> M End Line: 87</div><div id='n_start'> N Start Line: 62</div><div id='n_end'> N End Line: 84</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+        logger.debug("Grid mesh width is " + str(self._h))
+
+        self._points = torch.tensor(<a id="change">[x for x in grid_1d]</a>)
+
+        logger.info("Integration grid created.")
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        points = torch.meshgrid(*grid_1d)
+
+        &#47&#47 Flatten to 1D
+        points<a id="change"> = </a>[<a id="change">p.flatten()</a> for p in points]
+
+        self._points = torch.stack((tuple(points))).transpose(0, 1)
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/esa/torchquad/commit/baabec24f577f57a278a2d5521fc994dad8e540e#diff-2b3ef6a74bc21eda8fdbba5ea4408a68e6843694c145c2d539ef10c7a041676fL16' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 53893072</div><div id='project'> Project Name: esa/torchquad</div><div id='commit'> Commit Name: baabec24f577f57a278a2d5521fc994dad8e540e</div><div id='time'> Time: 2020-11-18</div><div id='author'> Author: contact@pablo-gomez.net</div><div id='file'> File Name: torchquad/integration/integration_grid.py</div><div id='m_class'> M Class Name: IntegrationGrid</div><div id='n_method'> N Class Name: IntegrationGrid</div><div id='m_method'> M Method Name: __init__(3)</div><div id='n_method'> N Method Name: __init__(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: torchquad/integration/integration_grid.py</div><div id='n_file'> N File Name: torchquad/integration/integration_grid.py</div><div id='m_start'> M Start Line: 37</div><div id='m_end'> M End Line: 43</div><div id='n_start'> N Start Line: 24</div><div id='n_end'> N End Line: 54</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+        idx = self._get_src_permutation_idx(indices)
+
+        target_classes_o = torch.cat(<a id="change">[t["labels"][J] for t, (_, J) in zip(targets, indices)]</a>)
+        target_classes = torch.full(src_logits.shape[:2], 0,
+                                    dtype=torch.int64, device=src_logits.device)
+        target_classes[idx] = target_classes_o</code></pre><h3>After Change</h3><pre><code class='java'>
+    def loss_class(self, outputs, matches, soft_labels):
+        assert &quotpred_logits&quot in outputs
+        cls_preds = outputs[&quotpred_logits&quot].flatten()
+        cls_labels<a id="change"> = </a><a id="change">matches.flatten()</a>.float()
+
+        &#47&#47 Remove non existent classes
+        valid_ids = (soft_labels.flatten() != -1).nonzero()</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/bwittmann/transoar/commit/50cc4661dc99397fe437a829cff6659bfd58eaba#diff-72325bd8560b0c87dc6c780bd674d1f642bdf043c4336b8d7d2033c2cfe1d9efL40' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 53893086</div><div id='project'> Project Name: bwittmann/transoar</div><div id='commit'> Commit Name: 50cc4661dc99397fe437a829cff6659bfd58eaba</div><div id='time'> Time: 2022-04-19</div><div id='author'> Author: bastian.wittmann@tum.de</div><div id='file'> File Name: transoar/models/criterion.py</div><div id='m_class'> M Class Name: TransoarCriterion</div><div id='n_method'> N Class Name: TransoarCriterion</div><div id='m_method'> M Method Name: loss_class(4)</div><div id='n_method'> N Method Name: loss_class(4)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: transoar/models/criterion.py</div><div id='n_file'> N File Name: transoar/models/criterion.py</div><div id='m_start'> M Start Line: 45</div><div id='m_end'> M End Line: 54</div><div id='n_start'> N Start Line: 42</div><div id='n_end'> N End Line: 48</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    def __init__(self, *args):
+        super(nn.ModuleList, self).__init__()
+        mods = <a id="change">[m if isinstance(m, (list, tuple)) else [m] for m in args]</a>
+        self += nncore.concat_list(mods)
+
+
+class ModuleDict(nn.ModuleDict):</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    def __init__(self, *args):
+        super(nn.ModuleList, self).__init__()
+        self<a id="change"> += </a><a id="change">nncore.flatten(</a>args<a id="change">)</a>
+
+
+class ModuleDict(nn.ModuleDict):
+    </code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/yeliudev/nncore/commit/a7816544d5502cedf4f8527b0eedb41c5ec731fa#diff-c447a7e5b78d45b9711b907cfb9331cdb23a3ec84d6a048dcfede897f4e73d7fL35' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 53893082</div><div id='project'> Project Name: yeliudev/nncore</div><div id='commit'> Commit Name: a7816544d5502cedf4f8527b0eedb41c5ec731fa</div><div id='time'> Time: 2021-11-03</div><div id='author'> Author: yeliudev@outlook.com</div><div id='file'> File Name: nncore/nn/blocks/bundle.py</div><div id='m_class'> M Class Name: ModuleList</div><div id='n_method'> N Class Name: ModuleList</div><div id='m_method'> M Method Name: __init__(1)</div><div id='n_method'> N Method Name: __init__(1)</div><div id='m_parent_class'> M Parent Class: nn.ModuleList</div><div id='n_parent_class'> N Parent Class: nn.ModuleList</div><div id='m_file'> M File Name: nncore/nn/blocks/bundle.py</div><div id='n_file'> N File Name: nncore/nn/blocks/bundle.py</div><div id='m_start'> M Start Line: 37</div><div id='m_end'> M End Line: 38</div><div id='n_start'> N Start Line: 37</div><div id='n_end'> N End Line: 37</div><BR>

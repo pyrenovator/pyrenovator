@@ -1,0 +1,29 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    if exists(mask):
+        logits = logits.masked_fill(~mask, -torch.finfo(logits.dtype).max)
+
+    num_keep = max(1,  <a id="change">int(</a>(1 - dropout) * n<a id="change">)</a>)
+    keep_indices = logits.topk(num_keep, dim = 1).indices
+
+    batch_indices = torch.arange(b, device = device)</code></pre><h3>After Change</h3><pre><code class='java'>
+        logits = logits.masked_fill(~mask, -torch.finfo(logits.dtype).max)
+
+    keep_prob = 1. - dropout
+    num_keep<a id="change"> = </a>max(1,  int(keep_prob * n))
+    keep_indices = logits.topk(num_keep, dim = 1).indices
+
+    batch_indices = torch.arange(b, device = device)
+    batch_indices = rearrange(batch_indices, &quotb -&gt; b 1&quot)
+
+    seq = seq[batch_indices, keep_indices]
+
+    if exists(mask):
+        seq_counts = mask.sum(dim = -1)
+        seq_keep_counts<a id="change"> = </a>torch.ceil(seq_counts * keep_prob).int()
+        keep_mask<a id="change"> = </a><a id="change">torch.arange(</a>num_keep<a id="change">, device = device)</a> &lt; rearrange(seq_keep_counts, &quotb -&gt; b 1&quot)
+
+        mask = mask[batch_indices, keep_indices] & keep_mask
+</code></pre>

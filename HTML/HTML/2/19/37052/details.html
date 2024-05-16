@@ -1,0 +1,236 @@
+<html><h3>Pattern ID :37052
+</h3><img src='105517608.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+            if is_mixed_precision:
+                &#47&#47 2/3 & 3/3 of mixed precision training with amp
+                <a id="change">with amp.scale_loss(</a><a id="change">loss, optimizer) as scaled_loss:
+                    </a>scaled_loss.backward()
+            else:
+                loss.backward()
+            <a id="change">optimizer.step()</a>
+            if lr_scheduler is not None:
+                lr_scheduler.step()
+
+            &#47&#47 EMA update</code></pre><h3>After Change</h3><pre><code class='java'>
+    if val_num_steps is None:
+        val_num_steps = len(train_loader)
+
+    <a id="change">if is_mixed_precision</a>:
+        scaler<a id="change"> = GradScaler()</a>
+
+    net.train()
+
+    &#47&#47 Use EMA to report final performance instead of select best checkpoint with valtiny
+    ema = EMA(net=net, decay=decay)
+
+    epoch = 0
+
+    &#47&#47 Training
+    running_loss = 0.0
+    while epoch &lt; num_epochs:
+        train_correct = 0
+        train_all = 0
+        time_now = time.time()
+        for i, data in enumerate(train_loader, 0):
+            inputs, labels = data
+            inputs = inputs.to(device)
+            labels = labels.to(device)
+            optimizer.zero_grad()
+            train_all += labels.shape[0]
+
+            &#47&#47 mixup data within the batch
+            if alpha is not None:
+                inputs, labels_a, labels_b, lam = mixup_data(x=inputs, y=labels, alpha=alpha)
+
+            <a id="change">with autocast</a><a id="change">(is_mixed_precision):
+                </a>outputs = net(inputs)
+
+            if alpha is not None:
+                &#47&#47 Pseudo training accuracy & interesting loss
+                loss = mixup_criterion(criterion, outputs, labels_a, labels_b, lam)
+                predicted = outputs.argmax(1)
+                train_correct += (lam * (predicted == labels_a).sum().float().item()
+                                  + (1 - lam) * (predicted == labels_b).sum().float().item())
+            else:
+                train_correct += (labels == outputs.argmax(1)).sum().item()
+                loss = criterion(outputs, labels)
+
+            if is_mixed_precision:
+                <a id="change">accelerator.backward(</a><a id="change">scaler.scale(loss</a><a id="change">))</a>
+                scaler.step(optimizer)
+                scaler.update()
+            else:
+                <a id="change">accelerator.backward(loss</a><a id="change">)</a>
+                <a id="change">optimizer.step()</a>
+            if lr_scheduler is not None:
+                lr_scheduler.step()
+
+            &#47&#47 EMA update</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 14</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/voldemortx/dst-cbc/commit/6011a78ca028c58259d0181a11905e1d258ff7b9#diff-71a2201970b0a3bc55689d294d77c1ce7f12bacb820d3a33e86d2077b4d60a4dL92' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 105517608</div><div id='project'> Project Name: voldemortx/dst-cbc</div><div id='commit'> Commit Name: 6011a78ca028c58259d0181a11905e1d258ff7b9</div><div id='time'> Time: 2021-06-06</div><div id='author'> Author: zyfeng97@outlook.com</div><div id='file'> File Name: classification/main_fs.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train(17)</div><div id='n_method'> N Method Name: train(17)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: classification/main_fs.py</div><div id='n_file'> N File Name: classification/main_fs.py</div><div id='m_start'> M Start Line: 115</div><div id='m_end'> M End Line: 133</div><div id='n_start'> N Start Line: 92</div><div id='n_end'> N End Line: 138</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+            if is_mixed_precision:
+                &#47&#47 2/3 & 3/3 of mixed precision training with amp
+                <a id="change">with amp.scale_loss(</a><a id="change">loss, optimizer) as scaled_loss:
+                    </a>scaled_loss.backward()
+            else:
+                loss.backward()
+            <a id="change">optimizer.step()</a>
+            lr_scheduler.step()
+
+            &#47&#47 Logging
+            for key in stats.keys():</code></pre><h3>After Change</h3><pre><code class='java'>
+    if with_sup:
+        iter_sup = iter(loader_sup)
+
+    <a id="change">if is_mixed_precision</a>:
+        scaler<a id="change"> = GradScaler()</a>
+
+    &#47&#47 Training
+    running_stats = {&quotdisagree&quot: -1, &quotcurrent_win&quot: -1, &quotavg_weights&quot: 1.0, &quotloss&quot: 0.0}
+    while epoch &lt; num_epochs:
+        conf_mat = ConfusionMatrix(num_classes)
+        time_now = time.time()
+        for i, data in enumerate(loader_c, 0):
+            &#47&#47 Combine loaders (maybe just alternate training will work)
+            if with_sup:
+                inputs_c, labels_c = data
+                inputs_sup, labels_sup = next(iter_sup, (0, 0))
+                if type(inputs_sup) == type(labels_sup) == int:
+                    iter_sup = iter(loader_sup)
+                    inputs_sup, labels_sup = next(iter_sup, (0, 0))
+
+                &#47&#47 Formatting (prob: label + max confidence, label: just label)
+                float_labels_sup = labels_sup.clone().float().unsqueeze(1)
+                probs_sup = torch.cat([float_labels_sup, torch.ones_like(float_labels_sup)], dim=1)
+                probs_c = labels_c.clone()
+                labels_c = labels_c[:, 0, :, :].long()
+
+                &#47&#47 Concatenating
+                inputs = torch.cat([inputs_c, inputs_sup])
+                labels = torch.cat([labels_c, labels_sup])
+                probs = torch.cat([probs_c, probs_sup])
+
+                probs = probs.to(device)
+            else:
+                inputs, labels = data
+
+            &#47&#47 Normal training
+            inputs = inputs.to(device)
+            labels = labels.to(device)
+            optimizer.zero_grad()
+            <a id="change">with autocast</a><a id="change">(is_mixed_precision):
+                </a>outputs = net(inputs)[&quotout&quot]
+                outputs = torch.nn.functional.interpolate(outputs, size=input_sizes[0], mode=&quotbilinear&quot, align_corners=True)
+                conf_mat.update(labels.flatten(), outputs.argmax(1).flatten())
+
+                if with_sup:
+                    loss, stats = criterion(outputs, probs, inputs_c.shape[0])
+                else:
+                    loss, stats = criterion(outputs, labels)
+
+            if is_mixed_precision:
+                <a id="change">accelerator.backward(</a><a id="change">scaler.scale(</a>loss<a id="change">))</a>
+                scaler.step(optimizer)
+                scaler.update()
+            else:
+                <a id="change">accelerator.backward(</a>loss<a id="change">)</a>
+                <a id="change">optimizer.step()</a>
+
+            lr_scheduler.step()
+
+            &#47&#47 Logging</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/voldemortx/dst-cbc/commit/6011a78ca028c58259d0181a11905e1d258ff7b9#diff-8967e2b9e7d9094c8c5fd0817345ecdcce279fd2adb6f49ee305b907e32c0726L155' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 105517606</div><div id='project'> Project Name: voldemortx/dst-cbc</div><div id='commit'> Commit Name: 6011a78ca028c58259d0181a11905e1d258ff7b9</div><div id='time'> Time: 2021-06-06</div><div id='author'> Author: zyfeng97@outlook.com</div><div id='file'> File Name: segmentation/main.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train(19)</div><div id='n_method'> N Method Name: train(19)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: segmentation/main.py</div><div id='n_file'> N File Name: segmentation/main.py</div><div id='m_start'> M Start Line: 205</div><div id='m_end'> M End Line: 220</div><div id='n_start'> N Start Line: 173</div><div id='n_end'> N End Line: 227</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+            if is_mixed_precision:
+                &#47&#47 2/3 & 3/3 of mixed precision training with amp
+                <a id="change">with amp.scale_loss(</a><a id="change">loss, optimizer) as scaled_loss:
+                    </a>scaled_loss.backward()
+            else:
+                loss.backward()
+            <a id="change">optimizer.step()</a>
+            criterion.step()
+            if lr_scheduler is not None:
+                lr_scheduler.step()
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    if val_num_steps is None:
+        val_num_steps = min_len
+
+    <a id="change">if is_mixed_precision</a>:
+        scaler<a id="change"> = GradScaler()</a>
+
+    net.train()
+
+    &#47&#47 Use EMA to report final performance instead of select best checkpoint with valtiny
+    ema = EMA(net=net, decay=decay)
+
+    epoch = 0
+
+    &#47&#47 Training
+    running_loss = 0.0
+    running_stats = {&quotdisagree&quot: -1, &quotcurrent_win&quot: -1, &quotavg_weights&quot: 1.0, &quotgamma1&quot: 0, &quotgamma2&quot: 0}
+    iter_labeled = iter(labeled_loader)
+    while epoch &lt; num_epochs:
+        train_correct = 0
+        train_all = 0
+        time_now = time.time()
+        for i, data in enumerate(pseudo_labeled_loader, 0):
+            &#47&#47 Pseudo labeled data
+            inputs_pseudo, labels_pseudo = data
+            inputs_pseudo, labels_pseudo = inputs_pseudo.to(device), labels_pseudo.to(device)
+            
+            &#47&#47 Hard labels
+            probs_pseudo = labels_pseudo.clone().detach()
+            labels_pseudo = labels_pseudo.argmax(-1)  &#47&#47 data type?
+
+            &#47&#47 Labeled data
+            inputs_labeled, labels_labeled = next(iter_labeled, (0, 0))
+            if type(inputs_labeled) == type(labels_labeled) == int:
+                iter_labeled = iter(labeled_loader)
+                inputs_labeled, labels_labeled = next(iter_labeled, (0, 0))
+            inputs_labeled, labels_labeled = inputs_labeled.to(device), labels_labeled.to(device)
+
+            &#47&#47 To probabilities (in fact, just one-hot)
+            probs_labeled = torch.nn.functional.one_hot(labels_labeled.clone().detach(), num_classes=num_classes) \
+                .float()
+
+            &#47&#47 Combine
+            inputs = torch.cat([inputs_pseudo, inputs_labeled])
+            labels = torch.cat([labels_pseudo, labels_labeled])
+            probs = torch.cat([probs_pseudo, probs_labeled])
+            optimizer.zero_grad()
+            train_all += labels.shape[0]
+
+            &#47&#47 mixup data within the batch
+            if alpha != -1:
+                dynamic_weights, stats = criterion.dynamic_weights_calc(
+                    net=net, inputs=inputs, targets=probs,
+                    split_index=inputs_pseudo.shape[0], labeled_weight=labeled_weight)
+                inputs, dynamic_weights, labels_a, labels_b, lam = mixup_data(x=inputs, w=dynamic_weights, y=labels,
+                                                                              alpha=alpha, keep_max=True)
+            <a id="change">with autocast</a><a id="change">(is_mixed_precision):
+                </a>outputs = net(inputs)
+
+            if alpha != -1:
+                &#47&#47 Pseudo training accuracy & interesting loss
+                predicted = outputs.argmax(1)
+                train_correct += (lam * (predicted == labels_a).sum().float().item()
+                                  + (1 - lam) * (predicted == labels_b).sum().float().item())
+                loss, true_loss = criterion(pred=outputs, y_a=labels_a, y_b=labels_b, lam=lam,
+                                            dynamic_weights=dynamic_weights)
+            else:
+                train_correct += (labels == outputs.argmax(1)).sum().item()
+                loss, true_loss, stats = criterion(inputs=outputs, targets=probs, split_index=inputs_pseudo.shape[0],
+                                                   gamma1=gamma1, gamma2=gamma2)
+
+            if is_mixed_precision:
+                <a id="change">accelerator.backward(</a><a id="change">scaler.scale(</a>loss<a id="change">))</a>
+                scaler.step(optimizer)
+                scaler.update()
+            else:
+                <a id="change">accelerator.backward(</a>loss<a id="change">)</a>
+                <a id="change">optimizer.step()</a>
+            criterion.step()
+            if lr_scheduler is not None:
+                lr_scheduler.step()
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/voldemortx/dst-cbc/commit/6011a78ca028c58259d0181a11905e1d258ff7b9#diff-f465be7137c967d17632e0cf88214a10ddd15a1e2012b69d4ce1709822867e27L144' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 105517607</div><div id='project'> Project Name: voldemortx/dst-cbc</div><div id='commit'> Commit Name: 6011a78ca028c58259d0181a11905e1d258ff7b9</div><div id='time'> Time: 2021-06-06</div><div id='author'> Author: zyfeng97@outlook.com</div><div id='file'> File Name: classification/main_dmt.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train(23)</div><div id='n_method'> N Method Name: train(23)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: classification/main_dmt.py</div><div id='n_file'> N File Name: classification/main_dmt.py</div><div id='m_start'> M Start Line: 206</div><div id='m_end'> M End Line: 226</div><div id='n_start'> N Start Line: 161</div><div id='n_end'> N End Line: 234</div><BR>

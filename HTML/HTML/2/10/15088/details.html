@@ -1,0 +1,120 @@
+<html><h3>Pattern ID :15088
+</h3><img src='50979130.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        else:
+            seq_mask = None
+
+        <a id="change">return </a>att_feats<a id="change">, seq, att_masks, seq_mask</a>
+
+    def _forward(self, fc_feats, att_feats, seq, att_masks=None, labels=None):
+        att_feats, seq, att_masks, seq_mask = self._prepare_feature_forward(att_feats, att_masks, seq, labels)
+        out = self.model(att_feats, seq, att_masks, seq_mask, memory_matrix=self.memory_matrix, labels = labels)</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 Memory querying and responding for visual features
+
+        &#47&#47dummy_memory_matrix = self.memory_matrix.unsqueeze(0).expand(att_feats.size(0), self.memory_matrix.size(0), self.memory_matrix.size(1))
+        max_num_protype = max((<a id="change">labels[:,-1]</a>*3 + labels[:,:-1].sum(-1))) * self.num_prototype
+        query_matrix = self.memory_matrix.new_zeros(att_feats.size(0), max_num_protype, self.memory_matrix.shape[-1])
+        cmn_masks = self.memory_matrix.new_zeros(query_matrix.shape[0], att_feats.size(1), max_num_protype)
+        for i in range(att_feats.size(0)):
+            cur_query_matrix = []
+            &#47&#47print(labels[i])
+            for j in range(len(labels[i])):
+                if labels[i, j] == 1:
+                    if j != len(labels[i])-1:
+                        cur_query_matrix.extend(self.memory_matrix[j*self.num_prototype:(j+1)*self.num_prototype, :])
+                    else:
+                        cur_query_matrix.extend(self.memory_matrix[j * self.num_prototype:, :])
+
+            cur_query_matrix = torch.stack(cur_query_matrix, 0)
+            &#47&#47print(&quot111&quot,query_matrix[i, :cur_query_matrix.shape[0], :].shape, cur_query_matrix.shape)
+            <a id="change">query_matrix</a>[i, :cur_query_matrix.shape[0], :] = cur_query_matrix
+            cmn_masks[i, :, :cur_query_matrix.shape[0]]<a id="change"> = </a>1
+
+        responses<a id="change"> = </a>self.cmn(att_feats, query_matrix, query_matrix, cmn_masks)
+        &#47&#47embeddings = embeddings + responses
+        att_feats = att_feats + responses
+
+        &quot&quot&quot
+
+        dummy_memory_matrix = torch.stack([self.memory_matrix[labels[i]==1,:] for i in range(att_feats.size(0))])
+
+
+        &#47&#47dummy_memory_matrix = torch.stack([torch.cat([self.memory_matrix, self.global_memory], 0) for index in idxs])
+        responses = self.cmn(att_feats, dummy_memory_matrix, dummy_memory_matrix)
+
+        att_feats = att_feats + responses
+        &quot&quot&quot
+        &#47&#47 Memory querying and responding for visual features
+
+        att_masks = att_masks.unsqueeze(-2)
+        if seq is not None:
+            seq = seq[:, :-1]
+            seq_mask = (seq.data &gt; 0)
+            seq_mask[:, 0] += True
+
+            seq_mask = seq_mask.unsqueeze(-2)
+            seq_mask = seq_mask & subsequent_mask(seq.size(-1)).to(seq_mask)
+        else:
+            seq_mask = None
+
+        <a id="change">return </a>att_feats<a id="change">, seq, att_masks, seq_mask, query_matrix, cmn_masks[:,0,:]</a>
+
+    def _forward(self, fc_feats, att_feats, seq, att_masks=None, labels=None):
+        att_feats, seq, att_masks, seq_mask, query_matrix, cmn_masks = \
+            self._prepare_feature_forward(att_feats, att_masks, seq, labels)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 9</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/markin-wang/xpronet/commit/f1eadeb44fcd3ca935352b9cc7d30eab0fa8c753#diff-b630bb1eacf9d665efc0c82b70d348b40f19422267ac86cbe6329800b8b3d4d3L391' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 50979130</div><div id='project'> Project Name: markin-wang/xpronet</div><div id='commit'> Commit Name: f1eadeb44fcd3ca935352b9cc7d30eab0fa8c753</div><div id='time'> Time: 2021-11-21</div><div id='author'> Author: cserwj@gmail.com</div><div id='file'> File Name: modules/base_cmn.py</div><div id='m_class'> M Class Name: BaseCMN</div><div id='n_method'> N Class Name: BaseCMN</div><div id='m_method'> M Method Name: _prepare_feature_forward(5)</div><div id='n_method'> N Method Name: _prepare_feature_forward(5)</div><div id='m_parent_class'> M Parent Class: AttModel</div><div id='n_parent_class'> N Parent Class: AttModel</div><div id='m_file'> M File Name: modules/base_cmn.py</div><div id='n_file'> N File Name: modules/base_cmn.py</div><div id='m_start'> M Start Line: 402</div><div id='m_end'> M End Line: 451</div><div id='n_start'> N Start Line: 391</div><div id='n_end'> N End Line: 444</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+        return cv2.morphologyEx(img, cv2.MORPH_DILATE, kernel=np.ones((2, 2)))
+
+    <a id="change">return </a>inner(positive_mask)<a id="change">, inner(negative_mask)</a>
+
+
+def refine(img, seg_img, thresh=100, noise_objects_size=20):
+    positive_mask, negative_mask = positive_negative_masks(seg_img, thresh, noise_objects_size)</code></pre><h3>After Change</h3><pre><code class='java'>
+    negative_mask[red &gt;= blue] = 0
+
+    cell_mapping = np.zeros_like(mask)
+    <a id="change">cell_mapping[:, :, 0]</a> = positive_mask
+    <a id="change">cell_mapping</a>[:, :, 2] = negative_mask
+
+    compute_cell_mapping(cell_mapping, mask.shape, small_object_size=50)
+    cell_mapping[cell_mapping &gt; 0]<a id="change"> = </a>255
+
+    positive_mask = cell_mapping[:, :, 0]
+    negative_mask<a id="change"> = </a>cell_mapping[:, :, 2]
+
+    def inner(img):
+        img = remove_small_objects_from_image(img, noise_objects_size)
+        img = ndi.binary_fill_holes(img).astype(np.uint8)
+        return cv2.morphologyEx(img, cv2.MORPH_DILATE, kernel=np.ones((2, 2)))
+
+    &#47&#47 return inner(positive_mask), inner(negative_mask)
+    <a id="change">return </a>remove_noises_fill_empty_holes(positive_mask, noise_objects_size)<a id="change">, remove_noises_fill_empty_holes(negative_mask, noise_objects_size)</a>
+
+
+def refine(img, seg_img, thresh=100, noise_objects_size=20):
+    positive_mask, negative_mask = positive_negative_masks(seg_img, thresh, noise_objects_size)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/nadeemlab/deepliif/commit/194b1adf21c08ba47d8f12a44a0aa9abd3b53e78#diff-128b53063e00ee8db27b26e0910e434949dba42ba17a83423493d487065704b2L77' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 50979162</div><div id='project'> Project Name: nadeemlab/deepliif</div><div id='commit'> Commit Name: 194b1adf21c08ba47d8f12a44a0aa9abd3b53e78</div><div id='time'> Time: 2021-10-08</div><div id='author'> Author: ghahremani.parmida@gmail.com</div><div id='file'> File Name: deepliif/postprocessing.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: positive_negative_masks(3)</div><div id='n_method'> N Method Name: positive_negative_masks(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: deepliif/postprocessing.py</div><div id='n_file'> N File Name: deepliif/postprocessing.py</div><div id='m_start'> M Start Line: 83</div><div id='m_end'> M End Line: 99</div><div id='n_start'> N Start Line: 158</div><div id='n_end'> N End Line: 186</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    u = torch.tensor(u, dtype=torch.float32)
+    v = torch.tensor(v, dtype=torch.float32)
+    p = torch.tensor(p, dtype=torch.float32)
+    <a id="change">return </a>x<a id="change">, y, t, u, v, p, N, T</a>
+
+
+&#47&#47 定义网络结构,由layer列表指定网络层数和神经元数</code></pre><h3>After Change</h3><pre><code class='java'>
+    p = PP.flatten()[:, None]
+    temp = np.concatenate((x,y,t,u,v,p),1)
+    feature_mat = np.empty((2, 6))
+    <a id="change">feature_mat[0, :]</a> = np.max(temp, 0)
+    <a id="change">feature_mat</a>[1, :]<a id="change"> = </a>np.min(temp, 0)
+    x = torch.tensor(x, dtype=torch.float32)
+    y = torch.tensor(y, dtype=torch.float32)
+    t = torch.tensor(t, dtype=torch.float32)
+    u = torch.tensor(u, dtype=torch.float32)
+    v = torch.tensor(v, dtype=torch.float32)
+    p = torch.tensor(p, dtype=torch.float32)
+    feature_mat<a id="change"> = </a>torch.tensor(feature_mat, dtype=torch.float32)
+    <a id="change">return </a>x<a id="change">, y, t, u, v, p, N, T, feature_mat</a>
+
+
+def read_data_portion(filename, portion):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/shengfeng233/pinn-for-ns-equation/commit/4e7c12794c97df9cd7c2097437954c96e614a65f#diff-b713a88202cb60da86c6cb43b5e56bed898d05c9c6a9ecdd8b6ae43f18230b6bL17' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 50979190</div><div id='project'> Project Name: shengfeng233/pinn-for-ns-equation</div><div id='commit'> Commit Name: 4e7c12794c97df9cd7c2097437954c96e614a65f</div><div id='time'> Time: 2021-12-02</div><div id='author'> Author: 58844155+Shengfeng233@users.noreply.github.com</div><div id='file'> File Name: pinn_model.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: read_data(1)</div><div id='n_method'> N Method Name: read_data(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: pinn_model.py</div><div id='n_file'> N File Name: pinn_model.py</div><div id='m_start'> M Start Line: 26</div><div id='m_end'> M End Line: 48</div><div id='n_start'> N Start Line: 28</div><div id='n_end'> N End Line: 55</div><BR>

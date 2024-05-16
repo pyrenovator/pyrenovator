@@ -1,0 +1,60 @@
+<html><h3>Pattern ID :32267
+</h3><img src='94398167.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+        &#47&#47 see = np.random.randint(0, 300)
+        see = 250  &#47&#47 net.receptive_field
+        pred<a id="change"> = </a>net.forecast_steps
+        yhat = torch.empty(see + pred)
+        yhat[:see] = x[:see]
+        with torch.no_grad():
+            mu = net(yhat[:see].view(1, 1, -1))[0, :, -1]
+            <a id="change">yhat[see : see + pred]</a> = mu
+
+        plt.plot(ty, y, c="k")
+        plt.plot(tx[:see], y[:see])</code></pre><h3>After Change</h3><pre><code class='java'>
+    &#47&#47 horizon = net.forecast_steps
+    horizon = 128
+    see = 250  &#47&#47 net.receptive_field
+    for ax, s in <a id="change">zip(</a>grid, dataset<a id="change">)</a>:
+        x, y, tx, ty = s["x"], s["y"], s["tx"], s["ty"]
+
+        &#47&#47 Assert no data leakage</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 5</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/cheind/autoregressive/commit/320dbcc72842b652d319f9fcdec663d2073d285c#diff-84829cd55b0671ec1cb668c8bef477caeed0037320d0fb261b8a94ea8b5d35b0L147' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 94398167</div><div id='project'> Project Name: cheind/autoregressive</div><div id='commit'> Commit Name: 320dbcc72842b652d319f9fcdec663d2073d285c</div><div id='time'> Time: 2021-10-18</div><div id='author'> Author: cheind@profactor.at</div><div id='file'> File Name: autoregressive/model.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: eval(1)</div><div id='n_method'> N Method Name: eval(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: autoregressive/model.py</div><div id='n_file'> N File Name: autoregressive/model.py</div><div id='m_start'> M Start Line: 147</div><div id='m_end'> M End Line: 203</div><div id='n_start'> N Start Line: 199</div><div id='n_end'> N End Line: 246</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+def flat_to_shape(tensor, shapes, length=()):
+    tensor_list = []
+    total<a id="change"> = </a>0
+    for shape in shapes:
+        next_total = total<a id="change"> + </a>shape.numel()
+        &#47&#47 It&quots important that this be view((...)), not view(...). Else when length=(), shape=() it fails.
+        tensor_list.append(<a id="change">tensor[..., total:next_total]</a>.view((*length, *shape)))
+        total = next_total
+    return tensor_list
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    `flat_tensor` must have exactly the number of elements as stated in `shapes`.
+    
+    numels = [shape.numel() for shape in shapes]
+    return [flat.reshape(shape) for flat, shape in <a id="change">zip(</a>flat_tensor.split(split_size=numels), shapes<a id="change">)</a>]
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/google-research/torchsde/commit/a3020b14ed50fe4ed5dbb081614a5c89f6d645bf#diff-781848bd668a0b9312cf47a18dac26f2a66562b68b82760bf9ea09309b23ba2dL97' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 94398170</div><div id='project'> Project Name: google-research/torchsde</div><div id='commit'> Commit Name: a3020b14ed50fe4ed5dbb081614a5c89f6d645bf</div><div id='time'> Time: 2020-10-13</div><div id='author'> Author: lxuechen@gmail.com</div><div id='file'> File Name: torchsde/_core/misc.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: flat_to_shape(2)</div><div id='n_method'> N Method Name: flat_to_shape(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: torchsde/_core/misc.py</div><div id='n_file'> N File Name: torchsde/_core/misc.py</div><div id='m_start'> M Start Line: 97</div><div id='m_end'> M End Line: 105</div><div id='n_start'> N Start Line: 102</div><div id='n_end'> N End Line: 103</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        return all_parameters
+
+    def jacobian(self, parameters):
+        vstart<a id="change"> = </a>0
+        ivstart = 0
+        full_jac = torch.zeros(tuple(self.window.get_shape_flip(self.target.pixelscale)) + (len(parameters),), dtype = self.dtype, device = self.device)
+        for model in self.model_list:
+            keys, reps = model.get_parameters_representation()
+            vend = vstart<a id="change"> + </a>np.sum(self.parameter_vector_len[ivstart:ivstart + len(keys)])
+            sub_jac = model.jacobian(<a id="change">parameters[vstart:vend]</a>)
+            indices = model.window._get_indices(self.window, self.target.pixelscale)
+            for ip, i in enumerate(range(vstart, vend)):
+                full_jac[indices[0], indices[1], i] = sub_jac[:,:,ip]</code></pre><h3>After Change</h3><pre><code class='java'>
+            self.set_parameters(parameters, override_locked = override_locked, as_representation = as_representation)        
+        param_map, param_vec_map = self.sub_model_parameter_map(override_locked = override_locked)
+        full_jac = torch.zeros(tuple(self.window.get_shape_flip(self.target.pixelscale)) + (np.sum(self.parameter_vector_len(override_locked = override_locked)),), dtype = self.dtype, device = self.device)
+        for model, vec_map in <a id="change">zip(</a>self.model_list, param_vec_map<a id="change">)</a>:
+            sub_jac = model.jacobian(as_representation = as_representation, override_locked = override_locked)
+            indices = model.window._get_indices(self.window, self.target.pixelscale)
+            for imodel, igroup in enumerate(vec_map):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/connorstoneastro/autoprof/commit/57d8bbdc0ace0549981a2a01aadc0d4b41f95187#diff-d9f0fa274e666d6339a240dd24fbd9bdd5c348e5bd19b0ac59f1c078b715d2a2L124' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 94398175</div><div id='project'> Project Name: connorstoneastro/autoprof</div><div id='commit'> Commit Name: 57d8bbdc0ace0549981a2a01aadc0d4b41f95187</div><div id='time'> Time: 2022-12-19</div><div id='author'> Author: connorstone628@gmail.com</div><div id='file'> File Name: autoprof/models/group_model_object.py</div><div id='m_class'> M Class Name: Group_Model</div><div id='n_method'> N Class Name: Group_Model</div><div id='m_method'> M Method Name: jacobian(4)</div><div id='n_method'> N Method Name: jacobian(2)</div><div id='m_parent_class'> M Parent Class: AutoProf_Model</div><div id='n_parent_class'> N Parent Class: AutoProf_Model</div><div id='m_file'> M File Name: autoprof/models/group_model_object.py</div><div id='n_file'> N File Name: autoprof/models/group_model_object.py</div><div id='m_start'> M Start Line: 124</div><div id='m_end'> M End Line: 136</div><div id='n_start'> N Start Line: 164</div><div id='n_end'> N End Line: 173</div><BR>

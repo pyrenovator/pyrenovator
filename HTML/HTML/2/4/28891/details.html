@@ -1,0 +1,66 @@
+<html><h3>Pattern ID :28891
+</h3><img src='84935648.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        size = [fixed_size[1], fixed_size[0]]
+    else:
+        min_size = torch.min(im_shape).to(dtype=torch.float32)
+        max_size = <a id="change">torch.max(im_shape).to(dtype=torch.float32)</a>
+        scale<a id="change"> = </a>torch.min(self_min_size / min_size, self_max_size / max_size)
+
+        if torchvision._is_tracing():
+            scale_factor = _fake_cast_onnx(scale)</code></pre><h3>After Change</h3><pre><code class='java'>
+    else:
+        im_shape = torch.tensor(image.shape[-2:])
+
+    ratio = <a id="change">torch.min(</a>new_shape[0] / im_shape[0], new_shape[1] / im_shape[1]<a id="change">)</a>
+
+    ratio_h = torch.round(im_shape[0] * ratio).to(dtype=torch.int32)
+    ratio_w = torch.round(im_shape[1] * ratio).to(dtype=torch.int32)
+
+    if torchvision._is_tracing():
+        new_unpad = _tracing_item_onnx(ratio_h), _tracing_item_onnx(ratio_w)
+    else:
+        new_unpad = int(ratio_h.item()), int(<a id="change">ratio_w.item()</a>)
+
+    image = F.interpolate(image[None], size=new_unpad, mode="bilinear", align_corners=False)[0]
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/zhiqwang/yolov5-rt-stack/commit/cd1a6ec7cda09de0dc92962a37ecb4f723a8dfeb#diff-60b40f8280cc07f4b1f5ff27c62b172cf2350df49462357850d9ccb60554c3c8L67' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 84935648</div><div id='project'> Project Name: zhiqwang/yolov5-rt-stack</div><div id='commit'> Commit Name: cd1a6ec7cda09de0dc92962a37ecb4f723a8dfeb</div><div id='time'> Time: 2022-02-03</div><div id='author'> Author: 92794867+q3394101@users.noreply.github.com</div><div id='file'> File Name: yolort/models/transform.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: _resize_image_and_masks(3)</div><div id='n_method'> N Method Name: _resize_image_and_masks(5)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: yolort/models/transform.py</div><div id='n_file'> N File Name: yolort/models/transform.py</div><div id='m_start'> M Start Line: 257</div><div id='m_end'> M End Line: 286</div><div id='n_start'> N Start Line: 67</div><div id='n_end'> N End Line: 77</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+def sweep_n(ntensor, niter, dtype):
+    print("n, dtype, ntensor, gflop, runtime, tflop/s")
+    for n in [16, 32, 64, 128, 256, 512, 1024, 2048, 4096]:
+        nt_a<a id="change"> = </a>torch.nested_tensor(
+            [<a id="change">torch.randn(n, n).to(</a>dtype<a id="change">)</a>.cuda() for t in range(ntensor)]
+        )
+        nt_b = torch.nested_tensor(
+            [torch.randn(n, n).to(dtype).cuda() for t in range(ntensor)]</code></pre><h3>After Change</h3><pre><code class='java'>
+        runtime = bench(nt_a, nt_b, niter)
+        nt_a_size = torch.ops.aten._nested_tensor_size(nt_a)
+        lengths = nt_a_size[:, 1]
+        print(",".join(map(str, [ntensor, dtype, <a id="change">lengths.min().item()</a>,
+              lengths.float().mean().item(), lengths.max().item(), runtime])))
+
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/pytorch/pytorch/commit/943b20e7ae290d8e71f877eb700f197a9df56cbe#diff-1a0c7c4824948dc09f17a85687fcb71774f4b0084b825189bb69aa3d87804a03L22' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 84935643</div><div id='project'> Project Name: pytorch/pytorch</div><div id='commit'> Commit Name: 943b20e7ae290d8e71f877eb700f197a9df56cbe</div><div id='time'> Time: 2022-11-02</div><div id='author'> Author: cpuhrsch@fb.com</div><div id='file'> File Name: benchmarks/nested/nested_bmm_bench.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: sweep_n(2)</div><div id='n_method'> N Method Name: sweep_n(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: benchmarks/nested/nested_bmm_bench.py</div><div id='n_file'> N File Name: benchmarks/nested/nested_bmm_bench.py</div><div id='m_start'> M Start Line: 22</div><div id='m_end'> M End Line: 33</div><div id='n_start'> N Start Line: 24</div><div id='n_end'> N End Line: 40</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    ratio = torch.min(new_shape[0] / im_shape[0], new_shape[1] / im_shape[1])
+
+    ratio_h<a id="change"> = </a><a id="change">torch.round(im_shape[0] * ratio).to(dtype=torch.int32)</a>
+    ratio_w = torch.round(im_shape[1] * ratio).to(dtype=torch.int32)
+
+    if torchvision._is_tracing():
+        new_unpad = _tracing_item_onnx(ratio_h), _tracing_item_onnx(ratio_w)</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    scale_factor: Optional[float] = None
+
+    min_size = <a id="change">torch.min(</a>im_shape<a id="change">)</a>.to(dtype=torch.float32)
+    max_size = torch.max(im_shape).to(dtype=torch.float32)
+    scale = torch.min(self_min_size / min_size, self_max_size / max_size)
+
+    if torchvision._is_tracing():
+        scale_factor = _tracing_float_onnx(scale)
+    else:
+        scale_factor = <a id="change">scale.item()</a>
+    recompute_scale_factor = True
+
+    image = F.interpolate(
+        image[None],</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/zhiqwang/yolov5-rt-stack/commit/1fea1a60c2517c2130d038af9d25a89f5a278873#diff-60b40f8280cc07f4b1f5ff27c62b172cf2350df49462357850d9ccb60554c3c8L57' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 84935659</div><div id='project'> Project Name: zhiqwang/yolov5-rt-stack</div><div id='commit'> Commit Name: 1fea1a60c2517c2130d038af9d25a89f5a278873</div><div id='time'> Time: 2022-02-07</div><div id='author'> Author: zhiqwang@foxmail.com</div><div id='file'> File Name: yolort/models/transform.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: _resize_image_and_masks(4)</div><div id='n_method'> N Method Name: _resize_image_and_masks(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: yolort/models/transform.py</div><div id='n_file'> N File Name: yolort/models/transform.py</div><div id='m_start'> M Start Line: 59</div><div id='m_end'> M End Line: 75</div><div id='n_start'> N Start Line: 67</div><div id='n_end'> N End Line: 86</div><BR>

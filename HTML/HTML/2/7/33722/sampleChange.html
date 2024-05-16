@@ -1,0 +1,54 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                                 step=step_counter)
+            train_losses_this_epoch.append(float(train_loss))
+            optimizer.zero_grad()
+            <a id="change">train_loss.backward()</a>
+            step_counter += 1
+            torch.nn.utils.clip_grad_norm_(net.parameters(), 1.0)
+            optimizer.step()
+        net.eval()</code></pre><h3>After Change</h3><pre><code class='java'>
+    if fine_tune:
+        lr = lr * 0.01
+    optimizer = torch.optim.Adam(net.parameters(), lr=lr, eps=1.0e-06, weight_decay=0.0)
+    <a id="change">scaler</a><a id="change"> = </a><a id="change">GradScaler()</a>
+    if path_to_checkpoint is not None:
+        check_dict = torch.load(os.path.join(path_to_checkpoint), map_location=device)
+        net.load_state_dict(check_dict["model"])
+        if not fine_tune:
+            optimizer.load_state_dict(check_dict["optimizer"])
+            step_counter = check_dict["step_counter"]
+            scaler.load_state_dict(check_dict["scaler"])
+    start_time = time.time()
+    while True:
+        epoch += 1
+        optimizer.zero_grad()
+        train_losses_this_epoch = list()
+        for batch in tqdm(train_loader):
+            with autocast():
+                if not use_speaker_embedding:
+                    train_loss = net(text=batch[0].to(device),
+                                     text_lengths=batch[1].to(device),
+                                     speech=batch[2].to(device),
+                                     speech_lengths=batch[3].to(device),
+                                     speaker_embeddings=None,
+                                     step=step_counter)
+                else:
+                    train_loss = net(text=batch[0].to(device),
+                                     text_lengths=batch[1].to(device),
+                                     speech=batch[2].to(device),
+                                     speech_lengths=batch[3].to(device),
+                                     speaker_embeddings=batch[4].to(device),
+                                     step=step_counter)
+                train_losses_this_epoch.append(float(train_loss))
+            optimizer.zero_grad()
+            <a id="change">scaler.scale(train_loss).backward()</a>
+            step_counter += 1
+            torch.nn.utils.clip_grad_norm_(net.parameters(), 1.0)
+            <a id="change">scaler.step(</a>optimizer<a id="change">)</a>
+            scaler.update()
+        net.eval()
+        if epoch % epochs_per_save == 0:
+            torch.save({</code></pre>

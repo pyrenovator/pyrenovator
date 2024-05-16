@@ -1,0 +1,27 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    &#47&#47 Loads the checkpoint
+    &#47&#47 Note we are always enabling cache for usage of `past_key_values`
+    checkpoint = torch.load(torch_model_path, map_location=torch.device(&quotcpu&quot))
+    <a id="change">checkpoint[&quotmodel_config&quot][&quotuse_cache&quot]</a> = True
+
+    &#47&#47 Initializes the model
+
+    &#47&#47 Added for compatibility with models trained with an 
+    &#47&#47 older test branch which had this flag
+    &#47&#47 TODO: Remove in the future
+    if &quotencoder_like&quot in checkpoint[&quotmodel_config&quot]:
+        <a id="change">del checkpoint[&quotmodel_config&quot][&quotencoder_like&quot]</a>
+    
+    model = MemTransformerLM(**checkpoint[&quotmodel_config&quot])
+    model.load_state_dict(checkpoint[&quotmodel_state&quot])
+</code></pre><h3>After Change</h3><pre><code class='java'>
+                                                    on_export=True)
+
+    &#47&#47 Overrides forward functions if MemTransformerLM
+    <a id="change">if model_type == &quotmem_transformer&quot</a>:
+        model.forward = types.MethodType(forward_with_probs, model)
+        model.crit.forward = types.MethodType(crit_forward_with_probs, model.crit)
+</code></pre>

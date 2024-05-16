@@ -1,0 +1,79 @@
+<html><h3>Pattern ID :36363
+</h3><img src='102963843.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 For each allocation made by the operations in the pipeline
+        for op_id, memory_allocation in memory_allocations.items():
+            &#47&#47 If the operation didn&quott make a query we stop here
+            <a id="change">if </a>memory_allocation is None:
+                memory_buffers[op_id] = None
+            else:
+                &#47&#47 We compute the total amount of memory needed for this
+                &#47&#47 operation
+                final_shape = [batches_ahead,
+                               batch_size, *memory_allocation.shape]
+                if isinstance(memory_allocation.dtype, ch.dtype):
+                    result = []
+                    for _ in range(final_shape[0]):
+                        partial = ch.empty(*final_shape[1:],
+                                          dtype=memory_allocation.dtype,
+                                          device=memory_allocation.device)
+                        try:
+                            partial = <a id="change">partial.pin_memory()</a>
+                        except:
+                            pass
+                        result.append(partial)
+                else:</code></pre><h3>After Change</h3><pre><code class='java'>
+        for op_id, memory_allocation in memory_allocations.items():
+            &#47&#47 If the operation didn&quott make a query we stop here
+            allocated_buffer = None
+            <a id="change">if </a>isinstance(memory_allocation, AllocationQuery):
+                allocated_buffer<a id="change"> = </a>self.allocate_query(memory_allocation,
+                                                            batch_size,
+                                                            batches_ahead)
+            elif isinstance(memory_allocation, Sequence):</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/libffcv/ffcv/commit/1e28d9884436db64131ee02d545d2c5374f19dc9#diff-e775b66b9cf24bfa0524d7edbf465b5ca12846f195123573855b4d62e63670e3L70' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 102963843</div><div id='project'> Project Name: libffcv/ffcv</div><div id='commit'> Commit Name: 1e28d9884436db64131ee02d545d2c5374f19dc9</div><div id='time'> Time: 2021-11-13</div><div id='author'> Author: leclerc@mit.edu</div><div id='file'> File Name: ffcv/pipeline/pipeline.py</div><div id='m_class'> M Class Name: Pipeline</div><div id='n_method'> N Class Name: Pipeline</div><div id='m_method'> M Method Name: allocate_memory(3)</div><div id='n_method'> N Method Name: allocate_memory(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: ffcv/pipeline/pipeline.py</div><div id='n_file'> N File Name: ffcv/pipeline/pipeline.py</div><div id='m_start'> M Start Line: 70</div><div id='m_end'> M End Line: 105</div><div id='n_start'> N Start Line: 100</div><div id='n_end'> N End Line: 112</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                force=False)
+
+            num_elements = int(self.fp16_partitioned_groups_flat[i].numel())
+            <a id="change">if </a>self.cpu_offload and not self.cpu_offload_use_pin_memory:
+                self.fp32_partitioned_groups_flat[i].grad = torch.zeros(
+                    num_elements,
+                    dtype=gradient_dtype,
+                    device=self.device)
+            elif self.cpu_offload_use_pin_memory:
+                self.fp32_partitioned_groups_flat[i].grad = <a id="change">torch.zeros(
+                    num_elements,
+                    dtype=gradient_dtype,
+                    device=self.device).pin_memory()</a>
+            else:
+                self.fp32_partitioned_groups_flat[i].grad = gradient_buffer.narrow(
+                    0,</code></pre><h3>After Change</h3><pre><code class='java'>
+                subgroup_gradient_buffer = torch.zeros(num_elements,
+                                                       dtype=gradient_dtype,
+                                                       device=self.device)
+                <a id="change">if </a>self.offload_optimizer_pin_memory:
+                    subgroup_gradient_buffer<a id="change"> = </a>subgroup_gradient_buffer.pin_memory()
+                self.fp32_partitioned_groups_flat[i].grad = subgroup_gradient_buffer
+            else:
+                self.fp32_partitioned_groups_flat[i].grad = gradient_buffer.narrow(</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/microsoft/deepspeed/commit/0d4a54a04d658db40a120bc10c6f1f1a4478f6f1#diff-1ad5daa1b31aa5573616024068d646f0c38e88d4d3a71d3d0e4bc352ea232178L1173' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 102963848</div><div id='project'> Project Name: microsoft/deepspeed</div><div id='commit'> Commit Name: 0d4a54a04d658db40a120bc10c6f1f1a4478f6f1</div><div id='time'> Time: 2021-04-18</div><div id='author'> Author: jerasley@microsoft.com</div><div id='file'> File Name: deepspeed/runtime/zero/stage3.py</div><div id='m_class'> M Class Name: FP16_DeepSpeedZeroOptimizer_Stage3</div><div id='n_method'> N Class Name: FP16_DeepSpeedZeroOptimizer_Stage3</div><div id='m_method'> M Method Name: initialize_optimizer_states(1)</div><div id='n_method'> N Method Name: initialize_optimizer_states(1)</div><div id='m_parent_class'> M Parent Class: object</div><div id='n_parent_class'> N Parent Class: object</div><div id='m_file'> M File Name: deepspeed/runtime/zero/stage3.py</div><div id='n_file'> N File Name: deepspeed/runtime/zero/stage3.py</div><div id='m_start'> M Start Line: 1176</div><div id='m_end'> M End Line: 1214</div><div id='n_start'> N Start Line: 1625</div><div id='n_end'> N End Line: 1690</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            0,
+            param.numel())
+
+        <a id="change">if </a>param_id not in self.accumulated_grads_in_cpu:
+            self.accumulated_grads_in_cpu[param_id] = <a id="change">torch.zeros(
+                param.numel(),
+                dtype=param.dtype,
+                device=self.device).pin_memory()</a>
+
+        if self.micro_step_id &gt; 0:
+            dest_buffer.copy_(self.accumulated_grads_in_cpu[param_id].view(-1),
+                              non_blocking=True)</code></pre><h3>After Change</h3><pre><code class='java'>
+                                                    num_elements),
+                    non_blocking=True)
+
+        <a id="change">if </a>param_id not in self.accumulated_grads_in_cpu:
+            self.accumulated_grads_in_cpu[param_id]<a id="change"> = </a>buffer_to_accumulate_to_in_cpu()
+
+        if self.micro_step_id &gt; 0:
+            accumulate_gradients()</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/microsoft/deepspeed/commit/f28432441bae1020157407a4eca1661e9fe35164#diff-7fcd356717f706c544a469feeba2e0f7471e39499ff6a9cb05940ce490fa06fbL898' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 102963838</div><div id='project'> Project Name: microsoft/deepspeed</div><div id='commit'> Commit Name: f28432441bae1020157407a4eca1661e9fe35164</div><div id='time'> Time: 2021-08-16</div><div id='author'> Author: ammar.awan@microsoft.com</div><div id='file'> File Name: deepspeed/runtime/zero/stage2.py</div><div id='m_class'> M Class Name: FP16_DeepSpeedZeroOptimizer</div><div id='n_method'> N Class Name: FP16_DeepSpeedZeroOptimizer</div><div id='m_method'> M Method Name: async_accumulate_grad_in_cpu_via_gpu(2)</div><div id='n_method'> N Method Name: async_accumulate_grad_in_cpu_via_gpu(2)</div><div id='m_parent_class'> M Parent Class: object</div><div id='n_parent_class'> N Parent Class: object</div><div id='m_file'> M File Name: deepspeed/runtime/zero/stage2.py</div><div id='n_file'> N File Name: deepspeed/runtime/zero/stage2.py</div><div id='m_start'> M Start Line: 899</div><div id='m_end'> M End Line: 923</div><div id='n_start'> N Start Line: 977</div><div id='n_end'> N End Line: 1041</div><BR>

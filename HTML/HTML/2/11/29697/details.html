@@ -1,0 +1,109 @@
+<html><h3>Pattern ID :29697
+</h3><img src='88061261.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            infos.append(info)
+
+        &#47&#47 Symbolically refine all N steps
+        tightened_output_constraints<a id="change"> = []</a>
+        N = len(output_constraints)
+        <a id="change">for t</a> in <a id="change">range(</a>2, N + 1<a id="change">):
+
+            &#47&#47 N-step analysis accepts as input:
+            &#47&#47 [1st output constraint, {2,...,t} tightened output constraints,
+            &#47&#47  dummy output constraint]
+            </a>output_constraints_better = deepcopy(output_constraints[:1])
+            output_constraints_better<a id="change"> += </a>deepcopy(tightened_output_constraints)
+            output_constraints_better<a id="change"> += </a>deepcopy(output_constraints[:1]) &#47&#47 just a dummy
+
+            output_constraint<a id="change">, _ = </a>self.get_N_step_reachable_set(
+                input_constraint, output_constraints_better, infos[:t]
+            )
+            tightened_output_constraints.append(output_constraint)
+
+        &#47&#47 &#47&#47 Do N-step "symbolic" refinement
+        &#47&#47 output_constraint, infos = self.get_N_step_reachable_set(
+        &#47&#47     input_constraint, output_constraints, infos
+        &#47&#47 )
+        &#47&#47 output_constraints.append(output_constraint)
+
+        &#47&#47 output_constraints = output_constraints + tightened_output_constraints
+        output_constraints<a id="change"> = </a>tightened_output_constraints
+        return output_constraints, {}
+
+    def get_one_step_backprojection_set(self, output_constraint, intput_constraint):</code></pre><h3>After Change</h3><pre><code class='java'>
+            output_constraints.append(deepcopy(output_constraint))
+            infos.append(info)
+
+        return output_constraints<a id="change">, infos</a>
+
+    def get_one_step_backprojection_set(self, output_constraint, intput_constraint):
+        raise NotImplementedError
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 10</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/mit-acl/nn_robustness_analysis/commit/695fdd909337e53b51591e713482ac08e209f494#diff-f5b54fb24cbb05cde70e82b5c81a5d0d1b8211a4ac7ab6c9f1a3b1768a50213dL16' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 88061261</div><div id='project'> Project Name: mit-acl/nn_robustness_analysis</div><div id='commit'> Commit Name: 695fdd909337e53b51591e713482ac08e209f494</div><div id='time'> Time: 2022-01-04</div><div id='author'> Author: mfe@mit.edu</div><div id='file'> File Name: nn_closed_loop/nn_closed_loop/propagators/ClosedLoopPropagator.py</div><div id='m_class'> M Class Name: ClosedLoopPropagator</div><div id='n_method'> N Class Name: ClosedLoopPropagator</div><div id='m_method'> M Method Name: get_reachable_set(4)</div><div id='n_method'> N Method Name: get_reachable_set(4)</div><div id='m_parent_class'> M Parent Class: propagators.Propagator</div><div id='n_parent_class'> N Parent Class: propagators.Propagator</div><div id='m_file'> M File Name: nn_closed_loop/nn_closed_loop/propagators/ClosedLoopPropagator.py</div><div id='n_file'> N File Name: nn_closed_loop/nn_closed_loop/propagators/ClosedLoopPropagator.py</div><div id='m_start'> M Start Line: 16</div><div id='m_end'> M End Line: 57</div><div id='n_start'> N Start Line: 16</div><div id='n_end'> N End Line: 32</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+        &#47&#47 Select data
+        data = []
+        labels<a id="change"> = []</a>
+        pointer = self.data_idx
+        <a id="change">for data_point</a> in <a id="change">range(</a>self.num_data_points<a id="change">):
+            </a>datum<a id="change">, label = </a>self.dataloader.dataset[pointer]
+            data<a id="change"> += </a>[datum]
+            labels<a id="change"> += </a>[torch.as_tensor(label)]
+            pointer += server_payload[&quotdata&quot].classes
+            pointer = pointer % len(self.dataloader.dataset)
+        data = torch.stack(data).to(**self.setup)
+        labels = torch.stack(labels).to(device=self.setup[&quotdevice&quot])
+
+        &#47&#47 Compute local updates
+        shared_grads = []
+        shared_buffers = []
+        for query in range(self.num_user_queries):
+            payload = server_payload[&quotqueries&quot][query]
+            parameters = payload[&quotparameters&quot]
+            buffers = payload[&quotbuffers&quot]
+
+            with torch.no_grad():
+                for param, server_state in zip(self.model.parameters(), parameters):
+                    param.copy_(server_state.to(**self.setup))
+                for buffer, server_state in zip(self.model.buffers(), buffers):
+                    buffer.copy_(server_state.to(**self.setup))
+
+            &#47&#47 Compute the forward pass
+            outputs = self.model(data)
+            loss = self.loss(outputs, labels)
+
+            shared_grads<a id="change"> += </a>[torch.autograd.grad(loss, self.model.parameters())]
+            shared_buffers += [[b.clone().detach() for b in self.model.buffers()]]
+
+        shared_data = dict(gradients=shared_grads, buffers=shared_buffers,</code></pre><h3>After Change</h3><pre><code class='java'>
+    def compute_local_updates(self, server_payload):
+        Compute local updates to the given model based on server payload.
+
+        user_data<a id="change">, user_labels</a> = self._generate_example_data()
+
+        &#47&#47 Compute local updates
+        shared_grads = []</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/jonasgeiping/breaching/commit/1ab2867fea20551797c9aea8ae67099093ec7180#diff-222118a39af19077a8b428b60923841d31a00f445f3963533670a0eaa87a9924L147' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 88061271</div><div id='project'> Project Name: jonasgeiping/breaching</div><div id='commit'> Commit Name: 1ab2867fea20551797c9aea8ae67099093ec7180</div><div id='time'> Time: 2021-10-01</div><div id='author'> Author: jonas.geiping@googlemail.com</div><div id='file'> File Name: breaching/cases/users.py</div><div id='m_class'> M Class Name: UserMultiStep</div><div id='n_method'> N Class Name: UserMultiStep</div><div id='m_method'> M Method Name: compute_local_updates(2)</div><div id='n_method'> N Method Name: compute_local_updates(2)</div><div id='m_parent_class'> M Parent Class: UserSingleStep</div><div id='n_parent_class'> N Parent Class: UserSingleStep</div><div id='m_file'> M File Name: breaching/cases/users.py</div><div id='n_file'> N File Name: breaching/cases/users.py</div><div id='m_start'> M Start Line: 151</div><div id='m_end'> M End Line: 187</div><div id='n_start'> N Start Line: 158</div><div id='n_end'> N End Line: 200</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+        &#47&#47 Select data
+        data = []
+        labels<a id="change"> = []</a>
+        pointer = self.data_idx
+        <a id="change">for data_point</a> in <a id="change">range(</a>self.num_data_points<a id="change">):
+            </a>datum<a id="change">, label</a> = self.dataloader.dataset[pointer]
+            data += [datum]
+            labels<a id="change"> += </a>[torch.as_tensor(label)]
+            pointer<a id="change"> += </a>server_payload[&quotdata&quot].classes
+            pointer<a id="change"> = </a>pointer % len(self.dataloader.dataset)
+        data = torch.stack(data).to(**self.setup)
+        labels<a id="change"> = </a>torch.stack(labels).to(device=self.setup[&quotdevice&quot])
+
+        &#47&#47 Compute local updates
+        shared_grads = []</code></pre><h3>After Change</h3><pre><code class='java'>
+    def compute_local_updates(self, server_payload):
+        Compute local updates to the given model based on server payload.
+
+        data<a id="change">, labels</a> = self._generate_example_data()
+        &#47&#47 Compute local updates
+        shared_grads = []
+        shared_buffers = []</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/jonasgeiping/breaching/commit/1ab2867fea20551797c9aea8ae67099093ec7180#diff-222118a39af19077a8b428b60923841d31a00f445f3963533670a0eaa87a9924L60' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 88061265</div><div id='project'> Project Name: jonasgeiping/breaching</div><div id='commit'> Commit Name: 1ab2867fea20551797c9aea8ae67099093ec7180</div><div id='time'> Time: 2021-10-01</div><div id='author'> Author: jonas.geiping@googlemail.com</div><div id='file'> File Name: breaching/cases/users.py</div><div id='m_class'> M Class Name: UserSingleStep</div><div id='n_method'> N Class Name: UserSingleStep</div><div id='m_method'> M Method Name: compute_local_updates(2)</div><div id='n_method'> N Method Name: compute_local_updates(2)</div><div id='m_parent_class'> M Parent Class: torch.nn.Module</div><div id='n_parent_class'> N Parent Class: torch.nn.Module</div><div id='m_file'> M File Name: breaching/cases/users.py</div><div id='n_file'> N File Name: breaching/cases/users.py</div><div id='m_start'> M Start Line: 64</div><div id='m_end'> M End Line: 74</div><div id='n_start'> N Start Line: 64</div><div id='n_end'> N End Line: 64</div><BR>

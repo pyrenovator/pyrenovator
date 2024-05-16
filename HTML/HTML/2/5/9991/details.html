@@ -1,0 +1,184 @@
+<html><h3>Pattern ID :9991
+</h3><img src='35643215.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 Use PIL to read high-resolution image
+        image = Image.open(f"{args.inputs_dir}/{file_name}")
+
+        for pos_x in range(0, <a id="change">image.size[0]</a> - args.image_size + 1, args.step):
+            for pos_y in range(0, image.size[1] - args.image_size + 1, args.step):
+                &#47&#47 crop box xywh
+                crop_image = image.crop([pos_x, pos_y, pos_x + args.image_size, pos_y + args.image_size])</code></pre><h3>After Change</h3><pre><code class='java'>
+    image_file_names = os.listdir(args.images_dir)
+
+    &#47&#47 Splitting images with multiple threads
+    progress_bar<a id="change"> = tqdm(total=len(image_file_names), unit="image", desc="Split")</a>
+    workers_pool = Pool(args.num_workers)
+    for image_file_name in image_file_names:
+        workers_pool.apply_async(worker, args=(image_file_name, args), callback=lambda arg: progress_bar.update(1))
+    workers_pool.close()
+    workers_pool.join()
+    <a id="change">progress_bar.close()</a>
+
+
+def worker(image_file_name, args) -&gt; None:
+    image = Image.open(f"{args.images_dir}/{image_file_name}").convert("RGB")</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/lornatang/espcn-pytorch/commit/402254b48af87c5b1bae284cd2be1e90b69ba396#diff-0b98e85a7205055fa6d3ef3a8c2e37a80de3ee37091286945a09dacc88f5ed7aL23' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 35643215</div><div id='project'> Project Name: lornatang/espcn-pytorch</div><div id='commit'> Commit Name: 402254b48af87c5b1bae284cd2be1e90b69ba396</div><div id='time'> Time: 2022-02-08</div><div id='author'> Author: liuchangyu1111@gmail.com</div><div id='file'> File Name: scripts/prepare_dataset.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(1)</div><div id='n_method'> N Method Name: main(0)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: scripts/prepare_dataset.py</div><div id='n_file'> N File Name: scripts/prepare_dataset.py</div><div id='m_start'> M Start Line: 23</div><div id='m_end'> M End Line: 41</div><div id='n_start'> N Start Line: 23</div><div id='n_end'> N End Line: 38</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    frames, frameRate, sliding_window_stride = get_frames_and_video_meta_data(video_path)
+
+    num_frames = frames.shape[0]
+    output_shape = (<a id="change">frames.shape[1]</a>, frames.shape[2])
+    num_maps = int((num_frames - clip_size) / sliding_window_stride + 1)
+    if num_maps &lt; 0:
+        &#47&#47 print(num_maps)</code></pre><h3>After Change</h3><pre><code class='java'>
+    min_max_scaler = preprocessing.MinMaxScaler()
+    detector = get_haarcascade()
+    eye_detector = get_eye_haarcascade()
+    pbar<a id="change"> = tqdm(total=num_frames, position=0, leave=True, desc=video_path+&quot Detecting Faces&quot)</a>
+    &#47&#47 First we process all the frames and then work with sliding window to save repeated processing for the same frame index
+    for idx, frame in enumerate(frames):
+        &#47&#47 spatio_temporal_map = np.zeros((fr, 25, 3))
+        &quot&quot&quot
+           Preprocess the Image
+           Step 1: Use cv2 face detector based on Haar cascades
+           Step 2: Crop the frame based on the face co-ordinates (we need to do 160%)
+           Step 3: Downsample the face cropped frame to output_shape = 36x36
+       &quot&quot&quot
+        faces = detector.detectMultiScale(frame, 1.3, 5)
+        if len(faces) is not 0:
+            (x, y, w, d) = faces[0]
+            frame_cropped = frame[y:(y + d), x:(x + w)]
+            &#47&#47 eyes = eye_detector.detectMultiScale(frame_cropped, 1.2, 3)
+            &#47&#47 if len(eyes) &gt; 0:
+            &#47&#47     &#47&#47 for having the same radius in both eyes
+            &#47&#47     (eye_x, eye_y, eye_w, eye_h) = eyes[0]
+            &#47&#47     eye_radius = (eye_w + eye_h) // 5
+            &#47&#47     mask = np.ones(frame_cropped.shape[:2], dtype="uint8")
+            &#47&#47     for (ex, ey, ew, eh) in eyes[:2]:
+            &#47&#47         eye_center = (ex + ew // 2, ey + eh // 2)
+            &#47&#47         &#47&#47 if eye_radius
+            &#47&#47         cv2.circle(mask, eye_center, eye_radius, 0, -1)
+            &#47&#47         &#47&#47 eh = int(0.8*eh)
+            &#47&#47         &#47&#47 ew = int(0.8*ew)
+            &#47&#47         &#47&#47 cv2.rectangle(mask, (ex, ey), (ex+ew, ey+eh), 0, -1)
+            &#47&#47
+            &#47&#47     frame_masked = cv2.bitwise_and(frame_cropped, frame_cropped, mask=mask)
+            &#47&#47 else:
+            &#47&#47     frame_masked = frame_cropped
+            &#47&#47     &#47&#47 plot_image(frame_masked)
+
+            frame_masked = frame_cropped
+        else:
+            &#47&#47 The problemis that this doesn&quott get cropped :/
+            &#47&#47 (x, y, w, d) = (308, 189, 215, 215)
+            &#47&#47 frame_masked = frame[y:(y + d), x:(x + w)]
+
+            &#47&#47 print("face detection failed, image frame will be masked")
+            mask = np.zeros(frame.shape[:2], dtype="uint8")
+            frame_masked = cv2.bitwise_and(frame, frame, mask=mask)
+            &#47&#47 plot_image(frame_masked)
+
+        &#47&#47 frame_cropped = frame[y:(y + d), x:(x + w)]
+
+        try:
+            &#47&#47 frame_resized = cv2.resize(frame_masked, output_shape, interpolation=cv2.INTER_CUBIC)
+            frame_resized = cv2.cvtColor(frame_masked, cv2.COLOR_BGR2YUV)
+
+        except:
+            print(&quot\n--------- ERROR! -----------\nUsual cv empty error&quot)
+            print(f&quotShape of img1: {frame.shape}&quot)
+            &#47&#47 print(f&quotbbox: {bbox}&quot)
+            print(f&quotThis is at idx: {idx}&quot)
+            return False, None
+
+            &#47&#47 exit(666)
+
+        processed_frames.append(frame_resized)
+        pbar.update(1)
+    pbar.close()
+    &#47&#47 roi_blocks = chunkify(frame_resized)
+    &#47&#47 for block_idx, block in enumerate(roi_blocks):
+    &#47&#47     avg_pixels = cv2.mean(block)
+    &#47&#47     processed_maps[idx, block_idx, 0] = avg_pixels[0]
+    &#47&#47     processed_maps[idx, block_idx, 1] = avg_pixels[1]
+    &#47&#47     processed_maps[idx, block_idx, 2] = avg_pixels[2]
+    pbar = tqdm(total=num_maps, position=0, leave=True, desc=video_path+&quot Making STMAPS&quot)
+    &#47&#47 At this point we have the processed maps from all the frames in a video and now we do the sliding window part.
+    for start_frame_index in range(0, num_frames, sliding_window_stride):
+        end_frame_index = start_frame_index + clip_size
+        if end_frame_index &gt; num_frames:
+            break
+        &#47&#47 &#47&#47 print(f"start_idx: {start_frame_index} | end_idx: {end_frame_index}")
+        spatio_temporal_map = np.zeros((clip_size, 25, 3))
+        &#47&#47
+        &#47&#47 spatio_temporal_map = processed_maps[start_frame_index:end_frame_index, :, :]
+
+        for idx, frame in enumerate(processed_frames[start_frame_index:end_frame_index]):
+            roi_blocks = chunkify(frame)
+            for block_idx, block in enumerate(roi_blocks):
+                avg_pixels = cv2.mean(block)
+                spatio_temporal_map[idx, block_idx, 0] = avg_pixels[0]
+                spatio_temporal_map[idx, block_idx, 1] = avg_pixels[1]
+                spatio_temporal_map[idx, block_idx, 2] = avg_pixels[2]
+
+        for block_idx in range(spatio_temporal_map.shape[1]):
+            &#47&#47 Not sure about uint8
+            fn_scale_0_255 = lambda x: (x * 255.0).astype(np.uint8)
+            scaled_channel_0 = min_max_scaler.fit_transform(spatio_temporal_map[:, block_idx, 0].reshape(-1, 1))
+            spatio_temporal_map[:, block_idx, 0] = fn_scale_0_255(scaled_channel_0.flatten())
+            scaled_channel_1 = min_max_scaler.fit_transform(spatio_temporal_map[:, block_idx, 1].reshape(-1, 1))
+            spatio_temporal_map[:, block_idx, 1] = fn_scale_0_255(scaled_channel_1.flatten())
+            scaled_channel_2 = min_max_scaler.fit_transform(spatio_temporal_map[:, block_idx, 2].reshape(-1, 1))
+            spatio_temporal_map[:, block_idx, 2] = fn_scale_0_255(scaled_channel_2.flatten())
+
+        stacked_maps[map_index, :, :, :] = spatio_temporal_map
+        map_index += 1
+        pbar.update(1)
+    <a id="change">pbar.close()</a>
+
+    (idx, w, h, c) = stacked_maps.shape
+    stacked_maps = stacked_maps.reshape((idx, h, w, c))</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/tvs-ai/pytorch_rppgs/commit/fb7669c43864d13d11528ad55745d21e2ce0635e#diff-9e56f945a06ad9d7c0b5eef59c8b6c9d69ad066e7a42e26909c38d0277fcb94cL981' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 35643214</div><div id='project'> Project Name: tvs-ai/pytorch_rppgs</div><div id='commit'> Commit Name: fb7669c43864d13d11528ad55745d21e2ce0635e</div><div id='time'> Time: 2022-10-19</div><div id='author'> Author: 57242033+najy97@users.noreply.github.com</div><div id='file'> File Name: utils/image_preprocess.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: RhythmNet_preprocessor(2)</div><div id='n_method'> N Method Name: RhythmNet_preprocessor(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: utils/image_preprocess.py</div><div id='n_file'> N File Name: utils/image_preprocess.py</div><div id='m_start'> M Start Line: 984</div><div id='m_end'> M End Line: 1102</div><div id='n_start'> N Start Line: 1004</div><div id='n_end'> N End Line: 1109</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    
+def download_from_url(urladdr,ppath):
+    file_name=<a id="change">urladdr.split(&quot/&quot)[-1]</a>
+    if os.path.isdir(ppath)==False:
+        os.makedirs(ppath)
+    r = requests.get(urladdr, stream=True)
+    f = open("file_path.zip", "wb")</code></pre><h3>After Change</h3><pre><code class='java'>
+    response = requests.get(urladdr, stream=True)
+    total_size_in_bytes= int(response.headers.get(&quotcontent-length&quot, 0))
+    block_size = 2048 &#47&#471 Kibibyte
+    progress_bar<a id="change"> = tqdm(total=total_size_in_bytes, unit=&quotiB&quot, unit_scale=True)</a>
+    with open(file_name, &quotwb&quot) as file:
+        for data in response.iter_content(block_size):
+            progress_bar.update(len(data))
+            file.write(data)
+    zipfile = ZipFile(file_name)
+    zipfile.extractall(path=ppath)
+    <a id="change">progress_bar.close()</a>
+    os.remove(file_name)
+    &#47&#47http_response = urlopen(urladdr)
+    &#47&#47total_length = int(http_response.headers.get(&quotcontent-length&quot))
+    &#47&#47print(&quothere1&quot,total_length)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/microsoft/nn-meter/commit/9446d4189bace0f8c5bb5a8044bcf4b65e979884#diff-fdad2c706ff20f19c6db47a9d694daf277c44de94966eb51f1a924816462ad6fL31' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 35643212</div><div id='project'> Project Name: microsoft/nn-meter</div><div id='commit'> Commit Name: 9446d4189bace0f8c5bb5a8044bcf4b65e979884</div><div id='time'> Time: 2021-06-02</div><div id='author'> Author: lzhani@microsoft.com</div><div id='file'> File Name: prediction/load_predictors.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: download_from_url(3)</div><div id='n_method'> N Method Name: download_from_url(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: prediction/load_predictors.py</div><div id='n_file'> N File Name: prediction/load_predictors.py</div><div id='m_start'> M Start Line: 32</div><div id='m_end'> M End Line: 43</div><div id='n_start'> N Start Line: 35</div><div id='n_end'> N End Line: 58</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        image = Image.open(f"{args.inputs_dir}/{file_name}")
+
+        for pos_x in range(0, image.size[0] - args.image_size + 1, args.step):
+            for pos_y in range(0, <a id="change">image.size[1]</a> - args.image_size + 1, args.step):
+                &#47&#47 crop box xywh
+                crop_image = image.crop([pos_x, pos_y, pos_x + args.image_size, pos_y + args.image_size])
+                &#47&#47 Save all images</code></pre><h3>After Change</h3><pre><code class='java'>
+    image_file_names = os.listdir(args.images_dir)
+
+    &#47&#47 Splitting images with multiple threads
+    progress_bar<a id="change"> = tqdm(total=len(image_file_names), unit="image", desc="Split")</a>
+    workers_pool = Pool(args.num_workers)
+    for image_file_name in image_file_names:
+        workers_pool.apply_async(worker, args=(image_file_name, args), callback=lambda arg: progress_bar.update(1))
+    workers_pool.close()
+    workers_pool.join()
+    <a id="change">progress_bar.close()</a>
+
+
+def worker(image_file_name, args) -&gt; None:
+    image = Image.open(f"{args.images_dir}/{image_file_name}").convert("RGB")</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lornatang/srcnn-pytorch/commit/12911c60469281dbb13842a780d18c46ef4a0405#diff-0b98e85a7205055fa6d3ef3a8c2e37a80de3ee37091286945a09dacc88f5ed7aL22' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 35643220</div><div id='project'> Project Name: lornatang/srcnn-pytorch</div><div id='commit'> Commit Name: 12911c60469281dbb13842a780d18c46ef4a0405</div><div id='time'> Time: 2022-01-12</div><div id='author'> Author: liuchangyu1111@gmail.com</div><div id='file'> File Name: scripts/prepare_dataset.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(1)</div><div id='n_method'> N Method Name: main(0)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: scripts/prepare_dataset.py</div><div id='n_file'> N File Name: scripts/prepare_dataset.py</div><div id='m_start'> M Start Line: 23</div><div id='m_end'> M End Line: 41</div><div id='n_start'> N Start Line: 23</div><div id='n_end'> N End Line: 38</div><BR>

@@ -1,0 +1,33 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    def complex_matmul_2d(a, b):
+        &#47&#47 (batch, in_channel, x, y), (in_channel, out_channel, x, y) -&gt; (batch, out_channel, x, y)
+        op = partial(torch.einsum, "bixy,ioxy-&gt;boxy")
+        <a id="change">return </a><a id="change">torch.stack([
+            </a>op(a[..., 0], b[..., 0]) - op(a[..., 1], b[..., 1]),
+            op(a[..., 1], b[..., 0]) + op(a[..., 0], b[..., 1])<a id="change"></a>
+        ]<a id="change">, dim=-1)</a>
+
+    def forward(self, z, x):
+        &#47&#47 z.shape == [n_batches, 2 * flat_size, 1]
+        &#47&#47 x.shape == [n_batches, flat_size, 1]</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        &#47&#47 (in_channel, out_channel, x), (batch, in_channel, x, y) -&gt; (batch, out_channel, x, y)
+        op = partial(torch.einsum, "iox,bixy-&gt;boxy")
+        c<a id="change"> = </a><a id="change">torch.stack([
+            </a>op(b0[..., 0], a[..., 0]) - op(b0[..., 1], a[..., 1]),
+            op(b0[..., 1], a[..., 0]) + op(b0[..., 0], a[..., 1])<a id="change"></a>
+        ]<a id="change">, dim=-1)</a>
+
+        op = partial(torch.einsum, "bixy,ioy-&gt;boxy")
+        out = torch.stack([
+            op(c[..., 0], b1[..., 0]) - op(c[..., 1], b1[..., 1]),
+            op(c[..., 1], b1[..., 0]) + op(c[..., 0], b1[..., 1])
+        ], dim=-1)
+
+        <a id="change">return </a>out
+
+    def forward(self, z, x):
+        &#47&#47 z.shape == [n_batches, 2 * flat_size, 1]</code></pre>

@@ -1,0 +1,97 @@
+<html><h3>Pattern ID :554
+</h3><img src='2851691.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        dists = cdist(anchor, positive, metric=self.metric)
+        &#47&#47 add 10 to false negative
+        dist_keypts = np.eye(dist_keypts.shape[0]) * 10 + dist_keypts.detach().cpu().numpy()
+        add_matrix<a id="change"> = </a>torch.zeros_like(dists)
+        add_matrix[np.where(dist_keypts &lt; self.safe_radius)] += 10
+        dists<a id="change"> = </a>dists + add_matrix
+
+        pos_mask = torch.eq(torch.unsqueeze(pids, dim=1), torch.unsqueeze(pids, dim=0))
+        neg_mask = torch.logical_not(pos_mask)
+
+        &#47&#47 dists * pos_mask get the distance of each valid anchor-positive pair.
+        furthest_positive, _ = torch.max(dists * pos_mask.float(), dim=1)
+        &#47&#47 here we use "dists +  10000*pos_mask" to avoid the anchor-positive pair been selected.
+        closest_negative, _ = torch.min(dists + 1e5 * pos_mask.float(), dim=1)
+        &#47&#47 closest_negative_row, _ = torch.min(dists + 1e5 * pos_mask.float(), dim=0)
+        &#47&#47 closest_negative = torch.min(closest_negative_col, closest_negative_row)
+        average_negative = (torch.sum(dists, dim=-1) - furthest_positive) / (dists.shape[0] - 1)
+        diff = furthest_positive - closest_negative
+        accuracy = (diff &lt; 0).sum() * 100.0 / diff.shape[0]
+
+        pos = dists - 1e5 * neg_mask.float()
+        pos_weight = (pos - self.pos_margin).detach()
+        pos_weight = torch.max(torch.zeros_like(pos_weight), pos_weight)
+        lse_positive = torch.logsumexp(self.log_scale * (pos - self.pos_margin) * pos_weight, dim=-1)
+
+        
+        neg<a id="change"> = </a>dists + 1e5 * pos_mask.float()
+        neg_weight<a id="change"> =  </a><a id="change">(self.neg_margin - neg).detach()</a>
+        neg_weight = torch.max(torch.zeros_like(neg_weight), neg_weight)
+        lse_negative = torch.logsumexp(self.log_scale * (self.neg_margin - neg) * neg_weight, dim=-1)
+
+        loss = F.softplus(lse_positive + lse_negative) / self.log_scale</code></pre><h3>After Change</h3><pre><code class='java'>
+        pos_weight = torch.max(torch.zeros_like(pos_weight), pos_weight)
+        lse_positive = torch.logsumexp(-self.log_scale * (pos - self.pos_margin) * pos_weight, dim=-1)
+
+        neg = dists - 1e5 * <a id="change">(~neg_mask).float()</a>
+        neg_weight<a id="change"> =  </a><a id="change">(neg - self.neg_optimal).detach()</a>
+        neg_weight = torch.max(torch.zeros_like(neg_weight), neg_weight)
+        lse_negative = torch.logsumexp(self.log_scale * (neg - self.neg_margin) * neg_weight, dim=-1)
+
+        loss = F.softplus(lse_positive + lse_negative) / self.log_scale</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 8</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/xuyangbai/d3feat.pytorch/commit/f19b93196387b22f1cb416f9a0214b2cffaf8e5e#diff-afc9c0f856a1fa54a2d35dfcd375a176b7b736953195238a3a51870eef4314bbL123' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 2851691</div><div id='project'> Project Name: xuyangbai/d3feat.pytorch</div><div id='commit'> Commit Name: f19b93196387b22f1cb416f9a0214b2cffaf8e5e</div><div id='time'> Time: 2020-07-16</div><div id='author'> Author: 653823597@qq.com</div><div id='file'> File Name: utils/loss.py</div><div id='m_class'> M Class Name: CircleLoss</div><div id='n_method'> N Class Name: CircleLoss</div><div id='m_method'> M Method Name: forward(4)</div><div id='n_method'> N Method Name: forward(4)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: utils/loss.py</div><div id='n_file'> N File Name: utils/loss.py</div><div id='m_start'> M Start Line: 123</div><div id='m_end'> M End Line: 152</div><div id='n_start'> N Start Line: 125</div><div id='n_end'> N End Line: 157</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+            model.zero_grad()
+
+            pred<a id="change"> = </a>model(
+                torch.autograd.Variable(batch).to(device), lengths.cpu().numpy()
+            )  &#47&#47&#47&#47 perform forward pass
+            pred<a id="change"> = </a>torch.squeeze(pred)
+            loss = criterion(
+                pred.to(device), torch.autograd.Variable(targets.float()).to(device)
+            )  &#47&#47&#47&#47 compute loss
+
+            loss.backward()  &#47&#47&#47&#47 perform backward pass
+            optimizer.step()  &#47&#47&#47&#47 update weights
+
+            pred_val<a id="change"> = </a>pred &gt;= 0.5  &#47&#47&#47&#47 get predictions
+            y_true += list(targets.int().numpy())  &#47&#47&#47&#47 accumulate targets from batch
+            y_pred<a id="change"> += </a>list(
+                <a id="change">pred_val.data.int().detach()</a>.cpu().numpy()
+            )  &#47&#47&#47&#47 accumulate preds from batch
+            total_loss += loss  &#47&#47&#47&#47 accumulate train loss
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            y_true += list(targets.float().numpy())
+
+            &#47&#47&#47&#47 accumulate preds from batch
+            y_pred<a id="change"> += </a>list(<a id="change">pred.data.float().detach()</a>.cpu().numpy())
+
+            &#47&#47&#47&#47 accumulate train loss
+            total_loss += loss</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/shahrukhx01/siamese-nn-semantic-text-similarity/commit/f3d054dd14ef532c408b1306c3341115777ac22f#diff-be822a1f9a4a693be118629ef529ccaecde36733327973c865b9d50a0c7bb839L15' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 2851690</div><div id='project'> Project Name: shahrukhx01/siamese-nn-semantic-text-similarity</div><div id='commit'> Commit Name: f3d054dd14ef532c408b1306c3341115777ac22f</div><div id='time'> Time: 2021-12-30</div><div id='author'> Author: sk28671@gmail.com</div><div id='file'> File Name: siamese_sts/trainer/train.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train_model(6)</div><div id='n_method'> N Method Name: train_model(6)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: siamese_sts/trainer/train.py</div><div id='n_file'> N File Name: siamese_sts/trainer/train.py</div><div id='m_start'> M Start Line: 16</div><div id='m_end'> M End Line: 47</div><div id='n_start'> N Start Line: 16</div><div id='n_end'> N End Line: 59</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            batch, targets, lengths
+        )  &#47&#47&#47&#47 sorts the batch wrt the length of sequences
+
+        pred<a id="change"> = </a>model(
+            torch.autograd.Variable(batch).to(device), lengths.cpu().numpy()
+        )  &#47&#47&#47&#47 perform forward pass
+        pred<a id="change"> = </a>torch.squeeze(pred)
+        loss = criterion(
+            pred.to(device), torch.autograd.Variable(targets.float()).to(device)
+        )  &#47&#47&#47&#47 compute loss
+        pred_val<a id="change"> = </a>pred &gt;= 0.5  &#47&#47&#47&#47 get predictions
+        y_true += list(targets.int())
+        y_pred<a id="change"> += </a>list(<a id="change">pred_val.data.int().detach()</a>.cpu().numpy())
+        total_loss += loss
+
+    acc = accuracy_score(y_true, y_pred)  &#47&#47&#47&#47 computing accuracy using sklearn&quots function</code></pre><h3>After Change</h3><pre><code class='java'>
+        )
+
+        y_true += list(targets.float())
+        y_pred<a id="change"> += </a>list(<a id="change">pred.data.float().detach()</a>.cpu().numpy())
+        total_loss += loss
+    &#47&#47&#47&#47 computing accuracy using sklearn&quots function
+    acc = r2_score(y_true, y_pred)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/shahrukhx01/siamese-nn-semantic-text-similarity/commit/f3d054dd14ef532c408b1306c3341115777ac22f#diff-be822a1f9a4a693be118629ef529ccaecde36733327973c865b9d50a0c7bb839L72' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 2851688</div><div id='project'> Project Name: shahrukhx01/siamese-nn-semantic-text-similarity</div><div id='commit'> Commit Name: f3d054dd14ef532c408b1306c3341115777ac22f</div><div id='time'> Time: 2021-12-30</div><div id='author'> Author: sk28671@gmail.com</div><div id='file'> File Name: siamese_sts/trainer/train.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: evaluate_dev_set(5)</div><div id='n_method'> N Method Name: evaluate_dev_set(5)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: siamese_sts/trainer/train.py</div><div id='n_file'> N File Name: siamese_sts/trainer/train.py</div><div id='m_start'> M Start Line: 78</div><div id='m_end'> M End Line: 95</div><div id='n_start'> N Start Line: 91</div><div id='n_end'> N End Line: 116</div><BR>

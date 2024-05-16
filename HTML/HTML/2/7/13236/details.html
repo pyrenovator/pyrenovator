@@ -1,0 +1,63 @@
+<html><h3>Pattern ID :13236
+</h3><img src='44642522.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        out = self.trans3(self.dense3(out))
+        out = self.dense4(out)
+        out = F.avg_pool2d(F.relu(self.bn(out)), 4)
+        e<a id="change"> = </a><a id="change">out.view(</a>out.size(0), <a id="change">-1</a><a id="change">)</a>
+        out = self.linear(w)
+        if last:
+            return out, e
+        else:</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    def forward(self, x, last=False, freeze=False):
+        if freeze:
+            <a id="change">with torch.no_grad()</a><a id="change">:
+                </a>features = self.features(x)
+                out = F.relu(features, inplace=True)
+                e<a id="change"> = </a>F.adaptive_avg_pool2d(out, (1, 1)).view(features.size(0), -1)
+        else:
+            features = self.features(x)
+            out = F.relu(features, inplace=True)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 6</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/decile-team/distil/commit/4108c7fe8b81f9f198410bb6b2598f6833329a5e#diff-e5225ab8b342831d17e107f666cc43ea082647e4929bae2e9a86579b97fcec3dL76' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 44642522</div><div id='project'> Project Name: decile-team/distil</div><div id='commit'> Commit Name: 4108c7fe8b81f9f198410bb6b2598f6833329a5e</div><div id='time'> Time: 2021-04-29</div><div id='author'> Author: you@example.com</div><div id='file'> File Name: distil/utils/models/densenet.py</div><div id='m_class'> M Class Name: DenseNet</div><div id='n_method'> N Class Name: DenseNet</div><div id='m_method'> M Method Name: forward(4)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: distil/utils/models/densenet.py</div><div id='n_file'> N File Name: distil/utils/models/densenet.py</div><div id='m_start'> M Start Line: 76</div><div id='m_end'> M End Line: 83</div><div id='n_start'> N Start Line: 121</div><div id='n_end'> N End Line: 131</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        logits_gen = outputs_gen.logits &#47&#47 (batch_size, seq_length, config.vocab_size)
+        masked_bool = (labels == -100)
+        &#47&#47 logits_masked: (batch_size*masked_length, config.vocab_size)
+        logits_masked = F.softmax(<a id="change">logits_gen[masked_bool].view(-1</a>, self.discriminator.electra.config.vocab_size<a id="change">)</a>, dim=1)
+        &#47&#47 replaced tokens are set with logits
+        tokens_replaced<a id="change"> = </a>logits_masked.multinomial(num_samples=1, replacement=True).view(-1)
+        input_ids_disc = labels.clone()
+        input_ids_disc[masked_bool] = tokens_replaced
+        labels_disc = (input_ids_disc != labels).to(torch.long)</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        loss_gen = outputs_gen.loss &#47&#47 (1,)
+        logits_gen = outputs_gen.logits &#47&#47 (batch_size, seq_length, config.vocab_size)
+        <a id="change">with torch.no_grad()</a><a id="change">:
+            </a>masked_bool = (labels == -100)
+            &#47&#47 logits_masked: (batch_size*masked_length, config.vocab_size)
+            &#47&#47 logits_masked = F.softmax(logits_gen[masked_bool].reshape(-1, self.discriminator.electra.config.vocab_size), dim=1)
+            &#47&#47 replaced tokens are set with logits
+            &#47&#47 tokens_replaced = logits_masked.multinomial(num_samples=1, replacement=True).reshape(-1)
+            logits = logits_gen[masked_bool]&#47&#47.reshape(-1, self.discriminator.electra.config.vocab_size)
+            gumbel = self.gumbel_dist.sample(logits.shape)&#47&#47.to(logits.device)
+            tokens_replaced<a id="change"> = </a>(logits + gumbel).argmax(dim=-1)
+            input_ids_disc = labels.clone()
+            input_ids_disc[masked_bool] = tokens_replaced
+            labels_disc = (input_ids_disc != labels)&#47&#47.to(torch.long)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/retarfi/language-pretraining/commit/ea8063480044fc1c8e844831355b7feb7edee091#diff-2ab458989f9a1c4e0c8dfb20cfb9dcbfbb0c9671651bd5df7c188d99658d99ddL43' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 44642525</div><div id='project'> Project Name: retarfi/language-pretraining</div><div id='commit'> Commit Name: ea8063480044fc1c8e844831355b7feb7edee091</div><div id='time'> Time: 2021-07-15</div><div id='author'> Author: valerososoccer@gmail.com</div><div id='file'> File Name: utils/model.py</div><div id='m_class'> M Class Name: ElectraForPretrainingModel</div><div id='n_method'> N Class Name: ElectraForPretrainingModel</div><div id='m_method'> M Method Name: forward(11)</div><div id='n_method'> N Method Name: forward(11)</div><div id='m_parent_class'> M Parent Class: PreTrainedModel</div><div id='n_parent_class'> N Parent Class: PreTrainedModel</div><div id='m_file'> M File Name: utils/model.py</div><div id='n_file'> N File Name: utils/model.py</div><div id='m_start'> M Start Line: 60</div><div id='m_end'> M End Line: 68</div><div id='n_start'> N Start Line: 69</div><div id='n_end'> N End Line: 83</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        with torch.no_grad():
+            means, buckets, dists = kmeans(x, means, training=self.training, init=not self.initted)
+            indices = distribution(dists, window_size)
+            indices<a id="change"> = </a><a id="change">indices.contiguous().view(</a>*indices.size()[:2], <a id="change">-1</a><a id="change">)</a>
+
+        routed_means = batched_index_select(expand_dim(means, 0, b), buckets)
+        loss = F.mse_loss(x, routed_means) * self.commitment
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            dists, buckets = dists_and_buckets(x, means)
+
+        if update_means:
+            <a id="change">with torch.no_grad()</a><a id="change">:
+                </a>means<a id="change"> = </a>kmeans_iter(x, means, buckets)
+            self.new_means = means
+
+        routed_means = batched_index_select(expand_dim(means, 0, b), buckets)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lucidrains/routing-transformer/commit/2042adb06111339b86814500f0c389759b8f6cdf#diff-1a96ccaa437a86e24c768ea078dd19db87f8694dae807ecbb231a703aba4702dL394' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 44642527</div><div id='project'> Project Name: lucidrains/routing-transformer</div><div id='commit'> Commit Name: 2042adb06111339b86814500f0c389759b8f6cdf</div><div id='time'> Time: 2020-05-27</div><div id='author'> Author: lucidrains@gmail.com</div><div id='file'> File Name: routing_transformer/routing_transformer.py</div><div id='m_class'> M Class Name: Kmeans</div><div id='n_method'> N Class Name: Kmeans</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: routing_transformer/routing_transformer.py</div><div id='n_file'> N File Name: routing_transformer/routing_transformer.py</div><div id='m_start'> M Start Line: 396</div><div id='m_end'> M End Line: 410</div><div id='n_start'> N Start Line: 367</div><div id='n_end'> N End Line: 384</div><BR>

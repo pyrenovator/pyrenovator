@@ -1,0 +1,52 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            num_classes (int, optional): Number of classification outputs. Defaults to 10.
+            act_fn_name (str, optional): Activation function to be used. Defaults to "relu". Accepted: ["tanh", "relu", "leakyrelu", "gelu"].
+        
+        <a id="change">super(MobileNetV3Large, self).__init__()</a>
+        self.hparams = SimpleNamespace(
+            model_name="mobilenet_v3_large",
+            pre_trained=True,
+            feature_extract=feature_extract,</code></pre><h3>After Change</h3><pre><code class='java'>
+        inverted_residual_setting, last_channel = _mobilenet_v3_conf(
+            "mobilenet_v3_large"
+        )
+        <a id="change">super(MobileNetV3Large, self).__init__(
+            inverted_residual_setting=inverted_residual_setting,
+            last_channel=last_channel,
+        )</a>
+        self.hparams = SimpleNamespace(
+            model_name="mobilenet_v3_large",
+            pre_trained=pre_trained,
+            feature_extract=bool(pre_trained and feature_extract),
+            finetune=bool(not feature_extract),
+            quantized=False,
+            num_classes=num_classes,
+            num_channels=num_channels,
+            act_fn_name=act_fn_name,
+            act_fn=ACTIVATION_FUNCTIONS_BY_NAME[act_fn_name],
+        )
+
+        <a id="change">if pre_trained</a>:
+            pretrained_model<a id="change"> = </a>models.mobilenet.mobilenet_v3_large(
+                pretrained=pre_trained, progress=True
+            )
+            <a id="change">self.load_state_dict(</a><a id="change">pretrained_model.state_dict())</a>
+            if feature_extract:
+                for param in self.parameters():
+                    param.requires_grad = False
+            <a id="change">if num_channels != 3</a>:
+                <a id="change">self.features[0] = </a><a id="change">ConvNormActivation(
+                    num_channels</a>,
+                    inverted_residual_setting[0].input_channels<a id="change">,
+                    kernel_size=3,
+                    stride=2,
+                    norm_layer=partial(nn.BatchNorm2d, eps=0.001, momentum=0.01),
+                    activation_layer=nn.Hardswish,
+                )</a>
+
+        in_features = self.classifier[1].in_features
+        self.classifier[1] = nn.Linear(in_features, self.hparams.num_classes)
+</code></pre>

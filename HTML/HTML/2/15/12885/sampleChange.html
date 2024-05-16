@@ -1,0 +1,22 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+        out = rearrange(out, &quot(b h) n d -&gt; b n (h d)&quot, h = h)
+        out =  self.to_out(out)
+        <a id="change">return </a>out
+
+&#47&#47 sparse axial causal attention
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    def forward(self, x, mask = None):
+        b, n, _, h, img_size, kernel_size, dilation, seq_len, device = *x.shape, self.heads, self.image_size, self.kernel_size, self.dilation, self.seq_len, x.device
+
+        <a id="change">if n &lt; seq_len</a>:
+            <a id="change">padding = </a>seq_len<a id="change"> - n</a>
+            x<a id="change"> = </a><a id="change">F.pad(</a>x, (<a id="change">0</a><a id="change">, 0, 0, padding</a>)<a id="change">, value = 0)</a>
+            if exists(mask):
+                mask = F.pad(x, (<a id="change">0</a><a id="change">, padding</a>), value = False)
+
+        qkv = self.to_qkv(x).chunk(3, dim = -1)
+        q, k, v = map(lambda t: rearrange(t, &quotb n (h d) -&gt; (b h) n d&quot, h = h), qkv)</code></pre>

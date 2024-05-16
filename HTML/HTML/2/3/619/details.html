@@ -1,0 +1,75 @@
+<html><h3>Pattern ID :619
+</h3><img src='3001013.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                tensor * ctx.scale, torch.log(w), regularization
+            )
+            ctx.factor = torch.exp(ctx.projection.compute())
+            <a id="change">return </a>ctx.factor
+
+    @staticmethod
+    def backward(ctx, grad_output):</code></pre><h3>After Change</h3><pre><code class='java'>
+        w = _arange_like(tensor, reverse=True) + 1
+        theta = tensor * ctx.scale
+        s, permutation = torch.sort(theta, descending=True)
+        inv_permutation<a id="change"> = </a>_inv_permutation(permutation)
+        if ctx.regularization == "l2":
+            dual_sol = isotonic_l2_cpu(s - w)
+            ret = (s - dual_sol)[inv_permutation]
+            ctx.factor = 1.0
+        else:
+            dual_sol = isotonic_kl_cpu(s, torch.log(w))
+            ret = torch.exp((s - dual_sol)[inv_permutation])
+            ctx.factor = ret
+
+        <a id="change">ctx.save_for_backward(</a>s, dual_sol, permutation, inv_permutation<a id="change">)</a>
+        return ret
+
+    @staticmethod
+    def backward(ctx, grad_output):</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/teddykoker/torchsort/commit/c8ac1de21639cf057aeff4f1aea1639b839276ed#diff-6cfcf9d2a83ff3ad8d3e7dbd9b0ab5e6184109cd09839661ed2bc52cbaf2f5c0L51' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 3001013</div><div id='project'> Project Name: teddykoker/torchsort</div><div id='commit'> Commit Name: c8ac1de21639cf057aeff4f1aea1639b839276ed</div><div id='time'> Time: 2021-03-21</div><div id='author'> Author: teddy.koker@gmail.com</div><div id='file'> File Name: torchsort/ops.py</div><div id='m_class'> M Class Name: SoftRank</div><div id='n_method'> N Class Name: SoftRank</div><div id='m_method'> M Method Name: forward(4)</div><div id='n_method'> N Method Name: forward(4)</div><div id='m_parent_class'> M Parent Class: torch.autograd.Function</div><div id='n_parent_class'> N Parent Class: torch.autograd.Function</div><div id='m_file'> M File Name: torchsort/ops.py</div><div id='n_file'> N File Name: torchsort/ops.py</div><div id='m_start'> M Start Line: 51</div><div id='m_end'> M End Line: 62</div><div id='n_start'> N Start Line: 71</div><div id='n_end'> N End Line: 87</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+class MaxPool2D(Function):
+  @staticmethod
+  def forward(ctx, input, kernel_size=(2, 2)):
+    <a id="change">return </a>subsample_op(ctx, input, kernel_size, kernel_size,
+      iter_op="group_res = max(group_res, input[iid])",
+      result_op="group_res", init_val="FLT_MIN")
+</code></pre><h3>After Change</h3><pre><code class='java'>
+class MaxPool2D(Function):
+  @staticmethod
+  def forward(ctx, input, kernel_size=(2, 2)):
+    idxs<a id="change"> = </a>subsample_op(ctx, input, kernel_size, kernel_size,
+      iter_op="if (input[iid]&gt;maxval) { maxval = input[iid]; maxidx = j * ksz.x + i; }",
+      result_op="(float)maxidx", decls="float maxval=-FLT_MAX; int maxidx=0")
+    <a id="change">ctx.save_for_backward(</a>idxs, input.shape<a id="change">)</a>
+    return subsample_op(ctx, input, kernel_size, kernel_size,
+      iter_op="maxval = max(maxval, input[iid])",
+      result_op="maxval", decls="float maxval = -FLT_MAX")
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/geohot/tinygrad/commit/8827a536e0e650fd231f7bc4416a2f052ac55eb1#diff-b7e8a4d3462e65523c8cfd523079177ad58eb9176481ea76a4dedbe501683059L380' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 3001012</div><div id='project'> Project Name: geohot/tinygrad</div><div id='commit'> Commit Name: 8827a536e0e650fd231f7bc4416a2f052ac55eb1</div><div id='time'> Time: 2020-11-11</div><div id='author'> Author: neph320@gmail.com</div><div id='file'> File Name: tinygrad/opsgpu.py</div><div id='m_class'> M Class Name: MaxPool2D</div><div id='n_method'> N Class Name: MaxPool2D</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: Function</div><div id='n_parent_class'> N Parent Class: Function</div><div id='m_file'> M File Name: tinygrad/opsgpu.py</div><div id='n_file'> N File Name: tinygrad/opsgpu.py</div><div id='m_start'> M Start Line: 381</div><div id='m_end'> M End Line: 383</div><div id='n_start'> N Start Line: 382</div><div id='n_end'> N End Line: 388</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+class LogSoftmax(Function):
+  @staticmethod
+  def forward(ctx, input):
+    <a id="change">return </a>input
+
+  @staticmethod
+  def backward(ctx, grad_output):</code></pre><h3>After Change</h3><pre><code class='java'>
+    )
+    prg.logsoftmax(ctx.cl_queue, [input.shape[0]], None, input, np.int32(input.shape[1]), lsum)
+
+    output<a id="change"> = </a>buffer_like(ctx, input)
+    prg = clbuild(ctx.cl_ctx, 
+    __kernel void lsmsub(
+        __global const float *a_g, __global const float *b_g, int sz, __global float *res_g)
+    {
+      int gid = get_global_id(0);
+      int gid2 = get_global_id(1);
+
+      res_g[gid*sz + gid2] = a_g[gid*sz + gid2] - b_g[gid];
+    }
+    )
+    prg.lsmsub(ctx.cl_queue, [input.shape[0], input.shape[1]], None, input, lsum, np.int32(input.shape[1]), output)
+    <a id="change">ctx.save_for_backward(</a>output<a id="change">)</a>
+    return output
+
+  @staticmethod
+  def backward(ctx, grad_output):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/geohot/tinygrad/commit/9332fe19893ccd0b35d08cb0bafd48f2de03b0ac#diff-b7e8a4d3462e65523c8cfd523079177ad58eb9176481ea76a4dedbe501683059L224' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 3001014</div><div id='project'> Project Name: geohot/tinygrad</div><div id='commit'> Commit Name: 9332fe19893ccd0b35d08cb0bafd48f2de03b0ac</div><div id='time'> Time: 2020-11-07</div><div id='author'> Author: geohot@gmail.com</div><div id='file'> File Name: tinygrad/opsgpu.py</div><div id='m_class'> M Class Name: LogSoftmax</div><div id='n_method'> N Class Name: LogSoftmax</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: Function</div><div id='n_parent_class'> N Parent Class: Function</div><div id='m_file'> M File Name: tinygrad/opsgpu.py</div><div id='n_file'> N File Name: tinygrad/opsgpu.py</div><div id='m_start'> M Start Line: 225</div><div id='m_end'> M End Line: 225</div><div id='n_start'> N Start Line: 225</div><div id='n_end'> N End Line: 255</div><BR>

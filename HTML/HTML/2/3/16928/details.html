@@ -1,0 +1,68 @@
+<html><h3>Pattern ID :16928
+</h3><img src='56977472.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+            IHVP_ = [g_ + (1 - damp) * ihvp_ - hvp_ / scale for (g_, ihvp_, hvp_) in zip(grads, IHVP_prev, hvps_)]
+
+        <a id="change">return </a>[IHVP_[k] / (scale * NUM_SAMPLES) for k in range(len(train_idx))]
+    </code></pre><h3>After Change</h3><pre><code class='java'>
+        IHVP_ = torch.stack(IHVP_, dim=0)  &#47&#47 Make a tensor of shape (len(train_idx), n_params)
+
+        test_loss = [self.model.loss_fn(X_test[idx:idx+1], self.model(X_test[idx:idx+1])) for idx in range(len(X_test))]
+        test_grads<a id="change"> = </a>[stack_torch_tensors(<a id="change">torch.autograd.grad(</a>test_loss[k], self.model.parameters()<a id="change">, create_graph=True)</a>)
+                      for k in range(len(X_test))]
+        test_grads = torch.stack(test_grads, dim=0)
+        logging.info(test_grads.shape)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/jonathancrabbe/label-free-xai/commit/46874c1656812543a18b052626e88766368b1463#diff-05738983290b99a9b578895e6f7e04b214a16d9d6a904303041730e6184dace6L26' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 56977472</div><div id='project'> Project Name: jonathancrabbe/label-free-xai</div><div id='commit'> Commit Name: 46874c1656812543a18b052626e88766368b1463</div><div id='time'> Time: 2021-12-27</div><div id='author'> Author: jonathan.cr1302@gmail.com</div><div id='file'> File Name: explanations/examples.py</div><div id='m_class'> M Class Name: InfluenceFunctions</div><div id='n_method'> N Class Name: InfluenceFunctions</div><div id='m_method'> M Method Name: attribute(7)</div><div id='n_method'> N Method Name: attribute(7)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: explanations/examples.py</div><div id='n_file'> N File Name: explanations/examples.py</div><div id='m_start'> M Start Line: 26</div><div id='m_end'> M End Line: 45</div><div id='n_start'> N Start Line: 28</div><div id='n_end'> N End Line: 55</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    for i in range(1, len(path)-1):
+        implicit_grad = darts_helper(implicit_grad, path[i], path[i+1], config)
+
+    <a id="change">return </a>[add_with_none(dg, ig) for dg, ig in zip(direct_grad, implicit_grad)]
+
+
+def darts_helper(vector, curr, prev, config):</code></pre><h3>After Change</h3><pre><code class='java'>
+    for p, v in zip(curr.trainable_parameters(), vector):
+        p.data.add_(v.data, alpha=eps)
+    loss_p = curr.training_step(curr.cur_batch)
+    grad_p = <a id="change">torch.autograd.grad(</a>loss_p, prev.trainable_parameters()<a id="change">)</a>
+
+    &#47&#47 negative
+    for p, v in zip(curr.trainable_parameters(), vector):
+        p.data.add_(v.data, alpha=-2*eps)
+    loss_n = curr.training_step(curr.cur_batch)
+    grad_n = torch.autograd.grad(loss_n, prev.trainable_parameters())
+
+    &#47&#47 reverse weight change
+    for p, v in zip(curr.trainable_parameters(), vector):
+        p.data.add(v.data, alpha=eps)
+
+    implicit_grad<a id="change"> = </a>[(x - y).div_(2 * eps) for x, y in zip(grad_n, grad_p)]
+
+    return implicit_grad
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/leopard-ai/betty/commit/5542eb6dd30fc3b008a0626760a339f3fe31088e#diff-fee71c6e11eca0a047fb000e6ce9c0986274faf27ef8f81ac06ee49870b9ef48L6' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 56977468</div><div id='project'> Project Name: leopard-ai/betty</div><div id='commit'> Commit Name: 5542eb6dd30fc3b008a0626760a339f3fe31088e</div><div id='time'> Time: 2022-06-03</div><div id='author'> Author: sangkeuc@andrew.cmu.edu</div><div id='file'> File Name: betty/hypergradient/darts.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: darts(3)</div><div id='n_method'> N Method Name: darts(7)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: betty/hypergradient/darts.py</div><div id='n_file'> N File Name: betty/hypergradient/darts.py</div><div id='m_start'> M Start Line: 6</div><div id='m_end'> M End Line: 49</div><div id='n_start'> N Start Line: 6</div><div id='n_end'> N End Line: 36</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    @staticmethod
+    def backward(ctx, *grad_outputs):
+        <a id="change">return </a>super().backward(ctx, *grad_outputs)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            x1.requires_grad = True
+            x2.requires_grad = True
+            y1, y2 = ctx.function(x1, x2, mask)
+        grad<a id="change"> = </a><a id="change">torch.autograd.grad(outputs=(y1, y2), inputs=(x1, x2), grad_outputs=grad_outputs)</a>
+        return (None, *grad, None)
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/rick-mccoy/reformer-pytorch/commit/4da6d0fcb3ce7e616d2e8cc9195b5b21dfd431cb#diff-e3774f35f62b92bb1d53bca86868831d64cd22450484b63085497e63bb739c16L21' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 56977471</div><div id='project'> Project Name: rick-mccoy/reformer-pytorch</div><div id='commit'> Commit Name: 4da6d0fcb3ce7e616d2e8cc9195b5b21dfd431cb</div><div id='time'> Time: 2020-01-10</div><div id='author'> Author: rickmccoy3141@gmail.com</div><div id='file'> File Name: model/reversible.py</div><div id='m_class'> M Class Name: Reversible</div><div id='n_method'> N Class Name: Reversible</div><div id='m_method'> M Method Name: backward(1)</div><div id='n_method'> N Method Name: backward(1)</div><div id='m_parent_class'> M Parent Class: Function</div><div id='n_parent_class'> N Parent Class: Function</div><div id='m_file'> M File Name: model/reversible.py</div><div id='n_file'> N File Name: model/reversible.py</div><div id='m_start'> M Start Line: 22</div><div id='m_end'> M End Line: 22</div><div id='n_start'> N Start Line: 24</div><div id='n_end'> N End Line: 34</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        for input, _ in self.loader:
+            saliency_map = backprop.calculate_gradients(input, target_label, take_max=True)
+            saliency_maps.append(saliency_map)
+        <a id="change">return </a>torch.stack(saliency_maps)
+
+    def cal_explanation_feature(self, saliency_maps: torch.Tensor) -&gt; int:
+        exp_features = []</code></pre><h3>After Change</h3><pre><code class='java'>
+        for _input, _ in self.loader:
+            _input.requires_grad_()
+            _output = self.model(_input)[target]
+            grad<a id="change"> = </a><a id="change">torch.autograd.grad(</a>_output, _input<a id="change">)</a>[0].max(dim=1, keepdim=True).cpu()  &#47&#47 (N, 1, H, W)
+            _input.requires_grad = False
+            saliency_maps.append(grad)
+        return torch.cat(saliency_maps)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/ain-soph/trojanzoo/commit/afe7bbd2d2e9f901ee8cf56c3b9320b9272a81af#diff-5528b4636bddd4d9ccc9486227970324e4344e01059ddca8b9863336ce85d70cL59' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 56977470</div><div id='project'> Project Name: ain-soph/trojanzoo</div><div id='commit'> Commit Name: afe7bbd2d2e9f901ee8cf56c3b9320b9272a81af</div><div id='time'> Time: 2020-07-22</div><div id='author'> Author: ain-soph@live.com</div><div id='file'> File Name: trojanzoo/defense/backdoor/neuron_inspect.py</div><div id='m_class'> M Class Name: Neuron_Inspect</div><div id='n_method'> N Class Name: Neuron_Inspect</div><div id='m_method'> M Method Name: get_saliency_map(2)</div><div id='n_method'> N Method Name: get_saliency_map(2)</div><div id='m_parent_class'> M Parent Class: Defense_Backdoor</div><div id='n_parent_class'> N Parent Class: Defense_Backdoor</div><div id='m_file'> M File Name: trojanzoo/defense/backdoor/neuron_inspect.py</div><div id='n_file'> N File Name: trojanzoo/defense/backdoor/neuron_inspect.py</div><div id='m_start'> M Start Line: 60</div><div id='m_end'> M End Line: 65</div><div id='n_start'> N Start Line: 58</div><div id='n_end'> N End Line: 65</div><BR>

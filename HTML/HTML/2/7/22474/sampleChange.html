@@ -1,0 +1,27 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+    def abs_loss(self, _input: torch.Tensor, atanh_mark: torch.Tensor, atanh_mask: torch.Tensor,
+                 layer: str, neuron: int, next_neuron: int):
+        mark<a id="change"> = </a><a id="change">atanh_mark.tanh().mul(0.5).add(</a>0.5<a id="change">)</a>
+        mask = <a id="change">atanh_mask.tanh().mul(0.5).add(</a>0.5<a id="change">)</a> * self.nc_mask
+
+        X = _input + mask * (mark - _input)
+        _dict: Dict[str, torch.Tensor] = self.model.get_all_layer(X)
+        tinners = _dict[layer]
+        logits = _dict[&quotlogits&quot]
+
+        vloss1 = tinners[:, neuron].sum()
+        vloss2 = <a id="change">tinners.sum()</a> - vloss1
+        tvloss = total_variation(mark)
+
+        mask_loss = mask.sum()</code></pre><h3>After Change</h3><pre><code class='java'>
+        X = _input + mask * (mark - _input)
+        feats = self.model.get_layer(X, layer_output=layer)
+        vloss1 = feats[:, neuron].sum()
+        vloss2 = <a id="change">feats.sum()</a> - vloss1
+        loss = torch.zeros_like(vloss1)
+        if use_mask:
+            mask_loss = mask.sum()</code></pre>

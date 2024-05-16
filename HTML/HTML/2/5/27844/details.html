@@ -1,0 +1,137 @@
+<html><h3>Pattern ID :27844
+</h3><img src='82769646.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            pred = model(
+                torch.autograd.Variable(batch).to(device), lengths.cpu().numpy()
+            )  &#47&#47&#47&#47 perform forward pass
+            pred = <a id="change">torch.squeeze(</a>pred<a id="change">)</a>
+            loss = criterion(
+                pred.to(device), torch.autograd.Variable(targets.float()).to(device)
+            )  &#47&#47&#47&#47 compute loss
+
+            loss.backward()  &#47&#47&#47&#47 perform backward pass
+            optimizer.step()  &#47&#47&#47&#47 update weights
+
+            pred_val<a id="change"> = </a>pred &gt;= 0.5  &#47&#47&#47&#47 get predictions
+            y_true += list(targets.int().numpy())  &#47&#47&#47&#47 accumulate targets from batch
+            y_pred += list(
+                pred_val.data.int().detach().cpu().numpy()</code></pre><h3>After Change</h3><pre><code class='java'>
+
+            model.zero_grad()
+            &#47&#47&#47&#47 perform forward pass
+            pred<a id="change"> = </a>model(
+                sent1.to(device),
+                sent2.to(device),
+                <a id="change">sents1_len.to(</a>device<a id="change">)</a>,
+                sents2_len.to(device),
+            )
+
+            &#47&#47&#47&#47 compute loss
+            loss = criterion(
+                pred.to(device), torch.autograd.Variable(targets.float()).to(device)
+            )
+
+            &#47&#47&#47&#47 perform backward pass
+            loss.backward()
+
+            &#47&#47&#47&#47 update weights
+            optimizer.step()
+
+            &#47&#47&#47&#47 accumulate targets from batch
+            y_true += list(targets.float().numpy())
+
+            &#47&#47&#47&#47 accumulate preds from batch
+            y_pred<a id="change"> += </a>list(pred.data.float().detach().cpu().numpy())
+
+            &#47&#47&#47&#47 accumulate train loss
+            total_loss += loss</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 5</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/shahrukhx01/siamese-nn-semantic-text-similarity/commit/f3d054dd14ef532c408b1306c3341115777ac22f#diff-be822a1f9a4a693be118629ef529ccaecde36733327973c865b9d50a0c7bb839L16' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 82769646</div><div id='project'> Project Name: shahrukhx01/siamese-nn-semantic-text-similarity</div><div id='commit'> Commit Name: f3d054dd14ef532c408b1306c3341115777ac22f</div><div id='time'> Time: 2021-12-30</div><div id='author'> Author: sk28671@gmail.com</div><div id='file'> File Name: siamese_sts/trainer/train.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train_model(6)</div><div id='n_method'> N Method Name: train_model(6)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: siamese_sts/trainer/train.py</div><div id='n_file'> N File Name: siamese_sts/trainer/train.py</div><div id='m_start'> M Start Line: 16</div><div id='m_end'> M End Line: 47</div><div id='n_start'> N Start Line: 16</div><div id='n_end'> N End Line: 59</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        pred_mask_vis = colorize_semseg(pred_mask, num_classes=SYNPICK_CLASSES)  &#47&#47 [T, 3, h, w]
+
+        frames_colorized = colorize_semseg(postprocess_mask(frames_seg.squeeze()), num_classes=SYNPICK_CLASSES).unsqueeze(dim=0) &#47&#47 [1, T, 3, h, w]
+        frames_colorized_vis<a id="change"> = </a>postprocess_img(<a id="change">frames_colorized.squeeze(dim=0)</a>)  &#47&#47 [T, 3, h, w]
+        input_colorized = frames_colorized[:VIDEO_IN_LENGTH]
+
+        colorized_then_pred = pred_colorized_mask_model.pred_n(input_colorized, pred_length=VIDEO_PRED_LENGTH)</code></pre><h3>After Change</h3><pre><code class='java'>
+    with torch.no_grad():
+        for i in tqdm(range(10)):
+
+            frames<a id="change"> = </a><a id="change">next(iter_loader).to(</a>DEVICE<a id="change">)</a>  &#47&#47 [1, T, 3, h, w]
+            frames_vis = postprocess_img(frames.squeeze(dim=0))  &#47&#47 [T, 3, h, w]
+            input = frames[:, :VIDEO_IN_LENGTH]  &#47&#47 [1, t, 3, h, w]
+
+            pred_rgb = pred_rgb_model.pred_n(input, pred_length=VIDEO_PRED_LENGTH)
+            pred_rgb = torch.cat([input, pred_rgb], dim=1)  &#47&#47 [1, T, 3, h, w]
+            pred_rgb_vis = postprocess_img(pred_rgb.squeeze(dim=0))  &#47&#47 [T, 3, h, w]
+
+            pred_rgb = torch.stack([seg_model(pred_rgb[:, i]) for i in range(pred_rgb.shape[1])], dim=1)
+            pred_rgb = pred_rgb.argmax(dim=2).squeeze()  &#47&#47 [T, h, w]
+            pred_then_colorized_vis = colorize_semseg(postprocess_mask(pred_rgb), num_classes=SYNPICK_CLASSES).transpose(0, 3, 1, 2) &#47&#47 [T, 3, h, w]
+
+            frames_seg = torch.stack([seg_model(frames[:, i]) for i in range(frames.shape[1])], dim=1).argmax(dim=2)  &#47&#47 [1, T, 1, h, w]
+            frames_seg_in = torch.stack([(frames_seg == i) for i in range(SYNPICK_CLASSES)], dim=2).float()  &#47&#47 [1, T, c, h, w] one-hot float
+            input_seg = frames_seg_in[:, :VIDEO_IN_LENGTH]  &#47&#47 [1, t, c, h, w]
+            pred_mask = pred_mask_model.pred_n(input_seg, pred_length=VIDEO_PRED_LENGTH).argmax(dim=2)  &#47&#47 [1, n, 1, h, w]
+            pred_mask = torch.cat([input_seg.argmax(dim=2), pred_mask], dim=1).squeeze()  &#47&#47 [T, h, w]
+            pred_mask_vis = colorize_semseg(postprocess_mask(pred_mask), num_classes=SYNPICK_CLASSES).transpose(0, 3, 1, 2)  &#47&#47 [T, 3, h, w]
+
+            frames_colorized = colorize_semseg(postprocess_mask(frames_seg.squeeze()), num_classes=SYNPICK_CLASSES)
+            frames_colorized_vis<a id="change"> = </a>frames_colorized.transpose(0, 3, 1, 2)  &#47&#47 [T, 3, h, w]
+
+            input_colorized = preprocess_img(frames_colorized[:VIDEO_IN_LENGTH]).to(DEVICE).unsqueeze(dim=0)  &#47&#47 [b, t, 3, h, w]
+            colorized_then_pred = pred_colorized_mask_model.pred_n(input_colorized, pred_length=VIDEO_PRED_LENGTH)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/ais-bonn/vp-suite/commit/13016d4ab8ba4f8e7ee087155a6c5171f4d00ba3#diff-e07d70acfca9139cbf2c37b7a0074bdfbb966d41dc6c7edcc2cef05e78c00af0L13' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 82769517</div><div id='project'> Project Name: ais-bonn/vp-suite</div><div id='commit'> Commit Name: 13016d4ab8ba4f8e7ee087155a6c5171f4d00ba3</div><div id='time'> Time: 2021-08-02</div><div id='author'> Author: boltres@ais.uni-bonn.de</div><div id='file'> File Name: scripts/visualize_4_way.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: visualize_4_way(1)</div><div id='n_method'> N Method Name: visualize_4_way(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: scripts/visualize_4_way.py</div><div id='n_file'> N File Name: scripts/visualize_4_way.py</div><div id='m_start'> M Start Line: 16</div><div id='m_end'> M End Line: 73</div><div id='n_start'> N Start Line: 17</div><div id='n_end'> N End Line: 74</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        tgt_in = torch.zeros(btz,1, dtype=torch.long).fill_(self.sos_id).to(device)
+        for step in range(self.max_len):
+            pred = self.decoder(tgt_in, enc_out, enc_mask)
+            preds[:,step,:]<a id="change"> = </a><a id="change">pred.squeeze(</a>-2<a id="change">)</a>
+            y_hat = pred.max(-1)[1]
+            tgt_in = y_hat
+            y_hats[:,step] = y_hat.squeeze(dim=-1)
+        </code></pre><h3>After Change</h3><pre><code class='java'>
+        if self.feat_extractor == &quotvgg&quot or self.feat_extractor == &quotw2v&quot:
+            inputs,input_length = self.conv(inputs), input_length&gt;&gt;2
+        
+        enc_mask<a id="change"> = </a><a id="change">get_attn_pad_mask(input_length).to(</a>inputs.device<a id="change">)</a>
+        enc_out, enc_mask = self.encoder(inputs, enc_mask)
+
+        preds = torch.zeros(btz, self.max_len, self.out_dim, dtype=torch.float32).to(device)
+        y_hats = torch.zeros(btz, self.max_len, dtype=torch.long).fill_(self.sos_id).to(device)
+        
+        tgt_in = torch.zeros(btz,1, dtype=torch.long).fill_(self.sos_id).to(device)
+        for step in range(self.max_len):
+            &#47&#47tgt_mask = target_mask(tgt_in, ignore_id=self.pad_id).to(tgt.device).unsqueeze(-3)
+            tgt_mask = subsequent_mask(step+1).to(tgt.device).unsqueeze(0)
+            preds = self.decoder(tgt_in, tgt_mask, enc_out, enc_mask)
+            &#47&#47preds[:,step,:] = pred.squeeze(-2)
+            y_hat = preds.max(-1)[1]
+            &#47&#47print(y_hat)
+            &#47&#47print(y_hat)
+            tgt_in = torch.cat((tgt_in,y_hat[:,step].unsqueeze(1)), dim=1)
+            &#47&#47y_hats[:,step] = y_hat.squeeze(dim=-1)
+            &#47&#47y_hats[:,step] = y_hat[:,step]
+        y_hats<a id="change"> = </a>tgt_in[:,1:]
+        if tgt is None:
+            for testing
+            golds = None</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/qute012/kosr/commit/bf3ec27288e38044b86f90a61978e360690072f5#diff-d85a2398855f69db5c8b138eb078442c2f5f0c9443e7ce97f911e4d1b826316bL70' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 82769757</div><div id='project'> Project Name: qute012/kosr</div><div id='commit'> Commit Name: bf3ec27288e38044b86f90a61978e360690072f5</div><div id='time'> Time: 2021-02-03</div><div id='author'> Author: ejrwls012@gmail.com</div><div id='file'> File Name: kosr/model/transformer/model.py</div><div id='m_class'> M Class Name: Transformer</div><div id='n_method'> N Class Name: Transformer</div><div id='m_method'> M Method Name: greedy_search(4)</div><div id='n_method'> N Method Name: greedy_search(4)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: kosr/model/transformer/model.py</div><div id='n_file'> N File Name: kosr/model/transformer/model.py</div><div id='m_start'> M Start Line: 77</div><div id='m_end'> M End Line: 88</div><div id='n_start'> N Start Line: 80</div><div id='n_end'> N End Line: 98</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    
+    logits = logits.reshape(batch_size * seq_len, -1)                           &#47&#47 (batch_size * seq_len, vocab_size)
+    mask_logits = logits[mask_positions_after_reshaped]                         &#47&#47 (batch * label_num, vocab_size)
+    mask_labels<a id="change"> = </a><a id="change">mask_labels.reshape(-1, 1).squeeze()</a>                          &#47&#47 (batch * label_num)
+    loss = cross_entropy_criterion(mask_logits, mask_labels)
+    
+    return loss / masked_lm_scale</code></pre><h3>After Change</h3><pre><code class='java'>
+        single_mask_logits = single_logits[single_mask_positions]                           &#47&#47 (mask_label_num, vocab_size)
+        single_mask_logits = single_mask_logits.repeat(len(single_sub_mask_labels), 1, 1)   &#47&#47 (sub_label_num, mask_label_num, vocab_size)
+        single_mask_logits = single_mask_logits.reshape(-1, vocab_size)                     &#47&#47 (sub_label_num * mask_label_num, vocab_size)
+        single_sub_mask_labels = <a id="change">torch.LongTensor(single_sub_mask_labels).to(</a>device<a id="change">)</a>        &#47&#47 (sub_label_num, mask_label_num)
+        single_sub_mask_labels = single_sub_mask_labels.reshape(-1, 1).squeeze()            &#47&#47 (sub_label_num * mask_label_num)
+        cur_loss = cross_entropy_criterion(single_mask_logits, single_sub_mask_labels)
+        cur_loss<a id="change"> = </a>cur_loss / len(single_sub_mask_labels)
+        if not loss:
+            loss = cur_loss
+        else:
+            loss<a id="change"> += </a>cur_loss
+    loss = loss / batch_size                                                                &#47&#47 (1,)
+    return loss / masked_lm_scale
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/harderthenharder/transformers_tasks/commit/bf825bb22c43795f1e3a08cf8969ddc613051e76#diff-8c36ce9e3ab2da910c520055f7c89509da251069c3ed661eb343bdade6fe30edL181' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 82769643</div><div id='project'> Project Name: harderthenharder/transformers_tasks</div><div id='commit'> Commit Name: bf825bb22c43795f1e3a08cf8969ddc613051e76</div><div id='time'> Time: 2022-11-30</div><div id='author'> Author: pankeyu@pankeyus-MacBook-Pro.local</div><div id='file'> File Name: prompt_tasks/p-tuning/utils.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: mlm_loss(6)</div><div id='n_method'> N Method Name: mlm_loss(6)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: prompt_tasks/p-tuning/utils.py</div><div id='n_file'> N File Name: prompt_tasks/p-tuning/utils.py</div><div id='m_start'> M Start Line: 204</div><div id='m_end'> M End Line: 212</div><div id='n_start'> N Start Line: 190</div><div id='n_end'> N End Line: 203</div><BR>

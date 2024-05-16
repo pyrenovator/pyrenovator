@@ -1,0 +1,51 @@
+<html><h3>Pattern ID :35992
+</h3><img src='102305773.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    def forward(self, x, **kwargs):
+        assert x.shape[2] == self.temporal_dim, "invalid number of frames given"
+        last_frame = x[:, :, -1]  &#47&#47 [b, c, h, w]
+        big_branch = <a id="change">self.big_branch(x).squeeze(2</a><a id="change">)</a>  &#47&#47 [b, c, h, w]
+        out<a id="change"> = </a>self.final_merge(torch.cat([big_branch, last_frame], dim=1))
+        return out
+
+    def pred_n(self, x, pred_length=1, **kwargs):</code></pre><h3>After Change</h3><pre><code class='java'>
+        x = x.transpose(1, 2)  &#47&#47 shape: [b, c, t, h, w]
+        output_frames = []
+        for t in range(pred_length):
+            input = <a id="change">x[:, :, -self.temporal_dim:]</a>
+            output_frames.append(self.pred_1(input))
+        return torch.stack(output_frames, dim=1), None
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 6</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/ais-bonn/vp-suite/commit/b1ebac921dc35dcaf5e5c3f9fe803c4c9e2d78f8#diff-fbd71ad5a29af730394535b97e62a8cce64cb44421b70aafd01ff726385abfd5L79' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 102305773</div><div id='project'> Project Name: ais-bonn/vp-suite</div><div id='commit'> Commit Name: b1ebac921dc35dcaf5e5c3f9fe803c4c9e2d78f8</div><div id='time'> Time: 2022-01-14</div><div id='author'> Author: boltres@ais.uni-bonn.de</div><div id='file'> File Name: vp_suite/models/simple.py</div><div id='m_class'> M Class Name: SimpleV2</div><div id='n_method'> N Class Name: SimpleV2</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: VideoPredictionModel</div><div id='n_parent_class'> N Parent Class: VideoPredictionModel</div><div id='m_file'> M File Name: vp_suite/models/simple.py</div><div id='n_file'> N File Name: vp_suite/models/simple.py</div><div id='m_start'> M Start Line: 79</div><div id='m_end'> M End Line: 83</div><div id='n_start'> N Start Line: 86</div><div id='n_end'> N End Line: 92</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        out = torch.stack(hs, dim=1)
+        
+        final_index_indices = final_index.unsqueeze(-1).expand(out.size(0), out.size(2)).unsqueeze(1)
+        final_out<a id="change"> = </a><a id="change">out.gather(dim=1, index=final_index_indices.long()).squeeze(1</a><a id="change">)</a>
+        
+        out = self.linear(final_out).unsqueeze(1)
+        
+        return out</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 final_index_indices = final_index.unsqueeze(-1).expand(out.size(0), out.size(2)).unsqueeze(1)
+        &#47&#47 final_out = out.gather(dim=1, index=final_index_indices.long()).squeeze(1)
+        &#47&#47 import pdb ; pdb.set_trace()
+        out = self.linear(<a id="change">out[:,out.shape[1]-self.output_time:,:]</a>)
+        
+        return out
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/sheoyon-jhin/ancde/commit/0ed00c106cfccfcd0a9d1c1640fb5e5ea278ce9d#diff-80cd5023a2d5ee952c10b3690d7fcb8c53cbdca4b18ccafefda0ed7f5d75a1edL118' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 102305775</div><div id='project'> Project Name: sheoyon-jhin/ancde</div><div id='commit'> Commit Name: 0ed00c106cfccfcd0a9d1c1640fb5e5ea278ce9d</div><div id='time'> Time: 2022-01-10</div><div id='author'> Author: sheoyonj@yonsei.ac.kr</div><div id='file'> File Name: experiments/models/other.py</div><div id='m_class'> M Class Name: _GRU_forecasting</div><div id='n_method'> N Class Name: _GRU_forecasting</div><div id='m_method'> M Method Name: forward(5)</div><div id='n_method'> N Method Name: forward(5)</div><div id='m_parent_class'> M Parent Class: torch.nn.Module</div><div id='n_parent_class'> N Parent Class: torch.nn.Module</div><div id='m_file'> M File Name: experiments/models/other.py</div><div id='n_file'> N File Name: experiments/models/other.py</div><div id='m_start'> M Start Line: 122</div><div id='m_end'> M End Line: 151</div><div id='n_start'> N Start Line: 122</div><div id='n_end'> N End Line: 151</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+        &#47&#47 Remove last y_hat dimension if unidimensional loss (for MAE, RMSE, etc.)
+        if y_hat.shape[-1] == 1:
+            y_hat<a id="change"> = </a><a id="change">y_hat.squeeze(-1</a><a id="change">)</a>
+
+        loss = self.loss(y=outsample_y, y_hat=y_hat, mask=outsample_mask)
+        self.log(&quotval_loss&quot, loss, batch_size=self.batch_size, prog_bar=True, on_epoch=True)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+                             scale=None,
+                             mask=outsample_mask)        
+        else:
+            y_hat = <a id="change">output[:, -val_windows:-1, :, :]</a>
+            loss = self.loss(y=outsample_y, y_hat=y_hat, mask=outsample_mask)
+
+        self.log(&quotval_loss&quot, loss, batch_size=self.batch_size, prog_bar=True, on_epoch=True)
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/nixtla/neuralforecast/commit/f22bf6b6c9e16557938ceff48393befa938d3d43#diff-0cdc48ec55ce1c327b6316201813cea3fd20ef83eed8571090ee63e103951c18L259' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 102305776</div><div id='project'> Project Name: nixtla/neuralforecast</div><div id='commit'> Commit Name: f22bf6b6c9e16557938ceff48393befa938d3d43</div><div id='time'> Time: 2022-11-24</div><div id='author'> Author: kin.gtz.olivares@gmail.com</div><div id='file'> File Name: neuralforecast/common/_base_recurrent.py</div><div id='m_class'> M Class Name: BaseRecurrent</div><div id='n_method'> N Class Name: BaseRecurrent</div><div id='m_method'> M Method Name: validation_step(3)</div><div id='n_method'> N Method Name: validation_step(3)</div><div id='m_parent_class'> M Parent Class: pl.LightningModule</div><div id='n_parent_class'> N Parent Class: pl.LightningModule</div><div id='m_file'> M File Name: neuralforecast/common/_base_recurrent.py</div><div id='n_file'> N File Name: neuralforecast/common/_base_recurrent.py</div><div id='m_start'> M Start Line: 280</div><div id='m_end'> M End Line: 292</div><div id='n_start'> N Start Line: 280</div><div id='n_end'> N End Line: 299</div><BR>

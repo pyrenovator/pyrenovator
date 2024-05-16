@@ -1,0 +1,29 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    if (loc is not None) and (scale is not None):
+        &#47&#47 total_count = (total_count * scale) + loc
+        probs += scale.log() / 10
+    total_count = <a id="change">F.softplus(</a>total_count<a id="change">)</a>
+    probs = F.sigmoid(probs)
+    return (total_count, probs)
+
+&#47&#47 %% ../../nbs/losses.pytorch.ipynb 61</code></pre><h3>After Change</h3><pre><code class='java'>
+    Also adds Negative Binomial domain protection to the distribution parameters.
+    
+    mu, alpha = output
+    mu = <a id="change">F.softplus(</a>mu<a id="change">)</a> + 1e-8
+    alpha = F.softplus(alpha) + 1e-8  &#47&#47 alpha = 1/total_counts
+    if (loc is not None) and (scale is not None):
+        mu *= loc
+        alpha /= loc + 1.0
+
+    &#47&#47 mu = total_count * (probs/(1-probs))
+    &#47&#47 =&gt; probs = mu / (total_count + mu)
+    &#47&#47 =&gt; probs = mu / [total_count * (1 + mu * (1/total_count))]
+    total_count = 1.0 / alpha
+    probs = (mu * alpha / (<a id="change">1.0</a><a id="change"> + </a>mu * alpha)) + 1e-8
+    return (total_count, probs)
+
+&#47&#47 %% ../../nbs/losses.pytorch.ipynb 65</code></pre>

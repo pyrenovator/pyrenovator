@@ -1,0 +1,82 @@
+<html><h3>Pattern ID :9856
+</h3><img src='35315226.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    assert "name-string_x_var" not in result.columns
+
+    &#47&#47 Check "count"
+    <a id="change">assert_eq(
+        </a>result[["name-cat", "name-cat_count"]]
+        .drop_duplicates()
+        .sort_values("name-cat")["name-cat_count"],
+        df0.groupby("name-cat").agg({"x": "count"})["x"].astype(np.int64)<a id="change">,
+        check_index=False,
+        check_dtype=False,  &#47&#47 May get int64 vs int32
+        check_names=False,
+    )</a>
+
+    &#47&#47 Check "min"
+    assert_eq(
+        result[["name-string", "name-string_x_min"]]</code></pre><h3>After Change</h3><pre><code class='java'>
+    assert "name-string_x_var" not in result.columns
+
+    &#47&#47 Check results.  Need to sort for direct comparison
+    expect = <a id="change">df0.sort_values(["label", "x", "y", "id"]).reset_index(drop=True).reset_index()</a>
+    got = result.sort_values(["label", "x", "y", "id"]).reset_index(drop=True).reset_index()
+    gb_e<a id="change"> = </a>expect.groupby("name-cat").aggregate({"name-cat": "count", "x": ["sum", "min", "std"]})
+    gb_e.columns = ["count", "sum", "min", "std"]
+    df_check = got.merge(gb_e, left_on="name-cat", right_index=True, how="left")
+    assert_eq(df_check["name-cat_count"], df_check["count"].astype("int64"), check_names=False)
+    <a id="change">assert_eq(df_check["name-cat_x_sum"]</a>, df_check["sum"]<a id="change">, check_names=False)</a>
+    assert_eq(df_check["name-cat_x_min"], df_check["min"], check_names=False)
+    assert_eq(df_check["name-cat_x_std"], df_check["std"], check_names=False)
+
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 6</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/nvidia/nvtabular/commit/8cb492e153ceb0bb56d95a311e43b9f30f39a7b1#diff-649a1e71ae3d6b6029207d0d05db1e6aa950ecabf40f6fc929ea1f884efaf2c9L130' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 35315226</div><div id='project'> Project Name: nvidia/nvtabular</div><div id='commit'> Commit Name: 8cb492e153ceb0bb56d95a311e43b9f30f39a7b1</div><div id='time'> Time: 2021-02-08</div><div id='author'> Author: rzamora217@gmail.com</div><div id='file'> File Name: tests/unit/test_dask_nvt.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: test_dask_groupby_stats(4)</div><div id='n_method'> N Method Name: test_dask_groupby_stats(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: tests/unit/test_dask_nvt.py</div><div id='n_file'> N File Name: tests/unit/test_dask_nvt.py</div><div id='m_start'> M Start Line: 135</div><div id='m_end'> M End Line: 185</div><div id='n_start'> N Start Line: 130</div><div id='n_end'> N End Line: 160</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        if freq_threshold:
+            cat_expect = cat_expect[cat_expect["name-string"] &gt;= freq_threshold]
+            &#47&#47 Note that we may need to skip the 0th element in result (null mapping)
+            <a id="change">assert_eq(
+                </a>cat_expect,
+                cat_result.iloc[1:] if len(cat_result) &gt; len(cat_expect) else cat_result<a id="change">,
+                check_index=False,
+            )</a>
+        else:
+            assert_eq(cat_expect, cat_result)
+
+        &#47&#47 Read back from disk</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    &#47&#47 Check categories.  Need to sort first to make sure we are comparing
+    &#47&#47 "apples to apples"
+    expect = <a id="change">df0.sort_values(["label", "x", "y", "id"]).reset_index(drop=True).reset_index()</a>
+    got = result.sort_values(["label", "x", "y", "id"]).reset_index(drop=True).reset_index()
+    dfm<a id="change"> = </a>expect.merge(got, on="index", how="inner")[["name-string_x", "name-string_y"]]
+    dfm_gb = dfm.groupby(["name-string_x", "name-string_y"]).agg(
+        {"name-string_x": "count", "name-string_y": "count"}
+    )
+    if freq_threshold:
+        dfm_gb = dfm_gb[dfm_gb["name-string_x"] &gt;= freq_threshold]
+    <a id="change">assert_eq(dfm_gb["name-string_x"]</a>, dfm_gb["name-string_y"]<a id="change">, check_names=False)</a>
+
+    &#47&#47 Read back from disk
+    df_disk = dask_cudf.read_parquet(output_path, index=False).compute()
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/nvidia/nvtabular/commit/8cb492e153ceb0bb56d95a311e43b9f30f39a7b1#diff-649a1e71ae3d6b6029207d0d05db1e6aa950ecabf40f6fc929ea1f884efaf2c9L52' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 35315211</div><div id='project'> Project Name: nvidia/nvtabular</div><div id='commit'> Commit Name: 8cb492e153ceb0bb56d95a311e43b9f30f39a7b1</div><div id='time'> Time: 2021-02-08</div><div id='author'> Author: rzamora217@gmail.com</div><div id='file'> File Name: tests/unit/test_dask_nvt.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: test_dask_workflow_api_dlrm(9)</div><div id='n_method'> N Method Name: test_dask_workflow_api_dlrm(9)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: tests/unit/test_dask_nvt.py</div><div id='n_file'> N File Name: tests/unit/test_dask_nvt.py</div><div id='m_start'> M Start Line: 65</div><div id='m_end'> M End Line: 127</div><div id='n_start'> N Start Line: 55</div><div id='n_end'> N End Line: 122</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    &#47&#47 Can directly compare the final ddf to the result if we didn&quott shuffle
+    if not shuffle:
+        for col in df_disk:
+            <a id="change">assert_eq(result[col]</a>, df_disk[col]<a id="change">)</a>
+    else:
+        assert len(df0) == len(df_disk)
+
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    &#47&#47 we don&quott have a deterministic ordering here, especially when using
+    &#47&#47 a dask client with multiple workers - so we need to sort the values here
+    columns = <a id="change">[</a>"label", "x", <a id="change">"y"</a>, <a id="change">"id"</a>] + cat_names
+    got<a id="change"> = </a><a id="change">result.sort_values(columns).reset_index(drop=True)</a>
+    expect = df_disk.sort_values(columns).reset_index(drop=True)
+    <a id="change">assert_eq(</a>got, expect<a id="change">)</a>
+
+
+@pytest.mark.parametrize("part_mem_fraction", [0.01])
+def test_dask_groupby_stats(client, tmpdir, datasets, part_mem_fraction):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/nvidia/nvtabular/commit/9218dd5b7d5244e860ddf45b637e3f482c157156#diff-649a1e71ae3d6b6029207d0d05db1e6aa950ecabf40f6fc929ea1f884efaf2c9L52' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 35315214</div><div id='project'> Project Name: nvidia/nvtabular</div><div id='commit'> Commit Name: 9218dd5b7d5244e860ddf45b637e3f482c157156</div><div id='time'> Time: 2021-02-10</div><div id='author'> Author: github@benfrederickson.com</div><div id='file'> File Name: tests/unit/test_dask_nvt.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: test_dask_workflow_api_dlrm(9)</div><div id='n_method'> N Method Name: test_dask_workflow_api_dlrm(9)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: tests/unit/test_dask_nvt.py</div><div id='n_file'> N File Name: tests/unit/test_dask_nvt.py</div><div id='m_start'> M Start Line: 93</div><div id='m_end'> M End Line: 122</div><div id='n_start'> N Start Line: 93</div><div id='n_end'> N End Line: 120</div><BR>

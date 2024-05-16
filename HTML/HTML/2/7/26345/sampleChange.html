@@ -1,0 +1,31 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    @rank_zero_only
+    def log_metrics(self, metrics: DictStrFloat, step: Optional[int] = None) -&gt; None:
+        epoch_name = "epoch"
+        <a id="change">if </a>epoch_name not in metrics:
+            raise ValueError("Each of the logged metrics should have an &quotepoch&quot key.")
+        epoch = int(metrics[epoch_name])
+        del metrics[epoch_name]
+        if epoch in self.results:
+            current_results = self.results[epoch]
+            overlapping_keys<a id="change"> = </a>set(<a id="change">metrics.keys()</a>).intersection(current_results.keys())
+            if len(overlapping_keys) &gt; 0:
+                raise ValueError(f"Unable to log metric with same name twice for epoch {epoch}: "
+                                 f"{&quot, &quot.join(overlapping_keys)}")</code></pre><h3>After Change</h3><pre><code class='java'>
+                metrics[key] = float(value)
+        if epoch in self.results_per_epoch:
+            current_results = self.results_per_epoch[epoch]
+            <a id="change">for </a>key, value in metrics.items()<a id="change">:
+                if </a>key in current_results:
+                    logging.debug(f"StoringLogger: appending results for metric {key}")
+                    current_metrics = current_results[key]
+                    if isinstance(current_metrics, list):
+                        current_metrics.append(value)
+                    else:
+                        current_results[key]<a id="change"> = </a>[current_metrics, value]
+                else:
+                    current_results[key] = value
+        else:</code></pre>

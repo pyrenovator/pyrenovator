@@ -1,0 +1,72 @@
+<html><h3>Pattern ID :6694
+</h3><img src='23011544.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        return self.bottleneck(torch.cat(psp_outs, dim=1))
+
+    def forward(self, inputs: Tuple[Tensor, Tensor, Tensor, Tensor]) -&gt; Tensor:
+        laterals = [lateral_conv(<a id="change">inputs[i]</a>) for i, lateral_conv in <a id="change">enumerate(</a>self.lateral_convs<a id="change">)</a>]
+        laterals.append(self.psp_forward(inputs))
+
+        used_backbone_levels = len(laterals)
+        <a id="change">for </a>i in range(used_backbone_levels-1, 0, -1)<a id="change">:
+            </a>laterals[i-1] += F.interpolate(laterals[i], size=laterals[i-1].shape[2:], mode=&quotbilinear&quot, align_corners=False)
+        
+        fpn_outs = [self.fpn_convs[i](laterals[i]) for i in range(used_backbone_levels-1)]
+        fpn_outs.append(laterals[-1])</code></pre><h3>After Change</h3><pre><code class='java'>
+        f = self.ppm(features[-1])
+        fpn_features = [f]
+
+        <a id="change">for </a>i in reversed(<a id="change">range(</a>len(features)<a id="change">-</a>1<a id="change">)</a>)<a id="change">:
+            </a>feature = self.fpn_in[i](<a id="change">features[i]</a>)
+            f<a id="change"> = </a>feature + F.interpolate(f, size=feature.shape[-2:], mode=&quotbilinear&quot, align_corners=False)
+            fpn_features.append(self.fpn_out[i](f))
+
+        fpn_features.reverse()</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 8</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/sithu31296/semantic-segmentation/commit/af9bcfd5c4642c42b0fa9e1b2af46eb45ec9063d#diff-34cecd933382e1fd69f8eb47990fab2dfbe929c210f74c82718154d4c5a5428cL44' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 23011544</div><div id='project'> Project Name: sithu31296/semantic-segmentation</div><div id='commit'> Commit Name: af9bcfd5c4642c42b0fa9e1b2af46eb45ec9063d</div><div id='time'> Time: 2021-08-27</div><div id='author'> Author: sithu31296@gmail.com</div><div id='file'> File Name: models/heads/upernet.py</div><div id='m_class'> M Class Name: UPerHead</div><div id='n_method'> N Class Name: UPerHead</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: models/heads/upernet.py</div><div id='n_file'> N File Name: models/heads/upernet.py</div><div id='m_start'> M Start Line: 53</div><div id='m_end'> M End Line: 63</div><div id='n_start'> N Start Line: 44</div><div id='n_end'> N End Line: 53</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    def forward(self, x: List[torch.Tensor]) -&gt; List[torch.Tensor]:
+        &#47&#47 top-down
+        inters = [x[-1]]                                                        &#47&#47 P7in
+        <a id="change">for </a>i, conv in <a id="change">enumerate(</a>self.inter_convs<a id="change">):
+            </a>out = F.interpolate(inters[-1], scale_factor=2., mode="nearest")    &#47&#47 resize(P7td)
+            out = self.fuse([<a id="change">x[-2-i]</a>, out])                                     &#47&#47 P6in + resize(P7td)
+            inters.append(conv(out))                                            &#47&#47 P6td = conv(P6in + resize(P7td))
+            
+        &#47&#47 bottom-up</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 top-down
+        tds = [None] * self.num_levels
+        tds[-1] = x[-1]
+        <a id="change">for </a>i in <a id="change">range(</a>self.num_levels<a id="change"> - </a>2, -1 , -1<a id="change">):
+            </a>tds[i]<a id="change"> = </a>self.td_fuses[i]([<a id="change">x[i]</a>, self.upsample(tds[i+1])])      &#47&#47 P6td = conv(P6in + resize(P7td))
+        
+        &#47&#47 bottom-up
+        outs = [None] * self.num_levels</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/gau-nernst/vision-toolbox/commit/0844b6bcb142e63b09cf6ae44e5087c20d52c380#diff-885dedfcd4036693f75ac69100e9ef7734b059807b782809a75be8b18762d0bdL161' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 23011541</div><div id='project'> Project Name: gau-nernst/vision-toolbox</div><div id='commit'> Commit Name: 0844b6bcb142e63b09cf6ae44e5087c20d52c380</div><div id='time'> Time: 2022-04-10</div><div id='author'> Author: gau.nernst@yahoo.com.sg</div><div id='file'> File Name: vision_toolbox/necks.py</div><div id='m_class'> M Class Name: BiFPNLayer</div><div id='n_method'> N Class Name: BiFPNLayer</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: vision_toolbox/necks.py</div><div id='n_file'> N File Name: vision_toolbox/necks.py</div><div id='m_start'> M Start Line: 163</div><div id='m_end'> M End Line: 180</div><div id='n_start'> N Start Line: 160</div><div id='n_end'> N End Line: 172</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    
+    clusters = {}
+    
+    for idx, (_, _, vid_path) in <a id="change">enumerate(</a>data<a id="change">)</a>: 
+        &#47&#47print (vid_path, &quotcluster:&quot, clustering_obj.labels_[idx])
+        cluster_label = <a id="change">clustering_obj.labels_[idx]</a>
+        if cluster_label not in clusters:
+            clusters[cluster_label] = []
+
+        vid_label = vid_path.split(os.sep)[-2]
+        clusters[cluster_label].append(vid_label)
+
+    <a id="change">for </a>idx, cluster in enumerate(clusters)<a id="change">:
+        </a>print(idx, &quot:&quot, clusters[cluster])
+
+
+if __name__ == &quot__main__&quot:</code></pre><h3>After Change</h3><pre><code class='java'>
+    n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
+    start_cluster = -1 if -1 in labels else 0
+
+    cluster_to_data_idxs = {label: np.where(clustering_obj.labels_ == label)[0] for label in <a id="change">range(</a>start_cluster, start_cluster<a id="change"> + </a>n_clusters<a id="change">)</a>}
+
+    <a id="change">for </a>cluster in cluster_to_data_idxs<a id="change">:
+        </a>cur_cluster_vids = []
+        for data_idx in cluster_to_data_idxs[cluster]:
+            vid_path<a id="change"> = </a><a id="change">data.data[data_idx]</a>[&quotvideo&quot]
+            vid_label = vid_path.split(os.sep)[-2]
+            cur_cluster_vids.append(vid_label)
+        print(cluster, &quot:&quot, cur_cluster_vids)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/rvl-lab-utoronto/video_similarity_search/commit/5bfd169a137512d725b4f9dade84dbcfa82cb2e0#diff-98f1ab4b8aa34886d0f0a9d861b630e102aafdb9b6fed0569e138b1facf9d4efL155' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 23011540</div><div id='project'> Project Name: rvl-lab-utoronto/video_similarity_search</div><div id='commit'> Commit Name: 5bfd169a137512d725b4f9dade84dbcfa82cb2e0</div><div id='time'> Time: 2020-08-31</div><div id='author'> Author: salar77h@gmail.com</div><div id='file'> File Name: clustering/cluster_masks.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: cluster_embeddings(2)</div><div id='n_method'> N Method Name: cluster_embeddings(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: clustering/cluster_masks.py</div><div id='n_file'> N File Name: clustering/cluster_masks.py</div><div id='m_start'> M Start Line: 157</div><div id='m_end'> M End Line: 171</div><div id='n_start'> N Start Line: 163</div><div id='n_end'> N End Line: 177</div><BR>

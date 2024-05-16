@@ -1,0 +1,137 @@
+<html><h3>Pattern ID :5125
+</h3><img src='18006929.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+        beta_read = bn_op.inputs[constants.BN_OP_PARAM_INDICES[&quotbeta&quot]].op
+
+        <a id="change">assert </a>beta_read.type == &quotReadVariableOp&quot
+        return beta_read
+
+    @staticmethod</code></pre><h3>After Change</h3><pre><code class='java'>
+         (is mul_1 op inside BN scope)
+        :return: beta read op
+        
+        <a id="change">if bn_op.type in [&quotMul&quot]</a>:
+            &#47&#47 For regular BN
+            &#47&#47 mul_1 -&gt; add_1 &lt;-- sub &lt;-- beta_read
+            assert len(bn_op.outputs) &gt;= 1, _BN_STRUCTURE_ERROR_MSG
+            add_1 = bn_op.outputs[0].consumers()[0]
+            assert len(add_1.inputs) &gt;= 2, _BN_STRUCTURE_ERROR_MSG
+            sub<a id="change"> = </a>add_1.inputs[1].op
+            <a id="change">assert </a>len(sub.inputs) &gt;= 1, _BN_STRUCTURE_ERROR_MSG
+            beta_read = sub.inputs[0].op
+        elif <a id="change">bn_op.type in [&quotFusedBatchNormV3&quot]</a>:
+            assert len(bn_op.inputs) == 5
+            beta_read = bn_op.inputs[constants.BN_OP_PARAM_INDICES[&quotbeta&quot]].op
+            <a id="change">if beta_read.type == &quotSwitch&quot</a>:      &#47&#47 tf slim bn using training tensor form
+                beta_read<a id="change"> = </a>beta_read.inputs[0].op
+                assert &quotread&quot in beta_read.name
+        else:
+            <a id="change">logger.error("Error, unknown BN op"</a><a id="change">)</a>
+            <a id="change">assert </a>False
+
+        assert beta_read.type in [&quotReadVariableOp&quot, &quotIdentity&quot]      &#47&#47 Will be identity for tf slim BNs
+        return beta_read</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 14</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/quic/aimet/commit/04a3d26199c86efdb24da756ab9210e050855d14#diff-4d4c6b2b283172f6b18adb34c493d4a8c54e3dd52877eabf1542f231dd4f0518L112' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 18006929</div><div id='project'> Project Name: quic/aimet</div><div id='commit'> Commit Name: 04a3d26199c86efdb24da756ab9210e050855d14</div><div id='time'> Time: 2020-05-21</div><div id='author'> Author: quic_klhsieh@quicinc.com</div><div id='file'> File Name: TrainingExtensions/tensorflow/src/python/aimet_tensorflow/utils/op/fusedbatchnorm.py</div><div id='m_class'> M Class Name: BNUtils</div><div id='n_method'> N Class Name: BNUtils</div><div id='m_method'> M Method Name: get_beta_read_op(1)</div><div id='n_method'> N Method Name: get_beta_read_op(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: TrainingExtensions/tensorflow/src/python/aimet_tensorflow/utils/op/fusedbatchnorm.py</div><div id='n_file'> N File Name: TrainingExtensions/tensorflow/src/python/aimet_tensorflow/utils/op/fusedbatchnorm.py</div><div id='m_start'> M Start Line: 112</div><div id='m_end'> M End Line: 117</div><div id='n_start'> N Start Line: 112</div><div id='n_end'> N End Line: 131</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        :return: moving mean read op
+        
+        &#47&#47 only support fused BN
+        <a id="change">assert </a>bn_op.type == &quotFusedBatchNormV3&quot
+        assert len(bn_op.inputs) == 5
+
+        moving_mean_read = bn_op.inputs[constants.BN_OP_PARAM_INDICES[&quotmovingmean&quot]].op</code></pre><h3>After Change</h3><pre><code class='java'>
+        a mul_1 op inside BN scope.
+        :return: moving mean read op
+        
+        <a id="change">if bn_op.type in [&quotFusedBatchNormV3&quot]</a>:
+            assert len(bn_op.inputs) == 5
+            moving_mean_read = bn_op.inputs[constants.BN_OP_PARAM_INDICES[&quotmovingmean&quot]].op
+            if moving_mean_read.type == &quotSwitch&quot:      &#47&#47 tf slim bn using training tensor form
+                moving_mean_read<a id="change"> = </a>moving_mean_read.inputs[0].op
+                <a id="change">assert </a>&quotread&quot in moving_mean_read.name
+        elif <a id="change">bn_op.type in [&quotMul&quot]</a>:
+            &#47&#47 For regular BN
+            &#47&#47 mul_1 &lt;&lt; - mul --&gt; mul_2 &lt;-- cond/merge &lt;-- switch2 &lt;-- moving mean read &lt; moving mean tensor
+            &#47&#47 inputs[1] is mul .op.inputs[1] is gamma:read op whose input is gamma tensor as variable v2
+
+            &#47&#47 register handlers for different structures
+            bn_op_struct_for_mean_handlers = [BNUtils._bn_op_mean_struct_1,
+                                              BNUtils._bn_op_mean_struct_2,
+                                              BNUtils._bn_op_mean_struct_3]
+
+            moving_mean_read = None
+            &#47&#47 try all handlers available
+            for handler in bn_op_struct_for_mean_handlers:
+                <a id="change">if moving_mean_read is None</a>:
+                    moving_mean_read<a id="change"> = </a>handler(bn_op)
+                else:
+                    break
+            <a id="change">assert </a>moving_mean_read is not None, _BN_STRUCTURE_ERROR_MSG
+        else:
+            <a id="change">logger.error("Error, unknown BN op"</a><a id="change">)</a>
+            assert False
+
+        if moving_mean_read.type == &quotIdentity&quot:
+            assert len(moving_mean_read.inputs) == 1, _BN_STRUCTURE_ERROR_MSG</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/quic/aimet/commit/04a3d26199c86efdb24da756ab9210e050855d14#diff-4d4c6b2b283172f6b18adb34c493d4a8c54e3dd52877eabf1542f231dd4f0518L307' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 18006934</div><div id='project'> Project Name: quic/aimet</div><div id='commit'> Commit Name: 04a3d26199c86efdb24da756ab9210e050855d14</div><div id='time'> Time: 2020-05-21</div><div id='author'> Author: quic_klhsieh@quicinc.com</div><div id='file'> File Name: TrainingExtensions/tensorflow/src/python/aimet_tensorflow/utils/op/fusedbatchnorm.py</div><div id='m_class'> M Class Name: BNUtils</div><div id='n_method'> N Class Name: BNUtils</div><div id='m_method'> M Method Name: get_moving_mean_as_read_op(1)</div><div id='n_method'> N Method Name: get_moving_mean_as_read_op(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: TrainingExtensions/tensorflow/src/python/aimet_tensorflow/utils/op/fusedbatchnorm.py</div><div id='n_file'> N File Name: TrainingExtensions/tensorflow/src/python/aimet_tensorflow/utils/op/fusedbatchnorm.py</div><div id='m_start'> M Start Line: 315</div><div id='m_end'> M End Line: 319</div><div id='n_start'> N Start Line: 475</div><div id='n_end'> N End Line: 506</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        
+
+        &#47&#47 only support fused BN
+        <a id="change">assert </a>bn_op.type == &quotFusedBatchNormV3&quot
+        assert len(bn_op.inputs) == 5
+
+        gamma_read = bn_op.inputs[constants.BN_OP_PARAM_INDICES[&quotgamma&quot]].op</code></pre><h3>After Change</h3><pre><code class='java'>
+        (is mul_1 op inside BN scope)
+        :return: gamma read op
+        
+        <a id="change">if bn_op.type in [&quotMul&quot]</a>:
+            &#47&#47 For regular BN
+            &#47&#47 mul_1 &lt;-- mul &lt;-- gamma_read &lt;-- gamma_tensor
+            <a id="change">assert </a>len(bn_op.inputs) &gt;= 2, _BN_STRUCTURE_ERROR_MSG
+            mul = bn_op.inputs[1].op
+            assert len(mul.inputs) &gt;= 2, _BN_STRUCTURE_ERROR_MSG
+            gamma_read<a id="change"> = </a>mul.inputs[1].op
+        elif <a id="change">bn_op.type in [&quotFusedBatchNormV3&quot]</a>:
+            assert len(bn_op.inputs) == 5
+            gamma_read = bn_op.inputs[constants.BN_OP_PARAM_INDICES[&quotgamma&quot]].op
+            <a id="change">if gamma_read.type == &quotSwitch&quot</a>:      &#47&#47 tf slim bn using training tensor form
+                gamma_read<a id="change"> = </a>gamma_read.inputs[0].op
+                assert &quotread&quot in gamma_read.name or gamma_read.type == &quotConst&quot
+        else:
+            <a id="change">logger.error("Error, unknown BN op"</a><a id="change">)</a>
+            <a id="change">assert </a>False
+        assert gamma_read.type in [&quotReadVariableOp&quot, &quotIdentity&quot, &quotConst&quot]    &#47&#47 Will be identity for tf slim BNs
+        return gamma_read
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/quic/aimet/commit/04a3d26199c86efdb24da756ab9210e050855d14#diff-4d4c6b2b283172f6b18adb34c493d4a8c54e3dd52877eabf1542f231dd4f0518L165' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 18006919</div><div id='project'> Project Name: quic/aimet</div><div id='commit'> Commit Name: 04a3d26199c86efdb24da756ab9210e050855d14</div><div id='time'> Time: 2020-05-21</div><div id='author'> Author: quic_klhsieh@quicinc.com</div><div id='file'> File Name: TrainingExtensions/tensorflow/src/python/aimet_tensorflow/utils/op/fusedbatchnorm.py</div><div id='m_class'> M Class Name: BNUtils</div><div id='n_method'> N Class Name: BNUtils</div><div id='m_method'> M Method Name: get_gamma_as_read_op(1)</div><div id='n_method'> N Method Name: get_gamma_as_read_op(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: TrainingExtensions/tensorflow/src/python/aimet_tensorflow/utils/op/fusedbatchnorm.py</div><div id='n_file'> N File Name: TrainingExtensions/tensorflow/src/python/aimet_tensorflow/utils/op/fusedbatchnorm.py</div><div id='m_start'> M Start Line: 174</div><div id='m_end'> M End Line: 177</div><div id='n_start'> N Start Line: 181</div><div id='n_end'> N End Line: 197</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        
+
+        &#47&#47 only support fused BN
+        <a id="change">assert </a>bn_op.type == &quotFusedBatchNormV3&quot
+        assert len(bn_op.inputs) == 5
+
+        moving_var_read = bn_op.inputs[constants.BN_OP_PARAM_INDICES[&quotmovingvariance&quot]].op</code></pre><h3>After Change</h3><pre><code class='java'>
+                                              BNUtils._bn_op_var_struct_2,
+                                              BNUtils._bn_op_var_struct_3]
+
+        <a id="change">if bn_op.type in [&quotFusedBatchNormV3&quot]</a>:
+            assert len(bn_op.inputs) == 5
+            moving_var_read = bn_op.inputs[constants.BN_OP_PARAM_INDICES[&quotmovingvariance&quot]].op
+            if moving_var_read.type == &quotSwitch&quot:      &#47&#47 tf slim bn using training tensor form
+                moving_var_read<a id="change"> = </a>moving_var_read.inputs[0].op
+                <a id="change">assert </a>&quotread&quot in moving_var_read.name
+        elif <a id="change">bn_op.type in [&quotMul&quot]</a>:
+            &#47&#47 For regular BN
+            moving_var_read = None
+            &#47&#47 try all handlers available
+            for handler in bn_op_struct_for_variance_handlers:
+                <a id="change">if moving_var_read is None</a>:
+                    moving_var_read<a id="change"> = </a>handler(bn_op)
+                else:
+                    break
+            assert moving_var_read is not None, _BN_STRUCTURE_ERROR_MSG
+        else:
+            <a id="change">logger.error("Error, unknown BN op"</a><a id="change">)</a>
+            <a id="change">assert </a>False
+
+        if moving_var_read.type == &quotIdentity&quot:
+            assert len(moving_var_read.inputs) == 1, _BN_STRUCTURE_ERROR_MSG</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/quic/aimet/commit/04a3d26199c86efdb24da756ab9210e050855d14#diff-4d4c6b2b283172f6b18adb34c493d4a8c54e3dd52877eabf1542f231dd4f0518L228' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 18006940</div><div id='project'> Project Name: quic/aimet</div><div id='commit'> Commit Name: 04a3d26199c86efdb24da756ab9210e050855d14</div><div id='time'> Time: 2020-05-21</div><div id='author'> Author: quic_klhsieh@quicinc.com</div><div id='file'> File Name: TrainingExtensions/tensorflow/src/python/aimet_tensorflow/utils/op/fusedbatchnorm.py</div><div id='m_class'> M Class Name: BNUtils</div><div id='n_method'> N Class Name: BNUtils</div><div id='m_method'> M Method Name: get_moving_variance_as_read_op(1)</div><div id='n_method'> N Method Name: get_moving_variance_as_read_op(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: TrainingExtensions/tensorflow/src/python/aimet_tensorflow/utils/op/fusedbatchnorm.py</div><div id='n_file'> N File Name: TrainingExtensions/tensorflow/src/python/aimet_tensorflow/utils/op/fusedbatchnorm.py</div><div id='m_start'> M Start Line: 237</div><div id='m_end'> M End Line: 240</div><div id='n_start'> N Start Line: 318</div><div id='n_end'> N End Line: 345</div><BR>

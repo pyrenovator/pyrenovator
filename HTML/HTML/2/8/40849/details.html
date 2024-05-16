@@ -1,0 +1,239 @@
+<html><h3>Pattern ID :40849
+</h3><img src='115256542.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            kdbl_down += kin_ground_down
+
+        if self.config_method.startswith(&quotsingle(&quot):
+            <a id="change">return </a>torch.cat((kin_ground_up, ksin_up), dim=1)<a id="change">, \
+                torch.cat((kin_ground_down, ksin_down), dim=1)</a>
+
+        if self.config_method.startswith(&quotsingle_double(&quot):
+            return torch.cat((kin_ground_up, ksin_up, kdbl_up), dim=1), \
+                torch.cat(</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        &#47&#47 store the kin terms we need
+        kin_out_up = kin_ground_up.clone()
+        kin_out_down = <a id="change">kin_ground_down.clone()</a>
+
+        if self.config_method == &quotground_state&quot:
+            return kin_out_up, kin_out_down
+
+        &#47&#47 virtual orbital matrices spin up/down
+        Avirt_up = mo[:, :self.nup, self.nup:self.index_max_orb_up]
+        Avirt_down = mo[:, self.nup:,
+                        self.ndown: self.index_max_orb_down]
+
+        &#47&#47 compute the products of Ain and B
+        mat_exc_up = (invAup @ Avirt_up)
+        mat_exc_down = (invAdown @ Avirt_down)
+
+        bkin_up = bkin[:, :self.nup, :self.index_max_orb_up]
+        bkin_occ_up = bkin[:, :self.nup, :self.nup]
+        bkin_virt_up = bkin[:, :self.nup,
+                            self.nup:self.index_max_orb_up]
+
+        bkin_down = bkin[:, self.nup:, :self.index_max_orb_down]
+        bkin_occ_down = bkin[:, self.nup:, :self.ndown]
+        bkin_virt_down = bkin[:, self.nup:,
+                              self.ndown:self.index_max_orb_down]
+
+        Mup = invAup @ bkin_virt_up - invAup @ bkin_occ_up @ invAup @ Avirt_up
+        Mdown = invAdown @ bkin_virt_down - \
+            invAdown @ bkin_occ_down @ invAdown @ Avirt_down
+
+        if do_single:
+
+            ksin_up = (1. / mat_exc_up.view(nbatch, -1)[:, self.exc_mask.index_unique_single_up]) * \
+                Mup.view(
+                    nbatch, -1)[:, self.exc_mask.index_unique_single_up]
+            ksin_up *= -0.5
+            ksin_up += kin_ground_up
+
+            ksin_down = (1. / mat_exc_down.view(nbatch, -1)[:, self.exc_mask.index_unique_single_down]) * \
+                Mdown.view(
+                    nbatch, -1)[:, self.exc_mask.index_unique_single_down]
+            ksin_down *= -0.5
+            ksin_down += kin_ground_down
+
+            &#47&#47 store the terms we need
+            kin_out_up<a id="change"> = </a>torch.cat((kin_out_up, ksin_up), dim=1)
+            kin_out_down<a id="change"> = </a>torch.cat(
+                (kin_out_down, ksin_down), dim=1)
+
+        if do_double:
+
+            kdbl_up = mat_exc_up.view(
+                nbatch, -1)[:, self.exc_mask.index_unique_double_up]
+            kdbl_up = torch.inverse(kdbl_up.view(nbatch, -1, 2, 2))
+            kdbl_up = kdbl_up @ (Mup.view(
+                nbatch, -1)[:, self.exc_mask.index_unique_double_up]).view(nbatch, -1, 2, 2)
+            kdbl_up = btrace(kdbl_up)
+            kdbl_up *= -0.5
+            kdbl_up += kin_ground_up
+
+            kdbl_down = mat_exc_down.view(
+                nbatch, -1)[:, self.exc_mask.index_unique_double_down]
+            kdbl_down = torch.inverse(
+                kdbl_down.view(nbatch, -1, 2, 2))
+            kdbl_down = kdbl_down @ (Mdown.view(
+                nbatch, -1)[:, self.exc_mask.index_unique_double_down]).view(nbatch, -1, 2, 2)
+            kdbl_down = btrace(kdbl_down)
+            kdbl_down *= -0.5
+            kdbl_down += kin_ground_down
+
+            &#47&#47 store the terms we need
+            kin_out_up<a id="change"> = </a>torch.cat((kin_out_up, kdbl_up), dim=1)
+            kin_out_down = torch.cat(
+                (kin_out_down, kdbl_down), dim=1)
+
+        <a id="change">return </a>kin_out_up<a id="change">, kin_out_down</a>
+
+        &#47&#47 if self.config_method.startswith(&quotsingle(&quot):
+        &#47&#47     return torch.cat((kin_ground_up, ksin_up), dim=1), \
+        &#47&#47         torch.cat((kin_ground_down, ksin_down), dim=1)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 8</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/nlesc-jcer/qmctorch/commit/a8002dd8e4f435edb49cebcc9253e62042d1f826#diff-97285bf75eb9cf007e2a584676c1f0d3dd12e02b6a8f8f3f9b189c7d5d3a8be3L343' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 115256542</div><div id='project'> Project Name: nlesc-jcer/qmctorch</div><div id='commit'> Commit Name: a8002dd8e4f435edb49cebcc9253e62042d1f826</div><div id='time'> Time: 2020-05-19</div><div id='author'> Author: nicolas.gm.renaud@gmail.com</div><div id='file'> File Name: qmctorch/wavefunction/slater_pooling.py</div><div id='m_class'> M Class Name: SlaterPooling</div><div id='n_method'> N Class Name: SlaterPooling</div><div id='m_method'> M Method Name: kinetic_unique_single_double(3)</div><div id='n_method'> N Method Name: kinetic_unique_single_double(3)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: qmctorch/wavefunction/slater_pooling.py</div><div id='n_file'> N File Name: qmctorch/wavefunction/slater_pooling.py</div><div id='m_start'> M Start Line: 343</div><div id='m_end'> M End Line: 418</div><div id='n_start'> N Start Line: 359</div><div id='n_end'> N End Line: 441</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        mrr.append(1 / rank)
+        hits.append(int(rank &lt;= k))
+
+    <a id="change">return </a>mrr<a id="change">, hits</a>
+
+
+def main():
+    args = parse_args()</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    &#47&#47 get the scores of the true target subjects/objects
+    idx = 0 if direction == "s" else 2
+    targets<a id="change"> = </a>test_spo[:, idx].long()
+    arange<a id="change"> = </a>torch.arange(len(targets), dtype=torch.long, device="cpu")
+    true_scores = scores[arange, targets].view(-1, 1)
+
+    &#47&#47 remove the true subjects/objects from the scores so they don&quott factor in rankings
+    scores<a id="change"> = </a><a id="change">scores.clone()</a>
+    scores[arange, targets] = float("-Inf")
+
+    &#47&#47 follow LibKGE protocol by taking the mean rank among all entities with same score
+    ranks = torch.sum(scores &gt; true_scores, dim=1, dtype=torch.double)
+    num_ties = torch.sum(scores == true_scores, dim=1, dtype=torch.double)
+    ranks = ranks + num_ties // 2 + 1  &#47&#47 ranks are one-indexed
+
+    mrr = (1 / ranks).numpy()
+    hits = (ranks &lt;= k).numpy()
+    <a id="change">return </a>list(mrr)<a id="change">, list(hits)</a>
+
+
+@torch.no_grad()
+def main():</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/tsafavi/codex/commit/3dddca246e4fb616cef251bafb32dac648e8eedb#diff-7473d3c6ae8fdca415f05877da582b17af17f591a0a1312717bb10fd4da4b992L119' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 115256383</div><div id='project'> Project Name: tsafavi/codex</div><div id='commit'> Commit Name: 3dddca246e4fb616cef251bafb32dac648e8eedb</div><div id='time'> Time: 2020-07-08</div><div id='author'> Author: tsafavi@umich.edu</div><div id='file'> File Name: scripts/baseline.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: evaluate_rankings(5)</div><div id='n_method'> N Method Name: evaluate_rankings(5)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: scripts/baseline.py</div><div id='n_file'> N File Name: scripts/baseline.py</div><div id='m_start'> M Start Line: 129</div><div id='m_end'> M End Line: 151</div><div id='n_start'> N Start Line: 129</div><div id='n_end'> N End Line: 148</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    jacobians = []
+    jacobians.append(jacobian_g)
+    jacobians.append(jacobian_p)
+    <a id="change">return </a>jacobians<a id="change">, _transform_from_impl(group, tensor)</a>
+
+
+class TransformFrom(lie_group.BinaryOperator):
+    @classmethod</code></pre><h3>After Change</h3><pre><code class='java'>
+    ret = _transform_from_impl(group, tensor)
+    size = get_transform_tensor_size(ret)
+    jacobian_g = -group @ _hat_autograd_fn(tensor)
+    jacobian_p<a id="change"> = </a>group
+    jacobian_g<a id="change"> = </a><a id="change">jacobian_g.expand(*size, 3, 3).clone()</a>
+    jacobian_p<a id="change"> = </a>jacobian_p.expand(*size, 3, 3).clone()
+    <a id="change">return </a>[jacobian_g, jacobian_p]<a id="change">, ret</a>
+
+
+class TransformFrom(lie_group.BinaryOperator):
+    @classmethod</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/facebookresearch/theseus/commit/f8f533dbde1f2fc8e8591949bb127c0488467a20#diff-83558085f2c82ad7c8cad66c30ce54ee61215a24b69c263efe924ee8f1660d29L661' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 115256520</div><div id='project'> Project Name: facebookresearch/theseus</div><div id='commit'> Commit Name: f8f533dbde1f2fc8e8591949bb127c0488467a20</div><div id='time'> Time: 2023-05-10</div><div id='author'> Author: 6612911+fantaosha@users.noreply.github.com</div><div id='file'> File Name: theseus/labs/lie/functional/so3_impl.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: _jtransform_from_impl(2)</div><div id='n_method'> N Method Name: _jtransform_from_impl(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: theseus/labs/lie/functional/so3_impl.py</div><div id='n_file'> N File Name: theseus/labs/lie/functional/so3_impl.py</div><div id='m_start'> M Start Line: 666</div><div id='m_end'> M End Line: 671</div><div id='n_start'> N Start Line: 668</div><div id='n_end'> N End Line: 674</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+        &#47&#47 return the ground state
+        if self.config_method == &quotground_state&quot:
+            <a id="change">return </a>detAup.unsqueeze(-1)<a id="change">, detAdown.unsqueeze(-1)</a>
+
+        &#47&#47 inverse of the
+        invAup = torch.inverse(Aup)
+        invAdown = torch.inverse(Adown)</code></pre><h3>After Change</h3><pre><code class='java'>
+        detAdown = torch.det(Adown)
+
+        &#47&#47 store all the dets we need
+        det_out_up = <a id="change">detAup.unsqueeze(-1).clone()</a>
+        det_out_down<a id="change"> = </a>detAdown.unsqueeze(-1).clone()
+
+        &#47&#47 return the ground state
+        if self.config_method == &quotground_state&quot:
+            return det_out_up, det_out_down
+
+        &#47&#47 inverse of the
+        invAup = torch.inverse(Aup)
+        invAdown = torch.inverse(Adown)
+
+        &#47&#47 virtual orbital matrices spin up/down
+        Bup = input[:, :self.nup, self.nup:self.index_max_orb_up]
+        Bdown = input[:, self.nup:,
+                      self.ndown: self.index_max_orb_down]
+
+        &#47&#47 compute the products of Ain and B
+        mat_exc_up = (invAup @ Bup)
+        mat_exc_down = (invAdown @ Bdown)
+
+        if do_single:
+
+            &#47&#47 determinant of the unique excitation spin up
+            det_single_up = mat_exc_up.view(
+                nbatch, -1)[:, self.exc_mask.index_unique_single_up]
+
+            &#47&#47 determinant of the unique excitation spin down
+            det_single_down = mat_exc_down.view(
+                nbatch, -1)[:, self.exc_mask.index_unique_single_down]
+
+            &#47&#47 multiply with ground state determinant
+            &#47&#47 and account for permutation for deep excitation
+            det_single_up = detAup.unsqueeze(-1) * \
+                det_single_up.view(nbatch, -1)
+
+            &#47&#47 multiply with ground state determinant
+            &#47&#47 and account for permutation for deep excitation
+            det_single_down = detAdown.unsqueeze(-1) * \
+                det_single_down.view(nbatch, -1)
+
+            &#47&#47 if the orbital in configs are in increasing order
+            &#47&#47 we should deal with that better ...
+            &#47&#47 det_up *= self.exc_mask.sign_unique_single_up
+            &#47&#47 det_down *= self.exc_mask.sign_unique_single_down
+
+            &#47&#47 accumulate the dets
+            det_out_up<a id="change"> = </a>torch.cat((det_out_up, det_single_up), dim=1)
+            det_out_down<a id="change"> = </a>torch.cat(
+                (det_out_down, det_single_down), dim=1)
+
+        if do_double:
+
+            &#47&#47 det of unique spin up double exc
+            det_double_up = mat_exc_up.view(
+                nbatch, -1)[:, self.exc_mask.index_unique_double_up]
+
+            &#47&#47 det_double_up = torch.det(
+            &#47&#47     det_double_up.view(nbatch, -1, 2, 2))
+            det_double_up = bdet2(
+                det_double_up.view(nbatch, -1, 2, 2))
+
+            det_double_up = detAup.unsqueeze(-1) * det_double_up
+
+            &#47&#47 det of unique spin down double exc
+            det_double_down = mat_exc_down.view(
+                nbatch, -1)[:, self.exc_mask.index_unique_double_down]
+
+            &#47&#47 det_double_down = torch.det(
+            &#47&#47     det_double_down.view(nbatch, -1, 2, 2))
+            det_double_down = bdet2(
+                det_double_down.view(nbatch, -1, 2, 2))
+
+            det_double_down = detAdown.unsqueeze(-1) * det_double_down
+
+            det_out_up = torch.cat((det_out_up, det_double_up), dim=1)
+            det_out_down = torch.cat(
+                (det_out_down, det_double_down), dim=1)
+
+        <a id="change">return </a>det_out_up<a id="change">, det_out_down</a>
+
+        &#47&#47 if self.config_method.startswith(&quotsingle(&quot):
+
+        &#47&#47     return torch.cat((detAup.unsqueeze(-1), det_single_up), dim=1),\</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/nlesc-jcer/qmctorch/commit/a8002dd8e4f435edb49cebcc9253e62042d1f826#diff-97285bf75eb9cf007e2a584676c1f0d3dd12e02b6a8f8f3f9b189c7d5d3a8be3L123' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 115256262</div><div id='project'> Project Name: nlesc-jcer/qmctorch</div><div id='commit'> Commit Name: a8002dd8e4f435edb49cebcc9253e62042d1f826</div><div id='time'> Time: 2020-05-19</div><div id='author'> Author: nicolas.gm.renaud@gmail.com</div><div id='file'> File Name: qmctorch/wavefunction/slater_pooling.py</div><div id='m_class'> M Class Name: SlaterPooling</div><div id='n_method'> N Class Name: SlaterPooling</div><div id='m_method'> M Method Name: det_unique_single_double(2)</div><div id='n_method'> N Method Name: det_unique_single_double(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: qmctorch/wavefunction/slater_pooling.py</div><div id='n_file'> N File Name: qmctorch/wavefunction/slater_pooling.py</div><div id='m_start'> M Start Line: 160</div><div id='m_end'> M End Line: 244</div><div id='n_start'> N Start Line: 167</div><div id='n_end'> N End Line: 245</div><BR>

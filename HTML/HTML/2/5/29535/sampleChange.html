@@ -1,0 +1,34 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            &#47&#47 When it should not
+            if (not isinstance(operation, CoreOp)
+                    and current_state.stage != previous_state.stage):
+                <a id="change">raise </a><a id="change">AssertionError(</a>"You are not allowed to change the stage"<a id="change">)</a>
+
+            &#47&#47 Add batch size to the shape when collating
+            if isinstance(operation, Collate):
+                &#47&#47 We can&quott have a second</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    def parse_pipeline(self, batch_size=16):
+        memory_allocations: Mapping[int, Optional[AllocationQuery]] = {}
+        operation_blocs<a id="change"> = </a><a id="change">[]</a>
+
+        current_state: State = self.original_state
+        current_block = []
+
+        &#47&#47 We read the content of the pipeline, validate and collect
+        &#47&#47 Memory allocations
+        for op_id, operation in enumerate(self.operations):
+            previous_state = current_state
+            current_state, memory_allocation = operation.declare_state_and_memory(
+                current_state)
+
+            if current_state.jit_mode != previous_state.jit_mode:
+                if current_block:
+                    <a id="change">operation_blocs.append(</a>(previous_state.jit_mode, current_block)<a id="change">)</a>
+                current_block = [op_id]
+            else:
+                current_block.append(op_id)
+</code></pre>

@@ -1,0 +1,94 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            kdbl_down += kin_ground_down
+
+        if self.config_method.startswith(&quotsingle(&quot):
+            <a id="change">return </a>torch.cat((kin_ground_up, ksin_up), dim=1)<a id="change">, \
+                torch.cat((kin_ground_down, ksin_down), dim=1)</a>
+
+        if self.config_method.startswith(&quotsingle_double(&quot):
+            return torch.cat((kin_ground_up, ksin_up, kdbl_up), dim=1), \
+                torch.cat(</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        &#47&#47 store the kin terms we need
+        kin_out_up = kin_ground_up.clone()
+        kin_out_down = <a id="change">kin_ground_down.clone()</a>
+
+        if self.config_method == &quotground_state&quot:
+            return kin_out_up, kin_out_down
+
+        &#47&#47 virtual orbital matrices spin up/down
+        Avirt_up = mo[:, :self.nup, self.nup:self.index_max_orb_up]
+        Avirt_down = mo[:, self.nup:,
+                        self.ndown: self.index_max_orb_down]
+
+        &#47&#47 compute the products of Ain and B
+        mat_exc_up = (invAup @ Avirt_up)
+        mat_exc_down = (invAdown @ Avirt_down)
+
+        bkin_up = bkin[:, :self.nup, :self.index_max_orb_up]
+        bkin_occ_up = bkin[:, :self.nup, :self.nup]
+        bkin_virt_up = bkin[:, :self.nup,
+                            self.nup:self.index_max_orb_up]
+
+        bkin_down = bkin[:, self.nup:, :self.index_max_orb_down]
+        bkin_occ_down = bkin[:, self.nup:, :self.ndown]
+        bkin_virt_down = bkin[:, self.nup:,
+                              self.ndown:self.index_max_orb_down]
+
+        Mup = invAup @ bkin_virt_up - invAup @ bkin_occ_up @ invAup @ Avirt_up
+        Mdown = invAdown @ bkin_virt_down - \
+            invAdown @ bkin_occ_down @ invAdown @ Avirt_down
+
+        if do_single:
+
+            ksin_up = (1. / mat_exc_up.view(nbatch, -1)[:, self.exc_mask.index_unique_single_up]) * \
+                Mup.view(
+                    nbatch, -1)[:, self.exc_mask.index_unique_single_up]
+            ksin_up *= -0.5
+            ksin_up += kin_ground_up
+
+            ksin_down = (1. / mat_exc_down.view(nbatch, -1)[:, self.exc_mask.index_unique_single_down]) * \
+                Mdown.view(
+                    nbatch, -1)[:, self.exc_mask.index_unique_single_down]
+            ksin_down *= -0.5
+            ksin_down += kin_ground_down
+
+            &#47&#47 store the terms we need
+            kin_out_up<a id="change"> = </a>torch.cat((kin_out_up, ksin_up), dim=1)
+            kin_out_down<a id="change"> = </a>torch.cat(
+                (kin_out_down, ksin_down), dim=1)
+
+        if do_double:
+
+            kdbl_up = mat_exc_up.view(
+                nbatch, -1)[:, self.exc_mask.index_unique_double_up]
+            kdbl_up = torch.inverse(kdbl_up.view(nbatch, -1, 2, 2))
+            kdbl_up = kdbl_up @ (Mup.view(
+                nbatch, -1)[:, self.exc_mask.index_unique_double_up]).view(nbatch, -1, 2, 2)
+            kdbl_up = btrace(kdbl_up)
+            kdbl_up *= -0.5
+            kdbl_up += kin_ground_up
+
+            kdbl_down = mat_exc_down.view(
+                nbatch, -1)[:, self.exc_mask.index_unique_double_down]
+            kdbl_down = torch.inverse(
+                kdbl_down.view(nbatch, -1, 2, 2))
+            kdbl_down = kdbl_down @ (Mdown.view(
+                nbatch, -1)[:, self.exc_mask.index_unique_double_down]).view(nbatch, -1, 2, 2)
+            kdbl_down = btrace(kdbl_down)
+            kdbl_down *= -0.5
+            kdbl_down += kin_ground_down
+
+            &#47&#47 store the terms we need
+            kin_out_up<a id="change"> = </a>torch.cat((kin_out_up, kdbl_up), dim=1)
+            kin_out_down = torch.cat(
+                (kin_out_down, kdbl_down), dim=1)
+
+        <a id="change">return </a>kin_out_up<a id="change">, kin_out_down</a>
+
+        &#47&#47 if self.config_method.startswith(&quotsingle(&quot):
+        &#47&#47     return torch.cat((kin_ground_up, ksin_up), dim=1), \
+        &#47&#47         torch.cat((kin_ground_down, ksin_down), dim=1)</code></pre>

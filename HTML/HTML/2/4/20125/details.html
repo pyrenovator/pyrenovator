@@ -1,0 +1,106 @@
+<html><h3>Pattern ID :20125
+</h3><img src='65813780.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    def enqueue(self, num_batches):
+        batch_size = self.batch_size
+
+        <a id="change">for </a>i in range(num_batches)<a id="change">:
+            </a>if self.pt + batch_size &lt; len(self.arrays[0]):
+                iter_ret = []
+                for j, a in enumerate(self.arrays):
+                    if self.shuffle:</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    def enqueue(self, num_batches):
+        for batch in itertools.islice(self.input_iter, num_batches):
+            flatten_args, tree = <a id="change">jax.tree_flatten(</a>batch<a id="change">)</a>
+
+            &#47&#47 Cache meta info
+            if self.first_iter:
+                self.first_iter = False
+                self.avals = [
+                    ShapedArray(a.shape, a.dtype) for a in flatten_args
+                ]
+                self.indices = [
+                    tuple(spec.indices(aval.shape))
+                    for spec, aval in zip(self.sharding_specs, self.avals)
+                ]
+
+            new_args = self.physical_mesh.shard_args_to_arrays(
+                self.avals, self.indices, self.sharding_specs, flatten_args)
+            self.queue.append(<a id="change">jax.tree_unflatten(</a>tree, new_args<a id="change">)</a>)
+
+    def __iter__(self):
+        if self.prefetch_size:</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/alpa-projects/alpa/commit/eb156b60a22df5fdc6a06d5c7833d4075002746d#diff-1c06e34c32f327f460c74a4e04faa9d8e072ea955f761b1bc10cefcb85ea86bbL33' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 65813780</div><div id='project'> Project Name: alpa-projects/alpa</div><div id='commit'> Commit Name: eb156b60a22df5fdc6a06d5c7833d4075002746d</div><div id='time'> Time: 2022-02-25</div><div id='author'> Author: lianminzheng@gmail.com</div><div id='file'> File Name: alpa/data_loader.py</div><div id='m_class'> M Class Name: DataLoader</div><div id='n_method'> N Class Name: DataLoader</div><div id='m_method'> M Method Name: enqueue(2)</div><div id='n_method'> N Method Name: enqueue(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: alpa/data_loader.py</div><div id='n_file'> N File Name: alpa/data_loader.py</div><div id='m_start'> M Start Line: 68</div><div id='m_end'> M End Line: 88</div><div id='n_start'> N Start Line: 33</div><div id='n_end'> N End Line: 51</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        others = (other,) + rest
+        acc = self
+
+        <a id="change">for </a>other in others<a id="change">:
+            </a>acc = acc._merge_one(other)
+
+        return acc
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            return acc
+
+        try:
+            flats, treedefs = zip(*[<a id="change">jax.tree_flatten(</a>m<a id="change">)</a> for m in modules])
+            flat_out = jax.tree_util.tree_map(merge_fn, *flats)
+            module = <a id="change">jax.tree_unflatten(</a>treedefs[0], flat_out<a id="change">)</a>
+        finally:
+            LOCAL.is_merging = old_merging
+
+        return module</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/cgarciae/treex/commit/940e81d23384c4f7d72cbf40694942176210a401#diff-b8a15969887aa759fe004454b4ef4aa181282e31792cb8a9f2f88706e14910beL163' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 65813776</div><div id='project'> Project Name: cgarciae/treex</div><div id='commit'> Commit Name: 940e81d23384c4f7d72cbf40694942176210a401</div><div id='time'> Time: 2021-08-17</div><div id='author'> Author: cgarcia.e88@gmail.com</div><div id='file'> File Name: treex/base.py</div><div id='m_class'> M Class Name: Module</div><div id='n_method'> N Class Name: Module</div><div id='m_method'> M Method Name: merge(2)</div><div id='n_method'> N Method Name: merge(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: Sliceable</div><div id='m_file'> M File Name: treex/base.py</div><div id='n_file'> N File Name: treex/base.py</div><div id='m_start'> M Start Line: 164</div><div id='m_end'> M End Line: 170</div><div id='n_start'> N Start Line: 203</div><div id='n_end'> N End Line: 222</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        module: T = self.__class__.__new__(self.__class__)
+        tree_parts, not_tree = self._parts()
+
+        <a id="change">for </a>k, (cls, v) in tree_parts.items()<a id="change">:
+            </a>if issubclass(cls, Sliceable):
+                v = cls.slice(v, *filters)
+            elif not issubclass(cls, filters):
+                v = Nothing()</code></pre><h3>After Change</h3><pre><code class='java'>
+        LOCAL.is_slicing = True
+
+        try:
+            flat, treedef = <a id="change">jax.tree_flatten(</a>self<a id="change">)</a>
+            flat_out = [
+                value_annotation.value
+                if issubclass(value_annotation.annotation, filters)
+                else Nothing()
+                for value_annotation in flat
+            ]
+            module = <a id="change">jax.tree_unflatten(</a>treedef, flat_out<a id="change">)</a>
+        finally:
+            LOCAL.is_slicing = old_slicing
+
+        return module</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/cgarciae/treex/commit/940e81d23384c4f7d72cbf40694942176210a401#diff-b8a15969887aa759fe004454b4ef4aa181282e31792cb8a9f2f88706e14910beL123' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 65813777</div><div id='project'> Project Name: cgarciae/treex</div><div id='commit'> Commit Name: 940e81d23384c4f7d72cbf40694942176210a401</div><div id='time'> Time: 2021-08-17</div><div id='author'> Author: cgarcia.e88@gmail.com</div><div id='file'> File Name: treex/base.py</div><div id='m_class'> M Class Name: Module</div><div id='n_method'> N Class Name: Module</div><div id='m_method'> M Method Name: slice(1)</div><div id='n_method'> N Method Name: slice(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: Sliceable</div><div id='m_file'> M File Name: treex/base.py</div><div id='n_file'> N File Name: treex/base.py</div><div id='m_start'> M Start Line: 124</div><div id='m_end'> M End Line: 138</div><div id='n_start'> N Start Line: 185</div><div id='n_end'> N End Line: 200</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        for i in range(num_batches):
+            if self.pt + batch_size &lt; len(self.arrays[0]):
+                iter_ret = []
+                <a id="change">for </a>j, a in enumerate(self.arrays)<a id="change">:
+                    </a>if self.shuffle:
+                        batch = a[self.perm[self.pt:self.pt + batch_size]]
+                    else:
+                        batch = a[self.pt:self.pt + batch_size]</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    def enqueue(self, num_batches):
+        for batch in itertools.islice(self.input_iter, num_batches):
+            flatten_args, tree = <a id="change">jax.tree_flatten(</a>batch<a id="change">)</a>
+
+            &#47&#47 Cache meta info
+            if self.first_iter:
+                self.first_iter = False
+                self.avals = [
+                    ShapedArray(a.shape, a.dtype) for a in flatten_args
+                ]
+                self.indices = [
+                    tuple(spec.indices(aval.shape))
+                    for spec, aval in zip(self.sharding_specs, self.avals)
+                ]
+
+            new_args = self.physical_mesh.shard_args_to_arrays(
+                self.avals, self.indices, self.sharding_specs, flatten_args)
+            self.queue.append(<a id="change">jax.tree_unflatten(</a>tree, new_args<a id="change">)</a>)
+
+    def __iter__(self):
+        if self.prefetch_size:</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/alpa-projects/alpa/commit/eb156b60a22df5fdc6a06d5c7833d4075002746d#diff-1c06e34c32f327f460c74a4e04faa9d8e072ea955f761b1bc10cefcb85ea86bbL67' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 65813778</div><div id='project'> Project Name: alpa-projects/alpa</div><div id='commit'> Commit Name: eb156b60a22df5fdc6a06d5c7833d4075002746d</div><div id='time'> Time: 2022-02-25</div><div id='author'> Author: lianminzheng@gmail.com</div><div id='file'> File Name: alpa/data_loader.py</div><div id='m_class'> M Class Name: DataLoader</div><div id='n_method'> N Class Name: DataLoader</div><div id='m_method'> M Method Name: enqueue(2)</div><div id='n_method'> N Method Name: enqueue(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: alpa/data_loader.py</div><div id='n_file'> N File Name: alpa/data_loader.py</div><div id='m_start'> M Start Line: 68</div><div id='m_end'> M End Line: 88</div><div id='n_start'> N Start Line: 33</div><div id='n_end'> N End Line: 51</div><BR>

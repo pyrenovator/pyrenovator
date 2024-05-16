@@ -1,0 +1,187 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+    if hparams["sorting"] == "ascending":
+        &#47&#47 we sort training data to speed up training and get better results.
+        <a id="change">train_data</a> = train_data.filtered_sorted(sort_key="duration")
+        &#47&#47 when sorting do not shuffle in dataloader ! otherwise is pointless
+        hparams["dataloader_opts"]["shuffle"] = False
+
+    elif hparams["sorting"] == "descending":
+        <a id="change">train_data</a> = train_data.filtered_sorted(
+            sort_key="duration", reverse=True
+        )
+        &#47&#47 when sorting do not shuffle in dataloader ! otherwise is pointless
+        hparams["dataloader_opts"]["shuffle"] = False
+
+    elif hparams["sorting"] == "random":
+        pass
+
+    else:
+        raise NotImplementedError(
+            "sorting must be random, ascending or descending"
+        )
+
+    valid_data = sb.dataio.dataset.DynamicItemDataset.from_csv(
+        csv_path=hparams["csv_valid"], replacements={"data_root": data_folder},
+    )
+    valid_data = valid_data.filtered_sorted(sort_key="duration")
+
+    test_real_data = sb.dataio.dataset.DynamicItemDataset.from_csv(
+        csv_path=hparams["csv_test_real"],
+        replacements={"data_root": data_folder},
+    )
+    test_real_data = test_real_data.filtered_sorted(sort_key="duration")
+
+    test_synth_data = sb.dataio.dataset.DynamicItemDataset.from_csv(
+        csv_path=hparams["csv_test_synth"],
+        replacements={"data_root": data_folder},
+    )
+    test_synth_data = test_synth_data.filtered_sorted(sort_key="duration")
+
+    datasets = <a id="change">[train_data</a>, <a id="change">valid_data</a>, <a id="change">test_real_data</a>, <a id="change">test_synth_data</a>]
+
+    tokenizer = hparams["tokenizer"]
+
+    &#47&#47 2. Define audio pipeline:
+    @sb.utils.data_pipeline.takes("wav")
+    @sb.utils.data_pipeline.provides("sig")
+    def audio_pipeline(wav):
+        sig = sb.dataio.dataio.read_audio(wav)
+        return sig
+
+    sb.dataio.dataset.add_dynamic_item(datasets, audio_pipeline)
+
+    &#47&#47 3. Define text pipeline:
+    @sb.utils.data_pipeline.takes("semantics")
+    @sb.utils.data_pipeline.provides(
+        "semantics", "token_list", "tokens_bos", "tokens_eos", "tokens"
+    )
+    def text_pipeline(semantics):
+        yield semantics
+        tokens_list = tokenizer.encode_as_ids(semantics)
+        yield tokens_list
+        tokens_bos = torch.LongTensor([hparams["bos_index"]] + (tokens_list))
+        yield tokens_bos
+        tokens_eos = torch.LongTensor(tokens_list + [hparams["eos_index"]])
+        yield tokens_eos
+        tokens = torch.LongTensor(tokens_list)
+        yield tokens
+
+    sb.dataio.dataset.add_dynamic_item(datasets, text_pipeline)
+
+    &#47&#47 4. Set output:
+    sb.dataio.dataset.set_output_keys(
+        datasets,
+        ["id", "sig", "semantics", "tokens_bos", "tokens_eos", "tokens"],
+    )
+    <a id="change">return train_data</a><a id="change">, valid_data, test_real_data, test_synth_data, tokenizer</a>
+
+
+if __name__ == "__main__":
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    if hparams["sorting"] == "ascending":
+        &#47&#47 we sort training data to speed up training and get better results.
+        <a id="change">train_data</a> = train_data.filtered_sorted(sort_key="duration")
+        &#47&#47 when sorting do not shuffle in dataloader ! otherwise is pointless
+        hparams["dataloader_opts"]["shuffle"] = False
+
+    elif hparams["sorting"] == "descending":
+        <a id="change">train_data</a> = train_data.filtered_sorted(
+            sort_key="duration", reverse=True
+        )
+        &#47&#47 when sorting do not shuffle in dataloader ! otherwise is pointless
+        hparams["dataloader_opts"]["shuffle"] = False
+
+    elif hparams["sorting"] == "random":
+        pass
+
+    else:
+        raise NotImplementedError(
+            "sorting must be random, ascending or descending"
+        )
+
+    &#47&#47 If we are testing on all the real data, including dev-real,
+    &#47&#47 we shouldn&quott use dev-real as the validation set.
+    if hparams["test_on_all_real"]:
+        valid_path = hparams["csv_dev_synth"]
+    else:
+        valid_path = hparams["csv_dev_real"]
+    valid_data = sb.dataio.dataset.DynamicItemDataset.from_csv(
+        csv_path=valid_path, replacements={"data_root": data_folder},
+    )
+    valid_data = valid_data.filtered_sorted(sort_key="duration")
+
+    test_real_data = sb.dataio.dataset.DynamicItemDataset.from_csv(
+        csv_path=hparams["csv_test_real"],
+        replacements={"data_root": data_folder},
+    )
+    test_real_data = test_real_data.filtered_sorted(sort_key="duration")
+
+    test_synth_data = sb.dataio.dataset.DynamicItemDataset.from_csv(
+        csv_path=hparams["csv_test_synth"],
+        replacements={"data_root": data_folder},
+    )
+    test_synth_data = test_synth_data.filtered_sorted(sort_key="duration")
+
+    all_real_data = <a id="change">sb.dataio.dataset.DynamicItemDataset.from_csv(
+        csv_path=hparams["csv_all_real"],
+        replacements={"data_root": data_folder},
+    )</a>
+    <a id="change">all_real_data = </a><a id="change">all_real_data.filtered_sorted(sort_key="duration")</a>
+
+    datasets<a id="change"> = [
+        train_data</a>,
+        <a id="change">valid_data</a>,
+        <a id="change">test_real_data</a>,
+        <a id="change">test_synth_data</a>,
+        <a id="change">all_real_data</a>,
+    ]
+
+    tokenizer = hparams["tokenizer"]
+
+    &#47&#47 2. Define audio pipeline:
+    @sb.utils.data_pipeline.takes("wav")
+    @sb.utils.data_pipeline.provides("sig")
+    def audio_pipeline(wav):
+        sig = sb.dataio.dataio.read_audio(wav)
+        return sig
+
+    sb.dataio.dataset.add_dynamic_item(datasets, audio_pipeline)
+
+    &#47&#47 3. Define text pipeline:
+    @sb.utils.data_pipeline.takes("semantics")
+    @sb.utils.data_pipeline.provides(
+        "semantics", "token_list", "tokens_bos", "tokens_eos", "tokens"
+    )
+    def text_pipeline(semantics):
+        yield semantics
+        tokens_list = tokenizer.encode_as_ids(semantics)
+        yield tokens_list
+        tokens_bos = torch.LongTensor([hparams["bos_index"]] + (tokens_list))
+        yield tokens_bos
+        tokens_eos = torch.LongTensor(tokens_list + [hparams["eos_index"]])
+        yield tokens_eos
+        tokens = torch.LongTensor(tokens_list)
+        yield tokens
+
+    sb.dataio.dataset.add_dynamic_item(datasets, text_pipeline)
+
+    &#47&#47 4. Set output:
+    sb.dataio.dataset.set_output_keys(
+        datasets,
+        ["id", "sig", "semantics", "tokens_bos", "tokens_eos", "tokens"],
+    )
+    <a id="change">return </a>(
+        <a id="change">train_data</a><a id="change">,
+        valid_data,
+        test_real_data,
+        test_synth_data,
+        all_real_data,
+        tokenizer</a>,
+    )
+
+</code></pre>

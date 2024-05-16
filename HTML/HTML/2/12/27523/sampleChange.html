@@ -1,0 +1,25 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            ctx.model.storage_dtype if dtype is None else jnp.promote_types(ctx.model.storage_dtype, dtype))
+        assign(ctx, name, param)
+    param = ctx.parameters[prefix_name]
+    <a id="change">if </a>depth_indexing:
+        param<a id="change"> = </a>param[idx].reshape(<a id="change">param.shape[1:]</a>)
+    return param.astype(
+        ctx.model.computation_dtype if dtype is None else jnp.promote_types(ctx.model.computation_dtype, dtype))
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        computation_dtype = jnp.promote_types(ctx.model.computation_dtype, dtype)
+        storage_dtype = jnp.promote_types(ctx.model.storage_dtype, dtype)
+
+    <a id="change">if </a>weight_sharing:
+        split_name<a id="change"> = </a>[<a id="change">n.split(&quot:&quot</a><a id="change">)</a>[0] + &quot:&quot for n in name.split(&quot/&quot)]
+        for pname, param in ctx.parameters.items():
+            if ctx.parameter_dims[pname] != str_shape:
+                <a id="change">continue</a>
+            pname<a id="change"> = pname.split(</a>&quot/&quot<a id="change">)</a>
+            if all(p.startswith(s) for p, s in zip(pname, split_name)):
+                return param.astype(computation_dtype)
+
+    shape = dims_to_shape(ctx, str_shape)</code></pre>

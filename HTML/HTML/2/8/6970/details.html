@@ -1,0 +1,367 @@
+<html><h3>Pattern ID :6970
+</h3><img src='23298291.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    print("best_acc1 = {:3.1f}".format(best_acc1))
+
+    &#47&#47 evaluate on test set
+    <a id="change">classifier.load_state_dict(</a>torch.load(logger.get_checkpoint_path(&quotbest&quot))<a id="change">)</a>
+    acc1<a id="change"> = </a><a id="change">validate(</a>test_loader, <a id="change">classifier</a>, args<a id="change">)</a>
+    print("test_acc1 = {:3.1f}".format(acc1))
+
+    logger.close()</code></pre><h3>After Change</h3><pre><code class='java'>
+    print("=&gt; using pre-trained model &quot{}&quot".format(args.arch))
+    backbone = models.__dict__[args.arch](pretrained=True)
+    num_classes = train_dataset.num_classes
+    classifier = <a id="change">Classifier(backbone, num_classes, head_source=backbone.copy_head()).to(</a>device<a id="change">)</a>
+
+    &#47&#47 define optimizer and lr scheduler
+    optimizer = SGD(classifier.get_parameters(args.lr), momentum=args.momentum, weight_decay=args.wd, nesterov=True)
+    lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, args.lr_decay_epochs, gamma=args.lr_gamma)
+
+    &#47&#47 resume from the best checkpoint
+    if args.phase == &quottest&quot:
+        checkpoint = torch.load(logger.get_checkpoint_path(&quotbest&quot), map_location=&quotcpu&quot)
+        classifier.load_state_dict(checkpoint)
+        acc1<a id="change"> = </a><a id="change">validate(</a>val_loader, classifier, args<a id="change">)</a>
+        print(acc1)
+        return
+
+    &#47&#47 build relationship between source classes and target classes
+    relationship<a id="change"> = </a>Relationship(determin_train_loader, classifier, device, os.path.join(logger.root, args.relationship))
+    co_tuning_loss = CoTuningLoss()
+
+    &#47&#47 start training</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 7</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/thuml/transfer-learning-library/commit/d2d33527cdc174b9ef6dd2644337e3e3e50028ac#diff-46e5f7f40f62982cd2fed0316172ea915e81cf8a967098e824cd534cc2215dc0L30' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 23298291</div><div id='project'> Project Name: thuml/transfer-learning-library</div><div id='commit'> Commit Name: d2d33527cdc174b9ef6dd2644337e3e3e50028ac</div><div id='time'> Time: 2021-03-10</div><div id='author'> Author: 13126830206@163.com</div><div id='file'> File Name: examples-ft/classification/co_tuning.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(1)</div><div id='n_method'> N Method Name: main(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples-ft/classification/co_tuning.py</div><div id='n_file'> N File Name: examples-ft/classification/co_tuning.py</div><div id='m_start'> M Start Line: 33</div><div id='m_end'> M End Line: 132</div><div id='n_start'> N Start Line: 30</div><div id='n_end'> N End Line: 100</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    backbone = models.__dict__[args.arch](pretrained=True)
+    num_classes = train_dataset.num_classes
+    pretrained_head = backbone.copy_head()
+    <a id="change">classifier</a> = Classifier(backbone, num_classes, source_head=pretrained_head).to(device)
+
+    &#47&#47 define optimizer and lr scheduler
+    optimizer = SGD(classifier.get_parameters(args.lr), momentum=args.momentum, weight_decay=args.wd, nesterov=True)
+    lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, args.lr_decay_epochs, gamma=args.lr_gamma)
+
+    &#47&#47 resume from the best checkpoint
+    if args.phase != &quottrain&quot:
+        checkpoint = torch.load(logger.get_checkpoint_path(&quotbest&quot), map_location=&quotcpu&quot)
+        classifier.load_state_dict(checkpoint)
+
+    if args.phase == &quottest&quot:
+        acc1<a id="change"> = </a><a id="change">validate(</a>test_loader, classifier, args<a id="change">)</a>
+        print(acc1)
+        return
+
+
+    &#47&#47 compute relationship
+
+    relationship_path = args.relationship
+    if not os.path.exists(relationship_path):
+        r = Relationship(determin_train_loader, val_loader, classifier)
+        relationship = r.get_relationship(direct=args.direct)
+        np.save(relationship_path, relationship)
+    else:
+        relationship = np.load(relationship_path)
+
+    &#47&#47 start training
+    best_acc1 = 0.0
+
+    for epoch in range(args.epochs):
+        &#47&#47 train for one epoch
+        train(train_iter, classifier, optimizer,
+              epoch, relationship, args)
+        lr_scheduler.step()
+        &#47&#47 evaluate on validation set
+        acc1 = validate(val_loader, classifier, args)
+
+        &#47&#47 remember best acc@1 and save checkpoint
+        torch.save(classifier.state_dict(), logger.get_checkpoint_path(&quotlatest&quot))
+        if acc1 &gt; best_acc1:
+            shutil.copy(logger.get_checkpoint_path(&quotlatest&quot), logger.get_checkpoint_path(&quotbest&quot))
+        best_acc1 = max(acc1, best_acc1)
+
+    print("best_acc1 = {:3.1f}".format(best_acc1))
+
+    &#47&#47 evaluate on test set
+    <a id="change">classifier.load_state_dict(</a>torch.load(logger.get_checkpoint_path(&quotbest&quot))<a id="change">)</a>
+    acc1 = validate(test_loader, classifier, args)
+    print("test_acc1 = {:3.1f}".format(acc1))
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    print("=&gt; using pre-trained model &quot{}&quot".format(args.arch))
+    backbone = models.__dict__[args.arch](pretrained=True)
+    num_classes = train_dataset.num_classes
+    classifier = <a id="change">Classifier(backbone, num_classes, head_source=backbone.copy_head()).to(</a>device<a id="change">)</a>
+
+    &#47&#47 define optimizer and lr scheduler
+    optimizer = SGD(classifier.get_parameters(args.lr), momentum=args.momentum, weight_decay=args.wd, nesterov=True)
+    lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, args.lr_decay_epochs, gamma=args.lr_gamma)
+
+    &#47&#47 resume from the best checkpoint
+    if args.phase == &quottest&quot:
+        checkpoint = torch.load(logger.get_checkpoint_path(&quotbest&quot), map_location=&quotcpu&quot)
+        classifier.load_state_dict(checkpoint)
+        acc1<a id="change"> = </a><a id="change">validate(</a>val_loader, classifier, args<a id="change">)</a>
+        print(acc1)
+        return
+
+    &#47&#47 build relationship between source classes and target classes
+    relationship<a id="change"> = </a>Relationship(determin_train_loader, classifier, device, os.path.join(logger.root, args.relationship))
+    co_tuning_loss = CoTuningLoss()
+
+    &#47&#47 start training</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/thuml/transfer-learning-library/commit/d2d33527cdc174b9ef6dd2644337e3e3e50028ac#diff-46e5f7f40f62982cd2fed0316172ea915e81cf8a967098e824cd534cc2215dc0L32' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 23298288</div><div id='project'> Project Name: thuml/transfer-learning-library</div><div id='commit'> Commit Name: d2d33527cdc174b9ef6dd2644337e3e3e50028ac</div><div id='time'> Time: 2021-03-10</div><div id='author'> Author: 13126830206@163.com</div><div id='file'> File Name: examples-ft/classification/co_tuning.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(1)</div><div id='n_method'> N Method Name: main(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples-ft/classification/co_tuning.py</div><div id='n_file'> N File Name: examples-ft/classification/co_tuning.py</div><div id='m_start'> M Start Line: 33</div><div id='m_end'> M End Line: 132</div><div id='n_start'> N Start Line: 30</div><div id='n_end'> N End Line: 100</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    &#47&#47 create model
+    print("=&gt; using pre-trained model &quot{}&quot".format(args.arch))
+    G = <a id="change">models.__dict__[args.arch](pretrained=True).to(</a>device<a id="change">)</a>
+    num_classes = train_source_dataset.num_classes
+    F = ImageClassifierHead(G.out_features, num_classes, args.bottleneck_dim).to(device)
+    F.apply(weights_init)
+
+    &#47&#47 define optimizer
+    &#47&#47 the learning rate is fixed according to origin paper
+    optimizer_g<a id="change"> = </a>SGD(G.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+    optimizer_f = SGD(F.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
+
+    &#47&#47 resume from the best checkpoint
+    if args.phase != &quottrain&quot:
+        checkpoint = torch.load(logger.get_checkpoint_path(&quotbest&quot), map_location=&quotcpu&quot)
+        G.load_state_dict(checkpoint[&quotG&quot])
+        F.load_state_dict(checkpoint[&quotF&quot])
+
+    &#47&#47 analysis the model
+    if args.phase == &quotanalysis&quot:
+        &#47&#47 extract features from both domains
+        feature_extractor = G.to(device)
+        source_feature = collect_feature(train_source_loader, feature_extractor, device)
+        target_feature = collect_feature(train_target_loader, feature_extractor, device)
+        &#47&#47 plot t-SNE
+        tSNE_filename = osp.join(logger.visualize_directory, &quotTSNE.png&quot)
+        tsne.visualize(source_feature, target_feature, tSNE_filename)
+        print("Saving t-SNE to", tSNE_filename)
+        &#47&#47 calculate A-distance, which is a measure for distribution discrepancy
+        A_distance = a_distance.calculate(source_feature, target_feature, device)
+        print("A-distance =", A_distance)
+        return
+
+    if args.phase == &quottest&quot:
+        acc1 = validate(test_loader, G, F, args)
+        print(acc1)
+        return
+
+    &#47&#47 start training
+    best_acc1 = 0.
+    for epoch in range(args.epochs):
+        &#47&#47 train for one epoch
+        train(train_source_iter, train_target_iter, G, F, optimizer_g, optimizer_f, epoch, args)
+
+        &#47&#47 evaluate on validation set
+        acc1 = validate(val_loader, G, F, args)
+
+        &#47&#47 remember best acc@1 and save checkpoint
+        torch.save({
+            &quotG&quot: G.state_dict(),
+            &quotF&quot: F.state_dict()
+        }, logger.get_checkpoint_path(&quotlatest&quot))
+        if acc1 &gt; best_acc1:
+            shutil.copy(logger.get_checkpoint_path(&quotlatest&quot), logger.get_checkpoint_path(&quotbest&quot))
+        best_acc1 = max(acc1, best_acc1)
+
+    print("best_acc1 = {:3.1f}".format(best_acc1))
+
+    &#47&#47 evaluate on test set
+    checkpoint = torch.load(logger.get_checkpoint_path(&quotbest&quot), map_location=&quotcpu&quot)
+    G.load_state_dict(checkpoint[&quotG&quot])
+    F.load_state_dict(checkpoint[&quotF&quot])
+    acc1<a id="change"> = </a><a id="change">validate(</a>test_loader, G, F, args<a id="change">)</a>
+    print("test_acc1 = {:3.1f}".format(acc1))
+
+    logger.close()
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    &#47&#47 create model
+    print("=&gt; using pre-trained model &quot{}&quot".format(args.arch))
+    backbone = models.__dict__[args.arch](pretrained=True)
+    <a id="change">classifier</a> = ImageClassifier(backbone, train_source_dataset.num_classes, bottleneck_dim=args.bottleneck_dim,
+                                 dropout_p=args.dropout_p).to(device)
+    adaptive_feature_norm = AdaptiveFeatureNorm(args.delta).to(device)
+
+    &#47&#47 define optimizer
+    &#47&#47 the learning rate is fixed according to origin paper
+    optimizer = SGD(classifier.get_parameters(), args.lr, weight_decay=args.weight_decay)
+
+    &#47&#47 resume from the best checkpoint
+    if args.phase != &quottrain&quot:
+        checkpoint = torch.load(logger.get_checkpoint_path(&quotbest&quot), map_location=&quotcpu&quot)
+        classifier.load_state_dict(checkpoint)
+
+    &#47&#47 analysis the model
+    if args.phase == &quotanalysis&quot:
+        &#47&#47 extract features from both domains
+        feature_extractor = nn.Sequential(classifier.backbone, classifier.bottleneck).to(device)
+        source_feature = collect_feature(train_source_loader, feature_extractor, device)
+        target_feature = collect_feature(train_target_loader, feature_extractor, device)
+        &#47&#47 plot t-SNE
+        tSNE_filename = osp.join(logger.visualize_directory, &quotTSNE.png&quot)
+        tsne.visualize(source_feature, target_feature, tSNE_filename)
+        print("Saving t-SNE to", tSNE_filename)
+        &#47&#47 calculate A-distance, which is a measure for distribution discrepancy
+        A_distance = a_distance.calculate(source_feature, target_feature, device)
+        print("A-distance =", A_distance)
+        return
+
+    if args.phase == &quottest&quot:
+        acc1 = validate(test_loader, classifier, args)
+        print(acc1)
+        return
+
+    &#47&#47 start training
+    best_acc1 = 0.
+    for epoch in range(args.epochs):
+        &#47&#47 train for one epoch
+        train(train_source_iter, train_target_iter, classifier, adaptive_feature_norm, optimizer, epoch, args)
+
+        &#47&#47 evaluate on validation set
+        acc1 = validate(val_loader, classifier, args)
+
+        &#47&#47 remember best acc@1 and save checkpoint
+        torch.save(classifier.state_dict(), logger.get_checkpoint_path(&quotlatest&quot))
+        if acc1 &gt; best_acc1:
+            shutil.copy(logger.get_checkpoint_path(&quotlatest&quot), logger.get_checkpoint_path(&quotbest&quot))
+        best_acc1 = max(acc1, best_acc1)
+
+    print("best_acc1 = {:3.1f}".format(best_acc1))
+
+    &#47&#47 evaluate on test set
+    <a id="change">classifier.load_state_dict(</a>torch.load(logger.get_checkpoint_path(&quotbest&quot))<a id="change">)</a>
+    acc1<a id="change"> = </a><a id="change">validate(</a>test_loader, classifier, args<a id="change">)</a>
+    print("test_acc1 = {:3.1f}".format(acc1))
+
+    logger.close()
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/thuml/transfer-learning-library/commit/ec192862c520a606b9233f651f2a381307d9a26a#diff-e54d2755942fde55ec5c7a79b78a2e3b8dce87b0c7acf25dd6c52c840eaf9a77L32' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 23298295</div><div id='project'> Project Name: thuml/transfer-learning-library</div><div id='commit'> Commit Name: ec192862c520a606b9233f651f2a381307d9a26a</div><div id='time'> Time: 2021-03-05</div><div id='author'> Author: chenbx18@mails.tsinghua.edu.cn</div><div id='file'> File Name: examples-da/unsupervised/afn.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(1)</div><div id='n_method'> N Method Name: main(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples-da/unsupervised/afn.py</div><div id='n_file'> N File Name: examples-da/unsupervised/afn.py</div><div id='m_start'> M Start Line: 73</div><div id='m_end'> M End Line: 152</div><div id='n_start'> N Start Line: 73</div><div id='n_end'> N End Line: 145</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    &#47&#47 create model
+    print("=&gt; using pre-trained model &quot{}&quot".format(args.arch))
+    G = <a id="change">models.__dict__[args.arch](pretrained=True).to(</a>device<a id="change">)</a>
+    num_classes = train_source_dataset.num_classes
+    F = ImageClassifierHead(G.out_features, num_classes, args.bottleneck_dim).to(device)
+    F.apply(weights_init)
+
+    &#47&#47 define optimizer
+    &#47&#47 the learning rate is fixed according to origin paper
+    optimizer_g<a id="change"> = </a>SGD(G.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+    optimizer_f = SGD(F.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
+
+    &#47&#47 resume from the best checkpoint
+    if args.phase != &quottrain&quot:
+        checkpoint = torch.load(logger.get_checkpoint_path(&quotbest&quot), map_location=&quotcpu&quot)
+        G.load_state_dict(checkpoint[&quotG&quot])
+        F.load_state_dict(checkpoint[&quotF&quot])
+
+    &#47&#47 analysis the model
+    if args.phase == &quotanalysis&quot:
+        &#47&#47 extract features from both domains
+        feature_extractor = G.to(device)
+        source_feature = collect_feature(train_source_loader, feature_extractor, device)
+        target_feature = collect_feature(train_target_loader, feature_extractor, device)
+        &#47&#47 plot t-SNE
+        tSNE_filename = osp.join(logger.visualize_directory, &quotTSNE.png&quot)
+        tsne.visualize(source_feature, target_feature, tSNE_filename)
+        print("Saving t-SNE to", tSNE_filename)
+        &#47&#47 calculate A-distance, which is a measure for distribution discrepancy
+        A_distance = a_distance.calculate(source_feature, target_feature, device)
+        print("A-distance =", A_distance)
+        return
+
+    if args.phase == &quottest&quot:
+        acc1 = validate(test_loader, G, F, args)
+        print(acc1)
+        return
+
+    &#47&#47 start training
+    best_acc1 = 0.
+    for epoch in range(args.epochs):
+        &#47&#47 train for one epoch
+        train(train_source_iter, train_target_iter, G, F, optimizer_g, optimizer_f, epoch, args)
+
+        &#47&#47 evaluate on validation set
+        acc1 = validate(val_loader, G, F, args)
+
+        &#47&#47 remember best acc@1 and save checkpoint
+        torch.save({
+            &quotG&quot: G.state_dict(),
+            &quotF&quot: F.state_dict()
+        }, logger.get_checkpoint_path(&quotlatest&quot))
+        if acc1 &gt; best_acc1:
+            shutil.copy(logger.get_checkpoint_path(&quotlatest&quot), logger.get_checkpoint_path(&quotbest&quot))
+        best_acc1 = max(acc1, best_acc1)
+
+    print("best_acc1 = {:3.1f}".format(best_acc1))
+
+    &#47&#47 evaluate on test set
+    checkpoint = torch.load(logger.get_checkpoint_path(&quotbest&quot), map_location=&quotcpu&quot)
+    G.load_state_dict(checkpoint[&quotG&quot])
+    F.load_state_dict(checkpoint[&quotF&quot])
+    acc1<a id="change"> = </a><a id="change">validate(</a>test_loader, G, F, args<a id="change">)</a>
+    print("test_acc1 = {:3.1f}".format(acc1))
+
+    logger.close()
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    &#47&#47 create model
+    print("=&gt; using pre-trained model &quot{}&quot".format(args.arch))
+    backbone = models.__dict__[args.arch](pretrained=True)
+    <a id="change">classifier</a> = ImageClassifier(backbone, train_source_dataset.num_classes, bottleneck_dim=args.bottleneck_dim,
+                                 dropout_p=args.dropout_p).to(device)
+    adaptive_feature_norm = AdaptiveFeatureNorm(args.delta).to(device)
+
+    &#47&#47 define optimizer
+    &#47&#47 the learning rate is fixed according to origin paper
+    optimizer = SGD(classifier.get_parameters(), args.lr, weight_decay=args.weight_decay)
+
+    &#47&#47 resume from the best checkpoint
+    if args.phase != &quottrain&quot:
+        checkpoint = torch.load(logger.get_checkpoint_path(&quotbest&quot), map_location=&quotcpu&quot)
+        classifier.load_state_dict(checkpoint)
+
+    &#47&#47 analysis the model
+    if args.phase == &quotanalysis&quot:
+        &#47&#47 extract features from both domains
+        feature_extractor = nn.Sequential(classifier.backbone, classifier.bottleneck).to(device)
+        source_feature = collect_feature(train_source_loader, feature_extractor, device)
+        target_feature = collect_feature(train_target_loader, feature_extractor, device)
+        &#47&#47 plot t-SNE
+        tSNE_filename = osp.join(logger.visualize_directory, &quotTSNE.png&quot)
+        tsne.visualize(source_feature, target_feature, tSNE_filename)
+        print("Saving t-SNE to", tSNE_filename)
+        &#47&#47 calculate A-distance, which is a measure for distribution discrepancy
+        A_distance = a_distance.calculate(source_feature, target_feature, device)
+        print("A-distance =", A_distance)
+        return
+
+    if args.phase == &quottest&quot:
+        acc1 = validate(test_loader, classifier, args)
+        print(acc1)
+        return
+
+    &#47&#47 start training
+    best_acc1 = 0.
+    for epoch in range(args.epochs):
+        &#47&#47 train for one epoch
+        train(train_source_iter, train_target_iter, classifier, adaptive_feature_norm, optimizer, epoch, args)
+
+        &#47&#47 evaluate on validation set
+        acc1 = validate(val_loader, classifier, args)
+
+        &#47&#47 remember best acc@1 and save checkpoint
+        torch.save(classifier.state_dict(), logger.get_checkpoint_path(&quotlatest&quot))
+        if acc1 &gt; best_acc1:
+            shutil.copy(logger.get_checkpoint_path(&quotlatest&quot), logger.get_checkpoint_path(&quotbest&quot))
+        best_acc1 = max(acc1, best_acc1)
+
+    print("best_acc1 = {:3.1f}".format(best_acc1))
+
+    &#47&#47 evaluate on test set
+    <a id="change">classifier.load_state_dict(</a>torch.load(logger.get_checkpoint_path(&quotbest&quot))<a id="change">)</a>
+    acc1<a id="change"> = </a><a id="change">validate(</a>test_loader, classifier, args<a id="change">)</a>
+    print("test_acc1 = {:3.1f}".format(acc1))
+
+    logger.close()
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/thuml/transfer-learning-library/commit/ec192862c520a606b9233f651f2a381307d9a26a#diff-2308619a27bef896d80ae6f3603a36bc9a9d9a838dba4f020212f63e98ec4ea2L33' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 23298294</div><div id='project'> Project Name: thuml/transfer-learning-library</div><div id='commit'> Commit Name: ec192862c520a606b9233f651f2a381307d9a26a</div><div id='time'> Time: 2021-03-05</div><div id='author'> Author: chenbx18@mails.tsinghua.edu.cn</div><div id='file'> File Name: examples-da/partial/afn.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(1)</div><div id='n_method'> N Method Name: main(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples-da/partial/afn.py</div><div id='n_file'> N File Name: examples-da/partial/afn.py</div><div id='m_start'> M Start Line: 75</div><div id='m_end'> M End Line: 154</div><div id='n_start'> N Start Line: 75</div><div id='n_end'> N End Line: 148</div><BR>

@@ -1,0 +1,63 @@
+<html><h3>Pattern ID :15038
+</h3><img src='50452737.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        channel_axis = ctx.channel_axis
+
+        dequantize_grad = delta * grad
+        mask_tensor = Variable(<a id="change">mask_tensor.type_as(</a>dequantize_grad.data<a id="change">)</a>)
+
+        tensor_grad = grad * mask_tensor
+        scale_grad = (clamp_out + offset - tensor * mask_tensor / delta) * grad
+        offset_grad = dequantize_grad * (1 - mask_tensor)
+
+        dim = list(range(len(tensor.shape)))
+        if len(delta) &gt; 1 and len(tensor.shape) &gt; 1:
+            dim.pop(channel_axis)
+
+        intermediate_term1<a id="change"> = </a>scale_grad.sum(dim=dim) / steps
+        intermediate_term2 = steps / (encoding_max - encoding_min) ** 2 * offset_grad.sum(dim=dim)
+
+        tensor_encoding_min_grad<a id="change"> = </a>-intermediate_term1 + encoding_max * intermediate_term2
+        tensor_encoding_max_grad = intermediate_term1 - encoding_min * intermediate_term2
+
+        return tensor_grad, tensor_encoding_min_grad, tensor_encoding_max_grad, None</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        intermediate_result = IntermediateResult(clamp_out, encoding_min, encoding_max, delta, offset, mask_tensor, steps)
+
+        tensor_grad<a id="change">, tensor_encoding_min_grad, tensor_encoding_max_grad</a> = \
+            grad_fn.calculate_gradients(tensor, grad, intermediate_result, channel_axis)
+
+        return tensor_grad, tensor_encoding_min_grad, tensor_encoding_max_grad, None</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/quic/aimet/commit/9c0f6f73bb2c2e725d533a065d5cfe08e8e46a41#diff-53af21caaa602b295954c0afcf0271342e22c2c3e5f1386f293cd465e08e53d2L692' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 50452737</div><div id='project'> Project Name: quic/aimet</div><div id='commit'> Commit Name: 9c0f6f73bb2c2e725d533a065d5cfe08e8e46a41</div><div id='time'> Time: 2022-09-27</div><div id='author'> Author: quic_geunlee@quicinc.com</div><div id='file'> File Name: TrainingExtensions/torch/src/python/aimet_torch/tensor_quantizer.py</div><div id='m_class'> M Class Name: QuantizeDequantizeFunc</div><div id='n_method'> N Class Name: QuantizeDequantizeFunc</div><div id='m_method'> M Method Name: backward(2)</div><div id='n_method'> N Method Name: backward(2)</div><div id='m_parent_class'> M Parent Class: torch.autograd.Function</div><div id='n_parent_class'> N Parent Class: torch.autograd.Function</div><div id='m_file'> M File Name: TrainingExtensions/torch/src/python/aimet_torch/tensor_quantizer.py</div><div id='n_file'> N File Name: TrainingExtensions/torch/src/python/aimet_torch/tensor_quantizer.py</div><div id='m_start'> M Start Line: 744</div><div id='m_end'> M End Line: 761</div><div id='n_start'> N Start Line: 692</div><div id='n_end'> N End Line: 697</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        shift_yy = shift_y.view(-1, 1).repeat(1, len(shift_x)).view(-1)
+
+        shifts = torch.stack([shift_xx, shift_yy, shift_xx, shift_yy], dim=-1)
+        shifts<a id="change"> = </a><a id="change">shifts.type_as(</a>base_cell<a id="change">)</a>
+
+        grid_cells<a id="change"> = </a>base_cell + shifts
+
+        return grid_cells
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    def get_grid_cells(self, featmap_size, scale=8, stride=8, device=&quotcuda&quot):
+        cell_size = stride * scale
+        y<a id="change">, x</a> = self.get_single_level_center_point(
+            featmap_size, stride, dtype=torch.float32, device=device, flatten=True)
+        grid_cells = torch.stack(
+            [x - 0.5 * cell_size, y - 0.5 * cell_size,</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/rangilyu/nanodet/commit/ed7d3f683d7b8a827ed4866761c0fcdd514678a6#diff-cb8fefbc2e4aded162b7aa797dfeb67e40e976b50b0e32f854a03879a1d64a6cL555' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 50452768</div><div id='project'> Project Name: rangilyu/nanodet</div><div id='commit'> Commit Name: ed7d3f683d7b8a827ed4866761c0fcdd514678a6</div><div id='time'> Time: 2021-02-20</div><div id='author'> Author: lyuchqi@gmail.com</div><div id='file'> File Name: nanodet/model/head/gfl_head.py</div><div id='m_class'> M Class Name: GFLHead</div><div id='n_method'> N Class Name: GFLHead</div><div id='m_method'> M Method Name: get_grid_cells(5)</div><div id='n_method'> N Method Name: get_grid_cells(5)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: nanodet/model/head/gfl_head.py</div><div id='n_file'> N File Name: nanodet/model/head/gfl_head.py</div><div id='m_start'> M Start Line: 564</div><div id='m_end'> M End Line: 581</div><div id='n_start'> N Start Line: 562</div><div id='n_end'> N End Line: 567</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        t_src_tgt_intgt = -R_tgt_src.bmm(t_tgt_src_insrc)
+
+        &#47&#47 Create translation matrix
+        zeros<a id="change"> = </a><a id="change">torch.zeros(batch_size, 1, 3).type_as(</a>V<a id="change">)</a>        &#47&#47 B x 1 x 3
+        one = torch.ones(batch_size, 1, 1).type_as(V)           &#47&#47 B x 1 x 1
+        trans_cols = torch.cat([t_src_tgt_intgt, one], dim=1)   &#47&#47 B x 4 x 1
+        rot_cols<a id="change"> = </a>torch.cat([R_tgt_src, zeros], dim=1)         &#47&#47 B x 4 x 3
+
+        return T_tgt_src, R_tgt_src, t_src_tgt_intgt
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        t_tgt_src_insrc = src_centroid - torch.bmm(R_tgt_src.transpose(2, 1).contiguous(), tgt_centroid)  &#47&#47 B x 3 x 1
+        t_src_tgt_intgt = -R_tgt_src.bmm(t_tgt_src_insrc)
+
+        return R_tgt_src<a id="change">, t_src_tgt_intgt</a>
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/utiasasrl/hero_radar_odometry/commit/4c65c14842aae35580b7b5d0784b8be9d2980773#diff-6462c51355dfb4832d6d7bf91ff4c6e5f19ced6e23ad32c401ac3928e3218e3dL11' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 50452779</div><div id='project'> Project Name: utiasasrl/hero_radar_odometry</div><div id='commit'> Commit Name: 4c65c14842aae35580b7b5d0784b8be9d2980773</div><div id='time'> Time: 2020-11-13</div><div id='author'> Author: keenburn2004@gmail.com</div><div id='file'> File Name: networks/svd.py</div><div id='m_class'> M Class Name: SVD</div><div id='n_method'> N Class Name: SVD</div><div id='m_method'> M Method Name: forward(4)</div><div id='n_method'> N Method Name: forward(4)</div><div id='m_parent_class'> M Parent Class: torch.nn.Module</div><div id='n_parent_class'> N Parent Class: torch.nn.Module</div><div id='m_file'> M File Name: networks/svd.py</div><div id='n_file'> N File Name: networks/svd.py</div><div id='m_start'> M Start Line: 40</div><div id='m_end'> M End Line: 50</div><div id='n_start'> N Start Line: 40</div><div id='n_end'> N End Line: 44</div><BR>

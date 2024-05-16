@@ -1,0 +1,68 @@
+<html><h3>Pattern ID :22775
+</h3><img src='72253388.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            pos_index = labels == labels[i]
+            pos_index[i] = 0
+            neg_index = labels != labels[i]
+            pos_pair_ = <a id="change">sim_mat[i][pos_index]</a>
+            neg_pair_ = sim_mat[i][neg_index]
+
+            alpha_p = torch.relu(-pos_pair_ + 1 + self.margin)</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        m = labels.size(0)
+        mask = labels.expand(m, m).t().eq(labels.expand(m, m)).float()
+        pos_mask = <a id="change">mask.triu(diagonal=1)</a>
+        neg_mask = (mask - 1).abs_().triu(diagonal=1)
+        if self.similarity == &quotdot&quot:
+            sim_mat = torch.matmul(feats, torch.t(feats))
+        elif self.similarity == &quotcos&quot:
+            feats = F.normalize(feats)
+            sim_mat = feats.mm(feats.t())
+        else:
+            raise ValueError(&quotThis similarity is not implemented.&quot)
+
+        pos_pair_ = sim_mat[pos_mask == 1]
+        neg_pair_ = sim_mat[neg_mask == 1]
+
+        alpha_p = torch.relu(-pos_pair_ + 1 + self.margin)
+        alpha_n = torch.relu(neg_pair_ + self.margin)
+        margin_p = 1 - self.margin
+        margin_n = self.margin
+        loss_p = torch.sum(torch.exp(-self.scale * alpha_p * (pos_pair_ - margin_p)))
+        loss_n = torch.sum(torch.exp(self.scale * alpha_n * (neg_pair_ - margin_n)))
+        loss<a id="change"> = </a>torch.log(1 + loss_p * loss_n)
+        return loss
+
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/qianjinhao/circle-loss/commit/55a6035c552f781d6c761475f88b33b8f684fbe7#diff-ee4498af95089c1dacb3bbdedbf8cffa6eecc60617a8a1d405b07f6f81510abbL16' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 72253388</div><div id='project'> Project Name: qianjinhao/circle-loss</div><div id='commit'> Commit Name: 55a6035c552f781d6c761475f88b33b8f684fbe7</div><div id='time'> Time: 2020-04-02</div><div id='author'> Author: qianjinhao@126.com</div><div id='file'> File Name: circle_loss.py</div><div id='m_class'> M Class Name: CircleLoss</div><div id='n_method'> N Class Name: CircleLoss</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: circle_loss.py</div><div id='n_file'> N File Name: circle_loss.py</div><div id='m_start'> M Start Line: 16</div><div id='m_end'> M End Line: 40</div><div id='n_start'> N Start Line: 17</div><div id='n_end'> N End Line: 38</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    similarity_matrix = feature @ feature.transpose(1, 0)
+    label_matrix = (label.unsqueeze(1) == label.unsqueeze(0)).int()
+
+    eye_label = torch.eye(<a id="change">label_matrix.shape[0]</a>, dtype=label_matrix.dtype, device=label_matrix.device)
+    label_matrix += eye_label
+
+    similarity_matrix = similarity_matrix.view(-1)</code></pre><h3>After Change</h3><pre><code class='java'>
+    label_matrix = label.unsqueeze(1) == label.unsqueeze(0)
+
+    positive_matrix = label_matrix.triu(diagonal=1)
+    negative_matrix<a id="change"> = </a><a id="change">label_matrix.logical_not().triu(diagonal=1)</a>
+
+    similarity_matrix = similarity_matrix.view(-1)
+    positive_matrix = positive_matrix.view(-1)
+    negative_matrix = negative_matrix.view(-1)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/tinyzeamays/circleloss/commit/d25dcfcf42c4231b5303a2f67f63dc65e2662ec8#diff-ee4498af95089c1dacb3bbdedbf8cffa6eecc60617a8a1d405b07f6f81510abbL38' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 72253407</div><div id='project'> Project Name: tinyzeamays/circleloss</div><div id='commit'> Commit Name: d25dcfcf42c4231b5303a2f67f63dc65e2662ec8</div><div id='time'> Time: 2020-04-03</div><div id='author'> Author: 1049793129@qq.com</div><div id='file'> File Name: circle_loss.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: convert_label_to_similarity(2)</div><div id='n_method'> N Method Name: convert_label_to_similarity(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: circle_loss.py</div><div id='n_file'> N File Name: circle_loss.py</div><div id='m_start'> M Start Line: 40</div><div id='m_end'> M End Line: 47</div><div id='n_start'> N Start Line: 40</div><div id='n_end'> N End Line: 48</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            &#47&#47 TODO Check limit cases like n = 1, 2, 3 ; m = k/2 - 1, k/2, k/2 + 1
+            &#47&#47 Compute just the projection from SO(n) / SO(k)
+            n, m = x.size()
+            low = <a id="change">x[:, :m//2]</a>.tril(-1)
+            up =  x[:, :m//2 + m%2].triu(1)
+            &#47&#47 Compute the reflection of low
+            low = low.flip(-1).flip(-2)</code></pre><h3>After Change</h3><pre><code class='java'>
+        if self.inverted:
+            x = x.t()
+        low = x[:, :self.n//2].tril(-1)
+        up<a id="change"> =  </a><a id="change">x[:, :self.n//2 + self.n%2].triu(</a>1<a id="change">)</a>
+        &#47&#47 Compute the reflection of low
+        low = low.flip(-1).flip(-2)
+        &#47&#47 S is square upper triangular
+        S = torch.cat([up, low], dim=1)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lezcano/geotorch/commit/ada013178cb25a391184cd6ffcd920ccc2109e69#diff-74a151be239c2363c52571841ddab93fb23406d6a404769d72dcf578e9d4e9baL140' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 72253378</div><div id='project'> Project Name: lezcano/geotorch</div><div id='commit'> Commit Name: ada013178cb25a391184cd6ffcd920ccc2109e69</div><div id='time'> Time: 2020-03-11</div><div id='author'> Author: lezcano-93@hotmail.com</div><div id='file'> File Name: mantorch/orthogonal.py</div><div id='m_class'> M Class Name: Stiefel</div><div id='n_method'> N Class Name: Stiefel</div><div id='m_method'> M Method Name: frame(3)</div><div id='n_method'> N Method Name: frame(3)</div><div id='m_parent_class'> M Parent Class: SO</div><div id='n_parent_class'> N Parent Class: BaseManifold</div><div id='m_file'> M File Name: mantorch/orthogonal.py</div><div id='n_file'> N File Name: mantorch/orthogonal.py</div><div id='m_start'> M Start Line: 144</div><div id='m_end'> M End Line: 167</div><div id='n_start'> N Start Line: 95</div><div id='n_end'> N End Line: 102</div><BR>

@@ -1,0 +1,48 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    optimizer = torch.optim.SGD(all_parameters, args.lr, momentum=args.momentum,
+                                weight_decay=args.weight_decay, nesterov=True)
+
+    iters_per_epoch<a id="change"> = </a>args.iters_per_epoch
+
+    &#47&#47 define loss function
+    domain_adv = adaptation.cdan.ConditionalDomainAdversarialLoss(
+        domain_discri, entropy_conditioning=False,
+        num_classes=num_classes, features_dim=classifier_feature_dim, randomized=False
+    ).cuda()
+
+    &#47&#47 start training
+    best_acc1 = 0.
+    for epoch in range(args.epochs):
+        <a id="change">print("lr={:.5f}".format(optimizer.param_groups[0][&quotlr&quot]</a><a id="change">)</a><a id="change">)</a>
+
+        &#47&#47 train for one epoch
+        <a id="change">train(</a>train_source_iter, train_target_iter, classifier, <a id="change">optimizer</a>, <a id="change">epoch</a>, iters_per_epoch, domain_adv, args<a id="change">)</a>
+
+        &#47&#47 evaluate on validation set
+        acc1 = validate(val_loader, classifier, args)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    domain_discri = torch.nn.DataParallel(domain_discri).cuda()
+
+    &#47&#47 define optimizer and lr scheduler
+    <a id="change">optimizer</a> = SGD(all_parameters, args.lr, momentum=args.momentum, weight_decay=args.weight_decay, nesterov=True)
+    lr_sheduler<a id="change"> = </a><a id="change">StepwiseLR(optimizer</a><a id="change">, init_lr=args.lr, gamma=0.001, decay_rate=0.75)</a>
+
+    &#47&#47 define loss function
+    domain_adv = ConditionalDomainAdversarialLoss(
+        domain_discri, entropy_conditioning=False,
+        num_classes=num_classes, features_dim=classifier_feature_dim, randomized=False
+    ).cuda()
+
+    &#47&#47 start training
+    best_acc1 = 0.
+    for <a id="change">epoch</a> in range(args.epochs):
+        &#47&#47 train for one epoch
+        <a id="change">train(</a>train_source_iter, train_target_iter, classifier, domain_adv, <a id="change">optimizer</a>,
+              lr_sheduler, <a id="change">epoch</a>, args<a id="change">)</a>
+
+        &#47&#47 evaluate on validation set
+        acc1 = validate(val_loader, classifier, args)
+</code></pre>

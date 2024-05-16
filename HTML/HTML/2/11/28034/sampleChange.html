@@ -1,0 +1,37 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 Encode sentence into ids stored in the model&quots embedding layer(s).
+        encoded = self.tokenizer.batch_encode_plus(sentences, padding = &quotlongest&quot, return_tensors="pt")
+        input_ids = encoded["input_ids"]
+        attention_masks<a id="change"> = </a><a id="change">encoded[&quotattention_mask&quot]</a>
+
+        &#47&#47 Compute hidden states for the sentence for the given layer.
+        output = self.model(input_ids = input_ids, attention_mask = attention_masks)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        output = self.model(**encoded)
+
+&#47&#47         &#47&#47 Hidden states appear as the last element of the otherwise custom hidden_states object
+        <a id="change">if layer != &quotall&quot</a>:
+            if layer is None:
+                layer = self.layers
+            elif layer &gt; self.layers:
+                <a id="change">raise ValueError(f"Number of layers specified ({layer}) exceed layers in model ({self.layers})!"</a><a id="change">)</a>
+            hidden_states = output.hidden_states[layer]
+            if "cuda" in self.device:
+                input_ids<a id="change"> = </a>input_ids.cpu()
+                hidden_states = hidden_states.detach().cpu()
+            else:
+                hidden_states = hidden_states.detach()
+        else:
+            hidden_states = output.hidden_states
+        
+            if "cuda" in self.device:
+                input_ids<a id="change"> = </a>input_ids.cpu()
+                hidden_states = [h.detach().cpu() for h in hidden_states]
+            else:
+                hidden_states<a id="change"> = </a>[h.detach() for h in hidden_states]
+
+        return input_ids, hidden_states
+    </code></pre>

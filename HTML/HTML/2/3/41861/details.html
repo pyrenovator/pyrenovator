@@ -1,0 +1,91 @@
+<html><h3>Pattern ID :41861
+</h3><img src='117365247.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            mean_entity = mean_entity / (real_number)
+            tensor_list.append(mean_entity.reshape(1, -1))
+        tensor_mean = torch.cat(tensor_list, dim=0)
+        print(&quottensor_mean:&quot, tensor_mean)<a id="change"> if </a>debug<a id="change"> else </a>None
+
+        &#47&#47 print(&quotout.shape:&quot, out.shape) if debug else None
+        &#47&#47 out = out[:, :self.real_entities_size, :]</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        &#47&#47 generate the mask for transformer
+        mask = torch.arange(0, self.max_entities).float()
+        mask = <a id="change">mask.repeat(</a>batch_size, 1<a id="change">)</a>
+        mask = mask &lt; entity_num.unsqueeze(dim=1)
+
+        print(&quotmask:&quot, mask) if debug else None
+        print(&quotmask.shape:&quot, mask.shape) if debug else None
+
+        &#47&#47 mask: [batch_size, max_entities]
+        device = next(self.parameters()).device
+        mask = mask.to(device)
+
+        &#47&#47 assert the input shape is : batch_seq_size x entities_size x embeding_size
+        &#47&#47 note: because the feature size of entity is not equal to 256, so it can not fed into transformer directly.
+        &#47&#47 thus, we add a embedding layer to transfer it to right size.
+        &#47&#47 x is batch_entities_tensor (dim = 3). Shape: batch_seq_size x entities_size x embeding_size
+        x = self.embedd(x)
+        print(&quotx.shape:&quot, x.shape) if debug else None
+
+        &#47&#47 mask for transformer need a special format
+        mask_seq_len = mask.shape[-1]
+        tran_mask = mask.unsqueeze(1)
+
+        &#47&#47 tran_mask: [batch_seq_size x max_entities x max_entities]
+        tran_mask = tran_mask.repeat(1, mask_seq_len, 1)
+
+        &#47&#47 out: [batch_seq_size x entities_size x embeding_size]
+        out = self.transformer(x, mask=tran_mask)
+        print(&quotout.shape:&quot, out.shape) if debug else None
+
+        &#47&#47 entity_embeddings: [batch_seq_size x entities_size x conv1_output_size]
+        entity_embeddings = F.relu(self.conv1(F.relu(out).transpose(1, 2))).transpose(1, 2)
+        print(&quotentity_embeddings.shape:&quot, entity_embeddings.shape) if debug else None
+
+        &#47&#47 AlphaStar: The mean of the transformer output across across the units (masked by the missing entries) 
+        &#47&#47 is fed through a linear layer of size 256 and a ReLU to yield `embedded_entity`
+        masked_out = out * mask.unsqueeze(2)
+
+        &#47&#47 sum over across the units
+        &#47&#47 masked_out: [batch_seq_size x entities_size x embeding_size]
+        &#47&#47 z: [batch_size, embeding_size]
+        z = masked_out.sum(dim=1, keepdim=False)
+
+        &#47&#47 here we should dived by the entity_num, not the cls.max_entities
+        &#47&#47 z: [batch_size, embeding_size]
+        z<a id="change"> = </a>z / entity_num
+
+        &#47&#47 note, dim=1 means the mean is across all entities in one timestep
+        &#47&#47 The mean of the transformer output across across the units  </code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/liuruoze/mini-alphastar/commit/612d42a7bf5ef827e1e919198d839fce106155cd#diff-71869e70f9cb835282d541d2d3529d25b6ed6795c79bc770e860e9318619f6b1L716' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 117365247</div><div id='project'> Project Name: liuruoze/mini-alphastar</div><div id='commit'> Commit Name: 612d42a7bf5ef827e1e919198d839fce106155cd</div><div id='time'> Time: 2021-11-25</div><div id='author'> Author: liuruoze@163.com</div><div id='file'> File Name: alphastarmini/core/arch/entity_encoder.py</div><div id='m_class'> M Class Name: EntityEncoder</div><div id='n_method'> N Class Name: EntityEncoder</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: alphastarmini/core/arch/entity_encoder.py</div><div id='n_file'> N File Name: alphastarmini/core/arch/entity_encoder.py</div><div id='m_start'> M Start Line: 721</div><div id='m_end'> M End Line: 758</div><div id='n_start'> N Start Line: 716</div><div id='n_end'> N End Line: 778</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        if self.output_layer.bias is not None:
+            new_bias = torch.empty(n_classes_to_add)
+            fan_in, _ = nn.init._calculate_fan_in_and_fan_out(self.output_layer.weight)
+            bound = 1 / math.sqrt(fan_in)<a id="change"> if </a>fan_in &gt; 0<a id="change"> else </a>0
+            nn.init.uniform_(new_bias, -bound, bound)
+            self.output_layer.bias = nn.parameter.Parameter(
+                torch.cat([self.output_layer.bias, new_bias], axis=0)</code></pre><h3>After Change</h3><pre><code class='java'>
+        
+        new_weights = torch.mean(self.output_layer.weight,dim=0).unsqueeze(1).T
+        if n_classes_to_add &gt; 1:
+            new_weights<a id="change"> = </a><a id="change">new_weights.unsqueeze(1).T.repeat(</a>1,n_classes_to_add, 1<a id="change">)</a>.squeeze()
+        self.output_layer.weight = nn.parameter.Parameter(
+            torch.cat([self.output_layer.weight, new_weights], axis=0)
+        )</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/online-ml/river-torch/commit/27f914a787bc844de5af4720487e2314f206960d#diff-b7b3dc93db412db0f1b244453a944c127c40d624ca0330c220405196365d357aL291' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 117365295</div><div id='project'> Project Name: online-ml/river-torch</div><div id='commit'> Commit Name: 27f914a787bc844de5af4720487e2314f206960d</div><div id='time'> Time: 2022-09-26</div><div id='author'> Author: cedric.kulbach@googlemail.com</div><div id='file'> File Name: river_torch/classification/classifier.py</div><div id='m_class'> M Class Name: Classifier</div><div id='n_method'> N Class Name: Classifier</div><div id='m_method'> M Method Name: _add_output_features(2)</div><div id='n_method'> N Method Name: _add_output_features(2)</div><div id='m_parent_class'> M Parent Class: DeepEstimator,base.Classifier</div><div id='n_parent_class'> N Parent Class: DeepEstimator,base.Classifier</div><div id='m_file'> M File Name: river_torch/classification/classifier.py</div><div id='n_file'> N File Name: river_torch/classification/classifier.py</div><div id='m_start'> M Start Line: 300</div><div id='m_end'> M End Line: 310</div><div id='n_start'> N Start Line: 300</div><div id='n_end'> N End Line: 311</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+  if shuffle:
+    ds = ds.shuffle(shuffle_buffer_size, seed=rngs.pop()[0])
+
+  ds = ds.repeat(num_epochs<a id="change"> if </a>not repeat_after_batching<a id="change"> else </a>1)
+
+  if preprocess_fn is not None:
+    if rng_available:</code></pre><h3>After Change</h3><pre><code class='java'>
+    ds = ds.shuffle(shuffle_buffer_size, seed=rngs.pop()[0])
+
+  if not repeat_after_batching:
+    ds<a id="change"> = </a><a id="change">ds.repeat(</a>num_epochs<a id="change">)</a>
+
+  mask_fn = lambda ex: dict(mask=1., **ex)
+  if preprocess_fn is not None:
+    preprocess_and_mask_fn = lambda ex: mask_fn(preprocess_fn(ex))</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/google/uncertainty-baselines/commit/5ef136b370a87f81dc0d0f1f57757d0432b2bc6a#diff-e4b4b686345ec38b48dee362ed9131cd71626908a9b2dce0a6ad0ebb71cd4a83L217' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 117365242</div><div id='project'> Project Name: google/uncertainty-baselines</div><div id='commit'> Commit Name: 5ef136b370a87f81dc0d0f1f57757d0432b2bc6a</div><div id='time'> Time: 2022-05-17</div><div id='author'> Author: dusenberrymw@google.com</div><div id='file'> File Name: baselines/jft/input_utils.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: get_data(15)</div><div id='n_method'> N Method Name: get_data(15)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: baselines/jft/input_utils.py</div><div id='n_file'> N File Name: baselines/jft/input_utils.py</div><div id='m_start'> M Start Line: 291</div><div id='m_end'> M End Line: 344</div><div id='n_start'> N Start Line: 267</div><div id='n_end'> N End Line: 324</div><BR>

@@ -1,0 +1,34 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 attention is batch x time x heads x time_to_attend
+        &#47&#47 average over batches, heads + only keep prediction attention and attention on observed timesteps
+        if attention_prediction_horizon is None:  &#47&#47 average over all horizons
+            attention<a id="change"> = </a><a id="change">out["attention"][..., : self.hparams.encode_length]</a>.mean(
+                dim=average_dims + [2]
+            )  &#47&#47 todo: how to handle zero attention due to shorter encode length?
+            attention = attention / attention.sum(-1).unsqueeze(-1)  &#47&#47 renormalize</code></pre><h3>After Change</h3><pre><code class='java'>
+        for i in range(len(attention)):  &#47&#47 very inefficient but does the trick
+            if 0 &lt; out["encode_lengths"][i] &lt; attention.size(1):
+                attention[i, -out["encode_lengths"][i] :] = attention[i, : out["encode_lengths"][i]].clone()
+                attention[i, : <a id="change">attention.size(1</a><a id="change">)</a> - out["encode_lengths"][i]]<a id="change"> = </a>0.0
+
+        if average_batches:  &#47&#47 if to average over batches
+            static_variables = static_variables.mean(dim=0)
+            encoder_variables = encoder_variables.mean(dim=0)
+            decoder_variables = decoder_variables.mean(dim=0)
+            attention = attention.mean(dim=0)
+            attention = attention / attention.sum(-1).unsqueeze(-1)  &#47&#47 renormalize
+
+            attention = torch.zeros(self.hparams.max_encode_length).scatter(
+                dim=0,
+                index=torch.arange(self.hparams.max_encode_length - attention.size(0), self.hparams.max_encode_length),
+                src=attention,
+            )
+        else:
+            attention = attention / attention.sum(-1).unsqueeze(-1)  &#47&#47 renormalize
+            attention<a id="change"> = </a>torch.zeros(attention.size(0), self.hparams.max_encode_length).scatter(
+                dim=1,
+                index=torch.arange(
+                    self.hparams.max_encode_length - attention.size(0), self.hparams.max_encode_length</code></pre>

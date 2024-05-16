@@ -1,0 +1,51 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                    done_bwds, num_batches)
+                if not (is_first_partition):
+                    &#47&#47 wait on prev send
+                    <a id="change">if </a>async_bwd_objects:
+                        wait_on_sent_object(is_fwd=False)
+                    async_bwd_objects[done_bwds] = sent_request_objects
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        is_last_partition = self.is_last_partition
+        run_batch_backward = self.run_batch_backward
+        run_batch_forward = self.run_batch_forward
+        <a id="change">futures_handler = </a>self.futures_handler
+
+        while done_bwds &lt; num_batches:
+            &#47&#47 Act according to some policy
+            action_is_fwd = work_scheduler(stage, num_stages, num_batches,
+                                           done_fwds, done_bwds)
+            if action_is_fwd:
+                ro = run_batch_forward(done_fwds,
+                                       num_batches,
+                                       done_bwds=done_bwds)
+                if is_last_partition:
+                    futures_handler.after_backward(ro, done_fwds)
+                else:
+                    <a id="change">futures_handler.after_forward(</a>ro, done_fwds, True<a id="change">)</a>
+
+            else:
+                ro = run_batch_backward(done_bwds, num_batches)
+                <a id="change">futures_handler.after_backward(</a>ro, done_fwds<a id="change">)</a>
+
+            &#47&#47 Increase counters
+            if is_last_partition:
+                done_bwds += 1
+                done_fwds += 1
+            else:
+                if action_is_fwd:
+                    done_fwds += 1
+                else:
+                    done_bwds += 1
+
+        &#47&#47 Do a scheduler step at the end of epoch if not already doing so each step.
+        if not self.trainer.PER_STEP_SCHEDULER:
+            self.lr_scheduler.step()
+        <a id="change">futures_handler.clean_train()</a>
+
+
+&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47
+&#47&#47 GPIPE</code></pre>

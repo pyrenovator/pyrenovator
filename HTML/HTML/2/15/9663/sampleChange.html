@@ -1,0 +1,40 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                loss, logits = outputs[0], outputs[1]
+                
+                valid_losses.append(loss)
+                <a id="change">valid_ppls.append(torch.exp(</a>loss<a id="change">)</a><a id="change">)</a>
+            
+            valid_losses = [loss.item() for loss in valid_losses]
+            valid_ppls = [ppl.item() for ppl in valid_ppls]
+            valid_loss = np.mean(valid_losses)</code></pre><h3>After Change</h3><pre><code class='java'>
+        self.model.eval()
+              
+        valid_losses = []
+        <a id="change">valid_ppls</a> = []
+        with torch.no_grad():
+            for i, batch in enumerate(tqdm(self.valid_loader)):
+                input_ids, token_type_ids, lm_labels = batch
+                input_ids, token_type_ids, lm_labels = \
+                    input_ids.to(self.args.device), token_type_ids.to(self.args.device), lm_labels.to(self.args.device)
+                
+                outputs = self.model(
+                    input_ids=input_ids,
+                    token_type_ids = token_type_ids,
+                    labels = lm_labels
+                )
+                
+                loss, logits = outputs[0], outputs[1]
+                
+                valid_losses.append(<a id="change">loss.detach()</a>)
+                <a id="change">ppl = </a><a id="change">torch.exp(loss.detach()</a><a id="change">)</a>
+                <a id="change">if math.isnan(ppl</a><a id="change">)</a>:
+                    <a id="change">valid_ppls.append(1e+8</a><a id="change">)</a>
+                else:
+                    <a id="change">valid_ppls.append(ppl</a><a id="change">)</a>
+            
+            valid_losses = [loss.item() for loss in valid_losses]
+            valid_ppls = [ppl.item() for ppl in valid_ppls]
+            valid_loss = np.mean(valid_losses)</code></pre>

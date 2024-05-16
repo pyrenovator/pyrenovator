@@ -1,0 +1,71 @@
+<html><h3>Pattern ID :35094
+</h3><img src='100169064.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+        bag_logits, bag_labels, bag_attn_list = self.compute_bag_labels_logits_and_attn_maps(batch)
+
+        <a id="change">if self.n_classes &gt; 1</a>:
+            loss<a id="change"> = </a>self.loss_fn(bag_logits, bag_labels.long())
+        else:
+            loss = self.loss_fn(bag_logits.squeeze(1), bag_labels.float())
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            predicted_probs = predicted_probs.squeeze(dim=1)
+
+        results = dict()
+        <a id="change">if </a>self.analyse_loss and <a id="change">stage in [ModelKey.TRAIN, ModelKey.VAL]</a>:
+            loss_per_sample = self._compute_loss(self.loss_fn_no_reduction, bag_logits, bag_labels)
+            results[ResultsKey.LOSS_PER_SAMPLE]<a id="change"> = </a><a id="change">loss_per_sample.detach().cpu().numpy()</a>
+
+        bag_labels = bag_labels.view(-1, 1)
+
+        for metric_object in self.get_metrics_dict(stage).values():</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 8</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/microsoft/hi-ml/commit/e2c1ca1cb4d224378df8209befd08e7ebcc136d5#diff-b9fb5f8c6ca03389c13292f169683435d9efa93e7ba5d8bacd374f8635773aa4L302' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 100169064</div><div id='project'> Project Name: microsoft/hi-ml</div><div id='commit'> Commit Name: e2c1ca1cb4d224378df8209befd08e7ebcc136d5</div><div id='time'> Time: 2022-10-12</div><div id='author'> Author: 37396332+kenza-bouzid@users.noreply.github.com</div><div id='file'> File Name: hi-ml-cpath/src/health_cpath/models/deepmil.py</div><div id='m_class'> M Class Name: BaseDeepMILModule</div><div id='n_method'> N Class Name: BaseDeepMILModule</div><div id='m_method'> M Method Name: _shared_step(4)</div><div id='n_method'> N Method Name: _shared_step(4)</div><div id='m_parent_class'> M Parent Class: LightningModule</div><div id='n_parent_class'> N Parent Class: LightningModule</div><div id='m_file'> M File Name: hi-ml-cpath/src/health_cpath/models/deepmil.py</div><div id='n_file'> N File Name: hi-ml-cpath/src/health_cpath/models/deepmil.py</div><div id='m_start'> M Start Line: 302</div><div id='m_end'> M End Line: 325</div><div id='n_start'> N Start Line: 311</div><div id='n_end'> N End Line: 334</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    for i in range(world_size):
+        handle = pynvml.nvmlDeviceGetHandleByIndex(i)
+        meminfo = pynvml.nvmlDeviceGetMemoryInfo(handle)
+        <a id="change">if meminfo.free &lt; total_size</a>:
+            matched<a id="change"> = </a>True
+            break
+
+    if matched:</code></pre><h3>After Change</h3><pre><code class='java'>
+    Returns:
+        gathered (list[data]): a list of data gathered from each rank
+    
+    <a id="change">if get_world_size(group=group) == 1</a>:
+        return [data]
+
+    tensor, group = _serialize_to_tensor(data, group)
+    size_list, tensor = _pad_tensors(tensor, group)
+    max_size = max(size_list)
+
+    tensor_list = [tensor.new_empty([max_size]) for _ in size_list]
+    dist.all_gather(tensor_list, tensor, group=group)
+
+    gathered = []
+    for size, tensor in zip(size_list, tensor_list):
+        buffer<a id="change"> = </a><a id="change">tensor.cpu().numpy()</a>.tobytes()[:size]
+        gathered.append(nncore.loads(buffer))
+
+    return gathered</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/yeliudev/nncore/commit/c60692996f4316b5befe701efbc18a9ad7cc7ac1#diff-fdf562e6b578fc92f4c74e59141f61b874fc8722e8eb5d843ef38c4c81d99321L47' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 100169065</div><div id='project'> Project Name: yeliudev/nncore</div><div id='commit'> Commit Name: c60692996f4316b5befe701efbc18a9ad7cc7ac1</div><div id='time'> Time: 2020-03-11</div><div id='author'> Author: goolhanrry@gmail.com</div><div id='file'> File Name: nncore/engine/comm.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: all_gather(2)</div><div id='n_method'> N Method Name: all_gather(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: nncore/engine/comm.py</div><div id='n_file'> N File Name: nncore/engine/comm.py</div><div id='m_start'> M Start Line: 47</div><div id='m_end'> M End Line: 78</div><div id='n_start'> N Start Line: 86</div><div id='n_end'> N End Line: 112</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    diff_count = torch.sum(diff).item()
+    print("diff between unit_counts_bow", diff_count) if debug else None
+    <a id="change">if diff_count == 1.0</a>:
+        diff_numpy<a id="change"> = </a>diff.numpy()
+        index_list = np.where(diff_numpy &gt;= 1.0)
+        print("index_list:", index_list) if debug else None
+        index = index_list[1][0]</code></pre><h3>After Change</h3><pre><code class='java'>
+    diff_count = torch.sum(diff).item()
+    print("diff between unit_counts_bow", diff_count) if debug else None
+
+    <a id="change">if diff_count &gt;= 1.0</a>:
+        print("diff:", diff) if debug else None
+
+        index = torch.nonzero(diff, as_tuple=True)[-1]
+        print("index:", index) if debug else None
+
+        index<a id="change"> = </a><a id="change">index.detach().cpu().numpy()</a>.tolist()
+        previous_bo.extend(index)
+
+    return previous_bo</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/liuruoze/mini-alphastar/commit/a115d8c35ded3fa3d608df5576d72a17cf941787#diff-7c0e32382d0e7e30a696fe55f56293d282c671f931ec5d2557f646727f46ad0aL122' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 100169068</div><div id='project'> Project Name: liuruoze/mini-alphastar</div><div id='commit'> Commit Name: a115d8c35ded3fa3d608df5576d72a17cf941787</div><div id='time'> Time: 2021-12-10</div><div id='author'> Author: liuruoze@163.com</div><div id='file'> File Name: alphastarmini/lib/utils.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: calculate_build_order(3)</div><div id='n_method'> N Method Name: calculate_build_order(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: alphastarmini/lib/utils.py</div><div id='n_file'> N File Name: alphastarmini/lib/utils.py</div><div id='m_start'> M Start Line: 126</div><div id='m_end'> M End Line: 145</div><div id='n_start'> N Start Line: 111</div><div id='n_end'> N End Line: 135</div><BR>

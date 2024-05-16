@@ -1,0 +1,131 @@
+<html><h3>Pattern ID :36324
+</h3><img src='102913026.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            ciou_term = d + alpha * ar_loss;
+        &#47&#47print(iou,iou-giou_term)
+        &#47&#47print(c,u)
+        <a id="change">return </a>iou<a id="change">-</a>ciou_term<a id="change">,iou</a>
+   
+    def box_giou(self,box1,box2):
+        box_c = self.box_c(box1,box2)
+        c = self.get_area(box_c)</code></pre><h3>After Change</h3><pre><code class='java'>
+        box_c = torch.cat((l,t,r,b))
+        return box_c.permute(1,0)
+    def box_ciou(self,box1,box2):
+        ciou<a id="change"> = </a><a id="change">torch.zeros(0,1).to(</a>device<a id="change">)</a>
+        iou<a id="change"> = </a>torch.zeros(0,1).to(device)
+        &#47&#47if box2.size(0) == 0 :
+        &#47&#47    return ciou,iou
+        box_c = self.box_c(box1,box2)
+        &#47&#47print(box_c.shape)
+        c = self.get_area(box_c).unsqueeze(1)       
+        iou = find_jaccard_overlap(box1, box2)
+
+        w1,h1 = (box1[...,2] - box1[...,0]).unsqueeze(1),(box1[...,3] - box1[...,1]).unsqueeze(1)
+        w2,h2 = (box2[...,2] - box2[...,0]).unsqueeze(1),(box2[...,3] - box2[...,1]).unsqueeze(1)
+        x1,y1 = (box1[...,2] + box1[...,0]).unsqueeze(1)/2,(box1[...,1] + box1[...,3]).unsqueeze(1)/2
+        x2,y2 = (box2[...,2] + box2[...,0]).unsqueeze(1)/2,(box2[...,1] + box2[...,3]).unsqueeze(1)/2
+        
+        u = (x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2);
+        &#47&#47if c==0 :
+        &#47&#47    ciou_term = iou
+        &#47&#47else :
+        &#47&#47print(c.shape,u.shape)
+        d = u/c
+        &#47&#47print(d.shape)
+        ar_gt  = w2/h2
+        ar_pred  = w1/h1
+        
+        ar_loss = 4 / (math.pi * math.pi) * (torch.atan(ar_gt) - torch.atan(ar_pred)) * (torch.atan(ar_gt) - torch.atan(ar_pred));
+        alpha = ar_loss / (1 - iou + ar_loss + 0.000001);
+        ciou_term = d + alpha * ar_loss;
+        &#47&#47print(ar_gt.shape,ar_pred.shape,ar_loss.shape,alpha.shape,torch.atan(ar_pred).shape)
+        mask = (c == 0) 
+        ciou_term = ciou_term * (~mask) + iou*mask
+        &#47&#47print(ciou_term.shape,ciou.shape,iou.shape,box1.shape,box2.shape)
+        ciou = torch.cat((ciou,ciou_term))
+
+        &#47&#47print(iou,iou-giou_term)
+        &#47&#47print(c,u)
+        <a id="change">return </a>iou-ciou<a id="change">,iou</a>
+   
+    def box_giou(self,box1,box2):
+        box_c = self.box_c(box1,box2)
+        c = self.get_area(box_c).unsqueeze(1)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 8</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/eric612/mobilenet-yolo-pytorch/commit/e67c6aa8fb3ddaeb1e81326e842beec4f025c300#diff-bde4bfecb8a13a3fca50d9423db5881b39fd49a5a110ff72eb80916aa6bf6f80L248' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 102913026</div><div id='project'> Project Name: eric612/mobilenet-yolo-pytorch</div><div id='commit'> Commit Name: e67c6aa8fb3ddaeb1e81326e842beec4f025c300</div><div id='time'> Time: 2021-04-14</div><div id='author'> Author: eric612kimo@yahoo.com.tw</div><div id='file'> File Name: models/voc/yolo_loss.py</div><div id='m_class'> M Class Name: YOLOLoss</div><div id='n_method'> N Class Name: YOLOLoss</div><div id='m_method'> M Method Name: box_ciou(3)</div><div id='n_method'> N Method Name: box_ciou(3)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: models/voc/yolo_loss.py</div><div id='n_file'> N File Name: models/voc/yolo_loss.py</div><div id='m_start'> M Start Line: 248</div><div id='m_end'> M End Line: 268</div><div id='n_start'> N Start Line: 248</div><div id='n_end'> N End Line: 283</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    clamp_out = quantize_out.clamp(n, p)
+    dequantize_out = (clamp_out + offset) * delta
+
+    mask_tensor = quantize_out.ge(n)<a id="change"> * </a>quantize_out.le(p)
+
+    &#47&#47 NOTE: There is no uint4, uint16 in PyTorch
+    &#47&#47 Use uint8 if bitwidth less than or equal to 8, otherwise use int32 as fallback
+    dtype_for_clamp_out = torch.uint8 if tensor_quantizer.bitwidth &lt;= 8 else torch.int32
+    intermediate_result = IntermediateResult(clamp_out.to(dtype=dtype_for_clamp_out),
+                                             encoding_min, encoding_max,
+                                             delta, offset, mask_tensor, steps)
+    <a id="change">return </a>dequantize_out<a id="change">, intermediate_result</a>
+
+
+&#47&#47 pylint:disable=too-many-locals
+def calculate_gradients(tensor: torch.Tensor,</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    x_round = torch.round(tensor / delta) - offset
+    x_quant = x_round.clamp(zero, num_steps)
+    x_dequant<a id="change"> = </a>(x_quant + offset) * delta
+
+    mask_tensor = x_round.ge(zero) * x_round.le(num_steps)
+
+    &#47&#47 Downcast x_quant if bitwidth is less than or equal to 8 to reduce memory consumption
+    if tensor_quantizer.bitwidth &lt;= 8:
+        x_quant<a id="change"> = </a><a id="change">x_quant.to(dtype=torch.uint8)</a>
+
+    intermediate_result = IntermediateResult(x_quant,
+                                             encoding_min, encoding_max,
+                                             delta, offset, mask_tensor, num_steps,
+                                             is_symmetric, is_unsigned)
+    <a id="change">return </a>x_dequant<a id="change">, intermediate_result</a>
+
+
+&#47&#47 pylint:disable=too-many-locals
+def asymmetric_gradients(tensor: torch.Tensor,</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/quic/aimet/commit/558cce71e5d8f55f75a7f101e0fed690e5732ba5#diff-b2f96b89478a93e69873eb98010efb6e08d1224ae44c6034c14355f04497a669L320' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 102913010</div><div id='project'> Project Name: quic/aimet</div><div id='commit'> Commit Name: 558cce71e5d8f55f75a7f101e0fed690e5732ba5</div><div id='time'> Time: 2022-10-06</div><div id='author'> Author: quic_geunlee@quicinc.com</div><div id='file'> File Name: TrainingExtensions/torch/src/python/aimet_torch/quantsim_straight_through_grad.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: calculate_forward_pass(4)</div><div id='n_method'> N Method Name: calculate_forward_pass(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: TrainingExtensions/torch/src/python/aimet_torch/quantsim_straight_through_grad.py</div><div id='n_file'> N File Name: TrainingExtensions/torch/src/python/aimet_torch/quantsim_straight_through_grad.py</div><div id='m_start'> M Start Line: 332</div><div id='m_end'> M End Line: 350</div><div id='n_start'> N Start Line: 440</div><div id='n_end'> N End Line: 466</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 print(f&quotTrain set: Average loss: {train_loss/ len(data):.4f}, &quot
+        &#47&#47       f&quotAccuracy: {correct}/{len(data)} ({correct/len(data):.2f}%)&quot)
+
+    <a id="change">return </a>train_loss<a id="change"> / </a>len(data)<a id="change">, correct / len(data)</a>  &#47&#47 返回平均损失和平均准确率</code></pre><h3>After Change</h3><pre><code class='java'>
+    group=0
+    output_batch=[]
+    aa=0
+    train_acc<a id="change">=</a>0.
+    i=0
+    for id,(data, target) in enumerate(train_loader):  &#47&#47 batch之前组装到data数据集里的,pytorch的MBDG统一用这种方式进行,会按序列一个个batch训练
+        &#47&#47print("id:",id)
+        optimizer.zero_accum_grad()  &#47&#47 梯度清空
+
+        &#47&#47这里执行单样本操作，但是没有参数决定是单样本，依赖这里面的数据集的组装形式（TensorDataset(data, target)），和上面的train_loader一样，默认都是一个torch一个torch来
+        &#47&#47 数据组装中torch的维度决定你想要进行多少样本的梯度训练，取决于一开始的数据组装的结构
+        for iid,(X_microbatch, y_microbatch) in enumerate(TensorDataset(data, target)):  &#47&#47这里相当于逐样本
+
+            optimizer.zero_microbatch_grad()
+            output = model(torch.unsqueeze(X_microbatch.to(torch.float32), 0))    &#47&#47这要是这里要做升维
+            loss = criterion(output, torch.unsqueeze(y_microbatch, 0))
+
+            loss.backward()         &#47&#47梯度求导，这边求出梯度
+            optimizer.microbatch_step()  &#47&#47 这个step做的是每个样本的梯度裁剪和梯度累加的操作
+
+        optimizer.step()  &#47&#47 这个做的是梯度加噪和梯度平均更新下降的操作
+
+        &#47&#47训练集测试损失值和准确率
+        train_output<a id="change">=</a>model(<a id="change">data.to(</a>torch.float32<a id="change">)</a>)
+        train_loss=criterion(train_output,target).item()
+        prediction = train_output.argmax(dim=1, keepdim=True)  &#47&#47 将one-hot输出转为单个标量
+        correct = prediction.eq(target.view_as(prediction)).sum().item()  &#47&#47 比较得到准确率
+        train_acc=100. * correct/len(data)
+        i+=1
+
+        &#47&#47 print(f&quotbatch: {i}, &quotf&quotTrain set: loss: {train_loss:.4f}, &quot
+        &#47&#47       f&quotAccuracy: {correct}/{len(data)} ({train_acc:.2f}%)&quot)
+
+    <a id="change">return </a>train_loss<a id="change">, train_acc</a>  &#47&#47 返回平均损失和平均准确率
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/jefffffu/awesome-differential-privacy-and-meachine-learning/commit/2ebbe536f3de4fe260e92dfa2a45dd3bab30a414#diff-aecaebc49c1330d797ceb7c3e3b703c3d28e5366804cbea249ee3aca40cfbd58L7' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 102913027</div><div id='project'> Project Name: jefffffu/awesome-differential-privacy-and-meachine-learning</div><div id='commit'> Commit Name: 2ebbe536f3de4fe260e92dfa2a45dd3bab30a414</div><div id='time'> Time: 2022-12-06</div><div id='author'> Author: 1193147851@qq.com</div><div id='file'> File Name: train_and_validation/train_with_dp.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train_dynamic_add_noise(4)</div><div id='n_method'> N Method Name: train_dynamic_add_noise(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: train_and_validation/train_with_dp.py</div><div id='n_file'> N File Name: train_and_validation/train_with_dp.py</div><div id='m_start'> M Start Line: 10</div><div id='m_end'> M End Line: 40</div><div id='n_start'> N Start Line: 13</div><div id='n_end'> N End Line: 45</div><BR>

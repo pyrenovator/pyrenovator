@@ -1,0 +1,138 @@
+<html><h3>Pattern ID :9358
+</h3><img src='33522143.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    senders, receivers = common.triangles_to_edges(inputs[&quotcells&quot])
+    relative_mesh_pos = (tf.gather(inputs[&quotmesh_pos&quot], senders) -
+                         tf.gather(inputs[&quotmesh_pos&quot], receivers))
+    edge_features<a id="change"> = </a>tf.concat(<a id="change">[
+        </a>relative_mesh_pos,
+        tf.norm(relative_mesh_pos, axis=-1, keepdims=True)<a id="change"></a>], axis=-1)
+
+    mesh_edges = core_model.EdgeSet(
+        name=&quotmesh_edges&quot,</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        senders, receivers = common.triangles_to_edges(inputs[&quotcells&quot])
+        mesh_pos = inputs[&quotmesh_pos&quot]
+        relative_mesh_pos = (<a id="change">torch.index_select(</a>mesh_pos, 0, senders<a id="change">)</a> -
+                             torch.index_select(mesh_pos, 0, receivers))
+        edge_features<a id="change"> = </a>torch.cat([
+            relative_mesh_pos,
+            torch.norm(relative_mesh_pos, dim=-1, keepdim=True)], dim=-1)
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/wwmark/meshgraphnets/commit/1ad048efb0f606f799674edb4d16a0554e54bf28#diff-f7d87b2b32c9de46b3f85c78c493e8994b57484f126c2154d9ddc9480a3675b9L44' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 33522143</div><div id='project'> Project Name: wwmark/meshgraphnets</div><div id='commit'> Commit Name: 1ad048efb0f606f799674edb4d16a0554e54bf28</div><div id='time'> Time: 2021-10-24</div><div id='author'> Author: ruoheng.ma@gmail.com</div><div id='file'> File Name: cfd_model.py</div><div id='m_class'> M Class Name: Model</div><div id='n_method'> N Class Name: Model</div><div id='m_method'> M Method Name: _build_graph(3)</div><div id='n_method'> N Method Name: _build_graph(3)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: snt.AbstractModule</div><div id='m_file'> M File Name: cfd_model.py</div><div id='n_file'> N File Name: cfd_model.py</div><div id='m_start'> M Start Line: 44</div><div id='m_end'> M End Line: 53</div><div id='n_start'> N Start Line: 63</div><div id='n_end'> N End Line: 75</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        empirical_epsilon_percentile: float = 90.0,
+    ) -&gt; None:
+        print("Computing PCA on the labels...")
+        param_dict = <a id="change">{}</a>
+        &#47&#47 Nick: Subset inherits from dataset, it doesn&quott have access to dataset.labels
+        if type(self.train_set) == torch.utils.data.dataset.Subset:
+            indxs = torch.tensor(self.train_set.indices)
+            data_arr = torch.index_select(
+                self.fulldataset.labels.detach().clone(), 0, indxs
+            )
+            if self.fulldataset.imgaug_transform:
+                i = 0
+                for idx in indxs:
+                    test_out = (
+                        super(type(self.fulldataset), self.fulldataset)
+                        .__getitem__(idx)[1]
+                        .reshape(-1, 2)
+                    )
+                    print("=====")
+                    print("====test_out.shape: {}".format(test_out.shape))
+                    print("====data_arr.shape: {}".format(data_arr.shape))
+                    data_arr[i] = (
+                        super(type(self.fulldataset), self.fulldataset)
+                        .__getitem__(idx)[1]
+                        .reshape(-1, 2)
+                    )
+                    i += 1
+        else:
+            data_arr = (
+                self.train_set.labels.detach().clone()
+            )  &#47&#47 won&quott work for random splitting
+            if self.train_set.imgaug_transform:
+                for i in range(len(data_arr)):
+                    data_arr[i] = super(
+                        type(self.train_set), self.train_set
+                    ).__getitem__(i)[1]
+
+        &#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47 CHANGES NANS TO ZEROES FOR PURELY TESTING PURPOSES &#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47
+        nan_indices = torch.nonzero(torch.isnan(data_arr))
+        for idx in nan_indices:
+            data_arr[idx] = torch.zeros(size=data_arr[0].shape)
+        nan_indices = torch.nonzero(torch.isnan(data_arr))
+        &#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47&#47
+
+        &#47&#47 TODO: format_mouse_data is specific to Rick&quots dataset, change when we&quotre scaling to more data sources
+        arr_for_pca = format_mouse_data(data_arr)
+
+        pca = PCA(n_components=4, svd_solver="full")
+        pca.fit(arr_for_pca.T)
+        print("Done!")
+
+        print(
+            "arr_for_pca shape: {}".format(arr_for_pca.shape)
+        )  &#47&#47 TODO: have prints as tests
+        PCA_prints(pca, components_to_keep)  &#47&#47 print important params
+        &#47&#47 mu = torch.mean(arr_for_pca, axis=1) &#47&#47 TODO: needed only for probabilistic version
+        &#47&#47 param_dict["obs_offset"] = mu  &#47&#47 TODO: needed only for probabilistic version
+        param_dict["kept_eigenvectors"] = torch.tensor(
+            pca.components_[:components_to_keep],
+            dtype=torch.float32,
+            device=_TORCH_DEVICE,  &#47&#47 TODO: be careful for multinode
+        )
+        param_dict["discarded_eigenvectors"] = torch.tensor(
+            pca.components_[components_to_keep:],
+            dtype=torch.float32,
+            device=_TORCH_DEVICE,  &#47&#47 TODO: be careful for multinode
+        )
+
+        &#47&#47 compute the labels&quot projections on the discarded components, to estimate the e.g., 90th percentile and determine epsilon
+        &#47&#47 absolute value is important -- projections can be negative.
+        proj_discarded = torch.abs(
+            torch.matmul(
+                arr_for_pca.T,
+                param_dict["discarded_eigenvectors"].clone().detach().cpu().T,
+            )
+        )
+        &#47&#47 setting axis = 0 generalizes to multiple discarded components
+        epsilon = np.percentile(
+            proj_discarded.numpy(), empirical_epsilon_percentile, axis=0
+        )
+        param_dict["epsilon"] = torch.tensor(
+            epsilon,
+            dtype=torch.float32,
+            device=_TORCH_DEVICE,  &#47&#47 TODO: be careful for multinode
+        )
+
+        self.pca_param_dict<a id="change"> = </a>param_dict
+
+    def unlabeled_dataloader(self):
+        return self.semi_supervised_loader</code></pre><h3>After Change</h3><pre><code class='java'>
+        good_indices = torch.nonzero(torch.logical_not(torch.isnan(arr_for_pca)))
+        print(nan_indices)
+        print(good_indices)
+        good_arr_for_pca<a id="change"> = </a><a id="change">arr_for_pca.index_select()</a>
+        pca = PCA(n_components=4, svd_solver="full")
+        pca.fit(arr_for_pca.T)
+        print("Done!")
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/danbider/lightning-pose/commit/b6eb45c9e6b36a0aadf7793a09800b67c5da3d12#diff-6f831f01faa249f13e47f246244eb15e7d9df80ad83d75fd7c939e411e878ccaL173' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 33522142</div><div id='project'> Project Name: danbider/lightning-pose</div><div id='commit'> Commit Name: b6eb45c9e6b36a0aadf7793a09800b67c5da3d12</div><div id='time'> Time: 2021-09-21</div><div id='author'> Author: ubuntu@ip-172-31-72-121.ec2.internal</div><div id='file'> File Name: pose_est_nets/datasets/datamodules.py</div><div id='m_class'> M Class Name: UnlabeledDataModule</div><div id='n_method'> N Class Name: UnlabeledDataModule</div><div id='m_method'> M Method Name: computePCA_params(3)</div><div id='n_method'> N Method Name: computePCA_params(3)</div><div id='m_parent_class'> M Parent Class: BaseDataModule</div><div id='n_parent_class'> N Parent Class: BaseDataModule</div><div id='m_file'> M File Name: pose_est_nets/datasets/datamodules.py</div><div id='n_file'> N File Name: pose_est_nets/datasets/datamodules.py</div><div id='m_start'> M Start Line: 179</div><div id='m_end'> M End Line: 262</div><div id='n_start'> N Start Line: 182</div><div id='n_end'> N End Line: 228</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        if incremental_state is None or len(incremental_state) == 0:
+            return
+        prev_hiddens, prev_cells, input_feed = self.get_cached_state(incremental_state)
+        cached_state = (prev_hiddens, prev_cells, <a id="change">[</a>input_feed<a id="change"></a>])
+        new_state = [self.reorder_state(state, new_order) for state in cached_state]
+        prev_hiddens_tensor<a id="change"> = </a>torch.stack(new_state[0])
+        prev_cells_tensor = torch.stack(new_state[1])
+        cached_state_new = torch.jit.annotate(
+            Dict[str, Optional[Tensor]],</code></pre><h3>After Change</h3><pre><code class='java'>
+        prev_hiddens = [p.index_select(0, new_order) for p in prev_hiddens]
+        prev_cells = [p.index_select(0, new_order) for p in prev_cells]
+        if input_feed is not None:
+            input_feed<a id="change"> = </a><a id="change">input_feed.index_select(</a>0, new_order<a id="change">)</a>
+        cached_state_new = torch.jit.annotate(
+            Dict[str, Optional[Tensor]],
+            {
+                "prev_hiddens": torch.stack(prev_hiddens),</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/kssteven418/i-bert/commit/d0ccc3e02e1a9015d05cade8dfc61896948275c7#diff-6ce7c0d4f0fb1f8f34940039a8bb42a6d902a8894dd18517bee43dac3fc09971L568' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 33522135</div><div id='project'> Project Name: kssteven418/i-bert</div><div id='commit'> Commit Name: d0ccc3e02e1a9015d05cade8dfc61896948275c7</div><div id='time'> Time: 2020-06-22</div><div id='author'> Author: myleott@fb.com</div><div id='file'> File Name: fairseq/models/lstm.py</div><div id='m_class'> M Class Name: LSTMDecoder</div><div id='n_method'> N Class Name: LSTMDecoder</div><div id='m_method'> M Method Name: reorder_incremental_state(3)</div><div id='n_method'> N Method Name: reorder_incremental_state(3)</div><div id='m_parent_class'> M Parent Class: FairseqIncrementalDecoder</div><div id='n_parent_class'> N Parent Class: FairseqIncrementalDecoder</div><div id='m_file'> M File Name: fairseq/models/lstm.py</div><div id='n_file'> N File Name: fairseq/models/lstm.py</div><div id='m_start'> M Start Line: 568</div><div id='m_end'> M End Line: 580</div><div id='n_start'> N Start Line: 573</div><div id='n_end'> N End Line: 591</div><BR>

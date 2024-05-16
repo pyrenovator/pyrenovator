@@ -1,0 +1,32 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        keras_model.save(saved_model_dir, save_format="tf")
+
+        &#47&#47 Pre-fetch some information about the model.
+        loaded_model = <a id="change">tf.saved_model.load(
+            </a>saved_model_dir<a id="change">, tags=[tf.saved_model.SERVING]
+        )</a>
+        self._predict_signature = loaded_model.signatures["serving_default"]
+
+        input_def = next(self._predict_signature.inputs.values().__iter__())
+        self._input_shape = tuple(dim.size for dim in input_def.tensor_shape.dim[1:])</code></pre><h3>After Change</h3><pre><code class='java'>
+        tf.compat.v1.keras.experimental.export_saved_model(keras_model, saved_model_dir)
+
+        &#47&#47 Pre-fetch some information about the model.
+        <a id="change">with </a><a id="change">tfv1.Session(graph=tf.Graph()) as sess:
+            </a>metagraph = tfv1.saved_model.load(
+                sess, [tf.saved_model.SERVING], saved_model_dir
+            )
+            self._predict_signature = metagraph.signature_def.get("serving_default")
+
+            input_def = next(self._predict_signature.inputs.values().__iter__())
+            self._input_shape = tuple(
+                dim.size for dim in input_def.tensor_shape.dim[1:]
+            )
+
+            variables<a id="change"> = </a>tfv1.global_variables()
+            self._variable_names = [variable.name for variable in variables]
+            self._initial_params = [variable.eval() for variable in variables]
+            trainable_variables = keras_model.trainable_variables</code></pre>

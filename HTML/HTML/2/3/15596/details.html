@@ -1,0 +1,54 @@
+<html><h3>Pattern ID :15596
+</h3><img src='52823238.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    estimated_amplitude = estimated_amplitude.transpose(3, 2, 1, 0)
+    estimated_sources = norbert.wiener(estimated_amplitude, mixture, eps=eps)
+    estimated_sources = estimated_sources.transpose(3, 2, 1, 0)
+    estimated_sources<a id="change"> = </a><a id="change">torch.from_numpy(estimated_sources).to(</a>device, dtype<a id="change">)</a>
+
+    return estimated_sources</code></pre><h3>After Change</h3><pre><code class='java'>
+    ratio = estimated_sources_amplitude / estimated_sources_amplitude.sum(dim=0)
+    estimated_sources = ratio * mixture
+
+    norm = max(1, <a id="change">torch.abs(mixture).max()</a> / 10)
+    mixture, estimated_sources = mixture / norm, estimated_sources / norm
+    estimated_sources = update_em(mixture, estimated_sources, iterations, eps=eps)
+    estimated_sources = norm * estimated_sources</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/tky823/dnn-based_source_separation/commit/d45a578a242ecb277ef7bdc5c9d6f75c4ad13521#diff-7c5b1018ab6bf19cc2f7c1fc385abd4adb493c178cdd1548dcae8770f80fb8fdL385' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 52823238</div><div id='project'> Project Name: tky823/dnn-based_source_separation</div><div id='commit'> Commit Name: d45a578a242ecb277ef7bdc5c9d6f75c4ad13521</div><div id='time'> Time: 2021-08-20</div><div id='author'> Author: 40362510+tky823@users.noreply.github.com</div><div id='file'> File Name: egs/musdb18/d3net/src/adhoc_driver.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: apply_multichannel_wiener_filter(5)</div><div id='n_method'> N Method Name: apply_multichannel_wiener_filter(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: egs/musdb18/d3net/src/adhoc_driver.py</div><div id='n_file'> N File Name: egs/musdb18/d3net/src/adhoc_driver.py</div><div id='m_start'> M Start Line: 398</div><div id='m_end'> M End Line: 414</div><div id='n_start'> N Start Line: 385</div><div id='n_end'> N End Line: 403</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+def sweep_n(ntensor, niter, dtype):
+    print("n, dtype, ntensor, gflop, runtime, tflop/s")
+    for n in [16, 32, 64, 128, 256, 512, 1024, 2048, 4096]:
+        nt_a<a id="change"> = </a>torch.nested_tensor(
+            [<a id="change">torch.randn(n, n).to(</a>dtype<a id="change">)</a>.cuda() for t in range(ntensor)]
+        )
+        nt_b = torch.nested_tensor(
+            [torch.randn(n, n).to(dtype).cuda() for t in range(ntensor)]</code></pre><h3>After Change</h3><pre><code class='java'>
+        nt_a_size = torch.ops.aten._nested_tensor_size(nt_a)
+        lengths = nt_a_size[:, 1]
+        print(",".join(map(str, [ntensor, dtype, lengths.min().item(),
+              lengths.float().mean().item(), <a id="change">lengths.max()</a>.item(), runtime])))
+
+
+if __name__ == "__main__":</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/pytorch/pytorch/commit/943b20e7ae290d8e71f877eb700f197a9df56cbe#diff-1a0c7c4824948dc09f17a85687fcb71774f4b0084b825189bb69aa3d87804a03L22' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 52823251</div><div id='project'> Project Name: pytorch/pytorch</div><div id='commit'> Commit Name: 943b20e7ae290d8e71f877eb700f197a9df56cbe</div><div id='time'> Time: 2022-11-02</div><div id='author'> Author: cpuhrsch@fb.com</div><div id='file'> File Name: benchmarks/nested/nested_bmm_bench.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: sweep_n(2)</div><div id='n_method'> N Method Name: sweep_n(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: benchmarks/nested/nested_bmm_bench.py</div><div id='n_file'> N File Name: benchmarks/nested/nested_bmm_bench.py</div><div id='m_start'> M Start Line: 22</div><div id='m_end'> M End Line: 33</div><div id='n_start'> N Start Line: 24</div><div id='n_end'> N End Line: 40</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    def compute_objectives(self, predictions, targets, stage="train"):
+        ids, target_wavs, lens = targets
+        target_wavs, lens = truncate(target_wavs, lens, params.max_length)
+        target_wavs = <a id="change">target_wavs.to(</a>params.device<a id="change">)</a>
+        lens = lens.to(params.device)
+        loss = params.compute_cost(predictions, target_wavs, lens)
+
+        stats = {}
+        if stage != "train":
+            lens = lens * target_wavs.shape[1]
+            pesq_scores<a id="change"> = </a>multiprocess_evaluation(
+                predictions.cpu().numpy(),
+                target_wavs.cpu().numpy(),
+                lens.cpu().numpy(),</code></pre><h3>After Change</h3><pre><code class='java'>
+                    enhance_path = os.path.join(
+                        self.hparams.enhanced_folder, name
+                    )
+                    pred_wav = pred_wav / <a id="change">torch.max(</a>torch.abs(pred_wav)<a id="change">)</a> * 0.99
+                    torchaudio.save(
+                        enhance_path, pred_wav[: int(length)].cpu(), 16000
+                    )</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/speechbrain/speechbrain/commit/12938c3385685062c6f084d917abef54fac489a3#diff-cc9f8699eae1c2632e2f73f5b17bdaef050727935bc4f6a5083b3cedf8da9a40L68' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 52823244</div><div id='project'> Project Name: speechbrain/speechbrain</div><div id='commit'> Commit Name: 12938c3385685062c6f084d917abef54fac489a3</div><div id='time'> Time: 2020-10-26</div><div id='author'> Author: weisberger2009@gmail.com</div><div id='file'> File Name: recipes/Voicebank/enhance/waveform_map/experiment.py</div><div id='m_class'> M Class Name: SEBrain</div><div id='n_method'> N Class Name: SEBrain</div><div id='m_method'> M Method Name: compute_objectives(4)</div><div id='n_method'> N Method Name: compute_objectives(4)</div><div id='m_parent_class'> M Parent Class: sb.Brain</div><div id='n_parent_class'> N Parent Class: sb.core.Brain</div><div id='m_file'> M File Name: recipes/Voicebank/enhance/waveform_map/experiment.py</div><div id='n_file'> N File Name: recipes/Voicebank/enhance/waveform_map/experiment.py</div><div id='m_start'> M Start Line: 70</div><div id='m_end'> M End Line: 95</div><div id='n_start'> N Start Line: 24</div><div id='n_end'> N End Line: 54</div><BR>

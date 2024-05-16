@@ -1,0 +1,27 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        assert (
+            not transformer.log_scale
+        ), "Beta distribution is not compatible with log transformation - use LogNormal"
+        <a id="change">assert </a>not transformer.center, "Beta distribution is not compatible with centered data"
+
+        scaled_mean = torch.sigmoid(parameters[..., 0] + target_scale[..., 0].unsqueeze(1))
+        return torch.stack([</code></pre><h3>After Change</h3><pre><code class='java'>
+        assert encoder.transformation in ["logit"], "Beta distribution is only compatible with logit transformation"
+        assert encoder.center, "Beta distribution requires normalizer to center data"
+
+        scaled_mean = encoder(<a id="change">dict(prediction=parameters[..., 0], target_scale=target_scale)</a>)
+        &#47&#47 need to first transform target scale standard deviation in logit space to real space
+        &#47&#47 we assume a normal distribution in logit space (we used a logit transform and a standard scaler)
+        &#47&#47 and know that the variance of the beta distribution is limited by `scaled_mean * (1 - scaled_mean)`
+        mean_derivative = scaled_mean * (1 - scaled_mean)
+
+        &#47&#47 we can approximate variance as
+        &#47&#47 torch.pow(torch.tanh(target_scale[..., 1].unsqueeze(1) * torch.sqrt(mean_derivative)), 2) * mean_derivative
+        &#47&#47 shape is (positive) parameter * mean_derivative / var
+        shape_scaler<a id="change"> = </a>torch.pow(torch.tanh(target_scale[..., 1].unsqueeze(1) * torch.sqrt(mean_derivative)), 2)
+        scaled_shape = F.softplus(parameters[..., 1]) / shape_scaler
+        return torch.stack([scaled_mean, scaled_shape], dim=-1)
+</code></pre>

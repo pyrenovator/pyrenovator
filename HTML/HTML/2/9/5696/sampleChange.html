@@ -1,0 +1,54 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+    &#47&#47 &lt;float32&gt;[emb_size]
+    dataset_embs = [output[config.embedding_name] for output in dataset_outputs]
+    example_embs<a id="change"> = </a><a id="change">[</a>example_output[config.embedding_name]<a id="change"></a>]
+    distances = distance.cdist(example_embs, dataset_embs)[0]
+    sorted_indices = np.argsort(distances)
+    k = config.num_neighbors</code></pre><h3>After Change</h3><pre><code class='java'>
+      A JsonDict containing the a list of num_neighbors nearest neighbors,
+      where each has the example id and distance from the main example.
+    
+    <a id="change">if not config</a>:
+      raise TypeError(&quotconfig must be provided&quot)
+
+    nnconf = NearestNeighborsConfig(**(config or {}))
+
+    &#47&#47 TODO(lit-dev): Add support for selecting nearest neighbors of a set.
+    if len(indexed_inputs) != 1:
+      raise ValueError(&quotindexed_inputs must contain exactly 1 example, found &quot
+                       f&quot{len(indexed_inputs)}.&quot)
+
+    if nnconf.use_input:
+      if not dataset.spec().get(nnconf.embedding_name):
+        <a id="change">raise </a><a id="change">KeyError(&quotCould not find embeddings field, &quot
+                       f&quot{nnconf.embedding_name} in dataset spec&quot</a><a id="change">)</a>
+      &#47&#47 If using input values, then treat inputs as outputs instead of running
+      &#47&#47 the model.
+      dataset_outputs = [inp[&quotdata&quot] for inp in dataset.indexed_examples]
+      example_outputs = [inp[&quotdata&quot] for inp in indexed_inputs]
+    else:
+      if not model.output_spec().get(nnconf.embedding_name):
+        raise KeyError(&quotCould not find embeddings field, &quot
+                       f&quot{nnconf.embedding_name} in model output spec&quot)
+      dataset_outputs = list(
+          model.predict_with_metadata(
+              dataset.indexed_examples, dataset_name=nnconf.dataset_name))
+      example_outputs = list(
+          model.predict_with_metadata(
+              indexed_inputs, dataset_name=nnconf.dataset_name))
+
+    example_output = example_outputs[0]
+
+    &#47&#47 &lt;float32&gt;[emb_size]
+    dataset_embs = [output[nnconf.embedding_name] for output in dataset_outputs]
+    example_embs = <a id="change">[</a>example_output[nnconf.embedding_name]<a id="change"></a>]
+    distances = distance.cdist(example_embs, dataset_embs)[0]
+    sorted_indices = np.argsort(distances)
+    k<a id="change"> = </a>nnconf.num_neighbors
+    k_nearest_neighbors = [
+        {&quotid&quot: dataset.indexed_examples[original_index][&quotid&quot],
+         &quotnn_distance&quot: distances[original_index]</code></pre>

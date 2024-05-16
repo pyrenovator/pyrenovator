@@ -1,0 +1,48 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        total_uploaded_size = 0
+        total_dataset_nbytes = 0
+        info_to_dump: DatasetInfo = next(iter(self.values())).info.copy()
+        dataset_name<a id="change"> = </a><a id="change">repo_id.split("/"</a><a id="change">)</a>[-1]
+        info_to_dump.splits = SplitDict(dataset_name=dataset_name)
+
+        for split in self.keys():</code></pre><h3>After Change</h3><pre><code class='java'>
+        info_to_dump.dataset_size = total_dataset_nbytes
+        info_to_dump.size_in_bytes = total_uploaded_size + total_dataset_nbytes
+
+        api<a id="change"> = </a>HfApi(endpoint=config.HF_ENDPOINT)
+        <a id="change">repo_files</a> = hf_api_list_repo_files(api, repo_id, repo_type="dataset", revision=branch, token=token)
+
+        &#47&#47 push to the deprecated dataset_infos.json
+        <a id="change">if config.DATASETDICT_INFOS_FILENAME in repo_files</a>:
+            buffer = BytesIO()
+            buffer.write(b&quot{"default": &quot)
+            info_to_dump._dump_info(buffer, pretty_print=True)
+            buffer.write(b"}")
+            HfApi(endpoint=config.HF_ENDPOINT).upload_file(
+                path_or_fileobj=buffer.getvalue(),
+                path_in_repo=config.DATASETDICT_INFOS_FILENAME,
+                repo_id=repo_id,
+                token=token,
+                repo_type="dataset",
+                revision=branch,
+            )
+        &#47&#47 push to README
+        <a id="change">if "README.md" in repo_files</a>:
+            download_config<a id="change"> = </a>DownloadConfig()
+            download_config.download_desc<a id="change"> = </a>"Downloading metadata"
+            dataset_readme_path = cached_path(
+                hf_hub_url(repo_id, "README.md"),
+                download_config=download_config,
+            )
+            dataset_metadata = DatasetMetadata.from_readme(Path(dataset_readme_path))
+            with open(dataset_readme_path, encoding="utf-8") as readme_file:
+                readme_content = readme_file.read()
+        else:
+            dataset_metadata = DatasetMetadata()
+            readme_content<a id="change"> = </a>f&quot&#47&#47 Dataset Card for "{repo_id.split("/")[-1]}"\n\n[More Information needed](https://github.com/huggingface/datasets/blob/main/CONTRIBUTING.md&#47&#47how-to-contribute-to-the-dataset-cards)&quot
+        DatasetInfosDict({"default": info_to_dump}).to_metadata(dataset_metadata)
+        HfApi(endpoint=config.HF_ENDPOINT).upload_file(
+            path_or_fileobj=dataset_metadata._to_readme(readme_content).encode(),</code></pre>

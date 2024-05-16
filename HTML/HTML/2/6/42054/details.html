@@ -1,0 +1,137 @@
+<html><h3>Pattern ID :42054
+</h3><img src='117762885.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        
+        X = torch.linspace(-1, 1, resolution).split(S)
+        Y = torch.linspace(-1, 1, resolution).split(S)
+        Z<a id="change"> = </a>torch.linspace(-1, 1, resolution).split(S)
+
+        count = torch.zeros_like(self.density_grid)
+        poses = poses.to(count.device)
+
+        &#47&#47 5-level loop, forgive me...
+        for xi, xs in enumerate(X):
+            for yi, ys in enumerate(Y):
+                for zi, zs in <a id="change">enumerate(</a>Z<a id="change">)</a>:
+                    lx<a id="change">, ly, lz</a> = len(xs), len(ys), len(zs)
+                    &#47&#47 construct points
+                    xx, yy, zz = custom_meshgrid(xs, ys, zs)
+                    world_xyzs = torch.cat([xx.reshape(-1, 1), yy.reshape(-1, 1), zz.reshape(-1, 1)], dim=-1).unsqueeze(0).to(count.device) &#47&#47 [1, N, 3]</code></pre><h3>After Change</h3><pre><code class='java'>
+        
+        fx, fy, cx, cy = intrinsic
+        
+        X = <a id="change">torch.arange(self.grid_size, dtype=torch.int32, device=self.density_grid.device).split(</a>S<a id="change">)</a>
+        Y = torch.arange(self.grid_size, dtype=torch.int32, device=self.density_grid.device).split(S)
+        Z = torch.arange(self.grid_size, dtype=torch.int32, device=self.density_grid.device).split(S)
+
+        count = torch.zeros_like(self.density_grid)
+        poses = poses.to(count.device)
+
+        &#47&#47 5-level loop, forgive me...
+
+        for xs in X:
+            for ys in Y:
+                for zs in Z:
+                    
+                    &#47&#47 construct points
+                    xx, yy, zz = custom_meshgrid(xs, ys, zs)
+                    coords = torch.cat([xx.reshape(-1, 1), yy.reshape(-1, 1), zz.reshape(-1, 1)], dim=-1) &#47&#47 [N, 3], in [0, 128)
+                    indices = raymarching.morton3D(coords).long() &#47&#47 [N]
+                    world_xyzs<a id="change"> = </a>(2 * coords.float() / (self.grid_size - 1) - 1).unsqueeze(0) &#47&#47 [1, N, 3] in [-1, 1]
+
+                    &#47&#47 cascading
+                    for cas in range(self.cascade):
+                        bound = min(2 ** cas, self.bound)
+                        half_grid_size = bound / self.grid_size
+                        &#47&#47 scale to current cascade&quots resolution
+                        cas_world_xyzs = world_xyzs * (bound - half_grid_size)
+
+                        &#47&#47 split batch to avoid OOM
+                        head = 0
+                        while head &lt; B:
+                            tail = min(head + S, B)
+
+                            &#47&#47 world2cam transform (poses is c2w, so we need to transpose it. Another transpose is needed for batched matmul, so the final form is without transpose.)
+                            cam_xyzs = cas_world_xyzs - poses[head:tail, :3, 3].unsqueeze(1)
+                            cam_xyzs = cam_xyzs @ poses[head:tail, :3, :3] &#47&#47 [S, N, 3]
+                            
+                            &#47&#47 query if point is covered by any camera
+                            mask_z = cam_xyzs[:, :, 2] &gt; 0 &#47&#47 [S, N]
+                            mask_x = torch.abs(cam_xyzs[:, :, 0]) &lt; cx / fx * cam_xyzs[:, :, 2] + half_grid_size * 2
+                            mask_y = torch.abs(cam_xyzs[:, :, 1]) &lt; cy / fy * cam_xyzs[:, :, 2] + half_grid_size * 2
+                            mask = (mask_z & mask_x & mask_y).sum(0).reshape(-1) &#47&#47 [N]
+
+                            &#47&#47 update count 
+                            count[cas<a id="change">, indices</a>] += mask
+                            head += S
+    
+        &#47&#47 mark untrained grid as -1</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 6</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/ashawkey/torch-ngp/commit/f02ec4824ef16a650c5a4acac510ec6c224a4337#diff-96330057ed34864879e5c07ca3b71aa0415cc9281c388c0ec9d3d6892d48343aL397' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 117762885</div><div id='project'> Project Name: ashawkey/torch-ngp</div><div id='commit'> Commit Name: f02ec4824ef16a650c5a4acac510ec6c224a4337</div><div id='time'> Time: 2022-06-02</div><div id='author'> Author: ashawkey1999@gmail.com</div><div id='file'> File Name: nerf/renderer.py</div><div id='m_class'> M Class Name: NeRFRenderer</div><div id='n_method'> N Class Name: NeRFRenderer</div><div id='m_method'> M Method Name: mark_untrained_grid(4)</div><div id='n_method'> N Method Name: mark_untrained_grid(4)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: nerf/renderer.py</div><div id='n_file'> N File Name: nerf/renderer.py</div><div id='m_start'> M Start Line: 397</div><div id='m_end'> M End Line: 438</div><div id='n_start'> N Start Line: 397</div><div id='n_end'> N End Line: 439</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        elif self.config.name in ["SLR83"]:
+            for i, path_to_index in enumerate(path_to_indexs):
+                with open(path_to_index, encoding="utf-8") as f:
+                    lines<a id="change"> = </a>f.readlines()
+                    for id_, line in <a id="change">enumerate(</a>lines<a id="change">)</a>:
+                        field_values = re.split(r",\s?", line.strip())
+                        user_id<a id="change">, filename, sentence</a> = field_values
+                        path = os.path.join(path_to_datas[i], f"{filename}.wav")
+                        counter += 1
+                        yield counter, {"path": path, "audio": path, "sentence": sentence}</code></pre><h3>After Change</h3><pre><code class='java'>
+                        &#47&#47 Following regexs are needed to normalise the lines, since the datasets
+                        &#47&#47 are not always consistent and have bugs:
+                        line = re.sub(r"\t[^\t]*\t", "\t", line.strip())
+                        field_values = <a id="change">re.split(</a>r"\t\t?", line<a id="change">)</a>
+                        if len(field_values) != 2:
+                            continue
+                        filename<a id="change">, sentence</a> = field_values
+                        &#47&#47 set absolute path for audio file
+                        path<a id="change"> = </a>f"{path_to_data}/{filename}.wav"
+                        sentences[path] = sentence
+                for path, f in files:
+                    if path.startswith(path_to_data):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/huggingface/datasets/commit/0534a87f60fb9a589138f0773e057c2429f482b7#diff-b1c40e633ad528baeeb7cf486e625b16f131dd6095409216d5ecc77b0dd32bfcL622' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 117762881</div><div id='project'> Project Name: huggingface/datasets</div><div id='commit'> Commit Name: 0534a87f60fb9a589138f0773e057c2429f482b7</div><div id='time'> Time: 2021-11-19</div><div id='author'> Author: 42851186+lhoestq@users.noreply.github.com</div><div id='file'> File Name: datasets/openslr/openslr.py</div><div id='m_class'> M Class Name: OpenSlr</div><div id='n_method'> N Class Name: OpenSlr</div><div id='m_method'> M Method Name: _generate_examples(4)</div><div id='n_method'> N Method Name: _generate_examples(3)</div><div id='m_parent_class'> M Parent Class: datasets.GeneratorBasedBuilder</div><div id='n_parent_class'> N Parent Class: datasets.GeneratorBasedBuilder</div><div id='m_file'> M File Name: datasets/openslr/openslr.py</div><div id='n_file'> N File Name: datasets/openslr/openslr.py</div><div id='m_start'> M Start Line: 625</div><div id='m_end'> M End Line: 652</div><div id='n_start'> N Start Line: 583</div><div id='n_end'> N End Line: 624</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+        X = torch.linspace(-1, 1, resolution).split(S)
+        Y = torch.linspace(-1, 1, resolution).split(S)
+        Z<a id="change"> = </a>torch.linspace(-1, 1, resolution).split(S)
+        for xi, xs in enumerate(X):
+            for yi, ys in enumerate(Y):
+                for zi, zs in <a id="change">enumerate(</a>Z<a id="change">)</a>:
+                    lx<a id="change">, ly, lz</a> = len(xs), len(ys), len(zs)
+                    &#47&#47 construct points
+                    xx, yy, zz = custom_meshgrid(xs, ys, zs)
+                    xyzs = torch.cat([xx.reshape(-1, 1), yy.reshape(-1, 1), zz.reshape(-1, 1)], dim=-1) &#47&#47 [N, 3], in [-1, 1]</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        tmp_grid = torch.zeros_like(self.density_grid)
+
+        X = <a id="change">torch.arange(self.grid_size, dtype=torch.int32, device=self.density_grid.device).split(</a>S<a id="change">)</a>
+        Y = torch.arange(self.grid_size, dtype=torch.int32, device=self.density_grid.device).split(S)
+        Z = torch.arange(self.grid_size, dtype=torch.int32, device=self.density_grid.device).split(S)
+        for xs in X:
+            for ys in Y:
+                for zs in Z:
+                    
+                    &#47&#47 construct points
+                    xx, yy, zz = custom_meshgrid(xs, ys, zs)
+                    coords = torch.cat([xx.reshape(-1, 1), yy.reshape(-1, 1), zz.reshape(-1, 1)], dim=-1) &#47&#47 [N, 3], in [0, 128)
+                    indices = raymarching.morton3D(coords).long() &#47&#47 [N]
+                    xyzs<a id="change"> = </a>2 * coords.float() / (self.grid_size - 1) - 1 &#47&#47 [N, 3] in [-1, 1]
+
+                    &#47&#47 cascading
+                    for cas in range(self.cascade):
+                        bound = min(2 ** cas, self.bound)
+                        half_grid_size = bound / self.grid_size
+                        &#47&#47 scale to current cascade&quots resolution
+                        cas_xyzs = xyzs * (bound - half_grid_size)
+                        &#47&#47 add noise in [-hgs, hgs]
+                        cas_xyzs += (torch.rand_like(cas_xyzs) * 2 - 1) * half_grid_size
+                        &#47&#47 query density
+                        sigmas = self.density(cas_xyzs)[&quotsigma&quot].reshape(-1).detach()
+                        &#47&#47 from `scalbnf(MIN_CONE_STEPSIZE(), 0)`, check `splat_grid_samples_nerf_max_nearest_neighbor`
+                        &#47&#47 scale == 2 * sqrt(3) / 1024
+                        sigmas *= self.density_scale * 0.003383
+                        &#47&#47 assign 
+                        tmp_grid[cas<a id="change">, indices</a>] = sigmas
+        
+        
+        &#47&#47 ema update</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/ashawkey/torch-ngp/commit/f02ec4824ef16a650c5a4acac510ec6c224a4337#diff-96330057ed34864879e5c07ca3b71aa0415cc9281c388c0ec9d3d6892d48343aL447' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 117762888</div><div id='project'> Project Name: ashawkey/torch-ngp</div><div id='commit'> Commit Name: f02ec4824ef16a650c5a4acac510ec6c224a4337</div><div id='time'> Time: 2022-06-02</div><div id='author'> Author: ashawkey1999@gmail.com</div><div id='file'> File Name: nerf/renderer.py</div><div id='m_class'> M Class Name: NeRFRenderer</div><div id='n_method'> N Class Name: NeRFRenderer</div><div id='m_method'> M Method Name: update_extra_state(3)</div><div id='n_method'> N Method Name: update_extra_state(3)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: nerf/renderer.py</div><div id='n_file'> N File Name: nerf/renderer.py</div><div id='m_start'> M Start Line: 454</div><div id='m_end'> M End Line: 488</div><div id='n_start'> N Start Line: 461</div><div id='n_end'> N End Line: 490</div><BR>

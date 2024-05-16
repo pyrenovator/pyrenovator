@@ -1,0 +1,135 @@
+<html><h3>Pattern ID :19387
+</h3><img src='63309958.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        splits = (splits,)
+    name = name.lower()
+    root = Path(root)
+    img_dirs = <a id="change">[]</a>
+    parsers = []
+    if name.startswith(&quotcoco&quot):
+        if &quotcoco2014&quot in name:
+            dataset_cfg = Coco2014Cfg()
+        else:
+            dataset_cfg = Coco2017Cfg()
+        for s in splits:
+            if s not in dataset_cfg.splits:
+                raise RuntimeError(f&quot{s} split not found in config&quot)
+            split_cfg = dataset_cfg.splits[s]
+            ann_file = root / split_cfg[&quotann_filename&quot]
+            img_dirs.append(root / Path(split_cfg[&quotimg_dir&quot]))
+            parser_cfg = CocoParserCfg(
+                ann_filename=ann_file,
+            )
+            parsers.append(create_parser(dataset_cfg.parser, cfg=parser_cfg))
+    elif name.startswith(&quotvoc&quot):
+        if &quotVOC2007&quot in name:
+            dataset_cfg = Voc2007Cfg()
+        else:
+            dataset_cfg = Voc2012Cfg()
+        for s in splits:
+            if s not in dataset_cfg.splits:
+                raise RuntimeError(f&quot{s} split not found in config&quot)
+            split_cfg = dataset_cfg.splits[s]
+            img_dirs.append(root / Path(split_cfg[&quotimg_dir&quot]))
+            parser_cfg = VocParserCfg(
+                split_filename=root / split_cfg[&quotsplit_filename&quot],
+                ann_template=os.path.join(root, dataset_cfg.ann_template),
+            )
+            parsers.append(create_parser(dataset_cfg.parser, cfg=parser_cfg))
+    elif name.startswith(&quotopenimages&quot):
+        if &quotchallenge2019&quot in name:
+            dataset_cfg = OpenImagesObjChallenge2019Cfg()
+        else:
+            dataset_cfg = OpenImagesObjV5Cfg()
+        for s in splits:
+            if s not in dataset_cfg.splits:
+                raise RuntimeError(f&quot{s} split not found in config&quot)
+            split_cfg = dataset_cfg.splits[s]
+            img_dirs.append(root / Path(split_cfg[&quotimg_dir&quot]))
+            parser_cfg = OpenImagesParserCfg(
+                categories_filename=root / dataset_cfg.categories_map,
+                img_info_filename=root / split_cfg[&quotimg_info&quot],
+                bbox_filename=root / split_cfg[&quotann_bbox&quot],
+                img_label_filename=root / split_cfg[&quotann_img_label&quot],
+                img_template=dataset_cfg.img_template,
+                prefix_levels=split_cfg[&quotprefix_levels&quot]
+
+            )
+            parsers.append(create_parser(dataset_cfg.parser, cfg=parser_cfg))
+    else:
+        assert False, f&quotUnknown dataset parser ({name})&quot
+
+    datasets = [DetectionDatset(img_dir, parser=parser) for img_dir, parser in <a id="change">zip(</a>img_dirs, parsers<a id="change">)</a>]
+    return datasets if len(datasets) &gt; 1 else datasets[0]
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            if s not in dataset_cfg.splits:
+                raise RuntimeError(f&quot{s} split not found in config&quot)
+            split_cfg = dataset_cfg.splits[s]
+            <a id="change">if </a><a id="change">isinstance(</a>split_cfg[&quotsplit_filename&quot], (tuple, list)<a id="change">)</a>:
+                assert len(split_cfg[&quotsplit_filename&quot]) == len(split_cfg[&quotann_filename&quot])
+                parser = None
+                for sf, af, id in zip(
+                        split_cfg[&quotsplit_filename&quot], split_cfg[&quotann_filename&quot], split_cfg[&quotimg_dir&quot]):
+                    parser_cfg = VocParserCfg(
+                        split_filename=root / sf,
+                        ann_filename=os.path.join(root, af),
+                        img_filename=os.path.join(id, dataset_cfg.img_filename))
+                    if parser is None:
+                        parser = create_parser(dataset_cfg.parser, cfg=parser_cfg)
+                    else:
+                        other_parser = create_parser(dataset_cfg.parser, cfg=parser_cfg)
+                        parser.merge(other=other_parser)
+            else:
+                parser_cfg = VocParserCfg(
+                    split_filename=root / split_cfg[&quotsplit_filename&quot],
+                    ann_filename=os.path.join(root, split_cfg[&quotann_filename&quot]),
+                    img_filename=os.path.join(split_cfg[&quotimg_dir&quot], dataset_cfg.img_filename),
+                )
+                parser<a id="change"> = </a>create_parser(dataset_cfg.parser, cfg=parser_cfg)
+            datasets[s] = dataset_cls(data_dir=root, parser=parser)
+    elif name.startswith(&quotopenimages&quot):
+        if &quotchallenge2019&quot in name:</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 5</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/rwightman/efficientdet-pytorch/commit/473ff1fca132063981fb0c174d8208f08a182d3a#diff-40c47eba45d6f8a48e43860915ee505b7dc7c3591c589db1c53506f51039f83aL18' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 63309958</div><div id='project'> Project Name: rwightman/efficientdet-pytorch</div><div id='commit'> Commit Name: 473ff1fca132063981fb0c174d8208f08a182d3a</div><div id='time'> Time: 2020-09-22</div><div id='author'> Author: rwightman@gmail.com</div><div id='file'> File Name: effdet/data/dataset_factory.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: create_dataset(3)</div><div id='n_method'> N Method Name: create_dataset(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: effdet/data/dataset_factory.py</div><div id='n_file'> N File Name: effdet/data/dataset_factory.py</div><div id='m_start'> M Start Line: 18</div><div id='m_end'> M End Line: 74</div><div id='n_start'> N Start Line: 18</div><div id='n_end'> N End Line: 96</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    def record_metrics(self, metrics: Union[float, list], phase: str = &quottrain&quot):
+        if not isinstance(metrics, list):
+            metrics = <a id="change">[</a>metrics<a id="change"></a>]
+        for n, l in <a id="change">zip(</a>self.metrics_names, metrics<a id="change">)</a>:
+            if isinstance(l, list):
+                for i, _l in enumerate(l):
+                    self._adaptive_record_metrics(f&quot{phase}_{n}{i + 1}&quot, _l)</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        
+
+        <a id="change">if </a>isinstance(metrics, list) or <a id="change">isinstance(</a>metrics, tuple<a id="change">)</a>:
+            metrics<a id="change"> = </a>pd.concat(metrics, axis=1)
+        self.losses = pd.concat([self.losses, metrics], ignore_index=True, axis=0)
+        self.losses = self.losses.fillna(0)
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/royerlab/cytoself/commit/fdc5c3f9d381e9a5d2ec581c1006e403ff86b365#diff-523a645fa31e54102ea3d8c4549d9c4caee9ee4e75e32ac26e816f9dccd684fdL104' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 63309948</div><div id='project'> Project Name: royerlab/cytoself</div><div id='commit'> Commit Name: fdc5c3f9d381e9a5d2ec581c1006e403ff86b365</div><div id='time'> Time: 2022-08-18</div><div id='author'> Author: liamiiliil@gmail.com</div><div id='file'> File Name: cytoself/trainer/basetrainer.py</div><div id='m_class'> M Class Name: BaseTrainer</div><div id='n_method'> N Class Name: BaseTrainer</div><div id='m_method'> M Method Name: record_metrics(2)</div><div id='n_method'> N Method Name: record_metrics(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: cytoself/trainer/basetrainer.py</div><div id='n_file'> N File Name: cytoself/trainer/basetrainer.py</div><div id='m_start'> M Start Line: 104</div><div id='m_end'> M End Line: 114</div><div id='n_start'> N Start Line: 137</div><div id='n_end'> N End Line: 151</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+	inc_datasets = []
+
+	if not isinstance(test_fielists, list):
+		list_test_filelist = <a id="change">[]</a>
+		for i in range(len(train_filelists)):
+			list_test_filelist.append(test_fielists)
+		test_fielists = list_test_filelist
+
+	for tr_flist, te_flist in <a id="change">zip(</a>train_filelists, test_fielists<a id="change">)</a>:
+		tr_dataset = FilelistDataset(root, tr_flist)
+		te_dataset = FilelistDataset(root, te_flist)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        filelist in the list.
+    
+
+    <a id="change">if </a>complete_test_set_only and not (<a id="change">isinstance(</a>test_filelists, str<a id="change">)</a> or
+                                       isinstance(test_filelists, Path)):
+        if len(test_filelists) &gt; 1:
+            raise ValueError(
+                &quotWhen complete_test_set_only is True, test_filelists must be a &quot
+                &quotstr, Path or a list with a single element describing the path &quot
+                &quotto the complete test set.&quot)
+        test_filelists<a id="change"> = </a>test_filelists[0]
+    if not complete_test_set_only:
+        if len(test_filelists) != len(train_filelists):
+            raise ValueError(</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/continualai/avalanche/commit/e31ab896db14da2b011f9820198f667b0f51b366#diff-f334db93894193afbac43dd5206c5c46eb283c608280a7772943c79a28d0b0a0L112' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 63309962</div><div id='project'> Project Name: continualai/avalanche</div><div id='commit'> Commit Name: e31ab896db14da2b011f9820198f667b0f51b366</div><div id='time'> Time: 2020-06-22</div><div id='author'> Author: lrzpellegrini@gmail.com</div><div id='file'> File Name: avalanche/benchmarks/scenarios/datasets_from_filelists.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: datasets_from_filelists(4)</div><div id='n_method'> N Method Name: datasets_from_filelists(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: avalanche/benchmarks/scenarios/datasets_from_filelists.py</div><div id='n_file'> N File Name: avalanche/benchmarks/scenarios/datasets_from_filelists.py</div><div id='m_start'> M Start Line: 125</div><div id='m_end'> M End Line: 139</div><div id='n_start'> N Start Line: 120</div><div id='n_end'> N End Line: 157</div><BR>

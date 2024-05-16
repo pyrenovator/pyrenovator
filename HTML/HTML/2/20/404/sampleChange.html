@@ -1,0 +1,100 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+from launch_ros.descriptions import ComposableNode
+
+def generate_launch_description():
+    yolox_ros_share_dir = <a id="change">get_package_share_directory(&quotyolox_ros_cpp&quot</a><a id="change">)</a>
+    yolox_param_yaml<a id="change"> = </a><a id="change">os.path.join(</a>yolox_ros_share_dir, <a id="change">"param"</a>, <a id="change">"nano_openvino.yaml"</a><a id="change">)</a>
+
+    container = ComposableNodeContainer(
+                name=&quotyolox_container&quot,
+                namespace=&quot&quot,</code></pre><h3>After Change</h3><pre><code class='java'>
+
+def generate_launch_description():
+    
+    launch_args = <a id="change">[
+        </a><a id="change">DeclareLaunchArgument(
+            "video_device"</a><a id="change">,
+            default_value="/dev/video0",
+            description="input video source"
+        )</a>,
+        <a id="change">DeclareLaunchArgument(
+            "model_path"</a><a id="change">,
+            default_value="./install/yolox_ros_cpp/share/yolox_ros_cpp/weights/openvino/yolox_nano.xml",
+            description="yolox model path."
+        )</a>,
+        <a id="change">DeclareLaunchArgument(
+            "device"</a><a id="change">,
+            default_value="CPU",
+            description="model device. if openvino, select CPU, GPU, etc... if tensorrt, input GPU index."
+        )</a>,
+        <a id="change">DeclareLaunchArgument(
+            "image_size/height"</a><a id="change">,
+            default_value="416",
+            description="model input image height."
+        )</a>,
+        DeclareLaunchArgument(
+            "image_size/width",
+            default_value="416",
+            description="model input image width."
+        ),
+        <a id="change">DeclareLaunchArgument(
+            "conf"</a><a id="change">,
+            default_value="0.30",
+            description="yolox confidence threshold."
+        )</a>,
+        <a id="change">DeclareLaunchArgument(
+            "nms"</a><a id="change">,
+            default_value="0.45",
+            description="yolox nms threshold"
+        )</a>,
+    ]
+
+    container = ComposableNodeContainer(
+                name=&quotyolox_container&quot,
+                namespace=&quot&quot,
+                package=&quotrclcpp_components&quot,
+                executable=&quotcomponent_container&quot,
+                composable_node_descriptions=[
+                    ComposableNode(
+                        package=&quotv4l2_camera&quot,
+                        plugin=&quotv4l2_camera::V4L2Camera&quot,
+                        name=&quotv4l2_camera&quot,
+                        parameters=[{
+                            "video_device": LaunchConfiguration("video_device"),
+                            "image_size": [640,480]
+                        }]),
+                    ComposableNode(
+                        package=&quotyolox_ros_cpp&quot,
+                        plugin=&quotyolox_ros_cpp::YoloXNode&quot,
+                        name=&quotyolox_ros_cpp&quot,
+                        parameters=[{
+                            "model_path": LaunchConfiguration("model_path"),
+                            "model_type": "openvino",
+                            "device": LaunchConfiguration("device"),
+                            "image_size/height": LaunchConfiguration("image_size/height"),
+                            "image_size/width": LaunchConfiguration("image_size/width"),
+                            "conf": LaunchConfiguration("conf"),
+                            "nms": LaunchConfiguration("nms"),
+                            "imshow_isshow": True,
+                            "src_image_topic_name": "/image_raw",
+                            "publish_image_topic_name": "/yolox/image_raw",
+                            "publish_boundingbox_topic_name": "/yolox/bounding_boxes",
+                        }],
+                        ),
+                ],
+                output=&quotscreen&quot,
+        )
+
+    rqt_graph = launch_ros.actions.Node(
+        package="rqt_graph", executable="rqt_graph",
+    )
+
+    return launch.LaunchDescription(
+        launch_args<a id="change"> + 
+        </a>[
+            container,
+            rqt_graph,
+        ]</code></pre>

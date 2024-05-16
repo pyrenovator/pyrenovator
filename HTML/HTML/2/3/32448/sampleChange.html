@@ -1,0 +1,20 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+    def get_weight(self):
+        if self.use_layernorm:
+            weight = self.scale<a id="change"> * </a><a id="change">F.layer_norm(</a>self.weight, self.weight.shape[1:]<a id="change">, eps=self.eps)</a>
+        else:
+            std, mean = torch.std_mean(self.weight, dim=[1, 2, 3], keepdim=True, unbiased=False)
+            weight = self.scale * (self.weight - mean) / (std + self.eps)
+        return self.gain * weight</code></pre><h3>After Change</h3><pre><code class='java'>
+    def get_weight(self):
+        if self.use_layernorm:
+            &#47&#47 NOTE F.layer_norm is being used to compute (self.weight - mean) / (sqrt(var) + self.eps) in one op
+            weight = <a id="change">F.layer_norm(</a>self.weight, self.weight.shape[1:]<a id="change">, eps=self.eps)</a>
+        else:
+            std, mean = torch.std_mean(self.weight, dim=[1, 2, 3], keepdim=True, unbiased=False)
+            weight = (self.weight - mean) / (std + self.eps)
+        return weight.mul_(self.gain * self.scale)</code></pre>

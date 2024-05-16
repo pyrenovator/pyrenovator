@@ -1,0 +1,30 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+    &#47&#47 implicit grad
+    v1 = torch.autograd.grad(loss,
+                             <a id="change">child.trainable_parameters()</a>,
+                             retain_graph=False)
+
+    &#47&#47 ! Mabye replace with child.loss by adding self.loss attribute to save computation
+    in_loss = <a id="change">child.training_step(</a>child.cur_batch<a id="change">)</a>
+    in_grad = torch.autograd.grad(in_loss, child.trainable_parameters(), create_graph=True)
+    v2 = approx_inverse_hvp(v1, in_grad, <a id="change">child.trainable_parameters()</a>,
+                            iterations=config.neumann_iterations,
+                            alpha=config.neumann_alpha)
+    implicit_grad<a id="change"> = </a>torch.autograd.grad(in_grad, params, grad_outputs=v2)
+
+    return [sub_with_none(dg, ig) for dg, ig in zip(direct_grad, implicit_grad)]
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    &#47&#47 implicit grad
+    implicit_grad = torch.autograd.grad(loss,
+                                        <a id="change">path[1].trainable_parameters()</a>,
+                                        retain_graph=False)
+    <a id="change">for i</a> in <a id="change">range(1</a>, <a id="change">len(path</a><a id="change">)-1</a><a id="change">):
+        </a>implicit_grad<a id="change"> = </a>neumann_helper(implicit_grad, <a id="change">path[i]</a>, <a id="change">path[i+1]</a>, config)
+
+    return [sub_with_none(dg, ig) for dg, ig in zip(direct_grad, implicit_grad)]
+</code></pre>

@@ -1,0 +1,180 @@
+<html><h3>Pattern ID :38927
+</h3><img src='110991997.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                timestamps = [el.split(&quot_&quot)[-1] for el in existing_repl_runs]
+                most_recent_run = existing_repl_runs[np.argmax(timestamps)]
+                pretrained_encoder_path = os.path.join(most_recent_run, &quotrepl_encoder.ckpt&quot)
+                <a id="change">logging.info(</a>f"Loading encoder from {pretrained_encoder_path}"<a id="change">)</a>
+
+    &#47&#47 If none of the branches above have found a pretrained path,
+    &#47&#47 proceed with repl training as normal
+    if pretrained_encoder_path is None:</code></pre><h3>After Change</h3><pre><code class='java'>
+
+                &#47&#47 Don&quott read in any Repl runs completed after the start of the full run
+                valid_timestamps = [ts for ts in timestamps if ts &gt; full_run_start_time]
+                <a id="change">if len(valid_timestamps) &gt; 0</a>:
+                    most_recent_run = existing_repl_runs[np.argmax(timestamps)]
+                    pretrained_encoder_path = os.path.join(most_recent_run, &quotrepl_encoder.ckpt&quot)
+                    <a id="change">logging.info(</a>f"Loading encoder from {pretrained_encoder_path}"<a id="change">)</a>
+
+            if pretrained_encoder_path is None:
+                logging.info(f"No encoder found that existed prior to full run start time")
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 7</div><BR><div id='size'>Non-data size: 5</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/humancompatibleai/eirli/commit/73551e476741a190932f7139d495763ffb227e25#diff-ac0180ce63420dc2ca54be789611665df0da7f4c04d1cba1b30d255501b86c38L279' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 110991997</div><div id='project'> Project Name: humancompatibleai/eirli</div><div id='commit'> Commit Name: 73551e476741a190932f7139d495763ffb227e25</div><div id='time'> Time: 2021-01-08</div><div id='author'> Author: codywild@berkeley.edu</div><div id='file'> File Name: src/il_representations/scripts/pretrain_n_adapt.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: run_end2end_exp(9)</div><div id='n_method'> N Method Name: run_end2end_exp(8)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/il_representations/scripts/pretrain_n_adapt.py</div><div id='n_file'> N File Name: src/il_representations/scripts/pretrain_n_adapt.py</div><div id='m_start'> M Start Line: 329</div><div id='m_end'> M End Line: 331</div><div id='n_start'> N Start Line: 279</div><div id='n_end'> N End Line: 342</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        self._log_startup(input_dict, output_dict, exec_properties)
+
+        &#47&#47 Main pipeline
+        <a id="change">logging.info(</a>&quotEvaluating model.&quot<a id="change">)</a>
+        with self._make_beam_pipeline() as pipeline:
+            examples_list = []
+            tensor_adapter_config = None
+            if tfma.is_batched_input(eval_shared_model, eval_config):</code></pre><h3>After Change</h3><pre><code class='java'>
+        examples_artifact = input_dict[constants.EXAMPLES]
+
+        input_uri = artifact_utils.get_single_uri(examples_artifact)
+        <a id="change">if len(path_utils.list_dir(input_uri)) == 0</a>:
+            &#47&#47 TODO: This is quite specific to AgnosticEvaluators,
+            logger.warning(&quotZenML can not run the evaluation as the provided &quot
+                           &quotinput configuration does not point towards any &quot
+                           &quotdata. Specifically, if you are using the agnostic &quot
+                           &quotevaluator, please make sure that you are using a &quot
+                           &quotproper test_fn in your trainer step to write &quot
+                           &quotthese results.&quot)
+
+        else:
+            &#47&#47 Check the outputs
+            if constants.EVALUATION not in output_dict:
+                raise ValueError(
+                    f&quot{constants.EVALUATION} is missing from outputs&quot)
+            evaluation_artifact = output_dict[constants.EVALUATION]
+            output_uri = artifact_utils.get_single_uri(evaluation_artifact)
+
+            &#47&#47 Resolve the schema
+            schema = None
+            if constants.SCHEMA in input_dict:
+                schema_artifact = input_dict[constants.SCHEMA]
+                schema_uri = artifact_utils.get_single_uri(schema_artifact)
+                reader = io_utils.SchemaReader()
+                schema = reader.read(io_utils.get_only_uri_in_dir(schema_uri))
+
+            &#47&#47 Create the step with the schema attached if provided
+            source = exec_properties[StepKeys.SOURCE]
+            args = exec_properties[StepKeys.ARGS]
+            c = source_utils.load_source_path_class(source)
+            evaluator_step: BaseEvaluatorStep = c(**args)
+
+            &#47&#47 Check the execution parameters
+            eval_config = evaluator_step.build_config()
+            eval_config = tfma.update_eval_config_with_defaults(eval_config)
+            tfma.verify_eval_config(eval_config)
+
+            &#47&#47 Resolve the model
+            if constants.MODEL in input_dict:
+                model_artifact = input_dict[constants.MODEL]
+                model_uri = artifact_utils.get_single_uri(model_artifact)
+                model_path = path_utils.serving_model_path(model_uri)
+
+                model_fn = try_get_fn(evaluator_step.CUSTOM_MODULE,
+                                      &quotcustom_eval_shared_model&quot) or tfma.default_eval_shared_model
+
+                eval_shared_model = model_fn(
+                    model_name=&quot&quot,  &#47&#47 TODO: Fix with model names
+                    eval_saved_model_path=model_path,
+                    eval_config=eval_config)
+            else:
+                eval_shared_model = None
+
+            self._log_startup(input_dict, output_dict, exec_properties)
+
+            &#47&#47 Main pipeline
+            <a id="change">logging.info(</a>&quotEvaluating model.&quot<a id="change">)</a>
+            with self._make_beam_pipeline() as pipeline:
+                examples_list = []
+                tensor_adapter_config = None
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/maiot-io/zenml/commit/ffa63be778b18ac7607d30ac61936b5c7425d81f#diff-392df5cb7642b3d07b6f54f12661fcbf439fcf278c5e9eda73bfe8106457f88bL35' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 110991999</div><div id='project'> Project Name: maiot-io/zenml</div><div id='commit'> Commit Name: ffa63be778b18ac7607d30ac61936b5c7425d81f</div><div id='time'> Time: 2021-03-17</div><div id='author'> Author: bariscandurak@hotmail.com</div><div id='file'> File Name: zenml/components/evaluator/executor.py</div><div id='m_class'> M Class Name: Executor</div><div id='n_method'> N Class Name: Executor</div><div id='m_method'> M Method Name: Do(4)</div><div id='n_method'> N Method Name: Do(4)</div><div id='m_parent_class'> M Parent Class: base_executor.BaseExecutor</div><div id='n_parent_class'> N Parent Class: base_executor.BaseExecutor</div><div id='m_file'> M File Name: zenml/components/evaluator/executor.py</div><div id='n_file'> N File Name: zenml/components/evaluator/executor.py</div><div id='m_start'> M Start Line: 46</div><div id='m_end'> M End Line: 153</div><div id='n_start'> N Start Line: 46</div><div id='n_end'> N End Line: 172</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            self.logger.info(
+                f"Found merging {len(input_files)} database files"
+            )
+            <a id="change">self.logger.info(</a>input_files<a id="change">)</a>
+
+            &#47&#47 Create one empty database table for each extraction
+            for table_name in self._table_names:
+                column_names = self._extract_column_names(</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        if len(input_files) &gt; 0:
+            self.logger.info(f"Merging {len(input_files)} database files")
+            <a id="change">if len(input_files) &lt;= 20</a>:
+                for input_file in input_files:
+                    <a id="change">self.logger.info(</a>"&gt; " + input_file<a id="change">)</a>
+
+            &#47&#47 Create one empty database table for each extraction
+            for table_name in self._table_names:
+                column_names = self._extract_column_names(</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/icecube/graphnet/commit/4e071074221358c3897ef1fa0c482306b380c87b#diff-381fb9307c2327d0fbc5bc1def9a2bbc145f3ab1c84d90cdf404b144a0630191L56' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 110991998</div><div id='project'> Project Name: icecube/graphnet</div><div id='commit'> Commit Name: 4e071074221358c3897ef1fa0c482306b380c87b</div><div id='time'> Time: 2022-06-29</div><div id='author'> Author: andreas.sogaard@gmail.com</div><div id='file'> File Name: src/graphnet/data/sqlite/sqlite_dataconverter.py</div><div id='m_class'> M Class Name: SQLiteDataConverter</div><div id='n_method'> N Class Name: SQLiteDataConverter</div><div id='m_method'> M Method Name: merge_files(3)</div><div id='n_method'> N Method Name: merge_files(3)</div><div id='m_parent_class'> M Parent Class: DataConverter</div><div id='n_parent_class'> N Parent Class: DataConverter</div><div id='m_file'> M File Name: src/graphnet/data/sqlite/sqlite_dataconverter.py</div><div id='n_file'> N File Name: src/graphnet/data/sqlite/sqlite_dataconverter.py</div><div id='m_start'> M Start Line: 62</div><div id='m_end'> M End Line: 85</div><div id='n_start'> N Start Line: 60</div><div id='n_end'> N End Line: 83</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        try:
+            result = self.client.search(index=index, body=body, request_timeout=300, headers=headers)["hits"]["hits"]
+            logger.info({"info": "No documents with embeddings."})
+            <a id="change">logger.info(
+                </a>"Likely some of your stored documents don&quott have embeddings."
+                " try to run the document store&quots update_embeddings() method."<a id="change">
+            )</a>
+        except RequestError as e:
+            raise e
+
+        documents = [</code></pre><h3>After Change</h3><pre><code class='java'>
+        logger.debug(f"Retriever query: {body}")
+        try:
+            result = self.client.search(index=index, body=body, request_timeout=300, headers=headers)["hits"]["hits"]
+            <a id="change">if len(result) == 0</a>:
+                count_embeddings = self.get_embedding_count(index=index, headers=headers)
+                if count_embeddings == 0:
+                    logger.info({"info": "No documents with embeddings."})
+                    <a id="change">logger.info(
+                        </a>"Likely some of your stored documents don&quott have embeddings."
+                        " try to run the document store&quots update_embeddings() method."<a id="change">
+                    )</a>
+        except RequestError as e:
+            raise e
+
+        documents = [</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/paddlepaddle/paddlenlp/commit/201864620d8798cff584340f8461d633e61ba7c9#diff-9e2290ea5682689fc07f3412acf7c90b69814ba84d47383361858a5a7b5d21d5L1158' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 110991993</div><div id='project'> Project Name: paddlepaddle/paddlenlp</div><div id='commit'> Commit Name: 201864620d8798cff584340f8461d633e61ba7c9</div><div id='time'> Time: 2023-01-04</div><div id='author'> Author: w5688414@gmail.com</div><div id='file'> File Name: pipelines/pipelines/document_stores/elasticsearch.py</div><div id='m_class'> M Class Name: ElasticsearchDocumentStore</div><div id='n_method'> N Class Name: ElasticsearchDocumentStore</div><div id='m_method'> M Method Name: query_by_embedding(7)</div><div id='n_method'> N Method Name: query_by_embedding(7)</div><div id='m_parent_class'> M Parent Class: KeywordDocumentStore</div><div id='n_parent_class'> N Parent Class: KeywordDocumentStore</div><div id='m_file'> M File Name: pipelines/pipelines/document_stores/elasticsearch.py</div><div id='n_file'> N File Name: pipelines/pipelines/document_stores/elasticsearch.py</div><div id='m_start'> M Start Line: 1277</div><div id='m_end'> M End Line: 1281</div><div id='n_start'> N Start Line: 1276</div><div id='n_end'> N End Line: 1285</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        if regex_filter:
+            filenames = [_ for _ in filenames if re.match(regex_filter, str(_))]
+
+        <a id="change">self.logger.info(</a>f"Using {len(filenames)} h5 files in {self.root}."<a id="change">)</a>
+
+        self.parse_filenames_data(
+            filenames, extra_h5s=pass_h5s, filter_slice=slice_data
+        )  &#47&#47 Collect information on the image masks_dict.</code></pre><h3>After Change</h3><pre><code class='java'>
+        if regex_filter:
+            filenames = [_ for _ in filenames if re.match(regex_filter, str(_))]
+
+        <a id="change">if len(filenames) == 0</a>:
+            warn = (
+                f"Found 0 h5 files in directory {self.root}."
+                if not self.text_description
+                else f"Found 0 h5 files in directory {self.root} for dataset {self.text_description}."
+            )
+            self.logger.warning(warn)
+        else:
+            <a id="change">self.logger.info(</a>f"Using {len(filenames)} h5 files in {self.root}."<a id="change">)</a>
+
+        self.parse_filenames_data(
+            filenames, extra_h5s=pass_h5s, filter_slice=slice_data
+        )  &#47&#47 Collect information on the image masks_dict.</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/directgroup/direct/commit/a628c8b2d92ad02fc6ffe52be3ed6067d58bffba#diff-fd48185930b82b2178e57bd13bb9a08e02942feae290e061af80e925f0848eddL23' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 110991995</div><div id='project'> Project Name: directgroup/direct</div><div id='commit'> Commit Name: a628c8b2d92ad02fc6ffe52be3ed6067d58bffba</div><div id='time'> Time: 2021-10-21</div><div id='author'> Author: georgeyiasemis@hotmail.com</div><div id='file'> File Name: direct/data/h5_data.py</div><div id='m_class'> M Class Name: H5SliceData</div><div id='n_method'> N Class Name: H5SliceData</div><div id='m_method'> M Method Name: __init__(14)</div><div id='n_method'> N Method Name: __init__(14)</div><div id='m_parent_class'> M Parent Class: Dataset</div><div id='n_parent_class'> N Parent Class: Dataset</div><div id='m_file'> M File Name: direct/data/h5_data.py</div><div id='n_file'> N File Name: direct/data/h5_data.py</div><div id='m_start'> M Start Line: 102</div><div id='m_end'> M End Line: 102</div><div id='n_start'> N Start Line: 79</div><div id='n_end'> N End Line: 113</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            &#47&#47 while ensuring the mutations fall within 
+            &#47&#47 desired constraint limits
+            unseen_pop = self.mutate_parents(pareto, self.mutations_per_parent)
+            <a id="change">self.logger.info(</a>f&quotiter {i}: mutation yielded {len(mutated)} new models&quot<a id="change">)</a>
+
+            &#47&#47 update the set of architectures ever visited
+            self.all_pop.extend(unseen_pop)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            self.iter_num = i + 1
+            self.logger.info(f&quotstarting iter {i}&quot)
+
+            <a id="change">if len(unseen_pop) == 0</a>:
+                <a id="change">self.logger.info(</a>f&quotiter {i}: no models to evaluate, stopping search.&quot<a id="change">)</a>
+                break
+
+            &#47&#47 Calculates objectives
+            self.logger.info(</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/microsoft/archai/commit/a696f7fa1263a43e608f85e9f8d6dc1934102fb0#diff-af6eee30035a32e902f23540993d4d368c841e9c484ad5bc912604684092e627L91' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 110991989</div><div id='project'> Project Name: microsoft/archai</div><div id='commit'> Commit Name: a696f7fa1263a43e608f85e9f8d6dc1934102fb0</div><div id='time'> Time: 2023-01-04</div><div id='author'> Author: pierokauffmann@gmail.com</div><div id='file'> File Name: archai/discrete_search/algos/local_search.py</div><div id='m_class'> M Class Name: LocalSearch</div><div id='n_method'> N Class Name: LocalSearch</div><div id='m_method'> M Method Name: search(1)</div><div id='n_method'> N Method Name: search(1)</div><div id='m_parent_class'> M Parent Class: Searcher</div><div id='n_parent_class'> N Parent Class: Searcher</div><div id='m_file'> M File Name: archai/discrete_search/algos/local_search.py</div><div id='n_file'> N File Name: archai/discrete_search/algos/local_search.py</div><div id='m_start'> M Start Line: 114</div><div id='m_end'> M End Line: 155</div><div id='n_start'> N Start Line: 112</div><div id='n_end'> N End Line: 155</div><BR>

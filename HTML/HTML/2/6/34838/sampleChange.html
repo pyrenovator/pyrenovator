@@ -1,0 +1,21 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    edges_to_remove = edges_to_remove.to(edge_index)
+
+    &#47&#47 it&quots not intuitive to remove edges from a graph represented as `edge_index`
+    edge_weight_remove<a id="change"> = torch</a><a id="change">.zeros(</a>edges_to_remove.size(1)<a id="change">)</a> - 1e5
+    edge_weight = torch.cat(
+        [<a id="change">torch.ones(</a>edge_index.size(1)<a id="change">)</a>, edge_weight_remove], dim=0)
+    edge_index = torch.cat([edge_index, edges_to_remove], dim=1).cpu().numpy()
+    adj_matrix = sp.csr_matrix(
+        (edge_weight.cpu().numpy(), (edge_index[0], edge_index[1])))</code></pre><h3>After Change</h3><pre><code class='java'>
+    num_nodes = max(edge_index.max().item(), edges_to_remove.max().item()) + 1
+    adj_matrix = to_scipy_sparse_matrix(edge_index, num_nodes=num_nodes).tocsr(copy=False)
+
+    row, col = <a id="change">edges_to_remove.cpu().numpy()</a>
+    adj_matrix = adj_matrix.tolil(copy=True)
+    adj_matrix[(row, col)] = 0
+    adj_matrix = adj_matrix.tocsr(copy=False)
+    adj_matrix.eliminate_zeros()</code></pre>

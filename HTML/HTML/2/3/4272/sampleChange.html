@@ -1,0 +1,19 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    ) -&gt; Awaitable[torch.Tensor]:
+        batch_size_per_rank_tensor = sharding_ctx.batch_size_per_rank_tensor
+        batch_size_per_rank = sharding_ctx.batch_size_per_rank
+        max_length<a id="change"> = </a><a id="change">max(</a>batch_size_per_rank<a id="change">)</a>
+        batch_size = batch_size_per_rank[self._rank]
+        packed_pooled_embs = torch.ops.fbgemm.pack_segments(
+            t_in=local_embs,
+            lengths=batch_size_per_rank_tensor,</code></pre><h3>After Change</h3><pre><code class='java'>
+        batch_size = batch_size_per_rank[self._rank]
+
+        awaitable_tensor = self._dist(
+            local_embs.view(<a id="change">sum(</a>batch_size_per_rank<a id="change">)</a>, -1),
+            input_splits=batch_size_per_rank,
+        )
+        return VariableBatchRwEmbeddingDistAwaitable(awaitable_tensor, batch_size)</code></pre>

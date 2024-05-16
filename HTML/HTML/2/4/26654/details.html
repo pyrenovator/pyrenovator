@@ -1,0 +1,76 @@
+<html><h3>Pattern ID :26654
+</h3><img src='79789641.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    src = (src, zero, src, zero)
+    if ctx.is_initializing:
+        ctx.add_depth = True
+        ctx.parameters = <a id="change">step(</a>ctx<a id="change">)</a>(src, ({}, 0))
+        ctx.add_depth = False
+    else:
+        params = {p: k for p, k in ctx.parameters.items() if is_stacked(ctx, p, k)}</code></pre><h3>After Change</h3><pre><code class='java'>
+    src = input_embed(ctx, src)
+    zero = jnp.zeros_like(src)
+    src = (src, zero, src, zero)
+    <a id="change">for </a>i in range(ctx.dims.depth)<a id="change">:
+        </a>src = reversible(ctx, pointwise_block, src)
+        src = reversible(ctx, bottleneck_block, src)
+        src = reversible(ctx, pointwise_block, src)
+        <a id="change">if </a>i % ctx.model.qrnn_frequency == (ctx.model.qrnn_frequency // 2 - 1):
+            src = reversible(ctx, qrnn_block, src)
+    out = revnet_out(src[1:])
+    out = scale_norm_act(ctx, out, ctx.dims.features, act=False)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/homebrewnlp/homebrewnlp-jax/commit/d3689ac1065990625b4a0205242bc2e6016a6a00#diff-3f6109f7c9d86f1facffc8877306296391bb997117c4f8adc9461b89d5eba1e4L29' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 79789641</div><div id='project'> Project Name: homebrewnlp/homebrewnlp-jax</div><div id='commit'> Commit Name: d3689ac1065990625b4a0205242bc2e6016a6a00</div><div id='time'> Time: 2022-08-28</div><div id='author'> Author: 39779310+ClashLuke@users.noreply.github.com</div><div id='file'> File Name: src/model/main.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: body_ctx(2)</div><div id='n_method'> N Method Name: body_ctx(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/model/main.py</div><div id='n_file'> N File Name: src/model/main.py</div><div id='m_start'> M Start Line: 56</div><div id='m_end'> M End Line: 64</div><div id='n_start'> N Start Line: 29</div><div id='n_end'> N End Line: 36</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    zero = jnp.zeros_like(src)
+    src = (src, zero, src, zero)
+    if ctx.is_initializing:
+        ctx.parameters = <a id="change">step(</a>ctx<a id="change">)</a>(src, ({}, 0))
+    else:
+        src, _ = step(ctx)(src, (ctx.parameters, 0))
+    out = revnet_out(src)</code></pre><h3>After Change</h3><pre><code class='java'>
+    src = (src, zero, src, zero)
+
+    src = [ctx.parameters] + list(src)
+    <a id="change">for _</a> in range(ctx.model.unroll_depth)<a id="change">:
+        </a>for depth in range(ctx.model.qrnn_frequency):
+            src = reversible(ctx, pointwise_block, src)
+            src = reversible(ctx, bottleneck_block, src)
+            src = reversible(ctx, pointwise_block, src)
+            <a id="change">if </a>depth % ctx.model.qrnn_frequency == (ctx.model.qrnn_frequency // 2 - 1):
+                src = reversible(ctx, qrnn_block, src)
+                &#47&#47 lax.cond could work but requires work on the parameter store
+    if ctx.is_initializing:</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/homebrewnlp/homebrewnlp-jax/commit/62dfa2ef160a05f91b52c4d92eb607fe251fdfa9#diff-3f6109f7c9d86f1facffc8877306296391bb997117c4f8adc9461b89d5eba1e4L47' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 79789640</div><div id='project'> Project Name: homebrewnlp/homebrewnlp-jax</div><div id='commit'> Commit Name: 62dfa2ef160a05f91b52c4d92eb607fe251fdfa9</div><div id='time'> Time: 2022-08-28</div><div id='author'> Author: 39779310+ClashLuke@users.noreply.github.com</div><div id='file'> File Name: src/model/main.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: body_ctx(2)</div><div id='n_method'> N Method Name: body_ctx(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/model/main.py</div><div id='n_file'> N File Name: src/model/main.py</div><div id='m_start'> M Start Line: 50</div><div id='m_end'> M End Line: 55</div><div id='n_start'> N Start Line: 29</div><div id='n_end'> N End Line: 43</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        ctx.add_depth = False
+    else:
+        params = {p: k for p, k in ctx.parameters.items() if is_stacked(ctx, p, k)}
+        src, _ = lax.scan(<a id="change">step(</a>ctx<a id="change">)</a>, src, (params, jnp.arange(ctx.dims.depth)), ctx.dims.depth)
+    out = revnet_out(src)
+    out = scale_norm_act(ctx, out, ctx.dims.features, act=False)
+    wgt = get_param(ctx, "out_embd", [ctx.dims.features, ctx.dims.vocab], std=1,</code></pre><h3>After Change</h3><pre><code class='java'>
+    src = input_embed(ctx, src)
+    zero = jnp.zeros_like(src)
+    src = (src, zero, src, zero)
+    <a id="change">for i</a> in range(ctx.dims.depth)<a id="change">:
+        </a>src = reversible(ctx, pointwise_block, src)
+        src = reversible(ctx, bottleneck_block, src)
+        src = reversible(ctx, pointwise_block, src)
+        <a id="change">if </a>i % ctx.model.qrnn_frequency == (ctx.model.qrnn_frequency // 2 - 1):
+            src = reversible(ctx, qrnn_block, src)
+    out = revnet_out(src[1:])
+    out = scale_norm_act(ctx, out, ctx.dims.features, act=False)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/homebrewnlp/homebrewnlp-jax/commit/d3689ac1065990625b4a0205242bc2e6016a6a00#diff-3f6109f7c9d86f1facffc8877306296391bb997117c4f8adc9461b89d5eba1e4L53' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 79789642</div><div id='project'> Project Name: homebrewnlp/homebrewnlp-jax</div><div id='commit'> Commit Name: d3689ac1065990625b4a0205242bc2e6016a6a00</div><div id='time'> Time: 2022-08-28</div><div id='author'> Author: 39779310+ClashLuke@users.noreply.github.com</div><div id='file'> File Name: src/model/main.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: body_ctx(2)</div><div id='n_method'> N Method Name: body_ctx(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/model/main.py</div><div id='n_file'> N File Name: src/model/main.py</div><div id='m_start'> M Start Line: 56</div><div id='m_end'> M End Line: 64</div><div id='n_start'> N Start Line: 29</div><div id='n_end'> N End Line: 36</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+
+def check_step_has_found_entitites(doc, step):
+    success_docs, failed_docs = <a id="change">step(</a>[doc]<a id="change">)</a>
+    assert len(failed_docs) == 0
+    expected_hgvs_strings = ["p.Leu90Pro", "c.269T&gt;C", "c.35delG"]
+    found_hgvs_strings = [
+        ent.metadata["hgvs"]</code></pre><h3>After Change</h3><pre><code class='java'>
+
+
+def check_step_has_found_entitites(doc, step_entity_class):
+    <a id="change">for ent</a> in doc.get_entities()<a id="change">:
+        </a><a id="change">if </a>ent.entity_class == step_entity_class:
+            unfound_correct_hgvs_strings.discard(ent.metadata["hgvs"])
+    assert not unfound_correct_hgvs_strings
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/astrazeneca/kazu/commit/af219ddc71c5241d538c467826fe8e9336f2b049#diff-eb583aa96a0a9bd7b13eabcc0816826b7d7878a218b6e8729212a320edde52e7L12' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 79789645</div><div id='project'> Project Name: astrazeneca/kazu</div><div id='commit'> Commit Name: af219ddc71c5241d538c467826fe8e9336f2b049</div><div id='time'> Time: 2022-11-30</div><div id='author'> Author: RichJackson@users.noreply.github.com</div><div id='file'> File Name: kazu/tests/test_seth.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: check_step_has_found_entitites(2)</div><div id='n_method'> N Method Name: check_step_has_found_entitites(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: kazu/tests/test_seth.py</div><div id='n_file'> N File Name: kazu/tests/test_seth.py</div><div id='m_start'> M Start Line: 13</div><div id='m_end'> M End Line: 21</div><div id='n_start'> N Start Line: 15</div><div id='n_end'> N End Line: 18</div><BR>

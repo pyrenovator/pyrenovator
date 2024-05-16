@@ -1,0 +1,55 @@
+<html><h3>Pattern ID :18090
+</h3><img src='59306051.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    def compute(self) -&gt; torch.Tensor:
+        &#47&#47 Upon computation, we sample if there is more than one choice (ddp setting)
+        if self.choice.size(0) &gt; 1:
+            choice = <a id="change">self.cumulative_squared_distance.multinomial(1</a><a id="change">)</a>
+            return <a id="change">self.choice[choice]</a>[0]
+        &#47&#47 Otherwise, we can return the choice
+        return self.choice[0]
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            process_indices = self.cumulative_squared_distance.multinomial(
+                self.num_choices, replacement=True
+            )
+            return <a id="change">choices[choice_indices, process_indices]</a>
+        &#47&#47 Otherwise, we can return the choices
+        return self.choices
+
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/borchero/pycave/commit/6d08623932e425385192f37f888e2fab68338fa0#diff-bd42cdf2cd175e5c83a601b48a3c1cd04a5ecc3d1460c9c8352ec0d80005ebb4L120' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 59306051</div><div id='project'> Project Name: borchero/pycave</div><div id='commit'> Commit Name: 6d08623932e425385192f37f888e2fab68338fa0</div><div id='time'> Time: 2021-10-19</div><div id='author'> Author: oliver@taskfleet.io</div><div id='file'> File Name: pycave/clustering/kmeans/metrics.py</div><div id='m_class'> M Class Name: DistanceSampler</div><div id='n_method'> N Class Name: DistanceSampler</div><div id='m_method'> M Method Name: compute(1)</div><div id='n_method'> N Method Name: compute(1)</div><div id='m_parent_class'> M Parent Class: Metric</div><div id='n_parent_class'> N Parent Class: Metric</div><div id='m_file'> M File Name: pycave/clustering/kmeans/metrics.py</div><div id='n_file'> N File Name: pycave/clustering/kmeans/metrics.py</div><div id='m_start'> M Start Line: 120</div><div id='m_end'> M End Line: 124</div><div id='n_start'> N Start Line: 147</div><div id='n_end'> N End Line: 157</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        shortest_distances = distances.gather(1, distances.argmin(1, keepdim=True)).squeeze(1)
+        squared_distances = shortest_distances.square()
+        weights = torch.cat([self.cumulative_squared_distance, squared_distances])
+        choice = <a id="change">weights.multinomial(1</a><a id="change">)</a>
+        if choice.item() != 0:
+            &#47&#47 If the choice is not 0, one of the new datapoints is chosen
+            self.choice.copy_(<a id="change">data[choice - 1]</a>)
+
+        &#47&#47 In any case, the cumulative distances are updated
+        self.cumulative_squared_distance.add_(squared_distances.sum())</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 Then, we sample from the data `num_choices` times and replace if needed
+        choices = (squared_distances + eps).multinomial(self.num_choices, replacement=True)
+        self.choices.masked_scatter_(
+            use_choice_from_data.unsqueeze(1), <a id="change">data[choices[use_choice_from_data]]</a>
+        )
+
+        &#47&#47 In any case, the cumulative distances are updated
+        self.cumulative_squared_distance.add_(data_dist)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/borchero/pycave/commit/6d08623932e425385192f37f888e2fab68338fa0#diff-bd42cdf2cd175e5c83a601b48a3c1cd04a5ecc3d1460c9c8352ec0d80005ebb4L106' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 59306052</div><div id='project'> Project Name: borchero/pycave</div><div id='commit'> Commit Name: 6d08623932e425385192f37f888e2fab68338fa0</div><div id='time'> Time: 2021-10-19</div><div id='author'> Author: oliver@taskfleet.io</div><div id='file'> File Name: pycave/clustering/kmeans/metrics.py</div><div id='m_class'> M Class Name: DistanceSampler</div><div id='n_method'> N Class Name: DistanceSampler</div><div id='m_method'> M Method Name: update(3)</div><div id='n_method'> N Method Name: update(3)</div><div id='m_parent_class'> M Parent Class: Metric</div><div id='n_parent_class'> N Parent Class: Metric</div><div id='m_file'> M File Name: pycave/clustering/kmeans/metrics.py</div><div id='n_file'> N File Name: pycave/clustering/kmeans/metrics.py</div><div id='m_start'> M Start Line: 107</div><div id='m_end'> M End Line: 116</div><div id='n_start'> N Start Line: 125</div><div id='n_end'> N End Line: 143</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            output.append(speaker_embedding)
+        
+        if return_all_spk_embedding:
+            random_idx = <a id="change">torch.multinomial(</a>torch.ones(len(self.all_spk_idx)), <a id="change">100</a><a id="change">, replacement=False)</a>.long() &#47&#47 100 for experimentally to avoid OOM error
+            all_speaker_embedding = self.embed_sources(<a id="change">self.all_spk_idx[random_idx]</a>) &#47&#47 (n_training_sources, latent_dim)
+            output.append(all_speaker_embedding)
+
+        return output</code></pre><h3>After Change</h3><pre><code class='java'>
+            output.append(all_spk_embedding)
+        
+        if len(output) == 1:
+            return <a id="change">output[0]</a>
+
+        return tuple(output)
+
+    def solve_permutation(self, mixture, spk_idx):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/tky823/dnn-based_source_separation/commit/bceeacb692d2f21773f3f8ad7921d5ff890a1403#diff-28649dc6ec1ef23f8ecb9167c7d59372d842872ac5c5379763c2fd9abbadab43L85' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 59306054</div><div id='project'> Project Name: tky823/dnn-based_source_separation</div><div id='commit'> Commit Name: bceeacb692d2f21773f3f8ad7921d5ff890a1403</div><div id='time'> Time: 2021-11-05</div><div id='author'> Author: delta9guitar97@gmail.com</div><div id='file'> File Name: src/models/wavesplit.py</div><div id='m_class'> M Class Name: WaveSplit</div><div id='n_method'> N Class Name: WaveSplit</div><div id='m_method'> M Method Name: forward(9)</div><div id='n_method'> N Method Name: forward(9)</div><div id='m_parent_class'> M Parent Class: WaveSplitBase</div><div id='n_parent_class'> N Parent Class: WaveSplitBase</div><div id='m_file'> M File Name: src/models/wavesplit.py</div><div id='n_file'> N File Name: src/models/wavesplit.py</div><div id='m_start'> M Start Line: 101</div><div id='m_end'> M End Line: 116</div><div id='n_start'> N Start Line: 159</div><div id='n_end'> N End Line: 185</div><BR>

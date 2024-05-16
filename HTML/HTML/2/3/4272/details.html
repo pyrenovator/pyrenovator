@@ -1,0 +1,69 @@
+<html><h3>Pattern ID :4272
+</h3><img src='15514729.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    ) -&gt; Awaitable[torch.Tensor]:
+        batch_size_per_rank_tensor = sharding_ctx.batch_size_per_rank_tensor
+        batch_size_per_rank = sharding_ctx.batch_size_per_rank
+        max_length<a id="change"> = </a><a id="change">max(</a>batch_size_per_rank<a id="change">)</a>
+        batch_size = batch_size_per_rank[self._rank]
+        packed_pooled_embs = torch.ops.fbgemm.pack_segments(
+            t_in=local_embs,
+            lengths=batch_size_per_rank_tensor,</code></pre><h3>After Change</h3><pre><code class='java'>
+        batch_size = batch_size_per_rank[self._rank]
+
+        awaitable_tensor = self._dist(
+            local_embs.view(<a id="change">sum(</a>batch_size_per_rank<a id="change">)</a>, -1),
+            input_splits=batch_size_per_rank,
+        )
+        return VariableBatchRwEmbeddingDistAwaitable(awaitable_tensor, batch_size)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/facebookresearch/torchrec/commit/e0fec078c4a021e94f8f5010ba461934cd24a7e6#diff-c3c9604eefb627aef64af1ba29cee329b10b13fc38d7e61b853de2aea08a32b5L183' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 15514729</div><div id='project'> Project Name: facebookresearch/torchrec</div><div id='commit'> Commit Name: e0fec078c4a021e94f8f5010ba461934cd24a7e6</div><div id='time'> Time: 2022-08-19</div><div id='author'> Author: aashaka@fb.com</div><div id='file'> File Name: torchrec/distributed/sharding/vb_rw_sharding.py</div><div id='m_class'> M Class Name: VariableBatchRwPooledEmbeddingDist</div><div id='n_method'> N Class Name: VariableBatchRwPooledEmbeddingDist</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: Subscript</div><div id='n_parent_class'> N Parent Class: Subscript</div><div id='m_file'> M File Name: torchrec/distributed/sharding/vb_rw_sharding.py</div><div id='n_file'> N File Name: torchrec/distributed/sharding/vb_rw_sharding.py</div><div id='m_start'> M Start Line: 184</div><div id='m_end'> M End Line: 194</div><div id='n_start'> N Start Line: 183</div><div id='n_end'> N End Line: 187</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    if any([labels is None for labels in all_labels]):
+        return None
+    &#47&#47 sampled anchors of all images
+    num_total_samples<a id="change"> = </a>sum([
+        <a id="change">max(</a>pos_inds.numel() + neg_inds.numel(), 1<a id="change">)</a>
+        for pos_inds, neg_inds in zip(pos_inds_list, neg_inds_list)
+    ])
+    &#47&#47 split targets to a list w.r.t. multiple levels
+    labels_list = images_to_levels(all_labels, num_level_anchors)</code></pre><h3>After Change</h3><pre><code class='java'>
+        return None
+    &#47&#47 sampled anchors of all images
+    num_total_pos = sum([max(inds.numel(), 1) for inds in pos_inds_list])
+    num_total_neg = <a id="change">sum(</a>[max(inds.numel(), 1) for inds in neg_inds_list]<a id="change">)</a>
+    &#47&#47 split targets to a list w.r.t. multiple levels
+    labels_list = images_to_levels(all_labels, num_level_anchors)
+    label_weights_list = images_to_levels(all_label_weights, num_level_anchors)
+    bbox_targets_list = images_to_levels(all_bbox_targets, num_level_anchors)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/wxinlong/solo/commit/20e75c2207ca7c4a3fbf8928ce7f1b499bd94118#diff-60b23bfd151096a7a6a424f9797992d3cec64f3155d1f08c06da5ae9b041ac5aL7' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 15514730</div><div id='project'> Project Name: wxinlong/solo</div><div id='commit'> Commit Name: 20e75c2207ca7c4a3fbf8928ce7f1b499bd94118</div><div id='time'> Time: 2018-10-07</div><div id='author'> Author: chenkaidev@gmail.com</div><div id='file'> File Name: mmdet/core/anchor/anchor_target.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: anchor_target(10)</div><div id='n_method'> N Method Name: anchor_target(7)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: mmdet/core/anchor/anchor_target.py</div><div id='n_file'> N File Name: mmdet/core/anchor/anchor_target.py</div><div id='m_start'> M Start Line: 23</div><div id='m_end'> M End Line: 56</div><div id='n_start'> N Start Line: 14</div><div id='n_end'> N End Line: 70</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        )
+        &#47&#47 Pad each chunk to same size, prepare for ReduceScatter
+        &#47&#47 Skip padding when a host has no table assigned, in which case its dim is 0
+        max_length = <a id="change">max(</a>batch_size_sum_by_cross_group<a id="change">)</a>
+        if local_embs.shape[1] != 0:
+            &#47&#47 pyre-fixme[28]: Unexpected keyword argument `pin_memory`.
+            lengths = torch.tensor(
+                batch_size_sum_by_cross_group,
+                pin_memory=True,
+            ).to(device=self._device, non_blocking=True)
+            local_embs = torch.ops.fbgemm.pack_segments(
+                t_in=local_embs,
+                max_length=max_length,
+                lengths=lengths,
+            )
+        &#47&#47 Perform ReduceScatter within one host
+        rs_result = self._intra_dist(
+            local_embs.view(self._intra_pg.size() * max_length, -1)
+        ).wait()
+
+        local_rank = self._rank % self._intra_pg.size()
+        rs_result<a id="change"> = </a>torch.narrow(
+            rs_result,
+            0,
+            0,</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 Perform ReduceScatterV within one host
+        lengths = batch_size_sum_by_cross_group
+        rs_result = self._intra_dist(
+            local_embs.view(<a id="change">sum(</a>lengths<a id="change">)</a>, -1), input_splits=lengths
+        ).wait()
+
+        local_rank = self._rank % self._intra_pg.size()</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/facebookresearch/torchrec/commit/e0fec078c4a021e94f8f5010ba461934cd24a7e6#diff-300a271bf7c4d27465e091bd56ffd44c194fcaf5cb6054774e3ce698818f5d42L258' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 15514726</div><div id='project'> Project Name: facebookresearch/torchrec</div><div id='commit'> Commit Name: e0fec078c4a021e94f8f5010ba461934cd24a7e6</div><div id='time'> Time: 2022-08-19</div><div id='author'> Author: aashaka@fb.com</div><div id='file'> File Name: torchrec/distributed/sharding/vb_twrw_sharding.py</div><div id='m_class'> M Class Name: VariableBatchTwRwPooledEmbeddingDist</div><div id='n_method'> N Class Name: VariableBatchTwRwPooledEmbeddingDist</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: Subscript</div><div id='n_parent_class'> N Parent Class: Subscript</div><div id='m_file'> M File Name: torchrec/distributed/sharding/vb_twrw_sharding.py</div><div id='n_file'> N File Name: torchrec/distributed/sharding/vb_twrw_sharding.py</div><div id='m_start'> M Start Line: 275</div><div id='m_end'> M End Line: 298</div><div id='n_start'> N Start Line: 275</div><div id='n_end'> N End Line: 277</div><BR>

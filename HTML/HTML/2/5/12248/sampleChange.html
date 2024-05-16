@@ -1,0 +1,30 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    ml_runner_with_run_id.container.max_num_gpus = 0
+    ml_runner_with_run_id.container.max_epochs += 10
+    assert ml_runner_with_run_id.checkpoint_handler.trained_weights_path
+    <a id="change">with </a>patch<a id="change">.multiple(ml_runner_with_run_id, run_validation=mock.DEFAULT, run_inference=mock.DEFAULT) as mocks:
+        </a>ml_runner_with_run_id.run()
+        assert mocks["run_validation"].called == run_extra_val_epoch
+        <a id="change">mocks["run_inference"].assert_called_once()</a>
+
+
+def test_model_weights_when_resume_training() -&gt; None:
+    experiment_config = ExperimentConfig(model="HelloWorld")</code></pre><h3>After Change</h3><pre><code class='java'>
+    ml_runner_with_run_id.container.max_epochs += 10
+    assert ml_runner_with_run_id.checkpoint_handler.trained_weights_path
+    mock_trainer = MagicMock()
+    with <a id="change">patch</a>("health_ml.run_ml.create_lightning_trainer", return_value=(mock_trainer, MagicMock())):
+        with patch.object(ml_runner_with_run_id.container, "get_checkpoint_to_test") as mock_get_checkpoint_to_test:
+            with patch.object(ml_runner_with_run_id, "run_inference") as mock_run_inference:
+                with patch.object(ml_runner_with_run_id, "after_ddp_cleanup") as mock_after_ddp_cleanup:
+                    mock_get_checkpoint_to_test.return_value = <a id="change">MagicMock(is_file=MagicMock(return_value=True))</a>
+                    ml_runner_with_run_id.run()
+                    mock_after_ddp_cleanup.assert_called_once()
+                    mock_get_checkpoint_to_test.assert_called_once()
+                    <a id="change">assert </a>mock_trainer.validate.called == run_extra_val_epoch
+                    mock_run_inference.assert_called_once()
+
+</code></pre>

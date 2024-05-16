@@ -1,0 +1,83 @@
+<html><h3>Pattern ID :29960
+</h3><img src='88816267.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+    f = fun(p)
+    j = jac_fun(p)
+    g = <a id="change">torch.bmm(j.transpose(-2, -1), f[..., None])[..., 0]</a>
+    H = torch.bmm(j.transpose(-2, -1), j)
+    p_list = [p]
+    while len(p_list) &lt; max_iter:
+        h = -l*torch.linalg.lstsq(H, g, rcond=None, driver=None)[0]&#47&#47-l*torch.bmm(torch.pinverse(H), g)[..., 0]&#47&#47</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    &#47&#47 compute gradient and Hessian costs
+    gc = torch.einsum(&quotbcnp,bcnp-&gt;bcp&quot, j, f[..., None])
+    Hc = <a id="change">torch.einsum(&quotbcnp,bcni-&gt;bcpi&quot</a>, j, j<a id="change">)</a>
+
+    &#47&#47 reduce multiple costs dimension through weighting
+    g = torch.einsum(&quotbcp,c-&gt;bp&quot, gc, wvec)
+    H<a id="change"> = </a>torch.einsum(&quotbcpi,c-&gt;bpi&quot, Hc, wvec)
+    
+    p_list = []
+    while len(p_list) &lt; max_iter:
+        h = -l*torch.linalg.lstsq(H, g, rcond=None, driver=None)[0]
+        p = p + h
+        p_list.append(p.detach())
+        f_prev = f.clone()
+        f = fun(p)
+        j = jac_fun(p)
+        gc = torch.einsum(&quotbcnp,bcnp-&gt;bcp&quot, j, f[..., None])
+        Hc = torch.einsum(&quotbcnp,bcni-&gt;bcpi&quot, j, j)
+        g = torch.einsum(&quotbcp,c-&gt;bp&quot, gc, wvec)
+        H<a id="change"> = </a>torch.einsum(&quotbcpi,c-&gt;bpi&quot, Hc, wvec)
+
+        &#47&#47 stop conditions
+        gcon = torch.max(abs(g)) &lt; gtol</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/hahnec/torchimize/commit/71d4a553c258e912862f87311fc88cd5cadb49d1#diff-c05188355c6af07b8a965d6cc795d0ed247203d3ff12709891e7696864af4005L12' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 88816267</div><div id='project'> Project Name: hahnec/torchimize</div><div id='commit'> Commit Name: 71d4a553c258e912862f87311fc88cd5cadb49d1</div><div id='time'> Time: 2022-05-16</div><div id='author'> Author: christopher.hahne@unibe.ch</div><div id='file'> File Name: torchimize/functions/gna_fun_parallel.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: lsq_gna_parallel(10)</div><div id='n_method'> N Method Name: lsq_gna_parallel(9)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: torchimize/functions/gna_fun_parallel.py</div><div id='n_file'> N File Name: torchimize/functions/gna_fun_parallel.py</div><div id='m_start'> M Start Line: 43</div><div id='m_end'> M End Line: 56</div><div id='n_start'> N Start Line: 12</div><div id='n_end'> N End Line: 73</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        u_hat = torch.einsum(&quotijk, jkl -&gt; ijl&quot, x, self.route_weights)
+
+        &#47&#47 Dynamic route
+        b = torch.zeros(<a id="change">x.shape[1]</a>, self.num_capsules, requires_grad=True)
+        for it in range(self.num_iterations):
+            c = b.softmax(dim=-1)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        &#47&#47 Last iteration with original u_hat to pass gradient
+        c = b.softmax(dim=1)
+        s<a id="change"> = </a><a id="change">torch.einsum(&quotijk, ijkl -&gt; ijl&quot</a>, c, u_hat_temp<a id="change">)</a>
+        v<a id="change"> = </a>squash(s)
+
+        return v
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/riroaki/capsnet/commit/408b1e77f4e40589def9c313c0b11beaa88f2108#diff-903964c7bdce50a4b995b4520374f243c677f45b2f8c7ed7b15abeeb6f26af12L45' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 88816282</div><div id='project'> Project Name: riroaki/capsnet</div><div id='commit'> Commit Name: 408b1e77f4e40589def9c313c0b11beaa88f2108</div><div id='time'> Time: 2020-03-08</div><div id='author'> Author: aki@akideMacBook-Pro.local</div><div id='file'> File Name: capsnet.py</div><div id='m_class'> M Class Name: DigitCaps</div><div id='n_method'> N Class Name: DigitCaps</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: capsnet.py</div><div id='n_file'> N File Name: capsnet.py</div><div id='m_start'> M Start Line: 47</div><div id='m_end'> M End Line: 64</div><div id='n_start'> N Start Line: 52</div><div id='n_end'> N End Line: 84</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+        &#47&#47 Recombination of the new mean.
+        old_mean = self.mean
+        self.mean = np.sum(parents * <a id="change">weights[:, None]</a>, axis=0)
+
+        &#47&#47 Update the evolution path.
+        y = self.mean - old_mean</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 Equivalent to calculating the outer product of each ys[i] with itself
+        &#47&#47 and taking a weighted sum of the outer products. Unfortunately, numba
+        &#47&#47 does not support einsum.
+        rank_mu_update<a id="change"> = </a><a id="change">np.einsum("ki,kj"</a>, weighted_ys, ys<a id="change">)</a>
+        c1a = c1 * (1 - (1 - hsig**2) * cc * (2 - cc))
+        self.cov.cov<a id="change"> = </a>self._calc_cov_update(self.cov.cov, c1a, cmu, c1,
+                                             self.pc, self.sigma,
+                                             rank_mu_update)
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/icaros-usc/pyribs/commit/d2b586573e07e26fb33d9527e48a47d9f1d14b5d#diff-72d6ee27f255605dc59c9cf7b5a1f7207f97a35b0e7bd06c6d3c0fa8b751d809L224' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 88816232</div><div id='project'> Project Name: icaros-usc/pyribs</div><div id='commit'> Commit Name: d2b586573e07e26fb33d9527e48a47d9f1d14b5d</div><div id='time'> Time: 2021-01-22</div><div id='author'> Author: bryon@btjanaka.net</div><div id='file'> File Name: ribs/emitters/opt/_cma_es.py</div><div id='m_class'> M Class Name: CMAEvolutionStrategy</div><div id='n_method'> N Class Name: CMAEvolutionStrategy</div><div id='m_method'> M Method Name: tell(3)</div><div id='n_method'> N Method Name: tell(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: ribs/emitters/opt/_cma_es.py</div><div id='n_file'> N File Name: ribs/emitters/opt/_cma_es.py</div><div id='m_start'> M Start Line: 236</div><div id='m_end'> M End Line: 268</div><div id='n_start'> N Start Line: 252</div><div id='n_end'> N End Line: 290</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        wisdom_embeddings = wisdom_embeddings_.squeeze()  &#47&#47 (W, H)
+
+        &#47&#47 --- draw H_wisdom from H_desc with attention --- &#47&#47
+        H_wisdom = self.H_wisdom(H_all, <a id="change">self.hparams[&quotmode&quot]</a>)
+        &#47&#47 --- now compare H_wisdom with all the wisdoms --- &#47&#47
+        S_wisdom_figurative = torch.einsum("nh,wh-&gt;nw", H_wisdom, wisdom_embeddings)  &#47&#47 (N, H) * (W, H) -&gt; (N, W)
+        return S_wisdom_figurative</code></pre><h3>After Change</h3><pre><code class='java'>
+        wisdom_embeddings = wisdom_embeddings_.squeeze()  &#47&#47 (W, H)
+        &#47&#47 --- draw H_wisdom from H_desc with attention --- &#47&#47
+        H_k_ = self.H_k(H_all)  &#47&#47 (N, L, H) -&gt; (N, K, H)
+        H_k<a id="change"> = </a><a id="change">torch.einsum("nkh-&gt;nhk"</a>, H_k_<a id="change">)</a>
+        H_wisdom<a id="change"> = </a>self.pooler(H_k).squeeze()  &#47&#47 (N, K, H) -pooling-&gt; (N, H, 1) -&gt; (N, H)
+        &#47&#47 --- now compare H_wisdom with all the wisdoms --- &#47&#47
+        S_wisdom_figurative = torch.einsum("nh,wh-&gt;nw", H_wisdom, wisdom_embeddings)  &#47&#47 (N, H) * (W, H) -&gt; (N, W)
+        return S_wisdom_figurative</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/eubinecto/wisdomify/commit/c7ee98a955f7ae9b0ccfabd2365ff494ae523229#diff-5f23a84aa818c6cbad34ed97adf37af0767442ed5f4a4082158ba950c800d8a4L352' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 88816268</div><div id='project'> Project Name: eubinecto/wisdomify</div><div id='commit'> Commit Name: c7ee98a955f7ae9b0ccfabd2365ff494ae523229</div><div id='time'> Time: 2021-11-23</div><div id='author'> Author: eubinecto</div><div id='file'> File Name: wisdomify/models.py</div><div id='m_class'> M Class Name: RDGamma</div><div id='n_method'> N Class Name: RDGamma</div><div id='m_method'> M Method Name: S_wisdom_figurative(2)</div><div id='n_method'> N Method Name: S_wisdom_figurative(2)</div><div id='m_parent_class'> M Parent Class: RD</div><div id='n_parent_class'> N Parent Class: RD</div><div id='m_file'> M File Name: wisdomify/models.py</div><div id='n_file'> N File Name: wisdomify/models.py</div><div id='m_start'> M Start Line: 362</div><div id='m_end'> M End Line: 362</div><div id='n_start'> N Start Line: 338</div><div id='n_end'> N End Line: 340</div><BR>

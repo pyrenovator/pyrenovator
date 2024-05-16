@@ -1,0 +1,66 @@
+<html><h3>Pattern ID :13181
+</h3><img src='44564215.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        input = torch.clamp(input, -1+eps, 1-eps)
+        theta = torch.arccos(input) &#47&#47 (batch_size, num_classes)
+        theta_modified = theta + margin &#47&#47 (batch_size, num_classes)
+        mesh = <a id="change">torch.arange(0, num_classes).unsqueeze(dim=0)</a> &#47&#47 (1, num_classes) 
+        mesh_target = target.unsqueeze(dim=1) &#47&#47 (batch_size, 1)
+        condition = mesh==mesh_target &#47&#47 (batch_size, num_classes)
+        theta_modified = torch.where(condition, theta_modified, theta)
+        cos = scale * torch.cos(theta_modified) &#47&#47 (batch_size, num_classes)
+
+        indices = num_classes * torch.arange(batch_size) + target &#47&#47 (batch_size,)
+        cos_target<a id="change"> = </a>torch.take(cos, indices) &#47&#47 (batch_size,)
+
+        loss = - cos_target + torch.logsumexp(cos, dim=1)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        if self.easy_margin:
+            cos_phi = torch.where(cos_th &lt; 0, cos_th, cos_phi) &#47&#47 (batch_size, num_classes)
+        else:
+            cos_phi<a id="change"> = </a><a id="change">torch.where(</a>cos_th &gt; self.cos_pi_m, cos_th - margin, cos_phi<a id="change">)</a> &#47&#47 (batch_size, num_classes)
+        
+        &#47&#47 For non-target class
+        mask = F.one_hot(target, num_classes=num_classes) &#47&#47 (batch_size, num_classes)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/tky823/dnn-based_source_separation/commit/a4bde6a5794ce4ec526ff846e07a4de4de24ab04#diff-3b1267acc6972219643a5bd026f7337eba5af922eb9445f208d8fc8b1a87fa1bL168' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 44564215</div><div id='project'> Project Name: tky823/dnn-based_source_separation</div><div id='commit'> Commit Name: a4bde6a5794ce4ec526ff846e07a4de4de24ab04</div><div id='time'> Time: 2022-02-10</div><div id='author'> Author: delta9guitar97@gmail.com</div><div id='file'> File Name: src/criterion/metric_learn.py</div><div id='m_class'> M Class Name: AdditiveAngularMarginLoss</div><div id='n_method'> N Class Name: AdditiveAngularMarginLoss</div><div id='m_method'> M Method Name: forward(4)</div><div id='n_method'> N Method Name: forward(4)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: src/criterion/metric_learn.py</div><div id='n_file'> N File Name: src/criterion/metric_learn.py</div><div id='m_start'> M Start Line: 168</div><div id='m_end'> M End Line: 184</div><div id='n_start'> N Start Line: 181</div><div id='n_end'> N End Line: 199</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                    emission_pred, torch.tensor([-1e-38]).to(device)) &#47&#47 was -float("Inf"), changed & nan errors stopped (nan from logsumexpbackward)
+
+        &#47&#47 create "zero_plane" for next bit:
+        zero_plane<a id="change"> = </a><a id="change">torch.unsqueeze(</a>-1e-38*torch.ones([batch_size, fb_max_length])<a id="change">, dim = 2)</a>.to(device)
+
+        &#47&#47 put "zero_plane" at beginning of the emission probabilities to be put in
+        &#47&#47 the place of the &quotpadding&quot phoneme (which has the index 0)</code></pre><h3>After Change</h3><pre><code class='java'>
+        mask_phn_lens = (
+            torch.arange(U_max).to(device)[None, :] &lt; phn_lens_abs[:, None]
+        )
+        emiss_pred_useful<a id="change"> = </a><a id="change">torch.where(
+            </a>mask_phn_lens[:, None, :],
+            emiss_pred_useful,
+            torch.tensor([1e-38]).to(device)<a id="change">,
+        )</a>
+
+        emiss_pred_useful = emiss_pred_useful.permute(0, 2, 1)
+
+        return emiss_pred_useful</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/speechbrain/speechbrain/commit/cc600a8d98ce0d7f63e3ceef4dce88dbd7928a63#diff-5998bf9afa99b8b276f0e74798ed1f028f51712bbe36e0601d8362e6909aeb9cL99' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 44564214</div><div id='project'> Project Name: speechbrain/speechbrain</div><div id='commit'> Commit Name: cc600a8d98ce0d7f63e3ceef4dce88dbd7928a63</div><div id='time'> Time: 2020-06-01</div><div id='author'> Author: rastorge@eos18.server.mila.quebec</div><div id='file'> File Name: speechbrain/alignment/aligner.py</div><div id='m_class'> M Class Name: ViterbiAligner</div><div id='n_method'> N Class Name: ViterbiAligner</div><div id='m_method'> M Method Name: make_emiss_pred_useful(5)</div><div id='n_method'> N Method Name: make_emiss_pred_useful(5)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: speechbrain/alignment/aligner.py</div><div id='n_file'> N File Name: speechbrain/alignment/aligner.py</div><div id='m_start'> M Start Line: 104</div><div id='m_end'> M End Line: 123</div><div id='n_start'> N Start Line: 104</div><div id='n_end'> N End Line: 133</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+            min_values, min_idx = torch.where(other_idx, values, values.max()).min(dim=-1)[0]  &#47&#47 (C)
+            min_labels = labels.gather(dim=1, index=min_idx.unsqueeze(1)).flatten()  &#47&#47 (C)
+            min_labels_counts<a id="change"> = </a>labels.eq(<a id="change">min_labels.unsqueeze(</a>1<a id="change">)</a>).int().sum(dim=1)  &#47&#47 (C)
+            condition2 = min_labels.ge(self.n_samples - 2)   &#47&#47 todo: Not sure: self.n_samples -&gt; self.seed_num
+            idx_list = condition2.nonzero()[:self.top_n_neurons]
+            neuron_dict[layer] = {int(idx): int(min_labels[idx]) for idx in idx_list}</code></pre><h3>After Change</h3><pre><code class='java'>
+            condition1 = labels[:, :, 0].eq(_label)  &#47&#47 exclude the ground-truth labels
+            values = torch.where(condition1, values[:, :, 1] - values[:, :, 2],
+                                 values[:, :, 0] - values[:, :, 1])  &#47&#47 (C, batch_size)
+            labels = <a id="change">torch.where(</a>condition1, labels[:, :, 1], labels[:, :, 0]<a id="change">)</a>  &#47&#47 (C, batch_size)
+
+            mode_labels = labels.mode(keepdim=True)[0]  &#47&#47 (C, 1) The most frequent label
+            mode_idx = labels.eq(mode_labels)  &#47&#47 (C, batch_size)
+            mode_labels_counts = mode_idx.sum(dim=-1)  &#47&#47 (C)
+            condition2 = mode_labels_counts.ge(self.seed_num * 0.75)
+            idx_list = condition2.nonzero().flatten().tolist()
+            idx_list<a id="change"> = </a>sorted(idx_list, key=lambda idx: float(values[idx][mode_idx[idx]].min()))[:self.top_n_neurons]
+
+            neuron_dict[layer] = {int(idx): int(mode_labels[idx]) for idx in idx_list}
+            prints(&quot{green}{layer:&lt;20}: {reset}&quot.format(layer=layer, **ansi), indent=4)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/ain-soph/trojanzoo/commit/1684c28ef38502abb83d37beb845b69007e33274#diff-7af6064ea7ec79a26e3db236e9cf91c2f5bb481beb04de7a8aadbb1986e10026L203' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 44564204</div><div id='project'> Project Name: ain-soph/trojanzoo</div><div id='commit'> Commit Name: 1684c28ef38502abb83d37beb845b69007e33274</div><div id='time'> Time: 2020-07-07</div><div id='author'> Author: ain-soph@live.com</div><div id='file'> File Name: trojanzoo/defense/backdoor/abs.py</div><div id='m_class'> M Class Name: ABS</div><div id='n_method'> N Class Name: ABS</div><div id='m_method'> M Method Name: find_min_max(3)</div><div id='n_method'> N Method Name: find_min_max(3)</div><div id='m_parent_class'> M Parent Class: Defense_Backdoor</div><div id='n_parent_class'> N Parent Class: Defense_Backdoor</div><div id='m_file'> M File Name: trojanzoo/defense/backdoor/abs.py</div><div id='n_file'> N File Name: trojanzoo/defense/backdoor/abs.py</div><div id='m_start'> M Start Line: 210</div><div id='m_end'> M End Line: 225</div><div id='n_start'> N Start Line: 234</div><div id='n_end'> N End Line: 254</div><BR>

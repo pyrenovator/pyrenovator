@@ -1,0 +1,162 @@
+<html><h3>Pattern ID :13819
+</h3><img src='46067550.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        pytest.skip("Only SAC has gSDE support")
+
+    n_bits = 4
+    env<a id="change"> = </a><a id="change">BitFlippingEnv(n_bits=n_bits, continuous=not (model_class == DQN))</a>
+
+    kwargs = dict(use_sde=True) if use_sde else {}
+
+    &#47&#47 create model</code></pre><h3>After Change</h3><pre><code class='java'>
+    def env_fn():
+        return BitFlippingEnv(n_bits=n_bits, continuous=not (model_class == DQN))
+
+    env = <a id="change">make_vec_env(</a>env_fn, n_envs<a id="change">)</a>
+
+    kwargs = dict(use_sde=True) if use_sde else {}
+
+    &#47&#47 create model
+    model = model_class(
+        "MultiInputPolicy",
+        env,
+        replay_buffer_class=HerReplayBuffer,
+        replay_buffer_kwargs=dict(
+            n_sampled_goal=2,
+            goal_selection_strategy="future",
+        ),
+        verbose=0,
+        tau=0.05,
+        batch_size=128,
+        learning_rate=0.001,
+        policy_kwargs=dict(net_arch=[64]),
+        buffer_size=int(1e5),
+        gamma=0.98,
+        gradient_steps=n_envs,
+        train_freq=4,
+        learning_starts=100,
+        **kwargs
+    )
+
+    model.learn(total_timesteps=150)
+
+    env.reset()
+    action = np.array([env.action_space.sample() for _ in range(n_envs)])
+    observations<a id="change"> = </a>env.step(action)[0]
+
+    &#47&#47 Get dictionary of current parameters
+    params = deepcopy(model.policy.state_dict())</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/dlr-rm/stable-baselines3/commit/c5adad82b2c1733bd8add7e2eeb49a895b635856#diff-161a1a7d8e6a4fa5684e0a3a1fb02b6d8e17de626da8df7389fdc64af9f9ffb1L108' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 46067550</div><div id='project'> Project Name: dlr-rm/stable-baselines3</div><div id='commit'> Commit Name: c5adad82b2c1733bd8add7e2eeb49a895b635856</div><div id='time'> Time: 2023-03-20</div><div id='author'> Author: 45557362+qgallouedec@users.noreply.github.com</div><div id='file'> File Name: tests/test_her.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: test_save_load(3)</div><div id='n_method'> N Method Name: test_save_load(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: tests/test_her.py</div><div id='n_file'> N File Name: tests/test_her.py</div><div id='m_start'> M Start Line: 108</div><div id='m_end'> M End Line: 153</div><div id='n_start'> N Start Line: 129</div><div id='n_end'> N End Line: 165</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    path = pathlib.Path(tmp_path / "replay_buffer.pkl")
+    path.parent.mkdir(exist_ok=True, parents=True)  &#47&#47 to not raise a warning
+    env = <a id="change">BitFlippingEnv(n_bits=4, continuous=True)</a>
+    model = SAC(
+        "MultiInputPolicy",
+        env,
+        replay_buffer_class=HerReplayBuffer,
+        replay_buffer_kwargs=dict(
+            n_sampled_goal=2,
+            goal_selection_strategy="future",
+            online_sampling=online_sampling,
+            max_episode_length=4,
+        ),
+        gradient_steps=1,
+        train_freq=4,
+        buffer_size=int(2e4),
+        policy_kwargs=dict(net_arch=[64]),
+        seed=1,
+    )
+    model.learn(200)
+    if online_sampling:
+        old_replay_buffer = deepcopy(model.replay_buffer)
+    else:
+        old_replay_buffer = deepcopy(model.replay_buffer.replay_buffer)
+    model.save_replay_buffer(path)
+    del model.replay_buffer
+
+    with pytest.raises(AttributeError):
+        model.replay_buffer
+
+    &#47&#47 Check that there is no warning
+    assert len(recwarn) == 0
+
+    model.load_replay_buffer(path, truncate_last_traj=truncate_last_trajectory)
+
+    if truncate_last_trajectory:
+        assert len(recwarn) == 1
+        warning = recwarn.pop(UserWarning)
+        assert "The last trajectory in the replay buffer will be truncated" in str(warning.message)
+    else:
+        assert len(recwarn) == 0
+
+    if online_sampling:
+        n_episodes_stored<a id="change"> = </a>model.replay_buffer.n_episodes_stored
+        assert np.allclose(
+            old_replay_buffer._buffer["observation"][:n_episodes_stored],
+            model.replay_buffer._buffer["observation"][:n_episodes_stored],</code></pre><h3>After Change</h3><pre><code class='java'>
+    def env_fn():
+        return BitFlippingEnv(n_bits=4, continuous=True)
+
+    env = <a id="change">make_vec_env(</a>env_fn, n_envs<a id="change">)</a>
+    model = SAC(
+        "MultiInputPolicy",
+        env,
+        replay_buffer_class=HerReplayBuffer,
+        replay_buffer_kwargs=dict(
+            n_sampled_goal=2,
+            goal_selection_strategy="future",
+        ),
+        gradient_steps=n_envs,
+        train_freq=4,
+        buffer_size=int(2e4),
+        policy_kwargs=dict(net_arch=[64]),
+        seed=1,
+    )
+    model.learn(200)
+    old_replay_buffer = deepcopy(model.replay_buffer)
+
+    model.save_replay_buffer(path)
+    del model.replay_buffer
+
+    with pytest.raises(AttributeError):
+        model.replay_buffer
+
+    &#47&#47 Check that there is no warning
+    assert len(recwarn) == 0
+
+    model.load_replay_buffer(path, truncate_last_traj=truncate_last_trajectory)
+
+    if truncate_last_trajectory:
+        assert len(recwarn) == 1
+        warning = recwarn.pop(UserWarning)
+        assert "The last trajectory in the replay buffer will be truncated" in str(warning.message)
+    else:
+        assert len(recwarn) == 0
+
+    replay_buffer = model.replay_buffer
+    pos<a id="change"> = </a>replay_buffer.pos
+    for key in ["observation", "desired_goal", "achieved_goal"]:
+        assert np.allclose(old_replay_buffer.observations[key][:pos], replay_buffer.observations[key][:pos])
+        assert np.allclose(old_replay_buffer.next_observations[key][:pos], replay_buffer.next_observations[key][:pos])</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/dlr-rm/stable-baselines3/commit/c5adad82b2c1733bd8add7e2eeb49a895b635856#diff-161a1a7d8e6a4fa5684e0a3a1fb02b6d8e17de626da8df7389fdc64af9f9ffb1L215' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 46067560</div><div id='project'> Project Name: dlr-rm/stable-baselines3</div><div id='commit'> Commit Name: c5adad82b2c1733bd8add7e2eeb49a895b635856</div><div id='time'> Time: 2023-03-20</div><div id='author'> Author: 45557362+qgallouedec@users.noreply.github.com</div><div id='file'> File Name: tests/test_her.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: test_save_load_replay_buffer(4)</div><div id='n_method'> N Method Name: test_save_load_replay_buffer(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: tests/test_her.py</div><div id='n_file'> N File Name: tests/test_her.py</div><div id='m_start'> M Start Line: 215</div><div id='m_end'> M End Line: 297</div><div id='n_start'> N Start Line: 227</div><div id='n_end'> N End Line: 285</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    Test Hindsight Experience Replay.
+    
+    n_bits = 4
+    env<a id="change"> = </a><a id="change">BitFlippingEnv(
+        n_bits=n_bits,
+        continuous=not (model_class == DQN),
+        image_obs_space=image_obs_space,
+    )</a>
+
+    model = model_class(
+        "MultiInputPolicy",
+        env,</code></pre><h3>After Change</h3><pre><code class='java'>
+            image_obs_space=image_obs_space,
+        )
+
+    env<a id="change"> = </a><a id="change">make_vec_env(</a>env_fn, n_envs<a id="change">)</a>
+
+    model = model_class(
+        "MultiInputPolicy",
+        env,</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/dlr-rm/stable-baselines3/commit/c5adad82b2c1733bd8add7e2eeb49a895b635856#diff-161a1a7d8e6a4fa5684e0a3a1fb02b6d8e17de626da8df7389fdc64af9f9ffb1L32' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 46067556</div><div id='project'> Project Name: dlr-rm/stable-baselines3</div><div id='commit'> Commit Name: c5adad82b2c1733bd8add7e2eeb49a895b635856</div><div id='time'> Time: 2023-03-20</div><div id='author'> Author: 45557362+qgallouedec@users.noreply.github.com</div><div id='file'> File Name: tests/test_her.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: test_her(2)</div><div id='n_method'> N Method Name: test_her(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: tests/test_her.py</div><div id='n_file'> N File Name: tests/test_her.py</div><div id='m_start'> M Start Line: 32</div><div id='m_end'> M End Line: 61</div><div id='n_start'> N Start Line: 34</div><div id='n_end'> N End Line: 63</div><BR>

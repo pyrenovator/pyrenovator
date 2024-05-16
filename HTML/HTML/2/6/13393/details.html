@@ -1,0 +1,168 @@
+<html><h3>Pattern ID :13393
+</h3><img src='45142295.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        if origin is dict or origin is Dict:
+            return (
+                Dict[
+                    <a id="change">sanitized_type(args[0]</a><a id="change">, primitive_only=True, nested=True)</a>,  &#47&#47 type: ignore
+                    sanitized_type(args[1], primitive_only=no_nested_container, nested=True),  &#47&#47 type: ignore
+                ]
+                if args</code></pre><h3>After Change</h3><pre><code class='java'>
+            return List if sys.version_info &gt; (3, 7) else List[Any]
+
+        if origin is dict or origin is Dict:
+            <a id="change">if </a>args:
+                KeyType = <a id="change">sanitized_type(args[0]</a><a id="change">, primitive_only=True, nested=True)</a>
+                ValueType = sanitized_type(
+                    args[1], primitive_only=no_nested_container, nested=True
+                )
+                return Dict[KeyType, ValueType]  &#47&#47 type: ignore
+            return Dict if sys.version_info &gt; (3, 7) else Dict[Any<a id="change">, Any</a>]
+
+        if (origin is tuple or origin is Tuple) and not nested:
+            &#47&#47 hydra silently supports tuples of homogenous types</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 6</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/mit-ll-responsible-ai/hydra-zen/commit/855378f335b842ed6487ef0831e32c5e0f393181#diff-ebabcec16e3caeb48b89ee03d3cc3fe9a4577145e5a820380e9becef136f956eL378' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 45142295</div><div id='project'> Project Name: mit-ll-responsible-ai/hydra-zen</div><div id='commit'> Commit Name: 855378f335b842ed6487ef0831e32c5e0f393181</div><div id='time'> Time: 2022-08-19</div><div id='author'> Author: rsoklaski@gmail.com</div><div id='file'> File Name: src/hydra_zen/structured_configs/_utils.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: sanitized_type(0)</div><div id='n_method'> N Method Name: sanitized_type(0)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/hydra_zen/structured_configs/_utils.py</div><div id='n_file'> N File Name: src/hydra_zen/structured_configs/_utils.py</div><div id='m_start'> M Start Line: 378</div><div id='m_end'> M End Line: 408</div><div id='n_start'> N Start Line: 378</div><div id='n_end'> N End Line: 409</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            has_ellipses = Ellipsis in unique_args
+
+            _unique_type = (
+                <a id="change">sanitized_type(args[0]</a><a id="change">, primitive_only=no_nested_container, nested=True)</a>
+                if len(unique_args) == 1 or (len(unique_args) == 2 and has_ellipses)
+                else Any
+            )
+            if has_ellipses:</code></pre><h3>After Change</h3><pre><code class='java'>
+    &gt;&gt;&gt; sanitized_type(Dict[str, frozenset])
+    Dict[str, Any]
+    
+    <a id="change">if </a>hasattr(type_, "__supertype__"):
+        &#47&#47 is NewType
+        return sanitized_type(
+            type_.__supertype__,
+            primitive_only=primitive_only,
+            wrap_optional=wrap_optional,
+            nested=nested,
+        )
+
+    &#47&#47 Warning: mutating `type_` will mutate the signature being inspected
+    &#47&#47 Even calling deepcopy(`type_`) silently fails to prevent this.
+    origin = get_origin(type_)
+    no_nested_container = not HYDRA_SUPPORTS_NESTED_CONTAINER_TYPES
+
+    if origin is not None:
+
+        if isinstance(type_, _AnnotatedAlias):
+            return sanitized_type(
+                origin,
+                primitive_only=primitive_only,
+                wrap_optional=wrap_optional,
+                nested=nested,
+            )
+
+        if primitive_only:  &#47&#47 pragma: no cover
+            return Any
+
+        args = get_args(type_)
+        if origin is Union:
+            &#47&#47 Hydra only supports Optional[&lt;type&gt;] unions
+            if len(args) != 2 or NoneType not in args:
+                &#47&#47 isn&quott Optional[&lt;type&gt;]
+                return Any
+
+            args = cast(Tuple[type, type], args)
+
+            optional_type, none_type = args
+            if none_type is not NoneType:
+                optional_type = none_type
+            optional_type: Optional[Any]
+            optional_type = sanitized_type(optional_type)
+
+            if optional_type is Any:  &#47&#47 Union[Any, T] is just Any
+                return Any
+            return Union[optional_type, NoneType]  &#47&#47 type: ignore
+
+        if origin is list or origin is List:
+            return List[sanitized_type(args[0], primitive_only=no_nested_container, nested=True)] if args else type_  &#47&#47 type: ignore
+
+        if origin is dict or origin is Dict:
+            return (
+                Dict[
+                    sanitized_type(args[0], primitive_only=True, nested=True),  &#47&#47 type: ignore
+                    sanitized_type(args[1], primitive_only=no_nested_container, nested=True),  &#47&#47 type: ignore
+                ]
+                if args
+                else type_
+            )
+
+        if (origin is tuple or origin is Tuple) and not nested:
+            &#47&#47 hydra silently supports tuples of homogenous types
+            &#47&#47 It has some weird behavior. It treats `Tuple[t1, t2, ...]` as `List[t1]`
+            &#47&#47 It isn&quott clear that we want to perpetrate this on our end..
+            &#47&#47 So we deal with inhomogeneous types as e.g. `Tuple[str, int]` -&gt; `Tuple[Any, Any]`.
+            &#47&#47
+            &#47&#47 Otherwise we preserve the annotation as accurately as possible
+            if not args:
+                return Any  &#47&#47 bare Tuple not supported by hydra
+            args = cast(Tuple[type, ...], args)
+            unique_args = set(args)
+            has_ellipses = Ellipsis in unique_args
+            has_variadic_unpack = any(get_origin(tp) is Unpack for tp in unique_args)
+
+            if len(unique_args) == 1 or (len(unique_args) == 2 and has_ellipses):
+                &#47&#47 E.g. Tuple[int, int, int] or Tuple[int, ...]
+                _unique_type = <a id="change">sanitized_type(
+                    args[0]</a><a id="change">, primitive_only=no_nested_container, nested=True
+                )</a>
+            elif len(unique_args) == 2 and has_variadic_unpack:
+                &#47&#47 E.g. Tuple[int, *Ts]
+                _a = Any
+                for item in args:
+                    if get_origin(item) is not Unpack:
+                        _a = item
+                        break
+                _unique_type = sanitized_type(
+                    _a, primitive_only=no_nested_container, nested=True
+                )
+                del _a
+            else:
+                _unique_type = Any
+
+            if has_ellipses or has_variadic_unpack:
+                return Tuple[_unique_type, ...]  &#47&#47 type: ignore
+            else:
+                return Tuple[(_unique_type,) * len(args)]  &#47&#47 type: ignore
+
+        return Any
+
+    if HYDRA_SUPPORTS_PARTIAL and isinstance(type_, type) and issubclass(type_, Path):
+        type_ = Path
+
+    if isinstance(type_, (ParamSpecArgs<a id="change">, ParamSpecKwargs</a>)):
+        &#47&#47 these aren&quott hashable -- can&quott check for membership in set
+        return Any
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/mit-ll-responsible-ai/hydra-zen/commit/616746ec193238af851b2de607f0130f4e382607#diff-ebabcec16e3caeb48b89ee03d3cc3fe9a4577145e5a820380e9becef136f956eL276' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 45142302</div><div id='project'> Project Name: mit-ll-responsible-ai/hydra-zen</div><div id='commit'> Commit Name: 616746ec193238af851b2de607f0130f4e382607</div><div id='time'> Time: 2022-06-14</div><div id='author'> Author: ry26099@mit.edu</div><div id='file'> File Name: src/hydra_zen/structured_configs/_utils.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: sanitized_type(0)</div><div id='n_method'> N Method Name: sanitized_type(0)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/hydra_zen/structured_configs/_utils.py</div><div id='n_file'> N File Name: src/hydra_zen/structured_configs/_utils.py</div><div id='m_start'> M Start Line: 359</div><div id='m_end'> M End Line: 366</div><div id='n_start'> N Start Line: 313</div><div id='n_end'> N End Line: 419</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+            if len(unique_args) == 1 or (len(unique_args) == 2 and has_ellipses):
+                &#47&#47 E.g. Tuple[int, int, int] or Tuple[int, ...]
+                _unique_type = <a id="change">sanitized_type(
+                    args[0]</a><a id="change">, primitive_only=no_nested_container, nested=True
+                )</a>
+            else:
+                _unique_type = Any
+
+            if has_ellipses or has_variadic_unpack:</code></pre><h3>After Change</h3><pre><code class='java'>
+            args = cast(Tuple[type, ...], args)
+            unique_args = set(args)
+
+            <a id="change">if </a>any(get_origin(tp) is Unpack for tp in unique_args):
+                &#47&#47 E.g. Tuple[*Ts]
+                return Tuple[Any<a id="change">, ...</a>]
+
+            has_ellipses = Ellipsis in unique_args
+
+            &#47&#47 E.g. Tuple[int, int, int] or Tuple[int, ...]
+            _unique_type = (
+                <a id="change">sanitized_type(args[0]</a><a id="change">, primitive_only=no_nested_container, nested=True)</a>
+                if len(unique_args) == 1 or (len(unique_args) == 2 and has_ellipses)
+                else Any
+            )
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/mit-ll-responsible-ai/hydra-zen/commit/5d963a6deba538bd1bb1a92bc95d251a23c30cce#diff-ebabcec16e3caeb48b89ee03d3cc3fe9a4577145e5a820380e9becef136f956eL291' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 45142303</div><div id='project'> Project Name: mit-ll-responsible-ai/hydra-zen</div><div id='commit'> Commit Name: 5d963a6deba538bd1bb1a92bc95d251a23c30cce</div><div id='time'> Time: 2022-06-16</div><div id='author'> Author: ryan.soklaski@ll.mit.edu</div><div id='file'> File Name: src/hydra_zen/structured_configs/_utils.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: sanitized_type(0)</div><div id='n_method'> N Method Name: sanitized_type(0)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/hydra_zen/structured_configs/_utils.py</div><div id='n_file'> N File Name: src/hydra_zen/structured_configs/_utils.py</div><div id='m_start'> M Start Line: 342</div><div id='m_end'> M End Line: 418</div><div id='n_start'> N Start Line: 342</div><div id='n_end'> N End Line: 418</div><BR>

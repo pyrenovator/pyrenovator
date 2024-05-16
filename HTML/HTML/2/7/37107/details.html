@@ -1,0 +1,91 @@
+<html><h3>Pattern ID :37107
+</h3><img src='105619161.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        self.num_patches = self.patch_embed.num_patches
+
+        &#47&#47 Build up each hierarchical level
+        self.ls_pos_embed<a id="change"> = </a><a id="change">[]</a>
+        self.ls_transformer_encoder = nn.ModuleList([])
+        self.ls_block_aggregation = nn.ModuleList([])
+        dpr = [x.item() for x in torch.linspace(0, drop_path_rate, sum(depths))] &#47&#47 drop path rate
+        self.feature_info = []
+        for level in range(self.num_levels):
+            &#47&#47 Positional embedding
+            &#47&#47 NOTE: Can&quott use ParameterList for positional embedding as it can&quott be enumerated with TorchScript
+            pos_embed = nn.Parameter(
+                torch.zeros(1, self.num_blocks[level], self.num_patches // self.num_blocks[0], embed_dims[level]))
+            self.register_parameter(f&quotpos_embed_{level}&quot, pos_embed)
+            <a id="change">self.ls_pos_embed.append(</a>pos_embed<a id="change">)</a>
+            &#47&#47 Transformer encoder
+            self.ls_transformer_encoder.append(nn.Sequential(*[
+                TransformerLayer(
+                    dim=embed_dims[level], num_heads=num_heads[level], mlp_ratio=mlp_ratio, qkv_bias=qkv_bias,
+                    drop=drop_rate, attn_drop=attn_drop_rate, drop_path=dpr[sum(depths[:level]) + i],
+                    norm_layer=norm_layer, act_layer=act_layer)
+                for i in range(depths[level])]))
+            
+            self.feature_info.append(dict(
+                num_chs=embed_dims[level], reduction=2,
+                module=f&quotls_transformer_encoder.{level}.{depths[level]-1}.mlp.fc2&quot))
+
+            &#47&#47 Block aggregation (not required for last level)
+            if level &lt; self.num_levels - 1:
+                self.ls_block_aggregation.append(
+                    BlockAggregation(embed_dims[level], embed_dims[level+1], norm_layer, pad_type=pad_type))
+            else:
+                &#47&#47 NOTE: Required for enumeration over all level components at once
+                self.ls_block_aggregation.append(nn.Identity())
+        self.ls_pos_embed<a id="change"> = </a>tuple(self.ls_pos_embed) &#47&#47 static length required for torchscript
+
+        
+        &#47&#47 Final normalization layer</code></pre><h3>After Change</h3><pre><code class='java'>
+        self.block_aggs = nn.ModuleList([])
+        drop_path_rates = [x.item() for x in torch.linspace(0, drop_path_rate, sum(depths))]
+        for lix in range(self.num_levels):
+            dpr = drop_path_rates[sum(depths[:lix]):sum(depths[<a id="change">:lix+1</a>])]
+            self.levels.append(NestLevel(
+                self.num_blocks[lix], self.block_size, self.seq_length, num_heads[lix], depths[lix],
+                embed_dims[lix], mlp_ratio, qkv_bias, drop_rate, attn_drop_rate, dpr, norm_layer,</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 6</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/feng-lab/pytorch-image-models/commit/b11d949a06f4c19be616aba25e49bf33d13a6b23#diff-e211399888fa3b741d9160f3d951ddc724fe39ee05d9e83b46718906f0098cbcL222' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 105619161</div><div id='project'> Project Name: feng-lab/pytorch-image-models</div><div id='commit'> Commit Name: b11d949a06f4c19be616aba25e49bf33d13a6b23</div><div id='time'> Time: 2021-07-03</div><div id='author'> Author: alexander.soare159@gmail.com</div><div id='file'> File Name: timm/models/nest.py</div><div id='m_class'> M Class Name: Nest</div><div id='n_method'> N Class Name: Nest</div><div id='m_method'> M Method Name: __init__(19)</div><div id='n_method'> N Method Name: __init__(19)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: timm/models/nest.py</div><div id='n_file'> N File Name: timm/models/nest.py</div><div id='m_start'> M Start Line: 222</div><div id='m_end'> M End Line: 284</div><div id='n_start'> N Start Line: 252</div><div id='n_end'> N End Line: 306</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                or (batch_size, num_blocks*growth_rate, n_bins, n_frames)
+        
+        x = input
+        stacked<a id="change"> = </a><a id="change">[]</a>
+
+        <a id="change">stacked.append(</a>input<a id="change">)</a>
+
+        for idx in range(self.num_blocks):
+            if idx != 0:
+                x<a id="change"> = </a>torch.cat(stacked, dim=1)
+            x = self.net[idx](x)
+            stacked.append(x)
+        </code></pre><h3>After Change</h3><pre><code class='java'>
+            x_residual = x_residual + x
+            
+            in_channels = growth_rate[idx]
+            stacked_channels = sum(growth_rate[<a id="change">idx+1:</a>])
+            sections = [in_channels, stacked_channels]
+
+            if idx != num_blocks - 1:</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/tky823/dnn-based_source_separation/commit/8fb5cd5f4f8b4a435d058aef6204904f657abea0#diff-ead896e273fdbcf5c8f3a2cfbd8c95af50b268919d59e26568c480f7c48682c7L348' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 105619167</div><div id='project'> Project Name: tky823/dnn-based_source_separation</div><div id='commit'> Commit Name: 8fb5cd5f4f8b4a435d058aef6204904f657abea0</div><div id='time'> Time: 2021-06-06</div><div id='author'> Author: 40362510+tky823@users.noreply.github.com</div><div id='file'> File Name: src/models/d3net.py</div><div id='m_class'> M Class Name: D3Block</div><div id='n_method'> N Class Name: D3Block</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: src/models/d3net.py</div><div id='n_file'> N File Name: src/models/d3net.py</div><div id='m_start'> M Start Line: 357</div><div id='m_end'> M End Line: 367</div><div id='n_start'> N Start Line: 414</div><div id='n_end'> N End Line: 430</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                or (batch_size, depth * growth_rate, n_bins, n_frames) if type(growth_rate) is int
+        
+        x = input
+        stacked<a id="change"> = </a><a id="change">[]</a>
+        output = []
+
+        <a id="change">stacked.append(</a>input<a id="change">)</a>
+
+        for idx in range(self.depth):
+            if idx != 0:
+                x<a id="change"> = </a>torch.cat(stacked, dim=1)
+            x = self.net[idx](x)
+            stacked.append(x)
+        </code></pre><h3>After Change</h3><pre><code class='java'>
+            x_residual = x_residual + x
+            
+            in_channels = growth_rate[idx]
+            stacked_channels = sum(growth_rate[<a id="change">idx+1:</a>])
+            sections = [in_channels, stacked_channels]
+
+            if idx != depth - 1:</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/tky823/dnn-based_source_separation/commit/8fb5cd5f4f8b4a435d058aef6204904f657abea0#diff-4e490b3e01a8e284b6da0e8730130ffb4c4441e7b12d0571490f0cedc6ae6489L42' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 105619164</div><div id='project'> Project Name: tky823/dnn-based_source_separation</div><div id='commit'> Commit Name: 8fb5cd5f4f8b4a435d058aef6204904f657abea0</div><div id='time'> Time: 2021-06-06</div><div id='author'> Author: 40362510+tky823@users.noreply.github.com</div><div id='file'> File Name: src/models/d2net.py</div><div id='m_class'> M Class Name: D2Block</div><div id='n_method'> N Class Name: D2Block</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: src/models/d2net.py</div><div id='n_file'> N File Name: src/models/d2net.py</div><div id='m_start'> M Start Line: 51</div><div id='m_end'> M End Line: 62</div><div id='n_start'> N Start Line: 51</div><div id='n_end'> N End Line: 67</div><BR>

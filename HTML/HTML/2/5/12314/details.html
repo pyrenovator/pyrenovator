@@ -1,0 +1,150 @@
+<html><h3>Pattern ID :12314
+</h3><img src='41688572.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    &#47&#47 making sure they get into new_graph
+    env = {}
+    node_processed: bool = False
+    <a id="change">for </a>node in graph.nodes<a id="change">:
+        </a>node_processed = False
+        if node.op == &quotcall_function&quot and node.target == torch.einsum:
+            &#47&#47 Get shapes:
+            try:
+                shapes = [a.shape for a in node.args[1:]]
+            except AttributeError:
+                warnings.warn(
+                    f"einsum {repr(node)} lacked shape information; "
+                    "not optimizing. "
+                    "Did you forget to run ShapeProp on this graph?",
+                    RuntimeWarning
+                )
+            else:
+                &#47&#47 We have shapes, so:
+                &#47&#47 Determine the optimal contraction
+                path, path_info = opt_einsum.contract_path(
+                    node.args[0],  &#47&#47 the einstr
+                    *shapes,
+                    shapes=True
+                )
+                &#47&#47 By wrapping the arguments with proxies,
+                &#47&#47 we can dispatch to opt_einsum and implicitly
+                &#47&#47 add it to the Graph by symbolically tracing it.
+                proxy_args = [
+                    fx.Proxy(env[x.name]) if isinstance(x, fx.Node) else x
+                    for x in node.args
+                ]
+                &#47&#47 Use _core_contract to avoid `len()` calls that
+                &#47&#47 fx can&quott deal with
+                output_proxy = _core_contract(
+                    proxy_args[1:],
+                    path_info.contraction_list,
+                    backend=&quottorch&quot,
+                    evaluate_constants=False
+                )
+
+                &#47&#47 Operations on `Proxy` always yield new `Proxy`s, and the
+                &#47&#47 return value of our decomposition rule is no exception.
+                &#47&#47 We need to extract the underlying `Node` from the `Proxy`
+                &#47&#47 to use it in subsequent iterations of this transform.
+                new_node = output_proxy.node
+                env[node.name] = new_node
+                node_processed = True
+
+        if not node_processed:
+            &#47&#47 Default case: just copy the node over into the new graph.
+            new_node = new_graph.node_copy(node, lambda x: env[x.name])
+            env[node.name]<a id="change"> = </a>new_node
+
+    new_graph.lint()
+    return new_graph</code></pre><h3>After Change</h3><pre><code class='java'>
+    if isinstance(model, fx.GraphModule):
+        graph: fx.Graph = model.graph
+    else:
+        tracer<a id="change">: fx.Tracer = </a>tracer_class()
+        graph: fx.Graph = tracer.trace(model)
+        model = tracer.root
+    out_mod = fx.GraphModule(model, graph)
+    &#47&#47 shapeprop
+    sp = ShapeProp(out_mod)
+    <a id="change">sp.run(</a>*<a id="change">example_inputs)</a>
+    out_mod.graph = optimize_einsums_graph(out_mod.graph)
+    out_mod.recompile()
+    return out_mod
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/linux-cpp-lisp/opt_einsum_fx/commit/1f0a34a7fbb639d1fbb2d09cb33fe49effef90e9#diff-9228f4ba45d7de2a59f0fd0c72132ca2d3c5e637beae064d7953e32954e14c3eL12' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 41688572</div><div id='project'> Project Name: linux-cpp-lisp/opt_einsum_fx</div><div id='commit'> Commit Name: 1f0a34a7fbb639d1fbb2d09cb33fe49effef90e9</div><div id='time'> Time: 2021-03-07</div><div id='author'> Author: 1473644+Linux-cpp-lisp@users.noreply.github.com</div><div id='file'> File Name: opt_einsum_fx/_opt_ein.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: optimize_einsums(3)</div><div id='n_method'> N Method Name: optimize_einsums(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: opt_einsum_fx/_opt_ein.py</div><div id='n_file'> N File Name: opt_einsum_fx/_opt_ein.py</div><div id='m_start'> M Start Line: 12</div><div id='m_end'> M End Line: 70</div><div id='n_start'> N Start Line: 13</div><div id='n_end'> N End Line: 31</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    &#47&#47 making sure they get into new_graph
+    env = {}
+    node_processed: bool = False
+    <a id="change">for node</a> in graph.nodes<a id="change">:
+        </a>node_processed<a id="change"> = </a>False
+        if node.op == &quotcall_function&quot and node.target == torch.einsum:
+            &#47&#47 Get shapes:
+            try:</code></pre><h3>After Change</h3><pre><code class='java'>
+    else:
+        tracer: fx.Tracer = tracer_class()
+        graph: fx.Graph = tracer.trace(model)
+        model<a id="change"> = </a>tracer.root
+    out_mod = fx.GraphModule(model, graph)
+    &#47&#47 shapeprop
+    sp = ShapeProp(out_mod)
+    <a id="change">sp.run(</a>*<a id="change">example_inputs)</a>
+    out_mod.graph = optimize_einsums_graph(out_mod.graph)
+    out_mod.recompile()
+    return out_mod
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/linux-cpp-lisp/opt_einsum_fx/commit/1f0a34a7fbb639d1fbb2d09cb33fe49effef90e9#diff-9228f4ba45d7de2a59f0fd0c72132ca2d3c5e637beae064d7953e32954e14c3eL12' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 41688573</div><div id='project'> Project Name: linux-cpp-lisp/opt_einsum_fx</div><div id='commit'> Commit Name: 1f0a34a7fbb639d1fbb2d09cb33fe49effef90e9</div><div id='time'> Time: 2021-03-07</div><div id='author'> Author: 1473644+Linux-cpp-lisp@users.noreply.github.com</div><div id='file'> File Name: opt_einsum_fx/_opt_ein.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: optimize_einsums(3)</div><div id='n_method'> N Method Name: optimize_einsums(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: opt_einsum_fx/_opt_ein.py</div><div id='n_file'> N File Name: opt_einsum_fx/_opt_ein.py</div><div id='m_start'> M Start Line: 12</div><div id='m_end'> M End Line: 70</div><div id='n_start'> N Start Line: 13</div><div id='n_end'> N End Line: 31</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        data, mask = data.to(device=device), mask.to(device=device)
+        
+        targets = []
+        <a id="change">for item</a> in bboxes<a id="change">:
+            </a>target<a id="change"> = </a>{
+                &quotboxes&quot: item[0].to(dtype=torch.float, device=device),
+                &quotlabels&quot: torch.tensor(item[1]).to(device=device)
+            }</code></pre><h3>After Change</h3><pre><code class='java'>
+    scheduler = torch.optim.lr_scheduler.StepLR(optim, config[&quottraining&quot][&quotlr_drop&quot])
+
+    &#47&#47 Build trainer and start training
+    trainer<a id="change"> = </a>Trainer(
+        train_loader, val_loader, model, criterion, optim, scheduler, device, config
+    )
+    <a id="change">trainer.run()</a>
+        
+
+if __name__ == "__main__":
+    torch.manual_seed(10)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/bwittmann/transoar/commit/fbe1515fe14ebf81c18bcf86c27bd7cb4ac79e7e#diff-0e048206896ef3808bf29e00f4ca534eb723fe51e27a47b583a92e913c33bbcfL13' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 41688565</div><div id='project'> Project Name: bwittmann/transoar</div><div id='commit'> Commit Name: fbe1515fe14ebf81c18bcf86c27bd7cb4ac79e7e</div><div id='time'> Time: 2021-11-22</div><div id='author'> Author: bastian.wittmann@tum.de</div><div id='file'> File Name: scripts/train.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train(1)</div><div id='n_method'> N Method Name: train(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: scripts/train.py</div><div id='n_file'> N File Name: scripts/train.py</div><div id='m_start'> M Start Line: 15</div><div id='m_end'> M End Line: 42</div><div id='n_start'> N Start Line: 15</div><div id='n_end'> N End Line: 41</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 TODO:
+        &#47&#47 Avoid looping through dataset twice
+        print("Fitting...")
+        <a id="change">for chunk</a> in dataset.chunk_dataset(
+            select_fields=self.vector_fields, filters=filters, chunksize=chunksize
+        )<a id="change">:
+            </a>vectors<a id="change"> = </a>self.get_field_across_documents(
+                self.vector_fields[0], chunk, missing_treatment="skip"
+            )
+            self.model.partial_fit(vectors)</code></pre><h3>After Change</h3><pre><code class='java'>
+        
+        Run batch clustering
+        
+        pup<a id="change"> = </a>PullTransformPush(
+            dataset=dataset,
+            func=self.fit,
+            pull_batch_size=chunksize,
+            push_batch_size=chunksize,
+            filters=filters,
+            select_fields=self.vector_fields,
+            show_progress_bar=True,
+        )
+        pup.run()
+
+        pup = PullTransformPush(
+            dataset=dataset,
+            func=self.transform,
+            pull_batch_size=chunksize,
+            push_batch_size=chunksize,
+            filters=filters,
+            select_fields=self.vector_fields,
+            show_progress_bar=True,
+        )
+        <a id="change">pup.run()</a>
+
+        return
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/relevanceai/relevanceai/commit/f51b2915298b5dbfdbf5c72d6557293fcd138894#diff-71a8d91ad12dca31d84b98b428a67f1ad7f7cb702d82b6c6f2b4bdb00bfd92a1L58' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 41688577</div><div id='project'> Project Name: relevanceai/relevanceai</div><div id='commit'> Commit Name: f51b2915298b5dbfdbf5c72d6557293fcd138894</div><div id='time'> Time: 2022-08-28</div><div id='author'> Author: joseph.twin@relevance.ai</div><div id='file'> File Name: relevanceai/operations_new/cluster/batch/ops.py</div><div id='m_class'> M Class Name: BatchClusterOps</div><div id='n_method'> N Class Name: BatchClusterOps</div><div id='m_method'> M Method Name: run(4)</div><div id='n_method'> N Method Name: run(4)</div><div id='m_parent_class'> M Parent Class: ClusterOps,BatchClusterTransform</div><div id='n_parent_class'> N Parent Class: ClusterOps,BatchClusterTransform</div><div id='m_file'> M File Name: relevanceai/operations_new/cluster/batch/ops.py</div><div id='n_file'> N File Name: relevanceai/operations_new/cluster/batch/ops.py</div><div id='m_start'> M Start Line: 64</div><div id='m_end'> M End Line: 81</div><div id='n_start'> N Start Line: 71</div><div id='n_end'> N End Line: 91</div><BR>

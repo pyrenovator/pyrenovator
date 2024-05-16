@@ -1,0 +1,119 @@
+<html><h3>Pattern ID :28961
+</h3><img src='85322644.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    def forward(self, x):
+        B, N, C = x.shape
+        y = torch.zeros((B, N, N), dtype=torch.float32, device=x.device)
+        <a id="change">for </a>k in <a id="change">range(</a>1, N<a id="change">):
+            </a>x_l = <a id="change">x[:, :-k, :]</a> &#47&#47 (B, N-k, C)
+            x_r = <a id="change">x[:, k:, :]</a> &#47&#47 (B, N-k, C)
+
+            &#47&#47 v1: closing pairs, v2: opening pairs
+            v1 = torch.cat((x_l, x_r), dim=2) &#47&#47 (B, N-k, C*2)
+            v2 = torch.cat((x_r, x_l), dim=2) &#47&#47 (B, N-k, C*2)
+            &#47&#47 concat
+            v = torch.cat((v1, v2), dim=0) &#47&#47 (B*2, N-k, C*2)
+            v = torch.reshape(v, (B*2*(N-k), C*2)) &#47&#47 (B*2*(N-k), C*2)
+            for fc in self.fc[:-1]:
+                v = F.relu(fc(v))
+                v = self.dropout(v)
+            v = self.fc[-1](v) &#47&#47 (B*2*(N-k), 1)
+            v = torch.reshape(v, (B*2, N<a id="change">-</a>k)) &#47&#47 (B*2, N-k)
+            v1<a id="change">, v2 = </a>torch.chunk(v, 2, dim=0) &#47&#47 (B, N-k) * 2
+            y += torch.diag_embed(v1, offset=k) &#47&#47 (B, N, N)
+            y += torch.diag_embed(v2, offset=-k) &#47&#47 (B, N, N)
+        return y</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47     y += torch.diag_embed(v2, offset=-k) &#47&#47 (B, N, N)
+
+        x_l = x.view(B, N, 1, C).expand(B, N, N, C)
+        x_r = <a id="change">x.view(B, 1, N, C).expand(</a>B, N, N, C<a id="change">)</a>
+        v = torch.cat((x_l, x_r), dim=3) &#47&#47 (B, N, N, C*2)
+        v = v.view(B*N*N, C*2)
+        for fc in self.fc[:-1]:
+            v = F.relu(fc(v))
+            v = self.dropout(v)
+        y = self.fc[-1](v) &#47&#47 (B*N*N, 1)
+        y<a id="change"> = </a>y.view(B, N, N)
+
+        return y
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 10</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/mxfold/mxfold2/commit/0a9ffac3926d53527ad492faf10321f7110d6e5f#diff-c9a664b6ab969299efeb624a60d9f43a2f26d097fa73e50c22da2a6220cbabfaL42' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 85322644</div><div id='project'> Project Name: mxfold/mxfold2</div><div id='commit'> Commit Name: 0a9ffac3926d53527ad492faf10321f7110d6e5f</div><div id='time'> Time: 2019-11-02</div><div id='author'> Author: satoken@bio.keio.ac.jp</div><div id='file'> File Name: dnnfold/fold/layers.py</div><div id='m_class'> M Class Name: FCPairedLayer</div><div id='n_method'> N Class Name: FCPairedLayer</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: dnnfold/fold/layers.py</div><div id='n_file'> N File Name: dnnfold/fold/layers.py</div><div id='m_start'> M Start Line: 42</div><div id='m_end'> M End Line: 61</div><div id='n_start'> N Start Line: 63</div><div id='n_end'> N End Line: 71</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    def forward(self, x):
+        B, N, C = x.shape
+        y = torch.zeros((B, N, N), dtype=torch.float32, device=x.device)
+        <a id="change">for </a>k in <a id="change">range(</a>1, N<a id="change">):
+            </a>x_l = <a id="change">x[:, :-k, :]</a> &#47&#47 (B, N-k, C)
+            x_r = <a id="change">x[:, k:, :]</a> &#47&#47 (B, N-k, C)
+
+            &#47&#47 v1: closing pairs, v2: opening pairs
+            v1 = torch.cat((x_l, x_r), dim=2) &#47&#47 (B, N-k, C*2)
+            v2 = torch.cat((x_r, x_l), dim=2) &#47&#47 (B, N-k, C*2)
+            &#47&#47 concat
+            v = torch.cat((v1, v2), dim=0) &#47&#47 (B*2, N-k, C*2)
+            v = torch.reshape(v, (B*2*(N-k), C*2)) &#47&#47 (B*2*(N-k), C*2)
+            for fc in self.fc[:-1]:
+                v = F.relu(fc(v))
+                v = self.dropout(v)
+            v = self.fc[-1](v) &#47&#47 (B*2*(N-k), 1)
+            v<a id="change"> = </a>torch.reshape(v, (B*2, N<a id="change">-</a>k)) &#47&#47 (B*2, N-k)
+            v1<a id="change">, v2</a> = torch.chunk(v, 2, dim=0) &#47&#47 (B, N-k) * 2
+            y += torch.diag_embed(v1, offset=k) &#47&#47 (B, N, N)
+            y += torch.diag_embed(v2, offset=-k) &#47&#47 (B, N, N)
+        return y</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47     y += torch.diag_embed(v2, offset=-k) &#47&#47 (B, N, N)
+
+        x_l = x.view(B, N, 1, C).expand(B, N, N, C)
+        x_r = <a id="change">x.view(B, 1, N, C).expand(</a>B, N, N, C<a id="change">)</a>
+        v = torch.cat((x_l, x_r), dim=3) &#47&#47 (B, N, N, C*2)
+        v = v.view(B*N*N, C*2)
+        for fc in self.fc[:-1]:
+            v = F.relu(fc(v))
+            v = self.dropout(v)
+        y = self.fc[-1](v) &#47&#47 (B*N*N, 1)
+        y<a id="change"> = </a>y.view(B, N, N)
+
+        return y
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/keio-bioinformatics/mxfold2/commit/0a9ffac3926d53527ad492faf10321f7110d6e5f#diff-c9a664b6ab969299efeb624a60d9f43a2f26d097fa73e50c22da2a6220cbabfaL40' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 85322646</div><div id='project'> Project Name: keio-bioinformatics/mxfold2</div><div id='commit'> Commit Name: 0a9ffac3926d53527ad492faf10321f7110d6e5f</div><div id='time'> Time: 2019-11-02</div><div id='author'> Author: satoken@bio.keio.ac.jp</div><div id='file'> File Name: dnnfold/fold/layers.py</div><div id='m_class'> M Class Name: FCPairedLayer</div><div id='n_method'> N Class Name: FCPairedLayer</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: dnnfold/fold/layers.py</div><div id='n_file'> N File Name: dnnfold/fold/layers.py</div><div id='m_start'> M Start Line: 42</div><div id='m_end'> M End Line: 61</div><div id='n_start'> N Start Line: 63</div><div id='n_end'> N End Line: 71</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            cardinality = self.base_leaf.cardinality
+        else:
+            cardinality = 1
+        <a id="change">tmp</a> = torch.zeros(
+            context.num_samples,
+            self.in_features,
+            cardinality,
+            device=samples.device,
+            dtype=samples.dtype,
+        )
+        <a id="change">for </a>sample_idx in <a id="change">range(</a>context.num_samples<a id="change">):
+            &#47&#47 Get correct repetition
+            </a>r = <a id="change">context.repetition_indices[sample_idx]</a>
+
+            &#47&#47 Get correct parent_indices
+            parent_indices_out = parent_indices[sample_idx]
+
+            &#47&#47 Get scope for the current repetition
+            scope = self.scopes[:, :, r]
+
+            &#47&#47 Turn one-hot encoded in-feature -&gt; out-feature mapping into a linear index
+            rnge_in = torch.arange(self.out_features, device=samples.device)
+            scope<a id="change"> = </a>(scope<a id="change"> * </a>rnge_in).sum(-1).long()
+
+            &#47&#47 Map parent_indices from original "out_features" view to "in_feautres" view
+            parent_indices_in = parent_indices_out[scope]
+
+            &#47&#47 Access base leaf samples based on
+            rnge_out = torch.arange(self.in_features, device=samples.device)
+
+            <a id="change">tmp[sample_idx]</a> = samples[sample_idx<a id="change">, rnge_out, ..., parent_indices_in</a>].view(
+                self.in_features, cardinality
+            )
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        &#47&#47 assert (indices_in_tmp == indices_in_gather).all()
+
+        indices_in_gather<a id="change"> = indices_in_gather.view(</a><a id="change">num_samples, 1, -1, 1).expand(</a>-1, samples.shape[1], -1, -1<a id="change">)</a>
+        samples = samples.gather(dim=-1, index=indices_in_gather)
+        samples.squeeze_(-1)  &#47&#47 Remove num_leaves dimension
+
+        return samples</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/braun-steven/simple-einet/commit/e657fc668bd0f87f5e622a8b2549cd9e8ade437a#diff-0e167804f5443ae4e51928b2569dfa157205f2b3fd2aa197779a9ef67fb370e5L60' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 85322652</div><div id='project'> Project Name: braun-steven/simple-einet</div><div id='commit'> Commit Name: e657fc668bd0f87f5e622a8b2549cd9e8ade437a</div><div id='time'> Time: 2022-01-11</div><div id='author'> Author: steven.lang.mz@gmail.com</div><div id='file'> File Name: simple_einet/factorized_leaf_layer.py</div><div id='m_class'> M Class Name: FactorizedLeaf</div><div id='n_method'> N Class Name: FactorizedLeaf</div><div id='m_method'> M Method Name: sample(3)</div><div id='n_method'> N Method Name: sample(3)</div><div id='m_parent_class'> M Parent Class: AbstractLayer</div><div id='n_parent_class'> N Parent Class: AbstractLayer</div><div id='m_file'> M File Name: simple_einet/factorized_leaf_layer.py</div><div id='n_file'> N File Name: simple_einet/factorized_leaf_layer.py</div><div id='m_start'> M Start Line: 63</div><div id='m_end'> M End Line: 120</div><div id='n_start'> N Start Line: 68</div><div id='n_end'> N End Line: 147</div><BR>

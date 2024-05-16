@@ -1,0 +1,31 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        with self.memory_cache.use_cache(attention_cache_handle) as cache:
+            print(&quotMETADATA:&quot, cache_metadata, "CACHE", cache.mean(), "CACHE ENTRIES:", len(self.memory_cache._allocated_tensors))
+            cache[...] += 1
+            <a id="change">return </a>(inputs[0] + cache.flatten()[0]<a id="change"></a>,)
+
+    def get_pools(self) -&gt; Sequence[TaskPool]:
+        return self.forward_pool, self.backward_pool, self.inference_pool</code></pre><h3>After Change</h3><pre><code class='java'>
+            assert isinstance(self.module, BloomBlock) and cache.shape[0] == 2 and cache.ndim == 5
+            layer_past = past_k, past_v = cache[0, :, :prefix_length], cache[1, :, :prefix_length]
+            print(past_k.shape, past_v.shape)
+            hidden_states<a id="change">, (new_k, new_v) = </a><a id="change">self.module.forward(hidden_states</a><a id="change">, layer_past=layer_past, use_cache=True)</a>
+
+
+            &#47&#47 todo remove these debugprints
+            new_length = new_v.shape[1]
+            assert new_length &gt; prefix_length
+            assert new_k.shape[0] == past_k.shape[0] and new_v.shape[0] == past_v.shape[0]
+            assert new_k.shape[1] == new_length and new_v.shape[1] == new_length
+            assert new_k.shape[2:] == past_k.shape[2:] and new_v.shape[2:] == past_v.shape[2:]
+            assert torch.allclose(new_v[:, :past_v.shape[1]], past_v)
+            assert torch.allclose(new_k[:, :past_k.shape[1]], past_k)
+            cache[0, :, prefix_length: new_length, :] = new_k[:, prefix_length : new_length]
+            cache[1, :, prefix_length: new_length, :] = new_v[:, prefix_length: new_length]
+            return (<a id="change">hidden_states</a>,)
+
+    def get_pools(self) -&gt; Sequence[TaskPool]:
+        return self.forward_pool, self.backward_pool, self.inference_pool</code></pre>

@@ -1,0 +1,68 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    else:
+        proposal.compute_acceptance.assert_not_called()
+        proposal.evaluate_likelihoods.assert_not_called()
+        <a id="change">assert </a>np.all(proposal.samples[&quotlogL&quot] == 0.0)
+
+
+def test_populate_not_initialised(proposal):</code></pre><h3>After Change</h3><pre><code class='java'>
+    )
+    proposal.compute_acceptance = MagicMock(side_effect=[0.5, 0.8])
+    proposal.model = MagicMock()
+    proposal.model.batch_evaluate_log_likelihood<a id="change"> = \
+        </a><a id="change">MagicMock(return_value=log_l)</a>
+
+    proposal.plot_pool = MagicMock()
+    proposal.convert_to_samples = MagicMock(
+        side_effect=lambda *args, **kwargs: args[0]
+    )
+
+    FlowProposal.populate(proposal, worst_point, N=10, plot=True)
+
+    proposal.forward_pass.assert_called_once_with(
+        worst_point, rescale=True, compute_radius=True,
+    )
+    proposal.radius.assert_called_once_with(worst_z, worst_q)
+    assert proposal.r == 1
+
+    draw_calls = [
+        call(2, r=1.0, N=5, fuzz=1.0, var=2.0),
+        call(2, r=1.0, N=5, fuzz=1.0, var=2.0),
+    ]
+    proposal.draw_latent_prior.assert_has_calls(draw_calls)
+
+    rejection_calls = [
+        call(z[0], worst_q), call(z[1], worst_q), call(z[2], worst_q)
+    ]
+    proposal.rejection_sampling.assert_has_calls(rejection_calls)
+
+    proposal.plot_pool.assert_called_once()
+    proposal.convert_to_samples.assert_called_once()
+    np.testing.assert_array_equal(
+        proposal.convert_to_samples.call_args[0][0],
+        proposal.x
+    )
+    assert proposal.convert_to_samples.call_args[1][&quotplot&quot] is True
+
+    assert proposal.population_acceptance == (10 / 15)
+    assert proposal.populated_count == 2
+    assert proposal.populated is True
+    assert proposal.x.size == 10
+
+    if check_acceptance:
+        proposal.compute_acceptance.assert_called()
+        assert proposal.approx_acceptance == [0.4, 0.5]
+        assert proposal.acceptance == [0.7, 0.8]
+    else:
+        proposal.compute_acceptance.assert_not_called()
+
+    <a id="change">proposal.model.batch_evaluate_log_likelihood.assert_called_once_with(
+        </a>proposal.samples<a id="change">
+    )</a>
+    np.testing.assert_array_equal(proposal.samples[&quotlogL&quot], log_l)
+
+
+def test_populate_not_initialised(proposal):</code></pre>

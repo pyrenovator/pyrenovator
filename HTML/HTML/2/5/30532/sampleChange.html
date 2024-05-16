@@ -1,0 +1,35 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    
+    model = AutoModelForCTC.from_pretrained(model_name, **model_kwargs)
+    processor = Wav2Vec2Processor.from_pretrained(model_name)
+    vocab<a id="change"> = </a><a id="change">list(</a>processor.tokenizer.get_vocab().keys()<a id="change">)</a>
+    text_transform = BatchTextTransformer(
+        tokens=vocab,
+        blank_token=processor.tokenizer.pad_token,
+        pad_token=processor.tokenizer.pad_token,</code></pre><h3>After Change</h3><pre><code class='java'>
+    feature_extractor = AutoFeatureExtractor.from_pretrained(model_name)
+    &#47&#47 Some models only contain the encoder, and no tokenizer
+    &#47&#47 In that case we need to warn the user to fix it before training
+    <a id="change">try:
+        </a>tokenizer = AutoTokenizer.from_pretrained(model_name)
+        vocab<a id="change"> = </a>list(tokenizer.get_vocab().keys())
+        text_transform = BatchTextTransformer(
+            tokens=vocab,
+            blank_token=tokenizer.pad_token,
+            pad_token=tokenizer.pad_token,
+            unknown_token=tokenizer.unk_token,
+            start_token=tokenizer.bos_token,
+            end_token=tokenizer.eos_token,
+        )
+        decoder = linear_decoder(
+            model.base_model.config.hidden_size, len(vocab), decoder_dropout=0.0
+        )
+        if hasattr(model, "lm_head"):
+            decoder[1].load_state_dict(model.lm_head.state_dict())
+    <a id="change">except </a>OSError:
+        warn(
+            UserWarning(
+                "Huggingface model is missing the tokenizer! decoder and text_transform were not initialized"</code></pre>

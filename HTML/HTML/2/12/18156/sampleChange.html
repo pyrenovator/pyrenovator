@@ -1,0 +1,51 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        features: KeyedJaggedTensor,
+    ) -&gt; KeyedTensor:
+        pooled_embeddings: List[Tensor] = []
+        length_per_key<a id="change">: List[int] = </a><a id="change">[]</a>
+        feature_dict = features.to_dict()
+        <a id="change">for </a>emb_config, emb_module in zip(
+            self._embedding_bag_configs, self.embedding_bags
+        )<a id="change">:
+            </a>for feature_name in emb_config.feature_names:
+                f = feature_dict[feature_name]
+                values = f.values()
+                offsets = f.offsets()
+                pooled_embeddings.append(
+                    emb_module(
+                        indices=values.int(),
+                        offsets=offsets.int(),
+                        per_sample_weights=f.weights() if self._is_weighted else None,
+                    )
+                )
+
+                <a id="change">length_per_key.append(</a>emb_config.embedding_dim<a id="change">)</a>
+
+        return KeyedTensor(
+            keys=self._embedding_names,
+            values=torch.cat(pooled_embeddings, dim=1),</code></pre><h3>After Change</h3><pre><code class='java'>
+            self._emb_modules, self._key_to_tables.items()
+        ):
+            indices = []
+            <a id="change">lengths</a><a id="change"> = []</a>
+            offsets = []
+            weights = []
+
+            <a id="change">for </a>table in tables<a id="change">:
+                </a>for feature in table.feature_names:
+                    f = feature_dict[feature]
+                    indices.append(f.values())
+                    <a id="change">lengths.append(</a>f.lengths()<a id="change">)</a>
+                    if self._is_weighted:
+                        weights.append(f.weights())
+
+            indices = torch.cat(indices)
+            lengths<a id="change"> = </a><a id="change">torch.cat(lengths</a><a id="change">)</a>
+
+            offsets<a id="change"> = </a>torch.ops.fbgemm.asynchronous_complete_cumsum(lengths)
+            if self._is_weighted:
+                weights = torch.cat(weights)
+</code></pre>

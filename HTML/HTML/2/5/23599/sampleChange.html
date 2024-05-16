@@ -1,0 +1,20 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+&#47&#47 according to calculated weights (of proposal net) and indices of inverse sampling, calculate the bounds required for loss computation
+&#47&#47 input weights (from proposal net) shape: (ray_num, num of proposal interval), inds shape (ray_num, fine_sample num + 1? TODO, 2)
+def getBounds(weights:torch.Tensor, inds:torch.Tensor):
+    <a id="change">pass</a>
+
+class NeRF(nn.Module):
+    @staticmethod
+    def init_weight(m):</code></pre><h3>After Change</h3><pre><code class='java'>
+&#47&#47 输入的inds应该是sample_pdf中的 below，每个点将有两个值。考虑到sample_pdf得到的点数量为(cone_num + 1)
+def getBounds(weights:torch.Tensor, inds:torch.Tensor, sort_inds:torch.Tensor):
+    ray_num, target_device = weights.shape[0], weights.device
+    inds<a id="change"> = </a><a id="change">torch.gather(</a>inds, <a id="change">-1</a>, sort_inds<a id="change">)</a>
+    starts, ends = inds[:, :-1], inds[:, 1:]<a id="change"> + </a>1
+    sat:torch.Tensor = torch.cat((torch.zeros(ray_num, 1, device = target_device), torch.cumsum(weights, dim = -1)), dim = -1)                  &#47&#47 输入的 weights是什么？proposal net 的weights
+    return torch.gather(sat, -1, ends) - torch.gather(sat, -1, starts)
+</code></pre>

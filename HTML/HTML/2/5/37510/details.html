@@ -1,0 +1,575 @@
+<html><h3>Pattern ID :37510
+</h3><img src='108054392.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    def _get_name_mappings(cls, config: RoFormerConfig) -&gt; List[StateDictNameMapping]:
+        mappings: List[StateDictNameMapping] = []
+        model_mappings = [
+            <a id="change">[</a>"embeddings.word_embeddings.weight", <a id="change">"embeddings.word_embeddings.weight"</a>],
+            ["embeddings.token_type_embeddings.weight", "embeddings.token_type_embeddings.weight"],
+            ["embeddings.LayerNorm.weight", "embeddings.layer_norm.weight"],
+            ["embeddings.LayerNorm.bias", "embeddings.layer_norm.bias"],</code></pre><h3>After Change</h3><pre><code class='java'>
+            ]
+            model_mappings.extend(layer_mappings)
+
+        <a id="change">init_name_mappings(model_mappings</a><a id="change">)</a>
+
+        &#47&#47 base-model prefix "RoFormerModel"
+        if "RoFormerModel" not in config.architectures:
+            for mapping in model_mappings:
+                mapping[0] = "roformer." + mapping[0]
+                mapping[1] = "roformer." + mapping[1]
+
+        if "RoFormerForMaskedLM" in config.architectures:
+            model_mappings.extend(
+                [
+                    ["cls.predictions.transform.dense.weight", "cls.predictions.transform.weight", "transpose"],
+                    ["cls.predictions.transform.dense.bias", "cls.predictions.transform.bias"],
+                    ["cls.predictions.transform.LayerNorm.weight", "cls.predictions.layer_norm.weight"],
+                    ["cls.predictions.transform.LayerNorm.bias", "cls.predictions.layer_norm.bias"],
+                    ["cls.predictions.decoder.bias", "cls.predictions.decoder_bias"],
+                ]
+            )
+        &#47&#47 downstream mappings
+        if "RoFormerForQuestionAnswering" in config.architectures:
+            model_mappings.extend(
+                [["qa_outputs.weight", "classifier.weight", "transpose"], ["qa_outputs.bias", "classifier.bias"]]
+            )
+        if (
+            "RoFormerForMultipleChoice" in config.architectures
+            or "RoFormerForSequenceClassification" in config.architectures
+            or "RoFormerForTokenClassification" in config.architectures
+        ):
+            model_mappings.extend([["classifier.weight", None, "transpose"]])
+
+        <a id="change">init_name_mappings(model_mappings</a><a id="change">)</a>
+        mappings = [StateDictNameMapping(*mapping, index=index) for index, mapping in enumerate(model_mappings)]
+        return mappings
+
+    def init_weights(self, layer):</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/paddlepaddle/paddlenlp/commit/ea777ba05746303c64f368e7cc6a5069f17a7010#diff-2273f38e112551b5dddaf10ac63218368f597efdfdf114d978dddb448c543ce7L261' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 108054392</div><div id='project'> Project Name: paddlepaddle/paddlenlp</div><div id='commit'> Commit Name: ea777ba05746303c64f368e7cc6a5069f17a7010</div><div id='time'> Time: 2023-04-18</div><div id='author'> Author: 1435130236@qq.com</div><div id='file'> File Name: paddlenlp/transformers/roformer/modeling.py</div><div id='m_class'> M Class Name: RoFormerPretrainedModel</div><div id='n_method'> N Class Name: RoFormerPretrainedModel</div><div id='m_method'> M Method Name: _get_name_mappings(2)</div><div id='n_method'> N Method Name: _get_name_mappings(2)</div><div id='m_parent_class'> M Parent Class: PretrainedModel</div><div id='n_parent_class'> N Parent Class: PretrainedModel</div><div id='m_file'> M File Name: paddlenlp/transformers/roformer/modeling.py</div><div id='n_file'> N File Name: paddlenlp/transformers/roformer/modeling.py</div><div id='m_start'> M Start Line: 262</div><div id='m_end'> M End Line: 359</div><div id='n_start'> N Start Line: 261</div><div id='n_end'> N End Line: 363</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            ["embeddings.LayerNorm.weight", "embeddings.layer_norm.weight"],
+            ["embeddings.LayerNorm.bias", "embeddings.layer_norm.bias"],
+            ["pooler.dense.weight", "pooler.dense.weight", "transpose"],
+            <a id="change">[</a>"pooler.dense.bias", <a id="change">"pooler.dense.bias"</a>],
+            &#47&#47 for TokenClassification
+        ]
+        for layer_index in range(config.num_hidden_layers):</code></pre><h3>After Change</h3><pre><code class='java'>
+    @classmethod
+    def _get_name_mappings(cls, config: RoFormerConfig) -&gt; List[StateDictNameMapping]:
+        mappings: List[StateDictNameMapping] = []
+        <a id="change">model_mappings</a> = [
+            "embeddings.word_embeddings.weight",
+            "embeddings.token_type_embeddings.weight",
+            ["embeddings.LayerNorm.weight", "embeddings.layer_norm.weight"],
+            ["embeddings.LayerNorm.bias", "embeddings.layer_norm.bias"],
+            ["pooler.dense.weight", None, "transpose"],
+            "pooler.dense.bias",
+            &#47&#47 for TokenClassification
+        ]
+        for layer_index in range(config.num_hidden_layers):
+            layer_mappings = [
+                [
+                    f"encoder.layer.{layer_index}.attention.self.query.weight",
+                    f"encoder.layers.{layer_index}.self_attn.q_proj.weight",
+                    "transpose",
+                ],
+                [
+                    f"encoder.layer.{layer_index}.attention.self.query.bias",
+                    f"encoder.layers.{layer_index}.self_attn.q_proj.bias",
+                ],
+                [
+                    f"encoder.layer.{layer_index}.attention.self.key.weight",
+                    f"encoder.layers.{layer_index}.self_attn.k_proj.weight",
+                    "transpose",
+                ],
+                [
+                    f"encoder.layer.{layer_index}.attention.self.key.bias",
+                    f"encoder.layers.{layer_index}.self_attn.k_proj.bias",
+                ],
+                [
+                    f"encoder.layer.{layer_index}.attention.self.value.weight",
+                    f"encoder.layers.{layer_index}.self_attn.v_proj.weight",
+                    "transpose",
+                ],
+                [
+                    f"encoder.layer.{layer_index}.attention.self.value.bias",
+                    f"encoder.layers.{layer_index}.self_attn.v_proj.bias",
+                ],
+                [
+                    f"encoder.layer.{layer_index}.attention.output.dense.weight",
+                    f"encoder.layers.{layer_index}.self_attn.out_proj.weight",
+                    "transpose",
+                ],
+                [
+                    f"encoder.layer.{layer_index}.attention.output.dense.bias",
+                    f"encoder.layers.{layer_index}.self_attn.out_proj.bias",
+                ],
+                [
+                    f"encoder.layer.{layer_index}.intermediate.dense.weight",
+                    f"encoder.layers.{layer_index}.linear1.weight",
+                    "transpose",
+                ],
+                [f"encoder.layer.{layer_index}.intermediate.dense.bias", f"encoder.layers.{layer_index}.linear1.bias"],
+                [
+                    f"encoder.layer.{layer_index}.attention.output.LayerNorm.weight",
+                    f"encoder.layers.{layer_index}.norm1.weight",
+                ],
+                [
+                    f"encoder.layer.{layer_index}.attention.output.LayerNorm.bias",
+                    f"encoder.layers.{layer_index}.norm1.bias",
+                ],
+                [
+                    f"encoder.layer.{layer_index}.output.dense.weight",
+                    f"encoder.layers.{layer_index}.linear2.weight",
+                    "transpose",
+                ],
+                [f"encoder.layer.{layer_index}.output.dense.bias", f"encoder.layers.{layer_index}.linear2.bias"],
+                [f"encoder.layer.{layer_index}.output.LayerNorm.weight", f"encoder.layers.{layer_index}.norm2.weight"],
+                [f"encoder.layer.{layer_index}.output.LayerNorm.bias", f"encoder.layers.{layer_index}.norm2.bias"],
+            ]
+            model_mappings.extend(layer_mappings)
+
+        <a id="change">init_name_mappings(</a>model_mappings<a id="change">)</a>
+
+        &#47&#47 base-model prefix "RoFormerModel"
+        if "RoFormerModel" not in config.architectures:
+            for mapping in model_mappings:
+                mapping[0] = "roformer." + mapping[0]
+                mapping[1] = "roformer." + mapping[1]
+
+        if "RoFormerForMaskedLM" in config.architectures:
+            model_mappings.extend(
+                [
+                    ["cls.predictions.transform.dense.weight", "cls.predictions.transform.weight", "transpose"],
+                    ["cls.predictions.transform.dense.bias", "cls.predictions.transform.bias"],
+                    ["cls.predictions.transform.LayerNorm.weight", "cls.predictions.layer_norm.weight"],
+                    ["cls.predictions.transform.LayerNorm.bias", "cls.predictions.layer_norm.bias"],
+                    ["cls.predictions.decoder.bias", "cls.predictions.decoder_bias"],
+                ]
+            )
+        &#47&#47 downstream mappings
+        if "RoFormerForQuestionAnswering" in config.architectures:
+            model_mappings.extend(
+                [["qa_outputs.weight", "classifier.weight", "transpose"], ["qa_outputs.bias", "classifier.bias"]]
+            )
+        if (
+            "RoFormerForMultipleChoice" in config.architectures
+            or "RoFormerForSequenceClassification" in config.architectures
+            or "RoFormerForTokenClassification" in config.architectures
+        ):
+            model_mappings.extend([["classifier.weight", None, "transpose"]])
+
+        <a id="change">init_name_mappings(</a>model_mappings<a id="change">)</a>
+        mappings = [StateDictNameMapping(*mapping, index=index) for index, mapping in enumerate(model_mappings)]
+        return mappings
+
+    def init_weights(self, layer):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/paddlepaddle/paddlenlp/commit/ea777ba05746303c64f368e7cc6a5069f17a7010#diff-2273f38e112551b5dddaf10ac63218368f597efdfdf114d978dddb448c543ce7L259' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 108054455</div><div id='project'> Project Name: paddlepaddle/paddlenlp</div><div id='commit'> Commit Name: ea777ba05746303c64f368e7cc6a5069f17a7010</div><div id='time'> Time: 2023-04-18</div><div id='author'> Author: 1435130236@qq.com</div><div id='file'> File Name: paddlenlp/transformers/roformer/modeling.py</div><div id='m_class'> M Class Name: RoFormerPretrainedModel</div><div id='n_method'> N Class Name: RoFormerPretrainedModel</div><div id='m_method'> M Method Name: _get_name_mappings(2)</div><div id='n_method'> N Method Name: _get_name_mappings(2)</div><div id='m_parent_class'> M Parent Class: PretrainedModel</div><div id='n_parent_class'> N Parent Class: PretrainedModel</div><div id='m_file'> M File Name: paddlenlp/transformers/roformer/modeling.py</div><div id='n_file'> N File Name: paddlenlp/transformers/roformer/modeling.py</div><div id='m_start'> M Start Line: 262</div><div id='m_end'> M End Line: 359</div><div id='n_start'> N Start Line: 261</div><div id='n_end'> N End Line: 363</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        model_mappings = [
+            ["embeddings.word_embeddings.weight", "embeddings.word_embeddings.weight"],
+            ["embeddings.position_embeddings.weight", "embeddings.position_embeddings.weight"],
+            <a id="change">[</a>"embeddings.token_type_embeddings.weight", <a id="change">"embeddings.token_type_embeddings.weight"</a>],
+            ["embeddings.LayerNorm.weight", "embeddings.layer_norm.weight"],
+            ["embeddings.LayerNorm.bias", "embeddings.layer_norm.bias"],
+            ["embeddings_project.weight", "embeddings_project.weight", "transpose"],</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    @classmethod
+    def _get_name_mappings(cls, config: ElectraConfig) -&gt; List[StateDictNameMapping]:
+        <a id="change">model_mappings</a> = [
+            "embeddings.word_embeddings.weight",
+            "embeddings.position_embeddings.weight",
+            "embeddings.token_type_embeddings.weight",
+            ["embeddings.LayerNorm.weight", "embeddings.layer_norm.weight"],
+            ["embeddings.LayerNorm.bias", "embeddings.layer_norm.bias"],
+            ["embeddings_project.weight", None, "transpose"],
+            "embeddings_project.bias",
+        ]
+
+        for layer_index in range(config.num_hidden_layers):
+            layer_mappings = [
+                [
+                    f"encoder.layer.{layer_index}.attention.self.query.weight",
+                    f"encoder.layers.{layer_index}.self_attn.q_proj.weight",
+                    "transpose",
+                ],
+                [
+                    f"encoder.layer.{layer_index}.attention.self.query.bias",
+                    f"encoder.layers.{layer_index}.self_attn.q_proj.bias",
+                ],
+                [
+                    f"encoder.layer.{layer_index}.attention.self.key.weight",
+                    f"encoder.layers.{layer_index}.self_attn.k_proj.weight",
+                    "transpose",
+                ],
+                [
+                    f"encoder.layer.{layer_index}.attention.self.key.bias",
+                    f"encoder.layers.{layer_index}.self_attn.k_proj.bias",
+                ],
+                [
+                    f"encoder.layer.{layer_index}.attention.self.value.weight",
+                    f"encoder.layers.{layer_index}.self_attn.v_proj.weight",
+                    "transpose",
+                ],
+                [
+                    f"encoder.layer.{layer_index}.attention.self.value.bias",
+                    f"encoder.layers.{layer_index}.self_attn.v_proj.bias",
+                ],
+                [
+                    f"encoder.layer.{layer_index}.attention.output.dense.weight",
+                    f"encoder.layers.{layer_index}.self_attn.out_proj.weight",
+                    "transpose",
+                ],
+                [
+                    f"encoder.layer.{layer_index}.attention.output.dense.bias",
+                    f"encoder.layers.{layer_index}.self_attn.out_proj.bias",
+                ],
+                [
+                    f"encoder.layer.{layer_index}.attention.output.LayerNorm.weight",
+                    f"encoder.layers.{layer_index}.norm1.weight",
+                ],
+                [
+                    f"encoder.layer.{layer_index}.attention.output.LayerNorm.bias",
+                    f"encoder.layers.{layer_index}.norm1.bias",
+                ],
+                [
+                    f"encoder.layer.{layer_index}.intermediate.dense.weight",
+                    f"encoder.layers.{layer_index}.linear1.weight",
+                    "transpose",
+                ],
+                [f"encoder.layer.{layer_index}.intermediate.dense.bias", f"encoder.layers.{layer_index}.linear1.bias"],
+                [
+                    f"encoder.layer.{layer_index}.output.dense.weight",
+                    f"encoder.layers.{layer_index}.linear2.weight",
+                    "transpose",
+                ],
+                [f"encoder.layer.{layer_index}.output.dense.bias", f"encoder.layers.{layer_index}.linear2.bias"],
+                [f"encoder.layer.{layer_index}.output.LayerNorm.weight", f"encoder.layers.{layer_index}.norm2.weight"],
+                [f"encoder.layer.{layer_index}.output.LayerNorm.bias", f"encoder.layers.{layer_index}.norm2.bias"],
+            ]
+            model_mappings.extend(layer_mappings)
+
+        <a id="change">init_name_mappings(</a>model_mappings<a id="change">)</a>
+        &#47&#47 base-model prefix "ElectraModel"
+        if "ElectraModel" not in config.architectures:
+            for mapping in model_mappings:
+                mapping[0] = "electra." + mapping[0]
+                mapping[1] = "electra." + mapping[1]
+
+        &#47&#47 downstream mappings
+        if "ElectraForQuestionAnswering" in config.architectures:
+            model_mappings.extend(
+                [["qa_outputs.weight", "classifier.weight", "transpose"], ["qa_outputs.bias", "classifier.bias"]]
+            )
+
+        if "ElectraForMultipleChoice" in config.architectures:
+            model_mappings.extend(
+                [
+                    ["sequence_summary.summary.weight", "sequence_summary.dense.weight", "transpose"],
+                    ["sequence_summary.summary.bias", "sequence_summary.dense.bias"],
+                    ["classifier.weight", "classifier.weight", "transpose"],
+                    ["classifier.bias", "classifier.bias"],
+                ]
+            )
+
+        if "ElectraForSequenceClassification" in config.architectures:
+            model_mappings.extend(
+                [
+                    ["classifier.dense.weight", "classifier.dense.weight", "transpose"],
+                    ["classifier.dense.bias", "classifier.dense.bias"],
+                    ["classifier.out_proj.weight", "classifier.out_proj.weight", "transpose"],
+                    ["classifier.out_proj.bias", "classifier.out_proj.bias"],
+                ]
+            )
+
+        if "ElectraForTokenClassification" in config.architectures:
+            model_mappings.extend(
+                [
+                    ["classifier.weight", "classifier.weight", "transpose"],
+                    "classifier.bias",
+                ]
+            )
+
+        &#47&#47 TODO: need to tie weights
+        if "ElectraForMaskedLM" in config.architectures:
+            model_mappings.extend(
+                [
+                    ["generator_predictions.LayerNorm.weight", "generator_predictions.layer_norm.weight", "transpose"],
+                    ["generator_predictions.LayerNorm.bias", "generator_predictions.layer_norm.bias"],
+                    ["generator_predictions.dense.weight", None, "transpose"],
+                    "generator_predictions.dense.bias",
+                    ["generator_lm_head.bias", "generator_lm_head_bias"],
+                ]
+            )
+
+        <a id="change">init_name_mappings(</a>model_mappings<a id="change">)</a>
+        return [StateDictNameMapping(*mapping) for mapping in model_mappings]
+
+    def init_weights(self):
+        </code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/paddlepaddle/paddlenlp/commit/ea777ba05746303c64f368e7cc6a5069f17a7010#diff-630ccf2f752be9159342d33deceba9cd3cddc3a351c4262848bad773d7c824cdL165' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 108054393</div><div id='project'> Project Name: paddlepaddle/paddlenlp</div><div id='commit'> Commit Name: ea777ba05746303c64f368e7cc6a5069f17a7010</div><div id='time'> Time: 2023-04-18</div><div id='author'> Author: 1435130236@qq.com</div><div id='file'> File Name: paddlenlp/transformers/electra/modeling.py</div><div id='m_class'> M Class Name: ElectraPretrainedModel</div><div id='n_method'> N Class Name: ElectraPretrainedModel</div><div id='m_method'> M Method Name: _get_name_mappings(2)</div><div id='n_method'> N Method Name: _get_name_mappings(2)</div><div id='m_parent_class'> M Parent Class: PretrainedModel</div><div id='n_parent_class'> N Parent Class: PretrainedModel</div><div id='m_file'> M File Name: paddlenlp/transformers/electra/modeling.py</div><div id='n_file'> N File Name: paddlenlp/transformers/electra/modeling.py</div><div id='m_start'> M Start Line: 167</div><div id='m_end'> M End Line: 286</div><div id='n_start'> N Start Line: 166</div><div id='n_end'> N End Line: 292</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                        ["lm_head.bias", "lm_head.bias"],
+                        ["lm_head.dense.weight", "lm_head.dense.weight"],
+                        ["lm_head.dense.bias", "lm_head.dense.bias"],
+                        <a id="change">[</a>"lm_head.layer_norm.weight", <a id="change">"lm_head.layer_norm.weight"</a>],
+                        ["lm_head.layer_norm.bias", "lm_head.layer_norm.bias"],
+                    ]
+                )</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    @classmethod
+    def _get_name_mappings(cls, config: RobertaConfig) -&gt; list[StateDictNameMapping]:
+        <a id="change">mappings</a> = [
+            "embeddings.word_embeddings.weight",
+            "embeddings.position_embeddings.weight",
+            "embeddings.token_type_embeddings.weight",
+            ["embeddings.LayerNorm.weight", "embeddings.layer_norm.weight"],
+            ["embeddings.LayerNorm.bias", "embeddings.layer_norm.bias"],
+        ]
+
+        for layer_index in range(config.num_hidden_layers):
+            layer_mappings = [
+                [
+                    f"encoder.layer.{layer_index}.attention.self.query.weight",
+                    f"encoder.layers.{layer_index}.self_attn.q_proj.weight",
+                    "transpose",
+                ],
+                [
+                    f"encoder.layer.{layer_index}.attention.self.query.bias",
+                    f"encoder.layers.{layer_index}.self_attn.q_proj.bias",
+                ],
+                [
+                    f"encoder.layer.{layer_index}.attention.self.key.weight",
+                    f"encoder.layers.{layer_index}.self_attn.k_proj.weight",
+                    "transpose",
+                ],
+                [
+                    f"encoder.layer.{layer_index}.attention.self.key.bias",
+                    f"encoder.layers.{layer_index}.self_attn.k_proj.bias",
+                ],
+                [
+                    f"encoder.layer.{layer_index}.attention.self.value.weight",
+                    f"encoder.layers.{layer_index}.self_attn.v_proj.weight",
+                    "transpose",
+                ],
+                [
+                    f"encoder.layer.{layer_index}.attention.self.value.bias",
+                    f"encoder.layers.{layer_index}.self_attn.v_proj.bias",
+                ],
+                [
+                    f"encoder.layer.{layer_index}.attention.output.dense.weight",
+                    f"encoder.layers.{layer_index}.self_attn.out_proj.weight",
+                    "transpose",
+                ],
+                [
+                    f"encoder.layer.{layer_index}.attention.output.dense.bias",
+                    f"encoder.layers.{layer_index}.self_attn.out_proj.bias",
+                ],
+                [
+                    f"encoder.layer.{layer_index}.attention.output.LayerNorm.weight",
+                    f"encoder.layers.{layer_index}.norm1.weight",
+                ],
+                [
+                    f"encoder.layer.{layer_index}.attention.output.LayerNorm.bias",
+                    f"encoder.layers.{layer_index}.norm1.bias",
+                ],
+                [
+                    f"encoder.layer.{layer_index}.intermediate.dense.weight",
+                    f"encoder.layers.{layer_index}.linear1.weight",
+                    "transpose",
+                ],
+                [f"encoder.layer.{layer_index}.intermediate.dense.bias", f"encoder.layers.{layer_index}.linear1.bias"],
+                [
+                    f"encoder.layer.{layer_index}.output.dense.weight",
+                    f"encoder.layers.{layer_index}.linear2.weight",
+                    "transpose",
+                ],
+                [f"encoder.layer.{layer_index}.output.dense.bias", f"encoder.layers.{layer_index}.linear2.bias"],
+                [f"encoder.layer.{layer_index}.output.LayerNorm.weight", f"encoder.layers.{layer_index}.norm2.weight"],
+                [f"encoder.layer.{layer_index}.output.LayerNorm.bias", f"encoder.layers.{layer_index}.norm2.bias"],
+            ]
+            mappings.extend(layer_mappings)
+
+        <a id="change">init_name_mappings(</a>mappings<a id="change">)</a>
+        &#47&#47 Other than RobertaModel, other architectures will prepend model prefix
+        if config.architectures is not None and "RobertaModel" not in config.architectures:
+            for mapping in mappings:
+                mapping[0] = "roberta." + mapping[0]
+
+        if cls.__name__ != "RobertaModel":
+            for mapping in mappings:
+                mapping[1] = "roberta." + mapping[1]
+
+        mappings.extend(
+            [
+                ["pooler.dense.weight", "roberta.pooler.dense.weight", "transpose"],
+                ["pooler.dense.bias", "roberta.pooler.dense.bias"],
+            ]
+        )
+
+        if config.architectures is not None:
+            if "RobertaForSequenceClassification" in config.architectures:
+                mappings.extend(
+                    [
+                        ["classifier.out_proj.weight", None, "transpose"],
+                        "classifier.out_proj.bias",
+                        ["classifier.dense.weight", None, "transpose"],
+                        "classifier.dense.bias",
+                    ]
+                )
+            if "RobertaForMaskedLM" in config.architectures:
+                mappings.extend(
+                    [
+                        "lm_head.bias",
+                        "lm_head.dense.weight",
+                        "lm_head.dense.bias",
+                        "lm_head.layer_norm.weight",
+                        "lm_head.layer_norm.bias",
+                    ]
+                )
+            if (
+                "RobertaForTokenClassification" in config.architectures
+                or "RobertaForMultipleChoice" in config.architectures
+            ):
+                mappings.extend(
+                    [
+                        ["classifier.weight", None, "transpose"],
+                        "classifier.bias",
+                    ]
+                )
+            if "RobertaForQuestionAnswering" in config.architectures:
+                mappings.extend(
+                    [
+                        ["qa_outputs.weight", "classifier.weight", "transpose"],
+                        ["qa_outputs.bias", "classifier.bias"],
+                    ]
+                )
+        <a id="change">init_name_mappings(</a>mappings<a id="change">)</a>
+        return [StateDictNameMapping(*mapping) for mapping in mappings]
+
+    def init_weights(self, layer):
+        Initialization hook</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/paddlepaddle/paddlenlp/commit/ea777ba05746303c64f368e7cc6a5069f17a7010#diff-c44fdde05c239034cf3164fdc20716dd4c6d995e471b4b0f5c8398a560fcbbddL170' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 108054394</div><div id='project'> Project Name: paddlepaddle/paddlenlp</div><div id='commit'> Commit Name: ea777ba05746303c64f368e7cc6a5069f17a7010</div><div id='time'> Time: 2023-04-18</div><div id='author'> Author: 1435130236@qq.com</div><div id='file'> File Name: paddlenlp/transformers/roberta/modeling.py</div><div id='m_class'> M Class Name: RobertaPretrainedModel</div><div id='n_method'> N Class Name: RobertaPretrainedModel</div><div id='m_method'> M Method Name: _get_name_mappings(2)</div><div id='n_method'> N Method Name: _get_name_mappings(2)</div><div id='m_parent_class'> M Parent Class: PretrainedModel</div><div id='n_parent_class'> N Parent Class: PretrainedModel</div><div id='m_file'> M File Name: paddlenlp/transformers/roberta/modeling.py</div><div id='n_file'> N File Name: paddlenlp/transformers/roberta/modeling.py</div><div id='m_start'> M Start Line: 172</div><div id='m_end'> M End Line: 285</div><div id='n_start'> N Start Line: 171</div><div id='n_end'> N End Line: 296</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        mappings: list[StateDictNameMapping] = []
+        model_mappings = [
+            ["embeddings.word_embeddings.weight", "embeddings.word_embeddings.weight"],
+            <a id="change">[</a>"embeddings.position_embeddings.weight", <a id="change">"embeddings.position_embeddings.weight"</a>],
+            ["embeddings.LayerNorm.weight", "embeddings.layer_norm.weight"],
+            ["embeddings.LayerNorm.bias", "embeddings.layer_norm.bias"],
+        ]</code></pre><h3>After Change</h3><pre><code class='java'>
+    @classmethod
+    def _get_name_mappings(cls, config: DistilBertConfig) -&gt; List[StateDictNameMapping]:
+        mappings: list[StateDictNameMapping] = []
+        <a id="change">model_mappings</a> = [
+            "embeddings.word_embeddings.weight",
+            "embeddings.position_embeddings.weight",
+            ["embeddings.LayerNorm.weight", "embeddings.layer_norm.weight"],
+            ["embeddings.LayerNorm.bias", "embeddings.layer_norm.bias"],
+        ]
+        for layer_index in range(config.num_hidden_layers):
+            layer_mappings = [
+                [
+                    f"transformer.layer.{layer_index}.attention.q_lin.weight",
+                    f"encoder.layers.{layer_index}.self_attn.q_proj.weight",
+                    "transpose",
+                ],
+                [
+                    f"transformer.layer.{layer_index}.attention.q_lin.bias",
+                    f"encoder.layers.{layer_index}.self_attn.q_proj.bias",
+                ],
+                [
+                    f"transformer.layer.{layer_index}.attention.k_lin.weight",
+                    f"encoder.layers.{layer_index}.self_attn.k_proj.weight",
+                    "transpose",
+                ],
+                [
+                    f"transformer.layer.{layer_index}.attention.k_lin.bias",
+                    f"encoder.layers.{layer_index}.self_attn.k_proj.bias",
+                ],
+                [
+                    f"transformer.layer.{layer_index}.attention.v_lin.weight",
+                    f"encoder.layers.{layer_index}.self_attn.v_proj.weight",
+                    "transpose",
+                ],
+                [
+                    f"transformer.layer.{layer_index}.attention.v_lin.bias",
+                    f"encoder.layers.{layer_index}.self_attn.v_proj.bias",
+                ],
+                [
+                    f"transformer.layer.{layer_index}.attention.out_lin.weight",
+                    f"encoder.layers.{layer_index}.self_attn.out_proj.weight",
+                    "transpose",
+                ],
+                [
+                    f"transformer.layer.{layer_index}.attention.out_lin.bias",
+                    f"encoder.layers.{layer_index}.self_attn.out_proj.bias",
+                ],
+                [
+                    f"transformer.layer.{layer_index}.sa_layer_norm.weight",
+                    f"encoder.layers.{layer_index}.norm1.weight",
+                ],
+                [
+                    f"transformer.layer.{layer_index}.sa_layer_norm.bias",
+                    f"encoder.layers.{layer_index}.norm1.bias",
+                ],
+                [
+                    f"transformer.layer.{layer_index}.output_layer_norm.weight",
+                    f"encoder.layers.{layer_index}.norm2.weight",
+                ],
+                [
+                    f"transformer.layer.{layer_index}.output_layer_norm.bias",
+                    f"encoder.layers.{layer_index}.norm2.bias",
+                ],
+                [
+                    f"transformer.layer.{layer_index}.ffn.lin1.weight",
+                    f"encoder.layers.{layer_index}.linear1.weight",
+                    "transpose",
+                ],
+                [
+                    f"transformer.layer.{layer_index}.ffn.lin1.bias",
+                    f"encoder.layers.{layer_index}.linear1.bias",
+                ],
+                [
+                    f"transformer.layer.{layer_index}.ffn.lin2.weight",
+                    f"encoder.layers.{layer_index}.linear2.weight",
+                    "transpose",
+                ],
+                [
+                    f"transformer.layer.{layer_index}.ffn.lin2.bias",
+                    f"encoder.layers.{layer_index}.linear2.bias",
+                ],
+            ]
+            model_mappings.extend(layer_mappings)
+
+        <a id="change">init_name_mappings(</a>model_mappings<a id="change">)</a>
+        &#47&#47 base-model prefix "DistilBertModel"
+        if "DistilBertModel" not in config.architectures:
+            for mapping in model_mappings:
+                mapping[0] = "distilbert." + mapping[0]
+                mapping[1] = "distilbert." + mapping[1]
+
+        &#47&#47 downstream mappings
+        if "DistilBertForSequenceClassification" in config.architectures:
+            model_mappings.extend(
+                [
+                    ["pre_classifier.weight", None, "transpose"],
+                    "pre_classifier.bias",
+                    ["classifier.weight", None, "transpose"],
+                    "classifier.bias",
+                ]
+            )
+
+        if "DistilBertForTokenClassification" in config.architectures:
+            model_mappings.extend(
+                [
+                    ["classifier.weight", None, "transpose"],
+                    "classifier.bias",
+                ]
+            )
+
+        if "DistilBertForQuestionAnswering" in config.architectures:
+            model_mappings.extend(
+                [["qa_outputs.weight", "classifier.weight", "transpose"], ["qa_outputs.bias", "classifier.bias"]]
+            )
+
+        <a id="change">init_name_mappings(</a>model_mappings<a id="change">)</a>
+        mappings = [StateDictNameMapping(*mapping, index=index) for index, mapping in enumerate(model_mappings)]
+        return mappings
+
+    def init_weights(self, layer):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/paddlepaddle/paddlenlp/commit/ea777ba05746303c64f368e7cc6a5069f17a7010#diff-1ef9dccad16aae55a2b785330d525a0c1a47299b092b2c0af886a1d5117d2dabL86' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 108054396</div><div id='project'> Project Name: paddlepaddle/paddlenlp</div><div id='commit'> Commit Name: ea777ba05746303c64f368e7cc6a5069f17a7010</div><div id='time'> Time: 2023-04-18</div><div id='author'> Author: 1435130236@qq.com</div><div id='file'> File Name: paddlenlp/transformers/distilbert/modeling.py</div><div id='m_class'> M Class Name: DistilBertPretrainedModel</div><div id='n_method'> N Class Name: DistilBertPretrainedModel</div><div id='m_method'> M Method Name: _get_name_mappings(2)</div><div id='n_method'> N Method Name: _get_name_mappings(2)</div><div id='m_parent_class'> M Parent Class: PretrainedModel</div><div id='n_parent_class'> N Parent Class: PretrainedModel</div><div id='m_file'> M File Name: paddlenlp/transformers/distilbert/modeling.py</div><div id='n_file'> N File Name: paddlenlp/transformers/distilbert/modeling.py</div><div id='m_start'> M Start Line: 89</div><div id='m_end'> M End Line: 190</div><div id='n_start'> N Start Line: 88</div><div id='n_end'> N End Line: 200</div><BR>

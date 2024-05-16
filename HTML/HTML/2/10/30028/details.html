@@ -1,0 +1,67 @@
+<html><h3>Pattern ID :30028
+</h3><img src='89199344.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        key of spatial data in adata.obsm
+    
+    &#47&#47 reindex adata1 and adata2 by matching then calculate the pairwise euclidean distance
+    <a id="change">if abs(adata1.obsm[spatial_key].max()) &gt; 1</a><a id="change"> or abs(adata1.obsm[spatial_key].min()) &gt; 1</a>:
+        adata1.obsm[&quotscale_spatial&quot] = adata1.obsm[spatial_key]/adata1.obsm[spatial_key].max()
+    if abs(adata2.obsm[spatial_key].max()) &gt; 1 or abs(adata2.obsm[spatial_key].min()) &gt; 1:
+        adata2.obsm[&quotscale_spatial&quot] = adata2.obsm[spatial_key]/adata2.obsm[spatial_key].max()</code></pre><h3>After Change</h3><pre><code class='java'>
+        key of spatial data in adata.obsm
+    
+    &#47&#47 reindex adata1 and adata2 by matching then calculate the pairwise euclidean distance
+    <a id="change">for </a>adata in [adata1, adata2]<a id="change">:
+        </a>coord = adata.obsm[spatial_key]
+        <a id="change">if </a>abs(coord.ptp()) &gt; 1 or abs(coord.max()) &gt; 1:
+            adata.obsm[&quotscale_spatial&quot]<a id="change"> = </a>(coord - coord.min(0))/coord.ptp(0)
+        else:
+            adata.obsm[&quotscale_spatial&quot]<a id="change"> = </a>coord
+    coord1 = adata1.obsm[&quotscale_spatial&quot][matching[1,:]]
+    coord2 = adata2.obsm[&quotscale_spatial&quot]
+    distance = np.sqrt((coord1[:,0] - coord2[:,0])**2+(coord1[:,1] - coord2[:,1])**2)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 8</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/gao-lab/slat/commit/7cdf361c26cbdb2ff6bcb4a29245fc7d6f06001c#diff-e9b9ee3543f96df4a09e302567041dfd7e93dcd4838571849c1a64725a1c4148L218' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 89199344</div><div id='project'> Project Name: gao-lab/slat</div><div id='commit'> Commit Name: 7cdf361c26cbdb2ff6bcb4a29245fc7d6f06001c</div><div id='time'> Time: 2023-04-17</div><div id='author'> Author: xiachenrui@mail.cbi.pku.edu.cn</div><div id='file'> File Name: scSLAT/metrics.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: euclidean_dis(4)</div><div id='n_method'> N Method Name: euclidean_dis(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: scSLAT/metrics.py</div><div id='n_file'> N File Name: scSLAT/metrics.py</div><div id='m_start'> M Start Line: 218</div><div id='m_end'> M End Line: 224</div><div id='n_start'> N Start Line: 218</div><div id='n_end'> N End Line: 225</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+def shampoo(ctx: Context, grad: jnp.ndarray, step: jnp.ndarray) -&gt; jnp.ndarray:
+    last_size = grad.shape[-1]
+    kernel_sizes = (ctx.dims.pointwise_kernel, ctx.dims.outer_bottleneck_kernel, ctx.dims.inner_bottleneck_kernel)
+    <a id="change">if </a><a id="change">grad.ndim != 3 or last_size not in kernel_sizes</a>:
+        return _shampoo(ctx, grad, step)
+    return jnp.stack([_shampoo(ctx, grad[:, :, i], step) for i in range(last_size)], axis=-1)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    preconditioner = Preconditioner(grad, ctx.optimizer.block_size)
+    new_preconditioners = []
+    <a id="change">for </a>i, <a id="change">old_stat</a> in enumerate(preconditioner.statistics_from_grad(grad))<a id="change">:
+        </a>new_stat = ema(ctx, old_stat, step, 1 - ctx.optimizer.shampoo_beta2, f"statistics_{i}", True,
+                       jnp.eye(old_stat.shape[0], dtype=ctx.model.storage_dtype) * ctx.optimizer.epsilon)
+        prev_p = get_param(ctx, f&quotpreconditioner_{i}&quot, old_stat.shape, dtype=ctx.model.storage_dtype,
+                           init_val=jnp.eye(old_stat.shape[0], dtype=ctx.model.storage_dtype))
+        <a id="change">if </a>ctx.is_initializing:
+            continue
+
+        new_p<a id="change">, error = </a>matrix_inverse_pth_root(new_stat, preconditioner.exponent_for_preconditioner(),
+                                               ridge_epsilon=ctx.optimizer.epsilon)
+        new_p<a id="change"> = </a>select_preconditioner(error, new_p, prev_p)
+        new_preconditioners.append(new_p)
+        assign(ctx, f"preconditioner_{i}", new_p)
+    if ctx.is_initializing:</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/homebrewnlp/homebrewnlp-jax/commit/bf951740b4e76e5a2144d26015890e30aed83bb5#diff-4540d7c8541eb25568b448ea775d64c43be83ce020bc67dd8340da4d4e804846L92' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 89199346</div><div id='project'> Project Name: homebrewnlp/homebrewnlp-jax</div><div id='commit'> Commit Name: bf951740b4e76e5a2144d26015890e30aed83bb5</div><div id='time'> Time: 2022-07-06</div><div id='author'> Author: 39779310+ClashLuke@users.noreply.github.com</div><div id='file'> File Name: src/optimizer.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: shampoo(3)</div><div id='n_method'> N Method Name: shampoo(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/optimizer.py</div><div id='n_file'> N File Name: src/optimizer.py</div><div id='m_start'> M Start Line: 93</div><div id='m_end'> M End Line: 97</div><div id='n_start'> N Start Line: 70</div><div id='n_end'> N End Line: 89</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        key of spatial data in adata.obsm
+    
+    &#47&#47 reindex adata1 and adata2 by matching then calculate the pairwise euclidean distance
+    <a id="change">if abs(adata1.obsm[spatial_key].max()) &gt; 1</a><a id="change"> or abs(adata1.obsm[spatial_key].min()) &gt; 1</a>:
+        adata1.obsm[&quotscale_spatial&quot] = adata1.obsm[spatial_key]/adata1.obsm[spatial_key].max()
+    if abs(adata2.obsm[spatial_key].max()) &gt; 1 or abs(adata2.obsm[spatial_key].min()) &gt; 1:
+        adata2.obsm[&quotscale_spatial&quot] = adata2.obsm[spatial_key]/adata2.obsm[spatial_key].max()</code></pre><h3>After Change</h3><pre><code class='java'>
+        key of spatial data in adata.obsm
+    
+    &#47&#47 reindex adata1 and adata2 by matching then calculate the pairwise euclidean distance
+    <a id="change">for adata</a> in [adata1, adata2]<a id="change">:
+        </a>coord = adata.obsm[spatial_key]
+        <a id="change">if </a>abs(coord.ptp()) &gt; 1 or abs(coord.max()) &gt; 1:
+            adata.obsm[&quotscale_spatial&quot]<a id="change"> = </a>(coord - coord.min(0))/coord.ptp(0)
+        else:
+            adata.obsm[&quotscale_spatial&quot]<a id="change"> = </a>coord
+    coord1 = adata1.obsm[&quotscale_spatial&quot][matching[1,:]]
+    coord2 = adata2.obsm[&quotscale_spatial&quot]
+    distance = np.sqrt((coord1[:,0] - coord2[:,0])**2+(coord1[:,1] - coord2[:,1])**2)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/gao-lab/slat/commit/7cdf361c26cbdb2ff6bcb4a29245fc7d6f06001c#diff-e9b9ee3543f96df4a09e302567041dfd7e93dcd4838571849c1a64725a1c4148L198' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 89199348</div><div id='project'> Project Name: gao-lab/slat</div><div id='commit'> Commit Name: 7cdf361c26cbdb2ff6bcb4a29245fc7d6f06001c</div><div id='time'> Time: 2023-04-17</div><div id='author'> Author: xiachenrui@mail.cbi.pku.edu.cn</div><div id='file'> File Name: scSLAT/metrics.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: euclidean_dis(4)</div><div id='n_method'> N Method Name: euclidean_dis(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: scSLAT/metrics.py</div><div id='n_file'> N File Name: scSLAT/metrics.py</div><div id='m_start'> M Start Line: 218</div><div id='m_end'> M End Line: 224</div><div id='n_start'> N Start Line: 218</div><div id='n_end'> N End Line: 225</div><BR>

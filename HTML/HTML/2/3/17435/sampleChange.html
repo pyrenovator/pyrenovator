@@ -1,0 +1,25 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    if test_dataset is not None:
+        test_process = RandomProcessImageWithBboxes(target_shape=input_shape, resize_method=resize_method, resize_antialias=resize_antialias, magnitude=-1)
+        test_dataset = test_dataset.map(test_process).map(lambda xx, yy: (xx, bbox_process(yy[0], yy[1])))
+        test_dataset = <a id="change">test_dataset.batch(</a>batch_size<a id="change">)</a>.map(lambda xx, yy: (rescaling(xx), yy))
+    return train_dataset, test_dataset, total_images, num_classes, steps_per_epoch
+
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    train_dataset = dataset["train"].shuffle(buffer_size).map(train_process).batch(batch_size)
+    &#47&#47 return train_dataset
+
+    <a id="change">if </a>mosaic_mix_prob &gt; 0:
+        mosaic_mix = lambda xx, yy: tf.cond(
+            tf.random.uniform(()) &gt; mosaic_mix_prob,
+            &#47&#47 lambda: (xx, tf.pad(yy[0])),
+            lambda: (xx, yy),
+            lambda: mosaic_mix_batch(xx, yy[0], yy[1]),
+        )
+        train_dataset<a id="change"> = </a>train_dataset.map(mosaic_mix, num_parallel_calls=AUTOTUNE)
+    &#47&#47 return train_dataset
+
+    mean, std = init_mean_std_by_rescale_mode(rescale_mode)</code></pre>

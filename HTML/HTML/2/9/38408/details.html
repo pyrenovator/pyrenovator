@@ -1,0 +1,232 @@
+<html><h3>Pattern ID :38408
+</h3><img src='109724552.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+        if output_attentions:
+            raise ValueError("output_attetntions=True is not supported " "for IPUWav2Vec2Encoder")
+        if <a id="change">output_hidden_states</a>:
+            raise ValueError("output_hidden_states=True is not supported " "for IPUWav2Vec2Encoder")
+
+        pad_length = 0
+        if attention_mask is not None:
+            &#47&#47 make sure padded tokens output 0
+            hidden_states[~attention_mask] = 0.0
+
+            sequence_length_padding_divisor = 4
+            &#47&#47 Pad attention mask to more divisible length
+            remainder = attention_mask.size(-1) % sequence_length_padding_divisor
+
+            if remainder != 0:
+                pad_length = sequence_length_padding_divisor - remainder
+                attention_mask = F.pad(
+                    attention_mask,
+                    &#47&#47 Want e.g. (..., 999) -&gt; (..., 1000)
+                    pad=(0, pad_length),
+                    value=0.0,
+                )
+
+            &#47&#47 extend attention_mask
+            attention_mask = (1.0 - attention_mask[:, None, None, :].to(dtype=hidden_states.dtype)) * -10000.0
+            attention_mask = attention_mask.expand(
+                attention_mask.shape[0],
+                1,
+                attention_mask.shape[-1],
+                attention_mask.shape[-1],
+            )
+
+        position_embeddings = self.pos_conv_embed(hidden_states)
+        hidden_states = hidden_states + position_embeddings
+        hidden_states = self.layer_norm(hidden_states)
+        hidden_states = self.dropout(hidden_states)
+
+        hidden_states<a id="change"> = </a>F.pad(
+            hidden_states,
+            &#47&#47 Want e.g. (..., 999, 768) -&gt; (..., 1000, 768)
+            pad=(0, 0, 0, pad_length),
+        )
+
+        for layer in self.layers:
+
+            layer_outputs = layer(
+                hidden_states,
+                attention_mask=attention_mask,
+                output_attentions=output_attentions,
+            )
+
+            if self.config.layerdrop &gt; 0.0:
+                &#47&#47 add LayerDrop (see https://arxiv.org/abs/1909.11556 for description)
+                dropout_probability = torch.rand(tuple())
+                skip_the_layer = torch.tensor(self.training) and (dropout_probability &lt; self.config.layerdrop)
+                hidden_states = torch.where(skip_the_layer, hidden_states, layer_outputs[0])
+            else:
+                hidden_states = layer_outputs[0]
+
+        &#47&#47 Remove padded values
+        &#47&#47 Want e.g. (..., 1000, 768) -&gt; (..., 999, 768)
+        if pad_length &gt; 0:
+            hidden_states = <a id="change">hidden_states[..., 0:(-pad_length), :]</a>
+
+        if not return_dict:
+            return tuple(v for v in [hidden_states, all_hidden_states, all_self_attentions] if v is not None)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        if attention_mask is not None:
+            &#47&#47 make sure padded tokens output 0
+            expand_attention_mask = <a id="change">attention_mask.unsqueeze(-1).repeat(</a>1, 1, hidden_states.shape[2]<a id="change">)</a>
+            hidden_states[~expand_attention_mask] = 0
+
+            &#47&#47 extend attention_mask
+            attention_mask = (1.0 - attention_mask[:, None, None, :].to(dtype=hidden_states.dtype)) * -10000.0
+            attention_mask = attention_mask.expand(
+                attention_mask.shape[0], 1, attention_mask.shape[-1], attention_mask.shape[-1]
+            )
+
+        position_embeddings = self.pos_conv_embed(hidden_states)
+        hidden_states = hidden_states + position_embeddings
+        hidden_states = self.layer_norm(hidden_states)
+        hidden_states = self.dropout(hidden_states)
+
+        for layer in self.layers:
+            if output_hidden_states:
+                all_hidden_states<a id="change"> = </a>all_hidden_states + (hidden_states,)
+
+            layer_outputs = layer(hidden_states, attention_mask=attention_mask, output_attentions=output_attentions)
+
+            &#47&#47 add LayerDrop (see https://arxiv.org/abs/1909.11556 for description)
+            dropout_probability = torch.rand(tuple())
+            skip_the_layer = torch.tensor(self.training) and (dropout_probability &lt; self.config.layerdrop)
+            if self.config.layerdrop &gt; 0.0:
+                hidden_states = torch.where(skip_the_layer, hidden_states, layer_outputs[0])
+            else:
+                hidden_states = layer_outputs[0]
+
+            if skip_the_layer:
+                layer_outputs = (None, None)
+
+            if output_attentions:
+                all_self_attentions = all_self_attentions + (layer_outputs[1],)
+
+        if output_hidden_states:
+            all_hidden_states<a id="change"> = </a>all_hidden_states + (hidden_states,)
+
+        if not return_dict:
+            return tuple(v for v in [hidden_states, all_hidden_states, all_self_attentions] if v is not None)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 7</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/huggingface/optimum-graphcore/commit/075200de7b5b118681fc46af97985bb53ce9c146#diff-78e7e62156963de0a5dbf323a0121639c4ddfcd5d6364518045269e8263e5b12L41' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 109724552</div><div id='project'> Project Name: huggingface/optimum-graphcore</div><div id='commit'> Commit Name: 075200de7b5b118681fc46af97985bb53ce9c146</div><div id='time'> Time: 2022-08-03</div><div id='author'> Author: gejinchen1996@gmail.com</div><div id='file'> File Name: optimum/graphcore/models/wav2vec2/ipu_layer_drop.py</div><div id='m_class'> M Class Name: IPUWav2Vec2Encoder</div><div id='n_method'> N Class Name: IPUWav2Vec2Encoder</div><div id='m_method'> M Method Name: forward(6)</div><div id='n_method'> N Method Name: forward(6)</div><div id='m_parent_class'> M Parent Class: Wav2Vec2Encoder</div><div id='n_parent_class'> N Parent Class: Wav2Vec2Encoder</div><div id='m_file'> M File Name: optimum/graphcore/models/wav2vec2/ipu_layer_drop.py</div><div id='n_file'> N File Name: optimum/graphcore/models/wav2vec2/ipu_layer_drop.py</div><div id='m_start'> M Start Line: 41</div><div id='m_end'> M End Line: 108</div><div id='n_start'> N Start Line: 41</div><div id='n_end'> N End Line: 83</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+            if remainder != 0:
+                pad_length = sequence_length_padding_divisor - remainder
+                attention_mask<a id="change"> = </a>F.pad(
+                    attention_mask,
+                    &#47&#47 Want e.g. (..., 999) -&gt; (..., 1000)
+                    pad=(0, pad_length),
+                    value=0.0,
+                )
+
+            &#47&#47 extend attention_mask
+            attention_mask = (1.0 - attention_mask[:, None, None, :].to(dtype=hidden_states.dtype)) * -10000.0
+            attention_mask = attention_mask.expand(
+                attention_mask.shape[0],
+                1,
+                attention_mask.shape[-1],
+                attention_mask.shape[-1],
+            )
+
+        position_embeddings = self.pos_conv_embed(hidden_states)
+        hidden_states = hidden_states + position_embeddings
+        hidden_states = self.dropout(hidden_states)
+
+        hidden_states = F.pad(
+            hidden_states,
+            &#47&#47 Want e.g. (..., 999, 768) -&gt; (..., 1000, 768)
+            pad=(0, 0, 0, pad_length),
+        )
+
+        for layer in self.layers:
+
+            layer_outputs = layer(
+                hidden_states,
+                attention_mask=attention_mask,
+                output_attentions=output_attentions,
+            )
+
+            if self.config.layerdrop &gt; 0.0:
+                &#47&#47 add LayerDrop (see https://arxiv.org/abs/1909.11556 for description)
+                dropout_probability = torch.rand(tuple())
+                skip_the_layer = torch.tensor(self.training) and (dropout_probability &lt; self.config.layerdrop)
+                hidden_states = torch.where(skip_the_layer, hidden_states, layer_outputs[0])
+            else:
+                hidden_states = layer_outputs[0]
+
+        &#47&#47 Remove padded values
+        &#47&#47 Want e.g. (..., 1000, 768) -&gt; (..., 999, 768)
+        if pad_length &gt; 0:
+            hidden_states = <a id="change">hidden_states[..., 0:(-pad_length), :]</a>
+
+        hidden_states = self.layer_norm(hidden_states)
+
+        if not return_dict:</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        if attention_mask is not None:
+            &#47&#47 make sure padded tokens are not attended to
+            expand_attention_mask = <a id="change">attention_mask.unsqueeze(-1).repeat(</a>1, 1, hidden_states.shape[2]<a id="change">)</a>
+            hidden_states[~expand_attention_mask] = 0
+
+            &#47&#47 extend attention_mask
+            attention_mask = (1.0 - attention_mask[:, None, None, :].to(dtype=hidden_states.dtype)) * -10000.0
+            attention_mask = attention_mask.expand(
+                attention_mask.shape[0], 1, attention_mask.shape[-1], attention_mask.shape[-1]
+            )
+
+        position_embeddings = self.pos_conv_embed(hidden_states)
+        hidden_states = hidden_states + position_embeddings
+        hidden_states = self.dropout(hidden_states)
+
+        for layer in self.layers:
+            if output_hidden_states:
+                all_hidden_states<a id="change"> = </a>all_hidden_states + (hidden_states,)
+
+            layer_outputs = layer(hidden_states, attention_mask=attention_mask, output_attentions=output_attentions)
+
+            &#47&#47 add LayerDrop (see https://arxiv.org/abs/1909.11556 for description)
+            dropout_probability = torch.rand(tuple())
+            skip_the_layer = torch.tensor(self.training) and (dropout_probability &lt; self.config.layerdrop)
+            if self.config.layerdrop &gt; 0.0:
+                hidden_states = torch.where(skip_the_layer, hidden_states, layer_outputs[0])
+            else:
+                hidden_states = layer_outputs[0]
+
+            if skip_the_layer:
+                layer_outputs = (None, None)
+
+            if output_attentions:
+                all_self_attentions = all_self_attentions + (layer_outputs[1],)
+
+        hidden_states = self.layer_norm(hidden_states)
+
+        if output_hidden_states:
+            all_hidden_states<a id="change"> = </a>all_hidden_states + (hidden_states,)
+
+        if not return_dict:
+            return tuple(v for v in [hidden_states, all_hidden_states, all_self_attentions] if v is not None)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/huggingface/optimum-graphcore/commit/075200de7b5b118681fc46af97985bb53ce9c146#diff-78e7e62156963de0a5dbf323a0121639c4ddfcd5d6364518045269e8263e5b12L119' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 109724568</div><div id='project'> Project Name: huggingface/optimum-graphcore</div><div id='commit'> Commit Name: 075200de7b5b118681fc46af97985bb53ce9c146</div><div id='time'> Time: 2022-08-03</div><div id='author'> Author: gejinchen1996@gmail.com</div><div id='file'> File Name: optimum/graphcore/models/wav2vec2/ipu_layer_drop.py</div><div id='m_class'> M Class Name: IPUWav2Vec2EncoderStableLayerNorm</div><div id='n_method'> N Class Name: IPUWav2Vec2EncoderStableLayerNorm</div><div id='m_method'> M Method Name: forward(6)</div><div id='n_method'> N Method Name: forward(6)</div><div id='m_parent_class'> M Parent Class: Wav2Vec2EncoderStableLayerNorm</div><div id='n_parent_class'> N Parent Class: Wav2Vec2EncoderStableLayerNorm</div><div id='m_file'> M File Name: optimum/graphcore/models/wav2vec2/ipu_layer_drop.py</div><div id='n_file'> N File Name: optimum/graphcore/models/wav2vec2/ipu_layer_drop.py</div><div id='m_start'> M Start Line: 127</div><div id='m_end'> M End Line: 193</div><div id='n_start'> N Start Line: 101</div><div id='n_end'> N End Line: 144</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        em_mat = self.get_emitter_matrix(kind=&quotall&quot)
+
+        img = np.zeros((self.img_size[0] * upscale, self.img_size[1] * upscale, self.num_frames))
+        for <a id="change">i</a> in range(self.num_frames):
+            &#47&#47 get emitters in current frame
+            em_in_frame = em_mat[em_mat[:, 4] == i, :]
+            frame<a id="change"> = </a>self.get_frame(<a id="change">em_in_frame[:, :3]</a>, em_in_frame[:, 3], psf=psf, bg=bg)
+            img[:, :, i] = frame
+        return img.astype(&quotuint16&quot)
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        img = np.zeros((self.img_size[0] * upscale, self.img_size[1] * upscale, self.num_frames))
+
+        pool = ThreadPool(self.poolsize)
+        frame_list<a id="change"> = </a>pool.starmap(self.get_frame_wrapper, zip(list(range(self.num_frames)),
+                                                     iter.repeat(em_mat),
+                                                     <a id="change">iter.repeat(</a>psf<a id="change">)</a>,
+                                                     iter.repeat(bg)))
+        img<a id="change"> = </a>np.moveaxis(np.asarray(frame_list), 0, -1)
+
+        &#47&#47 &#47&#47 serial version
+        &#47&#47 for i in range(self.num_frames):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/turagalab/decode/commit/3679761c527b0a46b9dfddf83fa33c960627f5c1#diff-e5ee57c7296123f955b409de0467f44ca4fe23cfa673d46f69db5ce54f437fc4L57' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 109724556</div><div id='project'> Project Name: turagalab/decode</div><div id='commit'> Commit Name: 3679761c527b0a46b9dfddf83fa33c960627f5c1</div><div id='time'> Time: 2018-12-20</div><div id='author'> Author: gitdev@LRM.photo</div><div id='file'> File Name: simulator.py</div><div id='m_class'> M Class Name: Simulation</div><div id='n_method'> N Class Name: Simulation</div><div id='m_method'> M Method Name: camera_image(4)</div><div id='n_method'> N Method Name: camera_image(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: simulator.py</div><div id='n_file'> N File Name: simulator.py</div><div id='m_start'> M Start Line: 59</div><div id='m_end'> M End Line: 67</div><div id='n_start'> N Start Line: 62</div><div id='n_end'> N End Line: 71</div><BR>

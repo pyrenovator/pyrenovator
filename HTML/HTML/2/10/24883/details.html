@@ -1,0 +1,118 @@
+<html><h3>Pattern ID :24883
+</h3><img src='76727938.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        losses_m.update(loss.item(), input.size(0))
+
+        optimizer.zero_grad()
+        <a id="change">loss.backward()</a>
+        optimizer.step()
+
+        torch.cuda.synchronize()
+        num_updates += 1</code></pre><h3>After Change</h3><pre><code class='java'>
+            losses_m.update(loss.item(), input.size(0))
+
+        optimizer.zero_grad()
+        <a id="change">if use_amp</a>:
+            <a id="change">with amp.scale_loss(loss</a><a id="change">, optimizer) as scaled_loss:
+                scaled_loss</a><a id="change">.backward()</a>
+        else:
+            <a id="change">loss.backward()</a>
+        optimizer.step()
+
+        torch.cuda.synchronize()
+        num_updates += 1</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 5</div><BR><div id='size'>Non-data size: 7</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/alvinwan/nbdt-pytorch-image-models/commit/5180f94c7e4fa001231a5794e2cfe0107ef98109#diff-ed183d67207df065a11e1289f19d34cc2abbc5448dea952683cfe9728c342b95L228' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 76727938</div><div id='project'> Project Name: alvinwan/nbdt-pytorch-image-models</div><div id='commit'> Commit Name: 5180f94c7e4fa001231a5794e2cfe0107ef98109</div><div id='time'> Time: 2019-04-05</div><div id='author'> Author: rwightman@gmail.com</div><div id='file'> File Name: train.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train_epoch(10)</div><div id='n_method'> N Method Name: train_epoch(9)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: train.py</div><div id='n_file'> N File Name: train.py</div><div id='m_start'> M Start Line: 228</div><div id='m_end'> M End Line: 265</div><div id='n_start'> N Start Line: 283</div><div id='n_end'> N End Line: 349</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            if torch.isnan(loss):
+                raise ValueError("nan loss encountered")
+
+            <a id="change">loss.backward()</a>
+            train_loss += loss.item()
+            batch_grad_norm = self.rescale_gradients()
+
+            if self.tensorboard.should_log_histograms_this_batch():</code></pre><h3>After Change</h3><pre><code class='java'>
+            self.batch_num_total += 1
+            self.optimizer.zero_grad()
+
+            <a id="change">loss</a> = self.batch_loss(self.model, batch_group)
+            if torch.isnan(loss):
+                raise ValueError("nan loss encountered")
+
+            <a id="change">if self.use_fp16</a>:
+                from apex import amp
+                <a id="change">with amp.scale_loss(</a><a id="change">loss, self.optimizer) as scale_loss:
+                    </a><a id="change">scale_loss.backward()</a>
+            else:
+                <a id="change">loss.backward()</a>
+            train_loss += loss.item()
+            batch_grad_norm = self.rescale_gradients()
+
+            if self.tensorboard.should_log_histograms_this_batch():</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/waterzxj/unf/commit/203df20453d02104fc8d91d0dc6634a563f5f82f#diff-87d3483b7acbc258927cb868dcf91b4f4ad9b90fe2aa3217624300c1141b03a6L279' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 76727937</div><div id='project'> Project Name: waterzxj/unf</div><div id='commit'> Commit Name: 203df20453d02104fc8d91d0dc6634a563f5f82f</div><div id='time'> Time: 2020-02-23</div><div id='author'> Author: zhouxiaojiang@n22-148-069.byted.org</div><div id='file'> File Name: UNF/training/learner.py</div><div id='m_class'> M Class Name: Trainer</div><div id='n_method'> N Class Name: Trainer</div><div id='m_method'> M Method Name: train_epoch(2)</div><div id='n_method'> N Method Name: train_epoch(2)</div><div id='m_parent_class'> M Parent Class: object</div><div id='n_parent_class'> N Parent Class: object</div><div id='m_file'> M File Name: UNF/training/learner.py</div><div id='n_file'> N File Name: UNF/training/learner.py</div><div id='m_start'> M Start Line: 291</div><div id='m_end'> M End Line: 303</div><div id='n_start'> N Start Line: 313</div><div id='n_end'> N End Line: 335</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                outputs = torch.cat((outputs, output))
+                targets = torch.cat((targets, target))
+            loss = self.criterion(output, target)
+            <a id="change">loss.backward()</a>
+            self.optimizers[&quotmodel&quot].step()
+
+            self.train_step += 1
+            self.writer.set_step(self.train_step)</code></pre><h3>After Change</h3><pre><code class='java'>
+            if len(self.metrics_epoch) &gt; 0:
+                outputs = torch.cat((outputs, output))
+                targets = torch.cat((targets, target))
+            <a id="change">loss</a> = self.criterion(output, target)
+            <a id="change">if self.apex</a>:
+                <a id="change">with self.amp.scale_loss(</a><a id="change">loss, self.optimizers[&quotmodel&quot]) as loss_scaled:
+                    </a><a id="change">loss_scaled.backward()</a>
+            else:
+                <a id="change">loss.backward()</a>
+            self.optimizers[&quotmodel&quot].step()
+
+            self.train_step += 1
+            self.writer.set_step(self.train_step)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/deeperlearner/pytorch-template/commit/aa69f0406334df0b4aed5dbfcf58990eeaa1def0#diff-8ab62ddeaf9f6b02e626078d34fbd9ba07d397e73f875ed5ed720bd648973a35L51' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 76727942</div><div id='project'> Project Name: deeperlearner/pytorch-template</div><div id='commit'> Commit Name: aa69f0406334df0b4aed5dbfcf58990eeaa1def0</div><div id='time'> Time: 2021-05-04</div><div id='author'> Author: b04202035@g.ntu.edu.tw</div><div id='file'> File Name: trainers/trainer.py</div><div id='m_class'> M Class Name: Trainer</div><div id='n_method'> N Class Name: Trainer</div><div id='m_method'> M Method Name: _train_epoch(2)</div><div id='n_method'> N Method Name: _train_epoch(2)</div><div id='m_parent_class'> M Parent Class: BaseTrainer</div><div id='n_parent_class'> N Parent Class: BaseTrainer</div><div id='m_file'> M File Name: trainers/trainer.py</div><div id='n_file'> N File Name: trainers/trainer.py</div><div id='m_start'> M Start Line: 76</div><div id='m_end'> M End Line: 76</div><div id='n_start'> N Start Line: 75</div><div id='n_end'> N End Line: 81</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        losses_m.update(loss.item(), input.size(0))
+
+        optimizer.zero_grad()
+        <a id="change">loss.backward()</a>
+        optimizer.step()
+
+        torch.cuda.synchronize()
+        num_updates += 1</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        output = model(input)
+
+        <a id="change">loss</a> = loss_fn(output, target)
+        if not args.distributed:
+            losses_m.update(loss.item(), input.size(0))
+
+        optimizer.zero_grad()
+        <a id="change">if use_amp</a>:
+            <a id="change">with amp.scale_loss(</a><a id="change">loss, optimizer) as scaled_loss:
+                </a><a id="change">scaled_loss.backward()</a>
+        else:
+            <a id="change">loss.backward()</a>
+        optimizer.step()
+
+        torch.cuda.synchronize()
+        num_updates += 1</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/feng-lab/pytorch-image-models/commit/5180f94c7e4fa001231a5794e2cfe0107ef98109#diff-ed183d67207df065a11e1289f19d34cc2abbc5448dea952683cfe9728c342b95L208' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 76727941</div><div id='project'> Project Name: feng-lab/pytorch-image-models</div><div id='commit'> Commit Name: 5180f94c7e4fa001231a5794e2cfe0107ef98109</div><div id='time'> Time: 2019-04-05</div><div id='author'> Author: rwightman@gmail.com</div><div id='file'> File Name: train.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train_epoch(10)</div><div id='n_method'> N Method Name: train_epoch(9)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: train.py</div><div id='n_file'> N File Name: train.py</div><div id='m_start'> M Start Line: 228</div><div id='m_end'> M End Line: 265</div><div id='n_start'> N Start Line: 283</div><div id='n_end'> N End Line: 349</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                batch_taskname = (batch, taskname)
+                total_loss = self.train_on_batch(batch_taskname, args)
+                total_loss /= self.t_config.gradient_accumulation_steps
+                <a id="change">total_loss.backward()</a>
+
+                scalar_total_loss = total_loss.cpu().item() * self.t_config.gradient_accumulation_steps
+                self.tb_writer.add_scalar(&quotscalar/total_loss&quot, scalar_total_loss, writer_step)
+                writer_step += 1</code></pre><h3>After Change</h3><pre><code class='java'>
+                if batch_postprocessors is not None:
+                    batch = batch_postprocessors[taskname](batch)
+                batch_taskname = (batch, taskname)
+                <a id="change">total_loss</a> = self.train_on_batch(batch_taskname, args)
+                total_loss /= self.t_config.gradient_accumulation_steps
+                <a id="change">if self.t_config.fp16</a>:
+                    <a id="change">with amp.scale_loss(</a><a id="change">total_loss,optimizer) as scaled_loss:
+                        </a><a id="change">scaled_loss.backward()</a>
+                else:
+                    <a id="change">total_loss.backward()</a>
+                scalar_total_loss = total_loss.cpu().item() * self.t_config.gradient_accumulation_steps
+                self.tb_writer.add_scalar(&quotscalar/total_loss&quot, scalar_total_loss, writer_step)
+                writer_step += 1
+            if max_grad_norm &gt; 0:</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/airaria/textbrewer/commit/89a5c7f43ae32c7e4f547980acda0d1b8ae91712#diff-a0df517a14c387489a167be94325fce9e4eceac1f693d479ceaa7822801fdf1aL36' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 76727932</div><div id='project'> Project Name: airaria/textbrewer</div><div id='commit'> Commit Name: 89a5c7f43ae32c7e4f547980acda0d1b8ae91712</div><div id='time'> Time: 2020-07-07</div><div id='author'> Author: yangziqing@163.com</div><div id='file'> File Name: src/textbrewer/distiller_multitask.py</div><div id='m_class'> M Class Name: MultiTaskDistiller</div><div id='n_method'> N Class Name: MultiTaskDistiller</div><div id='m_method'> M Method Name: train(11)</div><div id='n_method'> N Method Name: train(11)</div><div id='m_parent_class'> M Parent Class: BasicDistiller</div><div id='n_parent_class'> N Parent Class: BasicDistiller</div><div id='m_file'> M File Name: src/textbrewer/distiller_multitask.py</div><div id='n_file'> N File Name: src/textbrewer/distiller_multitask.py</div><div id='m_start'> M Start Line: 96</div><div id='m_end'> M End Line: 102</div><div id='n_start'> N Start Line: 59</div><div id='n_end'> N End Line: 118</div><BR>

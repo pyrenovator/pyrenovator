@@ -1,0 +1,41 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            grads = torch.autograd.grad(psi[ibatch], inp, retain_graph=True)
+            grads = torch.cat([g.view(-1)/psi[ibatch] for g in grads])
+            if ibatch == 0:
+                S<a id="change"> = </a>grads * <a id="change">grads.view(-1</a>, 1<a id="change">)</a>
+            else:
+                S += grads * grads.view(-1, 1)
+
+        return S / psi.shape[0]</code></pre><h3>After Change</h3><pre><code class='java'>
+        Sij = &lt;  psi_i / psi psi_j/psi &gt; - &lt;psi_i/psi&gt;&lt;psi_j/psi&gt;
+        &quot&quot&quot
+
+        nbatch<a id="change"> = </a>pos.shape[0]
+
+        ninp = 0
+        for group in self.param_groups:
+            for p in group[&quotparams&quot]:
+                if p.requires_grad:
+                    ninp += p.numel()
+
+        S = torch.zeros(ninp, ninp)
+        sum_grads = <a id="change">torch.zeros(</a>ninp<a id="change">)</a>
+
+        self.zero_grad()
+        psi = self.defaults[&quotwf&quot](pos)
+
+        for ibatch in range(nbatch):
+
+            psi[ibatch].backward(retain_graph=True)
+            grads = self._collect_grad() / psi[ibatch]
+            S += grads.reshape(-1, 1) @ grads.reshape(1, -1)
+            sum_grads += grads
+            self.zero_grad()
+
+        sum_grads<a id="change"> /= </a>nbatch
+        S -= sum_grads.reshape(-1, 1) @ sum_grads.reshape(1, -1)
+        return S
+</code></pre>

@@ -1,0 +1,48 @@
+<html><h3>Pattern ID :3857
+</h3><img src='14618942.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+    def forward(self, x, alpha, fac1):
+        out = x
+        out2 = fac1 * <a id="change">torch.exp(</a>-1.0<a id="change"> * </a>alpha<a id="change">)</a>
+        for i, layer in enumerate(self.fc_layers):
+            out = layer(torch.cat([out, out2], dim=1))
+        return self.fc_out(torch.cat([out, out2], dim=1))
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    def forward(self, x, alpha, fac1):
+        out = x
+        out2 = torch.exp(-F.interpolate(<a id="change">alpha[:, None]</a>, self.in_feat))[:, 0]
+        out2 = out2 * fac1 + (1 - fac1)
+        return self.fc_out(out * out2)
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/sungbinlim/neuboots/commit/d406d3694ab25140dafeb3f2af61335a50011a32#diff-80c592f2d59b4b0f54f2d8f0d2ff05fce730280b6a7b2c6b1c551157cc516320L32' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 14618942</div><div id='project'> Project Name: sungbinlim/neuboots</div><div id='commit'> Commit Name: d406d3694ab25140dafeb3f2af61335a50011a32</div><div id='time'> Time: 2020-09-25</div><div id='author'> Author: phelahab@gmail.com</div><div id='file'> File Name: models/gbsnet.py</div><div id='m_class'> M Class Name: GbsCls</div><div id='n_method'> N Class Name: GbsCls</div><div id='m_method'> M Method Name: forward(4)</div><div id='n_method'> N Method Name: forward(4)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: models/gbsnet.py</div><div id='n_file'> N File Name: models/gbsnet.py</div><div id='m_start'> M Start Line: 34</div><div id='m_end'> M End Line: 38</div><div id='n_start'> N Start Line: 32</div><div id='n_end'> N End Line: 35</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    Returns:
+    Softmax activated (N,k) ndarray (N: no. of samples, k: no. of nodes)
+    &quot&quot&quot
+    e_x = <a id="change">np.exp(</a>x<a id="change"> - </a>np.max(x)<a id="change">)</a> &#47&#47 For stability as it is prone to overflow and underflow
+&#47&#47     return e_x / e_x.sum(axis=1, keepdims=True) &#47&#47 only difference
+    return e_x / e_x.sum(axis=1).reshape((-1, 1)) &#47&#47 Alternative of keepdims=True for Numba compatibility
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    &#47&#47 Alternative 2
+    max_x = np.zeros((x.shape[0],1),dtype=x.dtype)
+    for i in range(x.shape[0]):
+        max_x[i,0] = np.max(<a id="change">x[i,:]</a>)
+    e_x = np.exp(x - max_x)
+    return e_x / e_x.sum(axis=1).reshape((-1, 1)) &#47&#47 Alternative of keepdims=True for Numba compatibility
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/manassharma07/crysx_nn/commit/c0fedc7df84ead8c1e3f2234f572aa8f25a8e017#diff-c701411ed12fc25fdab6b7c0621c527a4ad0ec8fa642a3e161d28f9d088dea89L35' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 14618941</div><div id='project'> Project Name: manassharma07/crysx_nn</div><div id='commit'> Commit Name: c0fedc7df84ead8c1e3f2234f572aa8f25a8e017</div><div id='time'> Time: 2022-01-14</div><div id='author'> Author: mikeatthetop@gmail.com</div><div id='file'> File Name: crysx_nn/activation.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: Softmax(1)</div><div id='n_method'> N Method Name: Softmax(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: crysx_nn/activation.py</div><div id='n_file'> N File Name: crysx_nn/activation.py</div><div id='m_start'> M Start Line: 46</div><div id='m_end'> M End Line: 46</div><div id='n_start'> N Start Line: 53</div><div id='n_end'> N End Line: 56</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            sim_matrix = sim_matrix / torch.einsum(&quotil,ju-&gt;ijlu&quot, z1_abs, z2_abs)
+
+        sim_matrix = torch.amax(sim_matrix, dim=(2, 3))  &#47&#47 [batch_size, batch_size]
+        sim_matrix = <a id="change">torch.exp(</a>sim_matrix<a id="change"> / </a>self.tau<a id="change">)</a>  &#47&#47 [batch_size, batch_size, num_conformers, num_conformers]
+        pos_sim = torch.diagonal(sim_matrix)  &#47&#47 [batch_size]
+
+        loss = pos_sim / (sim_matrix.sum(dim=1) - pos_sim)</code></pre><h3>After Change</h3><pre><code class='java'>
+        z2 = z2.view(batch_size, -1, metric_dim)  &#47&#47 [batch_size, num_conformers, metric_dim]
+
+        z1 = z1[:,:,None,:]  &#47&#47 [batch_size, num_conformers, num_conformers, metric_dim]
+        z2 = <a id="change">z2[:,None,:,:]</a>  &#47&#47 [batch_size, num_conformers, num_conformers, metric_dim]
+        loss = F.mse_loss(z1,z2)
+
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/hannesstark/3dinfomax/commit/075313255ed2d1cdb5b286ee8f8dade5b9d42c2a#diff-55a3bd64c39f25290e7e11ba397c450880c4aab081e0c8ab2bcfecd724bbab0aL769' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 14618938</div><div id='project'> Project Name: hannesstark/3dinfomax</div><div id='commit'> Commit Name: 075313255ed2d1cdb5b286ee8f8dade5b9d42c2a</div><div id='time'> Time: 2021-07-30</div><div id='author'> Author: hannes.staerk@gmail.com</div><div id='file'> File Name: commons/losses.py</div><div id='m_class'> M Class Name: NTXentMaximumSimilarity</div><div id='n_method'> N Class Name: NTXentMaximumSimilarity</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: _Loss</div><div id='n_parent_class'> N Parent Class: _Loss</div><div id='m_file'> M File Name: commons/losses.py</div><div id='n_file'> N File Name: commons/losses.py</div><div id='m_start'> M Start Line: 776</div><div id='m_end'> M End Line: 791</div><div id='n_start'> N Start Line: 776</div><div id='n_end'> N End Line: 781</div><BR>

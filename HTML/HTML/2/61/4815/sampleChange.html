@@ -1,0 +1,39 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    pad = (ksize - 1) // 2
+
+    feat_in = Func.pad(feat_in, (pad, pad, pad, pad), mode="replicate")
+    feat_in = <a id="change">feat_in.unfold(2, ksize, 1).unfold(3</a>, <a id="change">ksize</a>, <a id="change">1</a><a id="change">)</a>
+    feat_in = feat_in.permute(0, 2, 3, 1, 5, 4).reshape(N, H, W, channels, -1)
+
+    kernel1 = kernel1.permute(0, 2, 3, 1).reshape(N, H, W, channels, ksize, 1)
+    kernel2 = kernel2.permute(0, 2, 3, 1).reshape(N, H, W, channels, 1, ksize)
+    kernel = <a id="change">torch.matmul(kernel1.contiguous()</a>, <a id="change">kernel2.contiguous()</a><a id="change">)</a>
+    kernel = <a id="change">kernel.permute(0, 1, 2, 3, 5, 4).reshape(</a>N, H, W, channels, <a id="change">-1</a><a id="change">)</a>
+
+    feat_out = torch.sum(torch.mul(feat_in.contiguous(), kernel.contiguous()), -1)
+    feat_out<a id="change"> = feat_out.permute(0, 3, 1, 2).contiguous()</a>
+
+    return feat_out
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    pad = (ksize - 1) // 2
+
+    feat_in = Func.pad(feat_in, (0, 0, pad, pad), mode="replicate")
+    feat_in = <a id="change">feat_in.unfold(2</a>, <a id="change">ksize</a>, <a id="change">1</a><a id="change">)</a>
+    feat_in = feat_in.permute(0, 2, 3, 1, 4).reshape(N, H, W, channels, -1)
+
+    kernel1 = kernel1.permute(0, 2, 3, 1).reshape(N, H, W, channels, ksize)
+    feat_in = <a id="change">torch.sum(</a><a id="change">torch.mul(feat_in.contiguous()</a>, <a id="change">kernel1.contiguous()</a><a id="change">)</a>, <a id="change">-1</a><a id="change">)</a>
+    feat_in<a id="change"> = feat_in.permute(0, 3, 1, 2).contiguous()</a>
+
+    feat_in = <a id="change">Func.pad(</a>feat_in, (pad<a id="change">, pad, 0, 0</a>)<a id="change">, mode="replicate")</a>
+    feat_in<a id="change"> = </a><a id="change">feat_in.unfold(3</a>, <a id="change">ksize</a>, <a id="change">1</a><a id="change">)</a>
+    feat_in<a id="change"> = </a><a id="change">feat_in.permute(0, 2, 3, 1, 4).reshape(</a>N, H, W, channels, <a id="change">-1</a><a id="change">)</a>
+    kernel2 = kernel2.permute(0, 2, 3, 1).reshape(N, H, W, channels, ksize)
+    feat_in = torch.sum(torch.mul(feat_in.contiguous(), kernel1.contiguous()), -1)
+    feat_out<a id="change"> = </a><a id="change">feat_in.permute(0, 3, 1, 2).contiguous()</a>
+
+    return feat_out
+</code></pre>

@@ -1,0 +1,32 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+        &#47&#47 Memory querying and responding for visual features
+
+        dummy_memory_matrix = <a id="change">self.memory_matrix.unsqueeze(0).expand(</a>att_feats.size(0), self.memory_matrix.size(0), self.memory_matrix.size(1)<a id="change">)</a>
+        responses = self.cmn(att_feats, dummy_memory_matrix, dummy_memory_matrix)
+
+        max_num_protype = max((labels[:,-1]*3 + labels[:,:-1].sum(-1))) * self.num_prototype
+        query_matrix = self.memory_matrix.new_zeros(att_feats.size(0), max_num_protype, self.memory_matrix.shape[-1])</code></pre><h3>After Change</h3><pre><code class='java'>
+        query_matrix = self.memory_matrix.new_zeros(att_feats.size(0), max_num_protype, self.memory_matrix.shape[-1])
+        cmn_masks = self.memory_matrix.new_zeros(query_matrix.shape[0], att_feats.size(1), max_num_protype)
+
+        <a id="change">for </a>i in <a id="change">range(</a>att_feats.size(0)<a id="change">)</a><a id="change">:
+            </a>cur_query_matrix = []
+            &#47&#47print(labels[i])
+            for j in range(len(labels[i])):
+                if labels[i, j] == 1:
+                    if j != len(labels[i])-1:
+                        cur_query_matrix.extend(self.memory_matrix[j*self.num_prototype:(j+1)*self.num_prototype, :])
+                    else:
+                        cur_query_matrix.extend(self.memory_matrix[j * self.num_prototype:, :])
+
+            cur_query_matrix = torch.stack(cur_query_matrix, 0)
+            &#47&#47print(&quot111&quot,query_matrix[i, :cur_query_matrix.shape[0], :].shape, cur_query_matrix.shape)
+            <a id="change">query_matrix[i, :cur_query_matrix.shape[0], :]</a> = cur_query_matrix
+            <a id="change">cmn_masks</a>[i, :, :cur_query_matrix.shape[0]] = 1
+
+        responses = self.cmn(att_feats, query_matrix, query_matrix, cmn_masks)
+</code></pre>

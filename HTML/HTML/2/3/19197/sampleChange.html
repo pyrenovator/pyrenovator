@@ -1,0 +1,18 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    &#47&#47 this takes a ret index to an inp index, indexing 0 on the reduced strides
+    &#47&#47 if it&quots not a reduce, this should be a NOOP
+    reduce_shape = (bufs[0][1].shape, ret.shape) if reduce_shape is None else reduce_shape
+    view = View(<a id="change">reduce_shape[1]</a>, strides_for_shape(reduce_shape[0]))
+    loop : List[Tuple[str, str]] = []
+    if reduce_shape[1] != reduce_shape[0]:   &#47&#47 this is a reduce
+      &#47&#47 reverse operation of expand, this validates inputs</code></pre><h3>After Change</h3><pre><code class='java'>
+    red = prod([s for s,n in zip(*reduce_shape) if n == 1])
+
+    &#47&#47 if it&quots a partial reduce, assert last non reduced axis is before the first reduced axis
+    if red &gt; 1 and <a id="change">prod(</a>ret.shape<a id="change">)</a> != 1: assert max([i for i,(s,n) in enumerate(zip(*reduce_shape)) if s == n and n != 1]) &lt; min([i for i,(s,n) in enumerate(zip(*reduce_shape)) if s != 1 and n == 1])
+
+    kernel_name = "reduce" if red &gt; 1 else "elementwise"
+    views = {name:buf.contiguous_view_constant_fold(name) for name, buf in bufs}</code></pre>

@@ -1,0 +1,37 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        key_flat = key.view(batch, key.shape[1], -1).transpose(1, 2)
+        query = reshape(self.query(query_flat))
+        key = reshape(self.key(key_flat)).transpose(2, 3)
+        value<a id="change"> = </a>reshape(self.value(key_flat))
+
+        attn = torch.matmul(query, key) / sqrt(self.dim_head)
+        mask, start_mask = causal_mask(height * width)
+        mask = mask.type_as(query)
+        start_mask = start_mask.type_as(query)
+        attn = attn.masked_fill(mask == 0, -1e4)
+        attn = torch.softmax(attn, 3) * start_mask
+        attn = self.dropout(attn)
+
+        out = attn @ value
+        out = out.transpose(1, 2).reshape(
+            batch, height, width, self.dim_head * self.n_head
+        )
+        out = out.permute(0, 3, 1, 2)
+
+        <a id="change">return </a>out
+
+class PixelBlock(HelperModule):
+    def build(</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        attn = attn.masked_fill(mask == 0, -1e4)
+        attn = torch.softmax(attn, dim=3) * start_mask
+        attn = <a id="change">self.drop(</a>attn<a id="change">)</a>
+
+        y<a id="change"> = </a>(attn @ v).reshape(batch_size, height, width, self.head_dim*self.nb_heads).permute(0, 3, 1, 2)
+        <a id="change">return </a>y
+
+class PixelBlock(nn.Module):
+    def __init__(self, in_channel, channel, kernel_size, nb_res_blocks, dropout=0.1, condition_dim=0):</code></pre>

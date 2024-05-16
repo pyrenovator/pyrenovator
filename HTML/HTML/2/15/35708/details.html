@@ -1,0 +1,128 @@
+<html><h3>Pattern ID :35708
+</h3><img src='101619260.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        model_list_json = self.list_model_api(model_name)
+        if model_list_json is not None and model_list_json != "":
+            model_storage_url = model_list_json.get("model_url", "")
+            <a id="change">if model_storage_url != ""</a>:
+                local_model_package = self.pull_model_from_s3(model_storage_url, model_name)
+                if local_model_package != "":
+                    model_dir<a id="change"> = </a><a id="change">os.path.join(</a>ClientConstants.get_model_dir(), model_name<a id="change">)</a>
+                    ClientConstants.unzip_file(local_model_package, model_dir)
+                    if os.path.exists(model_dir):
+                        return True
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            return False
+
+        result = True
+        <a id="change">for </a>model in model_query_result.model_list<a id="change">:
+            </a>model_storage_url = model.model_url
+            query_model_name = model.model_name
+            <a id="change">if query_model_name != model_name</a>:
+                continue
+            <a id="change">if </a>model_storage_url is None or <a id="change">model_storage_url == ""</a>:
+                continue
+            local_model_package = self.pull_model_from_s3(model_storage_url, model_name)
+            <a id="change">if local_model_package == ""</a>:
+                result<a id="change"> = </a>False
+                print("Failed to pull model name {}".format(query_model_name))
+
+        return result</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 12</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/fedml-ai/fedml/commit/f8571c7e58ff079b7efa375e28d59f1e49c07b8f#diff-6175f532ef93361717402dc5f52476b67f294f94743cf41104ba1aa4291644d1L189' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 101619260</div><div id='project'> Project Name: fedml-ai/fedml</div><div id='commit'> Commit Name: f8571c7e58ff079b7efa375e28d59f1e49c07b8f</div><div id='time'> Time: 2023-01-07</div><div id='author'> Author: alex.gpt.llm@gmail.com</div><div id='file'> File Name: python/fedml/cli/model_deployment/device_model_cards.py</div><div id='m_class'> M Class Name: FedMLModelCards</div><div id='n_method'> N Class Name: FedMLModelCards</div><div id='m_method'> M Method Name: pull_model(4)</div><div id='n_method'> N Method Name: pull_model(2)</div><div id='m_parent_class'> M Parent Class: Singleton</div><div id='n_parent_class'> N Parent Class: Singleton</div><div id='m_file'> M File Name: python/fedml/cli/model_deployment/device_model_cards.py</div><div id='n_file'> N File Name: python/fedml/cli/model_deployment/device_model_cards.py</div><div id='m_start'> M Start Line: 189</div><div id='m_end'> M End Line: 200</div><div id='n_start'> N Start Line: 221</div><div id='n_end'> N End Line: 239</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+        &#47&#47 App Owner can decide which checkpoint to load (from existing output folder or from base checkpoint)
+        tasks = []
+        <a id="change">if model == "deepgrow"</a> or model == "all":
+            output_dir = os.path.join(self.model_dir, f"deepgrow_{name}")
+
+            load_path<a id="change"> = </a><a id="change">os.path.join(</a>output_dir, "model.pt"<a id="change">)</a>
+            load_path = load_path if os.path.exists(load_path) else os.path.join(self.model_dir, "deepgrow.pt")
+            logger.info(f"Using existing pre-trained weights: {load_path}")
+
+            tasks.append(</code></pre><h3>After Change</h3><pre><code class='java'>
+        logger.info(f"Selected models for training: {models}")
+
+        tasks = []
+        <a id="change">for </a>model in models<a id="change">:
+            </a>logger.info(f"Creating Training task for model: {model}")
+
+            output_dir = os.path.join(self.model_dir, f"{model}_{name}")
+            data = self.data[model]
+
+            network = data["network"]
+            load_path = os.path.join(output_dir, "model.pt")
+            load_path = load_path if os.path.exists(load_path) else data["path"][0]
+            logger.info(f"Using existing pre-trained weights: {load_path}")
+
+            &#47&#47 Update/Publish latest model for infer/active learning use
+            final_model = data["path"][1]
+            if os.path.exists(final_model) or os.path.islink(final_model):
+                os.unlink(final_model)
+            os.symlink(
+                os.path.join(os.path.basename(output_dir), "model.pt"),
+                final_model,
+                dir_fd=os.open(self.model_dir, os.O_RDONLY),
+            )
+
+            <a id="change">if model == "deepgrow_3d"</a>:
+                task = TrainDeepgrow(
+                    dimension=3,
+                    roi_size=(128, 192, 192),
+                    model_size=(128, 192, 192),
+                    max_train_interactions=15,
+                    max_val_interactions=20,
+                    output_dir=output_dir,
+                    data_list=self.datastore().datalist(),
+                    network=network,
+                    device=device,
+                    lr=lr,
+                    val_split=val_split,
+                    load_path=load_path,
+                )
+            elif <a id="change">model == "deepgrow_2d"</a>:
+                &#47&#47 TODO:: Flatten the dataset and batch it instead of picking random slice id
+                task = TrainDeepgrow(
+                    dimension=2,
+                    roi_size=(256, 256),
+                    model_size=(256, 256),
+                    max_train_interactions=15,
+                    max_val_interactions=5,
+                    output_dir=output_dir,
+                    data_list=self.datastore().datalist(),
+                    network=network,
+                    device=device,
+                    lr=lr,
+                    val_split=val_split,
+                    load_path=load_path,
+                )
+            elif <a id="change">model == "segmentation_spleen"</a>:
+                task<a id="change"> = </a>TrainSpleen(
+                    output_dir=output_dir,
+                    data_list=self.datastore().datalist(),
+                    network=network,</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/project-monai/monailabel/commit/f23d97efde96d05b3354d40d85b20b1d8a566de8#diff-2a05f462e4bdf417db2e7a2233bfdc9a13aa159d90f00b8f0ac39a210c523aa1L46' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 101619258</div><div id='project'> Project Name: project-monai/monailabel</div><div id='commit'> Commit Name: f23d97efde96d05b3354d40d85b20b1d8a566de8</div><div id='time'> Time: 2021-05-17</div><div id='author'> Author: sachidanand.alle@gmail.com</div><div id='file'> File Name: sample-apps/deepgrow/main.py</div><div id='m_class'> M Class Name: MyApp</div><div id='n_method'> N Class Name: MyApp</div><div id='m_method'> M Method Name: train(2)</div><div id='n_method'> N Method Name: train(2)</div><div id='m_parent_class'> M Parent Class: MONAILabelApp</div><div id='n_parent_class'> N Parent Class: MONAILabelApp</div><div id='m_file'> M File Name: sample-apps/deepgrow/main.py</div><div id='n_file'> N File Name: sample-apps/deepgrow/main.py</div><div id='m_start'> M Start Line: 48</div><div id='m_end'> M End Line: 99</div><div id='n_start'> N Start Line: 88</div><div id='n_end'> N End Line: 168</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            model_storage_url = model_list_json.get("model_url", "")
+            if model_storage_url != "":
+                local_model_package = self.pull_model_from_s3(model_storage_url, model_name)
+                <a id="change">if local_model_package != ""</a>:
+                    model_dir<a id="change"> = </a><a id="change">os.path.join(</a>ClientConstants.get_model_dir(), model_name<a id="change">)</a>
+                    ClientConstants.unzip_file(local_model_package, model_dir)
+                    if os.path.exists(model_dir):
+                        return True
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            return False
+
+        result = True
+        <a id="change">for </a>model in model_query_result.model_list<a id="change">:
+            </a>model_storage_url = model.model_url
+            query_model_name = model.model_name
+            <a id="change">if query_model_name != model_name</a>:
+                continue
+            <a id="change">if </a>model_storage_url is None or <a id="change">model_storage_url == ""</a>:
+                continue
+            local_model_package = self.pull_model_from_s3(model_storage_url, model_name)
+            <a id="change">if local_model_package == ""</a>:
+                result<a id="change"> = </a>False
+                print("Failed to pull model name {}".format(query_model_name))
+
+        return result</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/fedml-ai/fedml/commit/0c7b40c6966035386f402c76fce7c521ed213251#diff-6175f532ef93361717402dc5f52476b67f294f94743cf41104ba1aa4291644d1L188' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 101619256</div><div id='project'> Project Name: fedml-ai/fedml</div><div id='commit'> Commit Name: 0c7b40c6966035386f402c76fce7c521ed213251</div><div id='time'> Time: 2023-01-07</div><div id='author'> Author: alexliang.kh@gmail.com</div><div id='file'> File Name: python/fedml/cli/model_deployment/device_model_cards.py</div><div id='m_class'> M Class Name: FedMLModelCards</div><div id='n_method'> N Class Name: FedMLModelCards</div><div id='m_method'> M Method Name: pull_model(4)</div><div id='n_method'> N Method Name: pull_model(2)</div><div id='m_parent_class'> M Parent Class: Singleton</div><div id='n_parent_class'> N Parent Class: Singleton</div><div id='m_file'> M File Name: python/fedml/cli/model_deployment/device_model_cards.py</div><div id='n_file'> N File Name: python/fedml/cli/model_deployment/device_model_cards.py</div><div id='m_start'> M Start Line: 189</div><div id='m_end'> M End Line: 200</div><div id='n_start'> N Start Line: 221</div><div id='n_end'> N End Line: 239</div><BR>

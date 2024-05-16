@@ -1,0 +1,90 @@
+<html><h3>Pattern ID :21405
+</h3><img src='68210745.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+def sweep_n(ntensor, niter, dtype):
+    print("n, dtype, ntensor, gflop, runtime, tflop/s")
+    for n in [16, 32, 64, 128, 256, 512, 1024, 2048, 4096]:
+        nt_a<a id="change"> = </a>torch.nested_tensor(
+            <a id="change">[torch.randn(n, n).to(dtype).cuda() for t in range(ntensor)]</a>
+        )
+        nt_b = torch.nested_tensor(
+            [torch.randn(n, n).to(dtype).cuda() for t in range(ntensor)]
+        )</code></pre><h3>After Change</h3><pre><code class='java'>
+        nt_a_size = torch.ops.aten._nested_tensor_size(nt_a)
+        lengths = nt_a_size[:, 1]
+        print(",".join(map(str, [ntensor, dtype, lengths.min().item(),
+              lengths.float().mean().item(), <a id="change">lengths.max().item()</a>, runtime])))
+
+
+if __name__ == "__main__":</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/pytorch/pytorch/commit/943b20e7ae290d8e71f877eb700f197a9df56cbe#diff-1a0c7c4824948dc09f17a85687fcb71774f4b0084b825189bb69aa3d87804a03L22' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 68210745</div><div id='project'> Project Name: pytorch/pytorch</div><div id='commit'> Commit Name: 943b20e7ae290d8e71f877eb700f197a9df56cbe</div><div id='time'> Time: 2022-11-02</div><div id='author'> Author: cpuhrsch@fb.com</div><div id='file'> File Name: benchmarks/nested/nested_bmm_bench.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: sweep_n(2)</div><div id='n_method'> N Method Name: sweep_n(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: benchmarks/nested/nested_bmm_bench.py</div><div id='n_file'> N File Name: benchmarks/nested/nested_bmm_bench.py</div><div id='m_start'> M Start Line: 22</div><div id='m_end'> M End Line: 33</div><div id='n_start'> N Start Line: 24</div><div id='n_end'> N End Line: 40</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+		zero_grad_params(self.output_params)
+		reservoir.forward = self.eprop._decorate_hidden_forward(reservoir.forward, reservoir.name)
+		output_layer.forward = self.eprop._decorate_forward(output_layer.forward, output_layer.name)
+		for <a id="change">_</a> in progress_bar:
+			x_pred = []
+			x_pred.append(self.true_time_series[:, 0, :].clone())
+			forward_tensor = self.true_time_series[:, 0, :].clone().to(reservoir.device)
+			hh = None
+			for t in range(1, self.true_time_series.shape[-2]):
+				forward_tensor, hh = unpack_out_hh(reservoir(forward_tensor, hh, t=t-1))
+				forward_tensor, _ = unpack_out_hh(output_layer(forward_tensor, None, t=t-1))
+				x_pred.append(forward_tensor)
+				&#47&#47 eligibility_traces = dy_dw_local(y=forward_tensor, params=self.params)
+				&#47&#47 self.eprop.eligibility_traces = eligibility_traces
+				&#47&#47 batch_loss = self.eprop.apply_criterion(forward_tensor, self.true_time_series[:, t].to(forward_tensor.device))
+				&#47&#47 learning_signals = self.compute_learning_signals(loss_at_t)
+				&#47&#47 errors = self.eprop.compute_errors(forward_tensor, self.true_time_series[:, t])
+				&#47&#47 learning_signals = self.eprop.compute_learning_signals(errors)
+				&#47&#47 self.eprop.update_grads(errors, batch_loss)
+				forward_tensor.detach_()
+				hh = recursive_detach(hh)
+				&#47&#47 if t % self.update_each == 0:
+				&#47&#47 	self.eprop._make_optim_step()
+			self.eprop._make_optim_step()
+			x_pred<a id="change"> = </a>torch.stack(<a id="change">[t.cpu() for t in x_pred]</a>, dim=1)
+			pvar = PVarianceLoss()(x_pred, self.true_time_series.to(x_pred.device))
+			mse = torch.nn.MSELoss()(x_pred, self.true_time_series.to(x_pred.device))
+			progress_bar.set_postfix({"pvar": to_numpy(pvar).item(), "MSE": to_numpy(mse).item()})</code></pre><h3>After Change</h3><pre><code class='java'>
+		for _ in range(100):
+			val_x_pred = self.model.get_prediction_trace(inputs)
+			pvar = PVarianceLoss()(val_x_pred, self.raw_time_series.to(val_x_pred.device))
+			val_pvars.append(<a id="change">to_numpy(pvar).item()</a>)
+		print(f"Validation PVariance: {np.mean(val_pvars):.3f}")
+		return x_pred, self.raw_time_series
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/neurotorch/neurotorch/commit/da8d4065502c761ccf6e28e47dd189e3b5488140#diff-bfbe6bfd7f09fee9a898ae4ce6ce338f6bfc05e7db28469ba6540dfae09a766dL109' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 68210746</div><div id='project'> Project Name: neurotorch/neurotorch</div><div id='commit'> Commit Name: da8d4065502c761ccf6e28e47dd189e3b5488140</div><div id='time'> Time: 2023-01-31</div><div id='author'> Author: 50332514+JeremieGince@users.noreply.github.com</div><div id='file'> File Name: src/neurotorch/learning_algorithms/debug_e_prop_v5.py</div><div id='m_class'> M Class Name: SimplifiedEpropFinal</div><div id='n_method'> N Class Name: SimplifiedEpropFinal</div><div id='m_method'> M Method Name: train(4)</div><div id='n_method'> N Method Name: train(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/neurotorch/learning_algorithms/debug_e_prop_v5.py</div><div id='n_file'> N File Name: src/neurotorch/learning_algorithms/debug_e_prop_v5.py</div><div id='m_start'> M Start Line: 120</div><div id='m_end'> M End Line: 153</div><div id='n_start'> N Start Line: 115</div><div id='n_end'> N End Line: 144</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+def sweep_n(ntensor, niter, dtype):
+    print("n, dtype, ntensor, gflop, runtime, tflop/s")
+    for <a id="change">n</a> in [16, 32, 64, 128, 256, 512, 1024, 2048, 4096]:
+        nt_a<a id="change"> = </a>torch.nested_tensor(
+            <a id="change">[torch.randn(n, n).to(dtype).cuda() for t in range(ntensor)]</a>
+        )
+        nt_b = torch.nested_tensor(
+            [torch.randn(n, n).to(dtype).cuda() for t in range(ntensor)]
+        )</code></pre><h3>After Change</h3><pre><code class='java'>
+        runtime = bench(nt_a, nt_b, niter)
+        nt_a_size = torch.ops.aten._nested_tensor_size(nt_a)
+        lengths = nt_a_size[:, 1]
+        print(",".join(map(str, [ntensor, dtype, <a id="change">lengths.min().item()</a>,
+              lengths.float().mean().item(), lengths.max().item(), runtime])))
+
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/pytorch/pytorch/commit/943b20e7ae290d8e71f877eb700f197a9df56cbe#diff-1a0c7c4824948dc09f17a85687fcb71774f4b0084b825189bb69aa3d87804a03L22' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 68210747</div><div id='project'> Project Name: pytorch/pytorch</div><div id='commit'> Commit Name: 943b20e7ae290d8e71f877eb700f197a9df56cbe</div><div id='time'> Time: 2022-11-02</div><div id='author'> Author: cpuhrsch@fb.com</div><div id='file'> File Name: benchmarks/nested/nested_bmm_bench.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: sweep_n(2)</div><div id='n_method'> N Method Name: sweep_n(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: benchmarks/nested/nested_bmm_bench.py</div><div id='n_file'> N File Name: benchmarks/nested/nested_bmm_bench.py</div><div id='m_start'> M Start Line: 22</div><div id='m_end'> M End Line: 33</div><div id='n_start'> N Start Line: 24</div><div id='n_end'> N End Line: 40</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        c_terms  = preds_[:, (torch.ones(*N_mask.shape)-N_mask-CA_mask).bool() ]
+    &#47&#47 compute phis and count lower than 0s
+    phis_count = []
+    for <a id="change">i</a> in range(preds.shape[0]):
+        &#47&#47 calculate phi angles
+        phis<a id="change"> = </a><a id="change">[ get_dihedral_torch(c_terms[i,j-1], n_terms[i,j], c_alphas[i,j], c_terms[i,j]) \
+                 for j in range(1, c_alphas.shape[-1]) ]</a> &#47&#47 phi not allowed for first AA -&gt; [1:] 
+
+        phis_count.append( (np.array(phis)&lt;0).sum() )
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    else:
+        c_terms  = preds_[:, (torch.ones(*N_mask.shape)-N_mask-CA_mask).squeeze().bool() ]
+    &#47&#47 compute phis and count lower than 0s
+    phis_count = [ <a id="change">(get_dihedral_torch(c_terms[i,:-1], n_terms[i,:], c_alphas[i,:], c_terms[i,:])&lt;0).sum().item()</a> \
+                   for i in range(preds.shape[0])]
+
+    idx = np.argmax(phis_count)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lucidrains/alphafold2/commit/45a1bffd138fc5bddf28c382a492c539f0a4bc0b#diff-f9b2e05be1f80257f9a80ec7cc1290e3337a54fcc62aeee31b23a4cb827f12efL417' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 68210749</div><div id='project'> Project Name: lucidrains/alphafold2</div><div id='commit'> Commit Name: 45a1bffd138fc5bddf28c382a492c539f0a4bc0b</div><div id='time'> Time: 2021-02-07</div><div id='author'> Author: ericalcaide1@gmail.com</div><div id='file'> File Name: alphafold2_pytorch/utils.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: fix_mirrors_torch(6)</div><div id='n_method'> N Method Name: fix_mirrors_torch(6)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: alphafold2_pytorch/utils.py</div><div id='n_file'> N File Name: alphafold2_pytorch/utils.py</div><div id='m_start'> M Start Line: 431</div><div id='m_end'> M End Line: 447</div><div id='n_start'> N Start Line: 444</div><div id='n_end'> N End Line: 453</div><BR>

@@ -1,0 +1,68 @@
+<html><h3>Pattern ID :41916
+</h3><img src='117468115.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    def get_codebook_entry(self, indices, shape):
+        &#47&#47 shape specifying (batch, height, width, channel)
+        &#47&#47 TODO: check for more easy handling with nn.Embedding
+        min_encodings = <a id="change">torch.zeros(indices.shape[0], self.n_e).to(</a>indices<a id="change">)</a>
+        min_encodings.scatter_(1, indices[:,None], 1)
+
+        &#47&#47 get quantized latent vectors
+        z_q = torch.matmul(min_encodings.float(), self.embedding.weight)</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    def get_codebook_entry(self, indices, shape):
+        &#47&#47 shape specifying (batch, height, width, channel)
+        <a id="change">if </a>self.remap is not None:
+            indices = indices.reshape(shape[0],-1) &#47&#47 add batch axis
+            indices = self.unmap_to_all(indices)
+            indices<a id="change"> = </a><a id="change">indices.reshape(-1</a><a id="change">)</a> &#47&#47 flatten again
+
+        &#47&#47 get quantized latent vectors
+        z_q = self.embedding(indices)</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/tgisaturday/dalle-lightning/commit/d921f1da0c5eb11dac01cd1facad821547c250d4#diff-39f10457411109520640e39f475d0ec07093eef15589754653fc525d4e028d99L87' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 117468115</div><div id='project'> Project Name: tgisaturday/dalle-lightning</div><div id='commit'> Commit Name: d921f1da0c5eb11dac01cd1facad821547c250d4</div><div id='time'> Time: 2021-07-07</div><div id='author'> Author: jamesk1228@gmail.com</div><div id='file'> File Name: taming/modules/vqvae/quantize.py</div><div id='m_class'> M Class Name: VectorQuantizer</div><div id='n_method'> N Class Name: VectorQuantizer</div><div id='m_method'> M Method Name: get_codebook_entry(3)</div><div id='n_method'> N Method Name: get_codebook_entry(3)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: taming/modules/vqvae/quantize.py</div><div id='n_file'> N File Name: taming/modules/vqvae/quantize.py</div><div id='m_start'> M Start Line: 87</div><div id='m_end'> M End Line: 91</div><div id='n_start'> N Start Line: 311</div><div id='n_end'> N End Line: 317</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                attention_mask = attention_mask.to(self.device)
+                token_type_ids = token_type_ids.to(self.device)
+                label_vectors = label_vectors.to(self.device)
+                model_output = <a id="change">self.model(token_ids, attention_mask, token_type_ids).to(</a>self.device<a id="change">)</a>
+
+                if self.configs[&quotuse_multilabel_categorical_cross_entropy&quot]:
+                    model_output = model_output.reshape(batch_size * self.data_manager.num_labels * 2, -1)
+                    label_vectors = label_vectors.reshape(batch_size * self.data_manager.num_labels * 2, -1)</code></pre><h3>After Change</h3><pre><code class='java'>
+                self.optimizer.zero_grad()
+                logits, _ = self.model(token_ids, attention_mask, token_type_ids)
+
+                <a id="change">if </a>self.configs[&quotuse_multilabel_categorical_cross_entropy&quot]:
+                    if self.configs[&quotmodel_type&quot] == &quotbp&quot:
+                        num_labels = self.num_labels * 2
+                    else:
+                        num_labels = self.num_labels
+                    model_output<a id="change"> = </a><a id="change">logits.reshape(</a>batch_size * num_labels, <a id="change">-1</a><a id="change">)</a>
+                    label_vectors = label_vectors.reshape(batch_size * num_labels, -1)
+                    loss = self.loss_function(model_output, label_vectors)
+                else:
+                    if self.configs[&quotmodel_type&quot] == &quotbp&quot:</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/stanleylsx/entity_extractor_by_binary_tagging/commit/eb5b1ff92de74222cda1b2e33c046b03b036c451#diff-f78923b490affa9c24b04d4641bd9a4dd31198ebe9bc67b6630776cfac13ed20L43' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 117468116</div><div id='project'> Project Name: stanleylsx/entity_extractor_by_binary_tagging</div><div id='commit'> Commit Name: eb5b1ff92de74222cda1b2e33c046b03b036c451</div><div id='time'> Time: 2022-06-08</div><div id='author'> Author: gzlishouxian@gmail.com</div><div id='file'> File Name: engines/train.py</div><div id='m_class'> M Class Name: Train</div><div id='n_method'> N Class Name: Train</div><div id='m_method'> M Method Name: train(1)</div><div id='n_method'> N Method Name: train(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: engines/train.py</div><div id='n_file'> N File Name: engines/train.py</div><div id='m_start'> M Start Line: 72</div><div id='m_end'> M End Line: 90</div><div id='n_start'> N Start Line: 73</div><div id='n_end'> N End Line: 99</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        num_float_field = float_fields.shape[-1]
+        &#47&#47 [batch_size, max_item_length, num_float_field]
+        index = (
+            <a id="change">torch.arange(0, num_float_field)
+            .unsqueeze(0)
+            .expand_as(float_fields)
+            .long()
+            .to(</a>self.device<a id="change">)
+        )</a>
+
+        &#47&#47 [batch_size, max_item_length, num_float_field, embed_dim]
+        float_embedding = self.float_embedding_table[type](index)
+        float_embedding = torch.mul(float_embedding, float_fields.unsqueeze(-1))</code></pre><h3>After Change</h3><pre><code class='java'>
+        if float_fields is None:
+            return None
+        
+        <a id="change">if </a>type == &quotitem&quot:
+            embedding_shape = float_fields.shape[:-1] + (-1,)
+            float_fields = <a id="change">float_fields.reshape(-1</a>, float_fields.shape[-2], float_fields.shape[-1]<a id="change">)</a>
+            float_embedding = self.float_embedding_table[type](float_fields)
+            float_embedding<a id="change"> = </a>float_embedding.view(embedding_shape)
+        else:
+            float_embedding = self.float_embedding_table[type](float_fields)
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/rucaibox/recbole/commit/3ea75a6e4e9102223ea8fb80f9880b2bb423fbf1#diff-920f443ada6a180c00bfd136bd4387b628cfbd71a8fefc670df670214fb74947L903' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 117468117</div><div id='project'> Project Name: rucaibox/recbole</div><div id='commit'> Commit Name: 3ea75a6e4e9102223ea8fb80f9880b2bb423fbf1</div><div id='time'> Time: 2022-07-16</div><div id='author'> Author: 1204216974@qq.com</div><div id='file'> File Name: recbole/model/layers.py</div><div id='m_class'> M Class Name: ContextSeqEmbAbstractLayer</div><div id='n_method'> N Class Name: ContextSeqEmbAbstractLayer</div><div id='m_method'> M Method Name: embed_float_fields(4)</div><div id='n_method'> N Method Name: embed_float_fields(4)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: recbole/model/layers.py</div><div id='n_file'> N File Name: recbole/model/layers.py</div><div id='m_start'> M Start Line: 917</div><div id='m_end'> M End Line: 932</div><div id='n_start'> N Start Line: 955</div><div id='n_end'> N End Line: 966</div><BR>

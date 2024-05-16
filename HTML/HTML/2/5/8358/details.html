@@ -1,0 +1,123 @@
+<html><h3>Pattern ID :8358
+</h3><img src='29251391.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                    grad = grad.add(p, alpha=group[&quotweight_decay&quot])
+
+                square_avg.mul_(rho).addcmul_(grad, grad, value=1 - rho)
+                std<a id="change"> = </a>square_avg.add(eps).sqrt_()
+                delta = acc_delta.add(eps).sqrt_().div_(std).mul_(grad)
+                p.add_(delta, alpha=-group[&quotlr&quot])
+                <a id="change">acc_delta.mul_(rho).addcmul_(</a>delta, delta<a id="change">, value=1 - rho)</a>
+
+        return loss
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        for group in self.param_groups:
+            params_with_grad = []
+            grads = []
+            square_avgs<a id="change"> = </a><a id="change">[]</a>
+            acc_deltas = []
+
+            for p in group[&quotparams&quot]:
+                if p.grad is None:
+                    continue
+                params_with_grad.append(p)
+                if p.grad.is_sparse:
+                    raise RuntimeError(&quotAdadelta does not support sparse gradients&quot)
+                grads.append(p.grad)
+
+                state = self.state[p]
+
+                &#47&#47 Lazy state initialization
+                if len(state) == 0:
+                    state[&quotstep&quot] = 0
+                    state[&quotsquare_avg&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+                    state[&quotacc_delta&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+
+                <a id="change">square_avgs.append(</a>state[&quotsquare_avg&quot]<a id="change">)</a>
+                acc_deltas.append(state[&quotacc_delta&quot])
+
+                lr, rho, eps, weight_decay = group[&quotlr&quot], group[&quotrho&quot], group[&quoteps&quot], group[&quotweight_decay&quot]
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 5</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/pytorch/pytorch/commit/d6fb27ce72f357300abe65c2676f69a5848cb997#diff-1e3b06b7b465b89d72e773ead25aa5346022276d1e553494d03f6063cf71a8a8L51' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 29251391</div><div id='project'> Project Name: pytorch/pytorch</div><div id='commit'> Commit Name: d6fb27ce72f357300abe65c2676f69a5848cb997</div><div id='time'> Time: 2021-01-21</div><div id='author'> Author: wanchaol@users.noreply.github.com</div><div id='file'> File Name: torch/optim/adadelta.py</div><div id='m_class'> M Class Name: Adadelta</div><div id='n_method'> N Class Name: Adadelta</div><div id='m_method'> M Method Name: step(2)</div><div id='n_method'> N Method Name: step(2)</div><div id='m_parent_class'> M Parent Class: Optimizer</div><div id='n_parent_class'> N Parent Class: Optimizer</div><div id='m_file'> M File Name: torch/optim/adadelta.py</div><div id='n_file'> N File Name: torch/optim/adadelta.py</div><div id='m_start'> M Start Line: 51</div><div id='m_end'> M End Line: 78</div><div id='n_start'> N Start Line: 52</div><div id='n_end'> N End Line: 88</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                sign = grad.mul(state[&quotprev&quot]).sign()
+                sign[sign.gt(0)] = etaplus
+                sign[sign.lt(0)] = etaminus
+                sign[sign.eq(0)]<a id="change"> = </a>1
+
+                &#47&#47 update stepsizes with step size updates
+                step_size.mul_(sign).clamp_(step_size_min, step_size_max)
+
+                &#47&#47 for dir&lt;0, dfdx=0
+                &#47&#47 for dir&gt;=0 dfdx=dfdx
+                grad = grad.clone(memory_format=torch.preserve_format)
+                grad[sign.eq(etaminus)] = 0
+
+                &#47&#47 update parameters
+                <a id="change">p.addcmul_(</a>grad.sign(), step_size<a id="change">, value=-1)</a>
+
+                state[&quotprev&quot].copy_(grad)
+
+        return loss</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        for group in self.param_groups:
+            params = []
+            grads<a id="change"> = </a><a id="change">[]</a>
+            prevs = []
+            step_sizes = []
+
+            for p in group[&quotparams&quot]:
+                if p.grad is None:
+                    continue
+                params.append(p)
+                grad = p.grad
+                if grad.is_sparse:
+                    raise RuntimeError(&quotRprop does not support sparse gradients&quot)
+
+                <a id="change">grads.append(</a>grad<a id="change">)</a>
+                state = self.state[p]
+
+                &#47&#47 State initialization
+                if len(state) == 0:</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/pytorch/pytorch/commit/8ef13cf97637a6132c6d7f6e930f3fdcea0e8f94#diff-d28ac924b1493132ce4149376a47335708b23cbfab84e199ec729a0f915f3b34L29' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 29251327</div><div id='project'> Project Name: pytorch/pytorch</div><div id='commit'> Commit Name: 8ef13cf97637a6132c6d7f6e930f3fdcea0e8f94</div><div id='time'> Time: 2021-04-15</div><div id='author'> Author: wanchaol@fb.com</div><div id='file'> File Name: torch/optim/rprop.py</div><div id='m_class'> M Class Name: Rprop</div><div id='n_method'> N Class Name: Rprop</div><div id='m_method'> M Method Name: step(2)</div><div id='n_method'> N Method Name: step(2)</div><div id='m_parent_class'> M Parent Class: Optimizer</div><div id='n_parent_class'> N Parent Class: Optimizer</div><div id='m_file'> M File Name: torch/optim/rprop.py</div><div id='n_file'> N File Name: torch/optim/rprop.py</div><div id='m_start'> M Start Line: 42</div><div id='m_end'> M End Line: 78</div><div id='n_start'> N Start Line: 43</div><div id='n_end'> N End Line: 80</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                state[&quotstep&quot] += 1
+
+                if group[&quotweight_decay&quot] != 0:
+                    grad<a id="change"> = </a>grad.add(p, alpha=group[&quotweight_decay&quot])
+
+                <a id="change">square_avg.mul_(alpha).addcmul_(</a>grad, grad<a id="change">, value=1 - alpha)</a>
+
+                if group[&quotcentered&quot]:
+                    grad_avg = state[&quotgrad_avg&quot]
+                    grad_avg.mul_(alpha).add_(grad, alpha=1 - alpha)</code></pre><h3>After Change</h3><pre><code class='java'>
+        for group in self.param_groups:
+            params_with_grad = []
+            grads = []
+            square_avgs<a id="change"> = </a><a id="change">[]</a>
+            grad_avgs = []
+            momentum_buffer_list = []
+
+            for p in group[&quotparams&quot]:
+                if p.grad is None:
+                    continue
+                params_with_grad.append(p)
+
+                if p.grad.is_sparse:
+                    raise RuntimeError(&quotRMSprop does not support sparse gradients&quot)
+                grads.append(p.grad)
+
+                state = self.state[p]
+
+                &#47&#47 State initialization
+                if len(state) == 0:
+                    state[&quotstep&quot] = 0
+                    state[&quotsquare_avg&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+                    if group[&quotmomentum&quot] &gt; 0:
+                        state[&quotmomentum_buffer&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+                    if group[&quotcentered&quot]:
+                        state[&quotgrad_avg&quot] = torch.zeros_like(p, memory_format=torch.preserve_format)
+
+                <a id="change">square_avgs.append(</a>state[&quotsquare_avg&quot]<a id="change">)</a>
+
+                if group[&quotmomentum&quot] &gt; 0:
+                    momentum_buffer_list.append(state[&quotmomentum_buffer&quot])
+                if group[&quotcentered&quot]:</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/pytorch/pytorch/commit/ce1781d8db7ebe7d58f0a44160fa81b230aecdce#diff-30f6c6a0abd52337b895032577b0e61311f19123662dc69ce67446bf6ee4dfa1L56' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 29251382</div><div id='project'> Project Name: pytorch/pytorch</div><div id='commit'> Commit Name: ce1781d8db7ebe7d58f0a44160fa81b230aecdce</div><div id='time'> Time: 2021-01-21</div><div id='author'> Author: wanchaol@users.noreply.github.com</div><div id='file'> File Name: torch/optim/rmsprop.py</div><div id='m_class'> M Class Name: RMSprop</div><div id='n_method'> N Class Name: RMSprop</div><div id='m_method'> M Method Name: step(2)</div><div id='n_method'> N Method Name: step(2)</div><div id='m_parent_class'> M Parent Class: Optimizer</div><div id='n_parent_class'> N Parent Class: Optimizer</div><div id='m_file'> M File Name: torch/optim/rmsprop.py</div><div id='n_file'> N File Name: torch/optim/rmsprop.py</div><div id='m_start'> M Start Line: 68</div><div id='m_end'> M End Line: 110</div><div id='n_start'> N Start Line: 69</div><div id='n_end'> N End Line: 116</div><BR>

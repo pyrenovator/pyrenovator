@@ -1,0 +1,47 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+    def forward(self, q, r):
+        x = q + self.num_q * r
+        Mvt<a id="change"> = </a>self.Mv.unsqueeze(0)
+
+        <a id="change">p</a> = <a id="change">[]</a>
+        Mv = []
+
+        <a id="change">for </a>qt, xt in zip(q.permute(1, 0), x.permute(1, 0))<a id="change">:
+            </a>kt = self.k_emb_layer(qt)
+            vt = self.v_emb_layer(xt)
+
+            wt = torch.softmax(torch.matmul(kt, self.Mk), dim=-1)
+
+            &#47&#47 Read Process
+            rt<a id="change"> = </a>(wt.unsqueeze(-1) * Mvt).sum(1)
+            ft = torch.tanh(self.f_layer(torch.cat([rt, kt], dim=-1)))
+            pt = torch.sigmoid(self.p_layer(ft)).squeeze()
+
+            &#47&#47 Write Process
+            et = torch.sigmoid(self.e_layer(vt))
+            Mvt = Mvt * (1 - (wt.unsqueeze(-1) * et.unsqueeze(1)))
+            at = torch.tanh(self.a_layer(vt))
+            Mvt<a id="change"> = </a>Mvt + (wt.unsqueeze(-1) * at.unsqueeze(1))
+
+            <a id="change">p.append(</a>pt<a id="change">)</a>
+            Mv.append(Mvt)
+
+        p<a id="change"> = </a><a id="change">torch.stack(p</a><a id="change">, dim=1)</a>
+        Mv = torch.stack(Mv, dim=1)
+
+        return p, Mv
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        f = torch.tanh(
+            self.f_layer(
+                torch.cat(
+                    <a id="change">[
+                        </a>(w.unsqueeze(-1) * Mv[:, :-1]).sum(-2),
+                        k<a id="change"></a>
+                    ],
+                    dim=-1
+                )
+            )</code></pre>

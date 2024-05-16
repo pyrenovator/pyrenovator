@@ -1,0 +1,203 @@
+<html><h3>Pattern ID :38608
+</h3><img src='110425893.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        print(&quotStart Validation&quot)
+        pbar = tqdm(total=epoch_step_val, desc=f&quotEpoch {epoch + 1}/{Epoch}&quot,postfix=dict,mininterval=0.3)
+
+    <a id="change">model_train.eval()</a>
+    for iteration, batch in enumerate(gen_val):
+        if iteration &gt;= epoch_step_val:
+            break</code></pre><h3>After Change</h3><pre><code class='java'>
+        print(&quotStart Validation&quot)
+        pbar = tqdm(total=epoch_step_val, desc=f&quotEpoch {epoch + 1}/{Epoch}&quot,postfix=dict,mininterval=0.3)
+
+    <a id="change">if ema</a>:
+        model_train_eval = ema.ema
+    else:
+        model_train_eval = <a id="change">model_train.eval()</a>
+        
+    for iteration, batch in enumerate(gen_val):
+        if iteration &gt;= epoch_step_val:
+            break
+        images, targets = batch[0], batch[1]
+        with torch.no_grad():
+            if cuda:
+                images  = images.cuda()
+                targets = [ann.cuda() for ann in targets]
+            &#47&#47----------------------&#47&#47
+            &#47&#47   清零梯度
+            &#47&#47----------------------&#47&#47
+            optimizer.zero_grad()
+            &#47&#47----------------------&#47&#47
+            &#47&#47   前向传播
+            &#47&#47----------------------&#47&#47
+            outputs         = model_train_eval(images)
+
+            &#47&#47----------------------&#47&#47
+            &#47&#47   计算损失
+            &#47&#47----------------------&#47&#47
+            loss_value = yolo_loss(outputs, targets)
+
+        val_loss += loss_value.item()
+        if local_rank == 0:
+            pbar.set_postfix(**{&quotval_loss&quot: val_loss / (iteration + 1)})
+            pbar.update(1)
+
+    if local_rank == 0:
+        pbar.close()
+        print(&quotFinish Validation&quot)
+        loss_history.append_loss(epoch + 1, loss / epoch_step, val_loss / epoch_step_val)
+        print(&quotEpoch:&quot+ str(epoch + 1) + &quot/&quot + str(Epoch))
+        print(&quotTotal Loss: %.3f || Val Loss: %.3f &quot % (loss / epoch_step, val_loss / epoch_step_val))
+        if (epoch + 1) % save_period == 0 or epoch + 1 == Epoch:
+            <a id="change">if ema</a>:
+                save_state_dict = ema.ema.state_dict()
+            else:
+                save_state_dict = model.state_dict()</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/bubbliiiing/yolox-pytorch/commit/57c464faffef435e6bbe9e3898017c8b03465877#diff-1159d7fa34eff8cbe9fa807908c5121873390f54788a592aa0a1605ee5d1e0a4L9' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 110425893</div><div id='project'> Project Name: bubbliiiing/yolox-pytorch</div><div id='commit'> Commit Name: 57c464faffef435e6bbe9e3898017c8b03465877</div><div id='time'> Time: 2022-04-16</div><div id='author'> Author: 3323290568@qq.com</div><div id='file'> File Name: utils/utils_fit.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: fit_one_epoch(18)</div><div id='n_method'> N Method Name: fit_one_epoch(17)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: utils/utils_fit.py</div><div id='n_file'> N File Name: utils/utils_fit.py</div><div id='m_start'> M Start Line: 75</div><div id='m_end'> M End Line: 110</div><div id='n_start'> N Start Line: 9</div><div id='n_end'> N End Line: 120</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        print(&quotStart Validation&quot)
+        pbar = tqdm(total=epoch_step_val, desc=f&quotEpoch {epoch + 1}/{Epoch}&quot,postfix=dict,mininterval=0.3)
+
+    <a id="change">model_train.eval()</a>
+    for iteration, batch in enumerate(gen_val):
+        if iteration &gt;= epoch_step_val:
+            break</code></pre><h3>After Change</h3><pre><code class='java'>
+            scaler.scale(loss_value).backward()
+            scaler.step(optimizer)
+            scaler.update()
+        <a id="change">if </a>ema:
+            ema.update(model_train)
+
+        loss += loss_value.item()
+        
+        if local_rank == 0:
+            pbar.set_postfix(**{&quotloss&quot  : loss / (iteration + 1), 
+                                &quotlr&quot    : get_lr(optimizer)})
+            pbar.update(1)
+
+    if local_rank == 0:
+        pbar.close()
+        print(&quotFinish Train&quot)
+        print(&quotStart Validation&quot)
+        pbar = tqdm(total=epoch_step_val, desc=f&quotEpoch {epoch + 1}/{Epoch}&quot,postfix=dict,mininterval=0.3)
+
+    <a id="change">if ema</a>:
+        model_train_eval = ema.ema
+    else:
+        model_train_eval = <a id="change">model_train.eval()</a>
+        
+    for iteration, batch in enumerate(gen_val):
+        if iteration &gt;= epoch_step_val:</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/bubbliiiing/yolox-pytorch/commit/57c464faffef435e6bbe9e3898017c8b03465877#diff-1159d7fa34eff8cbe9fa807908c5121873390f54788a592aa0a1605ee5d1e0a4L9' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 110425894</div><div id='project'> Project Name: bubbliiiing/yolox-pytorch</div><div id='commit'> Commit Name: 57c464faffef435e6bbe9e3898017c8b03465877</div><div id='time'> Time: 2022-04-16</div><div id='author'> Author: 3323290568@qq.com</div><div id='file'> File Name: utils/utils_fit.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: fit_one_epoch(18)</div><div id='n_method'> N Method Name: fit_one_epoch(17)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: utils/utils_fit.py</div><div id='n_file'> N File Name: utils/utils_fit.py</div><div id='m_start'> M Start Line: 75</div><div id='m_end'> M End Line: 110</div><div id='n_start'> N Start Line: 9</div><div id='n_end'> N End Line: 120</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        print(&quotStart Validation&quot)
+        pbar = tqdm(total=epoch_step_val, desc=f&quotEpoch {epoch + 1}/{Epoch}&quot,postfix=dict,mininterval=0.3)
+
+    <a id="change">model_train.eval()</a>
+    for iteration, batch in enumerate(gen_val):
+        if iteration &gt;= epoch_step_val:
+            break</code></pre><h3>After Change</h3><pre><code class='java'>
+        print(&quotStart Validation&quot)
+        pbar = tqdm(total=epoch_step_val, desc=f&quotEpoch {epoch + 1}/{Epoch}&quot,postfix=dict,mininterval=0.3)
+
+    <a id="change">if ema</a>:
+        model_train_eval = ema.ema
+    else:
+        model_train_eval = <a id="change">model_train.eval()</a>
+        
+    for iteration, batch in enumerate(gen_val):
+        if iteration &gt;= epoch_step_val:
+            break
+        images, targets, y_trues = batch[0], batch[1], batch[2]
+        with torch.no_grad():
+            if cuda:
+                images  = images.cuda()
+                targets = [ann.cuda() for ann in targets]
+                y_trues = [ann.cuda() for ann in y_trues]
+            &#47&#47----------------------&#47&#47
+            &#47&#47   清零梯度
+            &#47&#47----------------------&#47&#47
+            optimizer.zero_grad()
+            &#47&#47----------------------&#47&#47
+            &#47&#47   前向传播
+            &#47&#47----------------------&#47&#47
+            outputs         = model_train_eval(images)
+
+            loss_value_all  = 0
+            &#47&#47----------------------&#47&#47
+            &#47&#47   计算损失
+            &#47&#47----------------------&#47&#47
+            for l in range(len(outputs)):
+                loss_item = yolo_loss(l, outputs[l], targets, y_trues[l])
+                loss_value_all  += loss_item
+            loss_value  = loss_value_all
+
+        val_loss += loss_value.item()
+        if local_rank == 0:
+            pbar.set_postfix(**{&quotval_loss&quot: val_loss / (iteration + 1)})
+            pbar.update(1)
+            
+    if local_rank == 0:
+        pbar.close()
+        print(&quotFinish Validation&quot)
+        loss_history.append_loss(epoch + 1, loss / epoch_step, val_loss / epoch_step_val)
+        print(&quotEpoch:&quot+ str(epoch + 1) + &quot/&quot + str(Epoch))
+        print(&quotTotal Loss: %.3f || Val Loss: %.3f &quot % (loss / epoch_step, val_loss / epoch_step_val))
+        if (epoch + 1) % save_period == 0 or epoch + 1 == Epoch:
+            <a id="change">if </a>ema:
+                save_state_dict = ema.ema.state_dict()
+            else:
+                save_state_dict = model.state_dict()</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/bubbliiiing/yolov5-pytorch/commit/0057259c38c6591af242e00a13effa72ed94428f#diff-1159d7fa34eff8cbe9fa807908c5121873390f54788a592aa0a1605ee5d1e0a4L8' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 110425900</div><div id='project'> Project Name: bubbliiiing/yolov5-pytorch</div><div id='commit'> Commit Name: 0057259c38c6591af242e00a13effa72ed94428f</div><div id='time'> Time: 2022-04-16</div><div id='author'> Author: 3323290568@qq.com</div><div id='file'> File Name: utils/utils_fit.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: fit_one_epoch(18)</div><div id='n_method'> N Method Name: fit_one_epoch(17)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: utils/utils_fit.py</div><div id='n_file'> N File Name: utils/utils_fit.py</div><div id='m_start'> M Start Line: 86</div><div id='m_end'> M End Line: 125</div><div id='n_start'> N Start Line: 8</div><div id='n_end'> N End Line: 137</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            logger.meters[&quottop1&quot].update(acc1, batch_size)
+            logger.meters[&quottop5&quot].update(acc5, batch_size)
+            empty_cache()   &#47&#47 TODO: should it be outside of the dataloader loop?
+        <a id="change">module.eval()</a>
+        activate_params(module, [])
+        loss, acc = logger.meters[&quotloss&quot].global_avg, logger.meters[&quottop1&quot].global_avg
+        if writer is not None:
+            from torch.utils.tensorboard import SummaryWriter</code></pre><h3>After Change</h3><pre><code class='java'>
+                header = &quot{upline}{clear_line}&quot.format(**ansi) + header
+                loader_epoch = tqdm(loader_epoch)
+            loader_epoch = logger.log_every(loader_epoch, header=header, indent=indent)
+        <a id="change">if </a>change_train_eval:
+            module.train()
+        activate_params(module, params)
+        optimizer.zero_grad()
+        for i, data in enumerate(loader_epoch):
+            _iter = _epoch * len_loader_train + i
+            &#47&#47 data_time.update(time.perf_counter() - end)
+            _input, _label = get_data_fn(data, mode=&quottrain&quot)
+            _output = module(_input, amp=amp)
+            loss = loss_fn(_input, _label, _output=_output, amp=amp)
+            if amp:
+                scaler.scale(loss).backward()
+                if callable(after_loss_fn):
+                    after_loss_fn(_input=_input, _label=_label, _output=_output,
+                                  loss=loss, optimizer=optimizer, loss_fn=loss_fn,
+                                  amp=amp, scaler=scaler,
+                                  _iter=_iter, total_iter=total_iter)
+                scaler.step(optimizer)
+                scaler.update()
+            else:
+                loss.backward()
+                if grad_clip is not None:
+                    nn.utils.clip_grad_norm_(params)
+                if callable(after_loss_fn):
+                    after_loss_fn(_input=_input, _label=_label, _output=_output,
+                                  loss=loss, optimizer=optimizer, loss_fn=loss_fn,
+                                  amp=amp, scaler=scaler,
+                                  _iter=_iter, total_iter=total_iter)
+                    &#47&#47 start_epoch=start_epoch, _epoch=_epoch, epoch=epoch)
+                optimizer.step()
+            optimizer.zero_grad()
+            acc1, acc5 = accuracy_fn(_output, _label, num_classes=num_classes, topk=(1, 5))
+            batch_size = int(_label.size(0))
+            logger.meters[&quotloss&quot].update(float(loss), batch_size)
+            logger.meters[&quottop1&quot].update(acc1, batch_size)
+            logger.meters[&quottop5&quot].update(acc5, batch_size)
+            empty_cache()   &#47&#47 TODO: should it be outside of the dataloader loop?
+        <a id="change">if change_train_eval</a>:
+            <a id="change">module.eval()</a>
+        activate_params(module, [])
+        loss, acc = logger.meters[&quotloss&quot].global_avg, logger.meters[&quottop1&quot].global_avg
+        if writer is not None:
+            from torch.utils.tensorboard import SummaryWriter</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/ain-soph/trojanzoo/commit/72fe23f0dca537a6ab252bf1ad80eb4f29856f03#diff-077f129661654cf49fb39aed5d0982a072fff7ca5bbdaf982a6e661f1ce09298L20' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 110425901</div><div id='project'> Project Name: ain-soph/trojanzoo</div><div id='commit'> Commit Name: 72fe23f0dca537a6ab252bf1ad80eb4f29856f03</div><div id='time'> Time: 2021-07-05</div><div id='author'> Author: ain-soph@live.com</div><div id='file'> File Name: trojanzoo/utils/train.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train(30)</div><div id='n_method'> N Method Name: train(29)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: trojanzoo/utils/train.py</div><div id='n_file'> N File Name: trojanzoo/utils/train.py</div><div id='m_start'> M Start Line: 44</div><div id='m_end'> M End Line: 113</div><div id='n_start'> N Start Line: 34</div><div id='n_end'> N End Line: 118</div><BR>

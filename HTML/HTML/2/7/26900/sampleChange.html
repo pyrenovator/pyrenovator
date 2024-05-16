@@ -1,0 +1,24 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            interval = 16
+            idx = torch.arange(0,T,interval)
+            rpn_inputs = inputs[:,:,idx]
+            rpn_inputs = <a id="change">rpn_inputs.transpose(1,2).contiguous().view(</a>N*(T//interval),C,H,W<a id="change">)</a>
+            with torch.no_grad():
+                proposals = rpn(rpn_inputs)
+            proposals = proposals.view(N,T//interval,10,4)
+            outputs = model(inputs, proposals.detach())</code></pre><h3>After Change</h3><pre><code class='java'>
+            interval = 16
+            &#47&#47 sample frames for RPN
+            sample = torch.arange(0,T,interval)
+            rpn_inputs = <a id="change">inputs[:,:,sample].transpose(1,2).contiguous()</a>
+            rpn_inputs<a id="change"> = rpn_inputs.view(-1</a>,C,H,W<a id="change">)</a>
+            if len(inputs) &lt; max_N:
+                print("Modified from {} to {}".format(len(inputs), max_N))
+                rpn_inputs = <a id="change">torch.cat(</a>(rpn_inputs, rpn_inputs[:(max_N-len(inputs))*(T//interval)])<a id="change">)</a>
+            with torch.no_grad():
+                proposals = rpn(rpn_inputs)
+            proposals = proposals.view(-1,T//interval,10,4)
+            if len(inputs) &lt; max_N:</code></pre>

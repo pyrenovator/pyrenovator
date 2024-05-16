@@ -1,0 +1,27 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        score_gt = F.softmax(distance_metric(traj_in, traj_gt), dim=1)
+        score_pred = self.score_mlp(torch.cat([feat_in, traj_in], dim=1))
+
+        <a id="change">return F.kl_div(</a>score_pred, <a id="change">score_gt</a><a id="change">, reduction=reduction)</a> + \
+               F.kl_div(score_pred, torch.ones(score_pred.size(), device=self.device), reduction=reduction)
+
+    def inference(self, feat_in: torch.Tensor, traj_in: torch.Tensor):</code></pre><h3>After Change</h3><pre><code class='java'>
+        
+
+        &#47&#47 compute ground truth score
+        <a id="change">score_gt</a> = F.softmax(-distance_metric(traj_in, traj_gt)/self.temper, dim=1)
+        score_pred<a id="change"> = </a>self.forward(feat_in, traj_in)
+
+        <a id="change">logprobs</a> = - F.log_softmax(score_pred, dim=1)
+        batch<a id="change"> = traj_in.shape[0]</a>
+        <a id="change">if reduction == &quotmean&quot</a>:
+            loss<a id="change"> = torch.sum(torch</a><a id="change">.mul(logprobs</a>, <a id="change">score_gt</a><a id="change">)) / </a>batch
+        else:
+            loss<a id="change"> = torch</a><a id="change">.sum(torch.mul(logprobs</a>, <a id="change">score_gt</a><a id="change">)</a><a id="change">)</a>
+        return loss
+
+        &#47&#47 return F.kl_div(score_pred, score_gt, reduction=reduction)
+</code></pre>

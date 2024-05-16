@@ -1,0 +1,38 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+        &#47&#47 Snap-to-grid
+        grid = torch.zeros(size=(self.n_pillars_x, self.n_pillars_y, self.out_features))
+        for i in range(<a id="change">x.shape[0]</a>):
+            x_idx, y_idx = indices[i].long()
+            grid[x_idx, y_idx].add(x[i])
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        &#47&#47 embedded_points = self.batch_norm(embedded_points)
+        embedded_points = self.relu(embedded_points)
+
+        indices<a id="change"> = </a>indices.long()
+
+        &#47&#47 TODO replace for-loop over batches by torch operations (if possible)
+        &#47&#47 TODO Check if this implementation is correct
+        &#47&#47 Snap-To-Grid
+        grid = torch.zeros(size=(embedded_points.shape[0], self.n_pillars_x, self.n_pillars_y, self.out_features))
+        for i in range(embedded_points.shape[0]):
+            batch_indices = indices[i]
+            batch_x = embedded_points[i]
+
+            n_pillars = torch.unique(batch_indices, dim=0).shape[0]  &#47&#47 number of different index pairs
+
+            &#47&#47 add up all points, which have the same index
+            batch_x = torch.zeros(n_pillars, 64, dtype=embedded_points.dtype).scatter_add_(0, batch_indices, batch_x)
+            batch_indices = <a id="change">torch.unique(</a>batch_indices<a id="change">, dim=0)</a>  &#47&#47 get the corresponding indices
+
+            &#47&#47 Snap-to-grid
+            batch_grid = torch.zeros(size=(self.n_pillars_x, self.n_pillars_y, self.out_features))
+            batch_grid[batch_indices[:, 0], batch_indices[:, 1], :] = batch_x
+
+            grid[i]<a id="change"> = </a>batch_grid
+
+        &#47&#47 Snap-to-grid
+        &#47&#47 grid = torch.zeros(size=(self.n_pillars_x, self.n_pillars_y, self.out_features))</code></pre>

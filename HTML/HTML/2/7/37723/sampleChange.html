@@ -1,0 +1,21 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    c[ind2] *= -1
+
+    r = torch.max(t / w, (t - 1) / w).clamp(min=-1e12, max=1e12)
+    <a id="change">r[w.abs() &lt; 1e-8] = 1e12</a>
+    r[r == -1e12] *= -1
+    rs, indr = torch.sort(r, dim=1)
+    rs2 = F.pad(rs[:, 1:], (0, 1))
+    rs[rs == 1e12] = 0</code></pre><h3>After Change</h3><pre><code class='java'>
+    w.mul_(ind2.unsqueeze(1))
+    c.mul_(ind2)
+
+    <a id="change">r</a> = torch.max(t / w, (t - 1) / w).clamp(min=-1e12, max=1e12)
+    <a id="change">r.masked_fill_(</a>w.abs() &lt; 1e-8, <a id="change">1e12</a><a id="change">)</a>
+    r[r == -1e12] *= -1
+    rs, indr = torch.sort(r, dim=1)
+    rs2 = F.pad(rs[:, 1:], (0, 1))
+    rs.masked_fill_(rs == 1e12, 0)</code></pre>

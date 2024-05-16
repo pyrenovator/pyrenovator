@@ -1,0 +1,26 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    It also has a retry mechanism in case connection fails.
+    The args and kwargs are passed to fsspec.open, except `use_auth_token` which is used for queries to private repos on huggingface.co
+    
+    <a id="change">if fsspec.get_fs_token_paths(file)[0].protocol == "https"</a>:
+        kwargs["headers"]<a id="change"> = </a>get_authentication_headers_for_url(file, use_auth_token=use_auth_token)
+    file_obj = fsspec.open(file, mode=mode, *args, **kwargs).open()
+    _add_retries_to_file_obj_read_method(file_obj)
+    return file_obj</code></pre><h3>After Change</h3><pre><code class='java'>
+    
+    main_hop, *rest_hops = file.split("::")
+    &#47&#47 add headers and cookies for authentication on the HF Hub and for Google Drive
+    <a id="change">if </a>not rest_hops and <a id="change">(main_hop.startswith("http://") or main_hop.startswith("https://"))</a>:
+        file, new_kwargs = _prepare_http_url_kwargs(file, use_auth_token=use_auth_token)
+    elif rest_hops and (rest_hops[0].startswith("http://") or rest_hops[0].startswith("https://")):
+        <a id="change">url</a><a id="change"> = </a>rest_hops[0]
+        <a id="change">url</a><a id="change">, http_kwargs = </a>_prepare_http_url_kwargs(url, use_auth_token=use_auth_token)
+        new_kwargs<a id="change"> = </a><a id="change">{</a>"https": http_kwargs<a id="change">}</a>
+        file<a id="change"> = "::".join(</a><a id="change">[</a>main_hop, <a id="change">url</a>, *rest_hops[1:]<a id="change"></a>]<a id="change">)</a>
+    else:
+        new_kwargs = {}
+    kwargs = {**kwargs, **new_kwargs}
+    file_obj = fsspec.open(file, mode=mode, *args, **kwargs).open()</code></pre>

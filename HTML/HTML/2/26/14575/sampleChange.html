@@ -1,0 +1,71 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            output_stride = stride / 2
+
+            for seg_mask, gt_label, half_h, half_w in zip(gt_masks, gt_labels, half_hs, half_ws):
+                if <a id="change">seg_mask.sum() &lt; 10</a>:
+                   continue
+                &#47&#47 mass center
+
+                upsampled_size = (featmap_sizes[0][0] * 4, featmap_sizes[0][1] * 4)
+                center_h<a id="change">, center_w = </a><a id="change">ndimage.measurements.center_of_mass(seg_mask</a><a id="change">)</a>
+                coord_w = int((center_w / upsampled_size[1]) // (1. / num_grid))
+                coord_h = int((center_h / upsampled_size[0]) // (1. / num_grid))
+
+                &#47&#47 left, top, right, down
+                top_box = max(0, int(((center_h - half_h) / upsampled_size[0]) // (1. / num_grid)))
+                down_box = min(num_grid - 1, int(((center_h + half_h) / upsampled_size[0]) // (1. / num_grid)))
+                left_box = max(0, int(((center_w - half_w) / upsampled_size[1]) // (1. / num_grid)))
+                right_box = min(num_grid - 1, int(((center_w + half_w) / upsampled_size[1]) // (1. / num_grid)))
+
+                top = max(top_box, coord_h-1)
+                down = min(down_box, coord_h+1)
+                left = max(coord_w-1, left_box)
+                right = min(right_box, coord_w+1)
+
+                &#47&#47 squared
+                cate_label[top:(down+1), left:(right+1)] = gt_label
+                &#47&#47 ins
+                seg_mask = mmcv.imrescale(seg_mask, scale=1. / output_stride)
+                seg_mask<a id="change"> = torch.Tensor(</a>seg_mask<a id="change">)</a>
+                for i in range(top, down+1):
+                    for j in range(left, right+1):
+                        label = int(i * num_grid + j)
+                        ins_label[label, :seg_mask.shape[0], :seg_mask.shape[1]] = seg_mask</code></pre><h3>After Change</h3><pre><code class='java'>
+            half_hs = 0.5 * (gt_bboxes[:, 3] - gt_bboxes[:, 1]) * self.sigma
+
+            &#47&#47 mass center
+            <a id="change">gt_masks_pt</a><a id="change"> = torch.from_numpy(</a><a id="change">gt_masks).to(device=device)</a>
+            center_ws<a id="change">, center_hs = </a><a id="change">center_of_mass(gt_masks_pt</a><a id="change">)</a>
+            valid_mask_flags<a id="change"> = gt_masks_pt.sum(dim=-1).sum(dim=-1) &gt;= 10</a>
+
+            output_stride = stride / 2
+            for seg_mask, gt_label, half_h, half_w, center_h, center_w, <a id="change">valid_mask_flag</a> in zip(gt_masks, gt_labels, half_hs, half_ws, center_hs, center_ws, valid_mask_flags):
+                if <a id="change">not valid_mask_flag</a>:
+                   continue
+                upsampled_size = (featmap_sizes[0][0] * 4, featmap_sizes[0][1] * 4)
+                coord_w = int((center_w / upsampled_size[1]) // (1. / num_grid))
+                coord_h = int((center_h / upsampled_size[0]) // (1. / num_grid))
+
+                &#47&#47 left, top, right, down
+                top_box = max(0, int(((center_h - half_h) / upsampled_size[0]) // (1. / num_grid)))
+                down_box = min(num_grid - 1, int(((center_h + half_h) / upsampled_size[0]) // (1. / num_grid)))
+                left_box = max(0, int(((center_w - half_w) / upsampled_size[1]) // (1. / num_grid)))
+                right_box = min(num_grid - 1, int(((center_w + half_w) / upsampled_size[1]) // (1. / num_grid)))
+
+                top = max(top_box, coord_h-1)
+                down = min(down_box, coord_h+1)
+                left = max(coord_w-1, left_box)
+                right = min(right_box, coord_w+1)
+
+                &#47&#47 squared
+                cate_label[top:(down+1), left:(right+1)] = gt_label
+                &#47&#47 ins
+                seg_mask = mmcv.imrescale(seg_mask, scale=1. / output_stride)
+                seg_mask<a id="change"> = torch</a><a id="change">.from_numpy(seg_mask).to(device=device)</a>
+                for i in range(top, down+1):
+                    for j in range(left, right+1):
+                        label = int(i * num_grid + j)
+                        ins_label[label, :seg_mask.shape[0], :seg_mask.shape[1]] = seg_mask</code></pre>

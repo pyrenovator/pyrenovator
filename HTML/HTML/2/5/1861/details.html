@@ -1,0 +1,83 @@
+<html><h3>Pattern ID :1861
+</h3><img src='8356776.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    
+    if weights is None:
+        weights = torch.ones_like(pre_dist_mat)
+    N<a id="change"> = </a>pre_dist_mat.shape[-1]
+    his = []
+    &#47&#47 init random coords
+    best_stress = float("Inf") 
+    best_3d_coords = 2*torch.rand(3, N) - 1
+    &#47&#47 iterative updates:
+    for i in range(iters):
+        &#47&#47 compute distance matrix of coords and stress
+        dist_mat = torch.cdist(best_3d_coords.t(), best_3d_coords.t(), p=2)
+        stress   = ( weights * (dist_mat - pre_dist_mat)**2 ).sum() / 2
+        &#47&#47 perturb - update X using the Guttman transform - sklearn-like
+        dist_mat[dist_mat == 0] = 1e-5
+        ratio = weights * (pre_dist_mat / dist_mat)
+        B = ratio * (-1)
+        B[np.arange(N), np.arange(N)] += ratio.sum(dim=1)
+        &#47&#47 update - double transpose. TODO: consider fix
+        coords = (1. / N * torch.matmul(best_3d_coords, B))
+        dis = <a id="change">torch.sqrt(</a>(coords<a id="change"> ** 2</a>).sum(axis=1)<a id="change">)</a>.sum()
+        if verbose &gt;= 2:
+            print(&quotit: %d, stress %s&quot % (i, stress))
+        &#47&#47 update metrics if relative improvement above tolerance</code></pre><h3>After Change</h3><pre><code class='java'>
+                                                                   stress))
+            break
+
+    return torch.transpose(best_3d_coords, -1,-2), <a id="change">torch.cat(</a>his<a id="change">)</a>
+
+def mds_numpy(pre_dist_mat, weights=None, iters=10, tol=1e-5, verbose=2):
+     Gets distance matrix. Outputs 3d. See below for wrapper. 
+        Assumes (for now) distrogram is (N x N) and symmetric</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/lucidrains/alphafold2/commit/98e16ad2931a27f90e05df940cff72c00074028d#diff-09d0cbaf891d623ac245ccf84485a687b554217349ca55557c60b33234b969aeL174' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 8356776</div><div id='project'> Project Name: lucidrains/alphafold2</div><div id='commit'> Commit Name: 98e16ad2931a27f90e05df940cff72c00074028d</div><div id='time'> Time: 2021-01-17</div><div id='author'> Author: ericalcaide1@gmail.com</div><div id='file'> File Name: utils.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: mds_torch(5)</div><div id='n_method'> N Method Name: mds_torch(5)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: utils.py</div><div id='n_file'> N File Name: utils.py</div><div id='m_start'> M Start Line: 174</div><div id='m_end'> M End Line: 205</div><div id='n_start'> N Start Line: 181</div><div id='n_end'> N End Line: 215</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    Returns:
+        quat: size = [B, 4] 4 &lt;===&gt;(w, x, y, z)
+    
+    trace<a id="change"> = </a>torch.einsum(&quotbii-&gt;b&quot, rotmat)
+    m32 = rotmat[:, 2, 1]
+    m23 = rotmat[:, 1, 2]
+    m13 = rotmat[:, 0, 2]
+    m31 = rotmat[:, 2, 0]
+    m21 = rotmat[:, 1, 0]
+    m12 = rotmat[:, 0, 1]
+
+    trace = torch.clamp_min(trace<a id="change"> + 1</a>, 1e-8)
+    w = <a id="change">torch.sqrt(</a>trace<a id="change">)</a> / 2
+    x = (m32 - m23) / (4 * w)
+    y = (m13 - m31) / (4 * w)
+    z = (m21 - m12) / (4 * w)</code></pre><h3>After Change</h3><pre><code class='java'>
+    Returns:
+        Quaternion: size is [B, 4] &lt;===&gt; (w, x, y, z)
+    
+    return <a id="change">torch.cat(</a>[single_rotation_matrix_to_quaternion_torch(mat) for mat in rotmat]<a id="change">, dim=0)</a>
+
+
+def single_rotation_matrix_to_quaternion_torch(rotation_matrix):
+    Convert rotation matrix to quaternion coefficient.</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/jeff-sjtu/hybrik/commit/9bb96606dac18a1ab115f0ad848bdd394e7b62d8#diff-369b9e6b55d81fa84dc94a1c7486ff571ad51838f6fe919dd9c44d03ddb11facL916' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 8356775</div><div id='project'> Project Name: jeff-sjtu/hybrik</div><div id='commit'> Commit Name: 9bb96606dac18a1ab115f0ad848bdd394e7b62d8</div><div id='time'> Time: 2021-06-23</div><div id='author'> Author: 1931604@tongji.edu.cn</div><div id='file'> File Name: hybrik/models/layers/smpl/lbs.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: rotmat_to_quat(1)</div><div id='n_method'> N Method Name: rotmat_to_quat(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: hybrik/models/layers/smpl/lbs.py</div><div id='n_file'> N File Name: hybrik/models/layers/smpl/lbs.py</div><div id='m_start'> M Start Line: 923</div><div id='m_end'> M End Line: 937</div><div id='n_start'> N Start Line: 923</div><div id='n_end'> N End Line: 923</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    def reprojection_error(self, objPts_w, imgPts, Rt):
+        P = np.matmul(self.camMat[:, :3], Rt)
+        objPts_w_ex<a id="change"> = </a>np.concatenate((objPts_w.reshape((self.n, 3)), np.array([np.ones((self.n))]).T), axis=1)
+
+        imgRep = np.matmul(P, objPts_w_ex.T).T
+        imgRep[:, 0] = imgRep[:, 0] / imgRep[:, 2]
+        imgRep[:, 1] = imgRep[:, 1] / imgRep[:, 2]
+        error = <a id="change">np.sqrt(</a>(imgPts[:, 0] - imgRep[:, 0].reshape((self.n, 1)))<a id="change"> ** 2</a> + (
+                    imgPts[:, 1] - imgRep[:, 1].reshape((self.n, 1))) ** 2<a id="change">)</a>
+        error = np.sum(error, axis=0) / self.n
+
+        return error[0]
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        
+        P = torch.bmm(camMat[:, :, :3], Rt)
+        &#47&#47 concat 1 to the last column of objPts_w
+        objPts_w_ex = <a id="change">torch.cat(</a>(objPts_w, torch.ones_like(objPts_w[:, :, :1]))<a id="change">, dim=-1)</a>
+        &#47&#47 Calculate the image points
+        imgRep = torch.bmm(P, objPts_w_ex.transpose(dim0=-1, dim1=-2)).transpose(dim0=-1, dim1=-2)
+
+        &#47&#47 Normalize the image points</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/pypose/pypose/commit/f93c59c3ad352fe90aa3072311a7ca67fa442243#diff-052b8dfcb4f5d16ac2df9676fd039e877588b354a969db2f245a098529fc6d31L455' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 8356758</div><div id='project'> Project Name: pypose/pypose</div><div id='commit'> Commit Name: f93c59c3ad352fe90aa3072311a7ca67fa442243</div><div id='time'> Time: 2023-02-25</div><div id='author'> Author: zitongz3@illinois.edu</div><div id='file'> File Name: pypose/module/pnp.py</div><div id='m_class'> M Class Name: EPnP</div><div id='n_method'> N Class Name: EPnP</div><div id='m_method'> M Method Name: reprojection_error(5)</div><div id='n_method'> N Method Name: reprojection_error(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: pypose/module/pnp.py</div><div id='n_file'> N File Name: pypose/module/pnp.py</div><div id='m_start'> M Start Line: 456</div><div id='m_end'> M End Line: 466</div><div id='n_start'> N Start Line: 469</div><div id='n_end'> N End Line: 492</div><BR>

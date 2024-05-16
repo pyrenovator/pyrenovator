@@ -1,0 +1,78 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            if len(predicted.shape) &gt; 2:
+                predicted = predicted.T.reshape(
+                    predicted.shape[0] * predicted.shape[2] * predicted.shape[3],
+                    <a id="change">predicted.shape[1]</a>,
+                )
+                labels = labels.T.reshape(
+                    labels.shape[0] * labels.shape[2] * labels.shape[3], labels.shape[1]</code></pre><h3>After Change</h3><pre><code class='java'>
+    def evaluate_model(
+        self, dataloader, criterion=None, description="testing on validation set",
+    ):
+        <a id="change">labels_total</a><a id="change"> = </a>[]
+        predicted_total = <a id="change">[]</a>
+        iou_labels_total = torch.zeros([1, self.num_classes], dtype=torch.float64)
+
+        
+        Evaluates the current model against the specified dataloader for the specified metrics
+        :param dataloader:
+        :param metrics: list of metric keys to calculate
+        :criterion: Criterion to calculate loss
+        :description: What to show in the progress bar
+        :return: tuple of (metrics, y_true, y_pred)
+        
+        self.model.eval()
+
+        &#47&#47 initialize loss if applicable
+        total_loss = 0.0
+
+        for inputs, outputs, labels in self.predict_output_per_batch(
+            dataloader, description
+        ):
+            if criterion:
+                batch_loss = criterion(outputs, labels)
+                total_loss += batch_loss.item() * inputs.size(0)
+
+            predicted_probs, predicted = self.get_predicted(outputs)
+
+            labels_total += list(labels.cpu().detach().numpy())
+            predicted_total += list(predicted.cpu().detach().numpy())
+
+            &#47&#47print(labels, predicted)
+
+            &#47&#47 if segmentation reshape the predictions and labels
+            &#47&#47if len(predicted.shape) &gt; 2:
+            &#47&#47    iou_labels_total += iou_pytorch(predicted.type(torch.int), labels.type(torch.int))
+
+            if (
+                len(labels.shape) == 1
+            ):  &#47&#47 if it is multiclass, then we need one hot encoding for the predictions
+                &#47&#47print(labels.size(0), self.num_classes)
+                one_hot = torch.zeros(labels.size(0), self.num_classes)
+                predicted = predicted.reshape(predicted.size(0))
+                one_hot[torch.arange(labels.size(0)), predicted.type(torch.long)] = 1
+                predicted = one_hot
+                predicted = predicted.to(self.device)
+                &#47&#47print(&quotLabels: &quot, labels.type(torch.uint8), &quotPredicted: &quot, predicted.type(torch.uint8))
+
+            self.running_metrics.update(
+                labels.type(torch.uint8), predicted.type(torch.uint8)
+            )
+
+        if criterion:
+            total_loss = total_loss / len(dataloader.dataset)
+
+        <a id="change">predicted_total = </a>[int(i) for i in predicted_total]
+
+        &#47&#47print(labels_total, predicted_total)
+
+        <a id="change">print(</a>&quotMetrika macro: &quot, <a id="change">f1_score(labels_total</a>, <a id="change">predicted_total</a><a id="change">, average=&quotmacro&quot))</a>
+        print(&quotMetrika micro: &quot, <a id="change">f1_score(labels_total</a>, <a id="change">predicted_total</a><a id="change">, average=&quotmicro&quot)</a>)
+        <a id="change">print(</a>&quotMetrika weighted: &quot, <a id="change">f1_score(labels_total</a>, <a id="change">predicted_total</a><a id="change">, average=&quotweighted&quot)</a><a id="change">)</a>
+
+
+        &#47&#47print(self.running_metrics.get_f1score())
+        &#47&#47print(&quotRezultat: &quot, iou_labels_total / len(dataloader.dataset))</code></pre>

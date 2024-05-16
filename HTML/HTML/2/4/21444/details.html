@@ -1,0 +1,64 @@
+<html><h3>Pattern ID :21444
+</h3><img src='68738831.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        bs, tz, _, _, _ = x.shape
+        x = x.view(bs, tz, self.channels * self.size * self.size)  &#47&#47 bs x tz x cz * hz * wz
+        x_ln = self.ln_t(x)
+        attention_value<a id="change">, _</a> = self.spatial_attention(x_ln, x_ln, x_ln)
+        x = attention_value + x
+        &#47&#47 x = x.view(bs, tz, self.channels, self.size, self.size)
+        x = x.view(bs, tz*self.channels, self.size*self.size).permute(0, 2, 1)  &#47&#47 bs x hz * wz x tz * cz</code></pre><h3>After Change</h3><pre><code class='java'>
+        x = x.view(bs, tz, self.channels, self.size, self.size)
+        print(x.shape)
+        x = x.view(bs, tz, self.size*self.size, self.channels).permute(0, 2, 1, 3).view(bs*self.size*self.size, tz, self.channels)  &#47&#47 bs x hz * wz x tz * cz
+        mask = <a id="change">torch.tril(torch.ones(</a>tz, tz<a id="change">, dtype=torch.float32)</a><a id="change">)</a> * -10000
+        x = self.temporal_transformer(x, mask=mask)
+        x = x.view(bs, self.size, self.size, tz, self.channels).permute(0, 3, 4, 1, 2)
+        return x</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/laion-ai/phenaki/commit/37d2f60e889cf6f791559a3cfd667db1f90268ac#diff-d2675e29d21c30767dbf4b16980547aac6cc99b46ce44781ec89d09ee7193467L24' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 68738831</div><div id='project'> Project Name: laion-ai/phenaki</div><div id='commit'> Commit Name: 37d2f60e889cf6f791559a3cfd667db1f90268ac</div><div id='time'> Time: 2022-10-03</div><div id='author'> Author: 61938694+dome272@users.noreply.github.com</div><div id='file'> File Name: vivq.py</div><div id='m_class'> M Class Name: TemporalSpatialAttention</div><div id='n_method'> N Class Name: TemporalSpatialAttention</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: vivq.py</div><div id='n_file'> N File Name: vivq.py</div><div id='m_start'> M Start Line: 24</div><div id='m_end'> M End Line: 34</div><div id='n_start'> N Start Line: 27</div><div id='n_end'> N End Line: 35</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        for i in range(self.num_layers):
+            residual = his_vectors
+            &#47&#47 self-attention
+            query, key, value = self.Q(his_vectors)<a id="change">, self.K(his_vectors), self.V(his_vectors)</a>
+            scale = self.emb_size ** -0.5
+            his_vectors = components.scaled_dot_product_attention(
+                query, key, value, scale=scale, attn_mask=attn_mask)
+            &#47&#47 mlp forward</code></pre><h3>After Change</h3><pre><code class='java'>
+        his_vectors = his_vectors + pos_vectors
+
+        &#47&#47 Self-attention
+        causality_mask = <a id="change">np.tril(np.ones(</a>(1, 1, seq_len, seq_len)<a id="change">, dtype=np.int)</a><a id="change">)</a>
+        attn_mask = torch.from_numpy(causality_mask).to(self.device)
+        &#47&#47 attn_mask = valid_his.view(batch_size, 1, 1, seq_len)
+        for block in self.transformer_block:
+            his_vectors = block(his_vectors, attn_mask)</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/thuwangcy/rechorus/commit/dba1d0bd7b6d7296ed6c730793e0f61278007dc2#diff-cdd126f2420ce18169e295f58055586bada35bf4c9417ee5d8a4ffd826a65370L37' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 68738832</div><div id='project'> Project Name: thuwangcy/rechorus</div><div id='commit'> Commit Name: dba1d0bd7b6d7296ed6c730793e0f61278007dc2</div><div id='time'> Time: 2020-11-08</div><div id='author'> Author: THUwangcy@gmail.com</div><div id='file'> File Name: src/models/sequential/SASRec.py</div><div id='m_class'> M Class Name: SASRec</div><div id='n_method'> N Class Name: SASRec</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: GRU4Rec</div><div id='n_parent_class'> N Parent Class: GRU4Rec</div><div id='m_file'> M File Name: src/models/sequential/SASRec.py</div><div id='n_file'> N File Name: src/models/sequential/SASRec.py</div><div id='m_start'> M Start Line: 41</div><div id='m_end'> M End Line: 72</div><div id='n_start'> N Start Line: 41</div><div id='n_end'> N End Line: 66</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            zero_pad = torch.zeros(zero_pad_shape, device=x.device, dtype=x.dtype)
+            x_padded = torch.cat([zero_pad, x], dim=1)
+
+            x_padded_shape = (x.size(1) + 1<a id="change">, x.size(0)</a>) + x.size()[2:]
+            x_padded = x_padded.view(*x_padded_shape)
+
+            x = x_padded[1:].view_as(x)</code></pre><h3>After Change</h3><pre><code class='java'>
+            x_padded = x_padded.view(*x.size()[:2], k_len + 1, q_len)
+            x = x_padded[:,:,1:,:].view_as(x)
+            if zero_triu:
+                ones = <a id="change">torch.ones(</a>(q_len, k_len)<a id="change">, device=x.device)</a>
+                x = x * <a id="change">torch.tril(</a>ones, k_len - q_len<a id="change">)</a>[None,None,:,:]
+            return x
+
+        def forward(self, w, cat, r, attention_mask=None):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/tongjilibo/bert4torch/commit/e7a71b5780f0c193c2575f5dec687cb004c50ab2#diff-423158f6414177c50deaf8ff8d75202474ddccb543fca22c762f1c3c0e973f8eL529' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 68738833</div><div id='project'> Project Name: tongjilibo/bert4torch</div><div id='commit'> Commit Name: e7a71b5780f0c193c2575f5dec687cb004c50ab2</div><div id='time'> Time: 2022-05-23</div><div id='author'> Author: tongjilibo@163.com</div><div id='file'> File Name: bert4torch/layers.py</div><div id='m_class'> M Class Name: RelPartialLearnableMultiHeadAttn</div><div id='n_method'> N Class Name: RelPartialLearnableMultiHeadAttn</div><div id='m_method'> M Method Name: _rel_shift(3)</div><div id='n_method'> N Method Name: _rel_shift(2)</div><div id='m_parent_class'> M Parent Class: MultiHeadAttentionLayer</div><div id='n_parent_class'> N Parent Class: MultiHeadAttentionLayer</div><div id='m_file'> M File Name: bert4torch/layers.py</div><div id='n_file'> N File Name: bert4torch/layers.py</div><div id='m_start'> M Start Line: 532</div><div id='m_end'> M End Line: 539</div><div id='n_start'> N Start Line: 535</div><div id='n_end'> N End Line: 546</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        &#47&#47 x = x.view(bs, tz, self.channels, self.size, self.size)
+        x = x.view(bs, tz*self.channels, self.size*self.size).permute(0, 2, 1)  &#47&#47 bs x hz * wz x tz * cz
+        x = self.ln_s(x)
+        attention_value<a id="change">, _</a> = self.temporal_attention(x, x, x)
+        attention_value = attention_value + x
+        attention_value = self.ff_self(attention_value) + attention_value
+        return attention_value.permute(0, 2, 1).view(bs, tz, self.channels, self.size, self.size)</code></pre><h3>After Change</h3><pre><code class='java'>
+        x = x.view(bs, tz, self.channels, self.size, self.size)
+        print(x.shape)
+        x = x.view(bs, tz, self.size*self.size, self.channels).permute(0, 2, 1, 3).view(bs*self.size*self.size, tz, self.channels)  &#47&#47 bs x hz * wz x tz * cz
+        mask = <a id="change">torch.tril(torch.ones(</a>tz, tz<a id="change">, dtype=torch.float32)</a><a id="change">)</a> * -10000
+        x = self.temporal_transformer(x, mask=mask)
+        x = x.view(bs, self.size, self.size, tz, self.channels).permute(0, 3, 4, 1, 2)
+        return x</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/laion-ai/phenaki/commit/37d2f60e889cf6f791559a3cfd667db1f90268ac#diff-d2675e29d21c30767dbf4b16980547aac6cc99b46ce44781ec89d09ee7193467L22' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 68738836</div><div id='project'> Project Name: laion-ai/phenaki</div><div id='commit'> Commit Name: 37d2f60e889cf6f791559a3cfd667db1f90268ac</div><div id='time'> Time: 2022-10-03</div><div id='author'> Author: 61938694+dome272@users.noreply.github.com</div><div id='file'> File Name: vivq.py</div><div id='m_class'> M Class Name: TemporalSpatialAttention</div><div id='n_method'> N Class Name: TemporalSpatialAttention</div><div id='m_method'> M Method Name: forward(2)</div><div id='n_method'> N Method Name: forward(2)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: vivq.py</div><div id='n_file'> N File Name: vivq.py</div><div id='m_start'> M Start Line: 24</div><div id='m_end'> M End Line: 34</div><div id='n_start'> N Start Line: 27</div><div id='n_end'> N End Line: 35</div><BR>

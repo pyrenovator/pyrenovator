@@ -1,0 +1,69 @@
+<html><h3>Pattern ID :14693
+</h3><img src='48460006.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                array2image(item).save(&quotResults/mixup_{0}.jpg&quot.format(get_time_suffix()))
+
+        if &quotmixup_loss&quot not in training_context[&quotlosses&quot]:
+            training_context[&quotlosses&quot][&quotmixup_loss&quot]<a id="change"> = </a><a id="change">[]</a>
+        training_context[&quotcurrent_loss&quot] = training_context[&quotcurrent_loss&quot] + this_loss *self.loss_weight
+        if training_context[&quotis_collect_data&quot]:
+            training_context[&quotlosses&quot][&quotmixup_loss&quot].append(float(to_numpy(this_loss) * self.loss_weight))
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        training_context[&quotcurrent_loss&quot] = training_context[&quotcurrent_loss&quot] + this_loss *self.loss_weight
+        if training_context[&quotis_collect_data&quot]:
+            training_context[&quotlosses&quot].collect(&quotmixup_loss&quot, training_context[&quotsteps&quot], float(<a id="change">to_numpy(</a>this_loss * self.loss_weight<a id="change">)</a>))
+
+        if training_context[&quotcurrent_batch&quot]==0:
+            for item in mixed_x:</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/allanyiin/trident/commit/a961886325f288a00b1d81d66539d8b20cf21d07#diff-87f1d359e49f5d7192ecc96a128fca1efb648962c392ccec2f70ab037cc24047L71' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 48460006</div><div id='project'> Project Name: allanyiin/trident</div><div id='commit'> Commit Name: a961886325f288a00b1d81d66539d8b20cf21d07</div><div id='time'> Time: 2020-10-20</div><div id='author'> Author: allan@asiaminer.com.tw</div><div id='file'> File Name: trident/callbacks/regularization_callbacks.py</div><div id='m_class'> M Class Name: MixupCallback</div><div id='n_method'> N Class Name: MixupCallback</div><div id='m_method'> M Method Name: on_loss_calculation_end(2)</div><div id='n_method'> N Method Name: on_loss_calculation_end(2)</div><div id='m_parent_class'> M Parent Class: RegularizationCallbacksBase</div><div id='n_parent_class'> N Parent Class: RegularizationCallbacksBase</div><div id='m_file'> M File Name: trident/callbacks/regularization_callbacks.py</div><div id='n_file'> N File Name: trident/callbacks/regularization_callbacks.py</div><div id='m_start'> M Start Line: 71</div><div id='m_end'> M End Line: 99</div><div id='n_start'> N Start Line: 71</div><div id='n_end'> N End Line: 98</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+		reservoir.forward = self.eprop._decorate_hidden_forward(reservoir.forward, reservoir.name)
+		output_layer.forward = self.eprop._decorate_forward(output_layer.forward, output_layer.name)
+		for _ in progress_bar:
+			x_pred = <a id="change">[]</a>
+			x_pred.append(self.true_time_series[:, 0, :].clone())
+			forward_tensor = self.true_time_series[:, 0, :].clone().to(reservoir.device)
+			hh = None
+			for t in range(1, self.true_time_series.shape[-2]):
+				forward_tensor, hh = unpack_out_hh(reservoir(forward_tensor, hh, t=t-1))
+				forward_tensor, _ = unpack_out_hh(output_layer(forward_tensor, None, t=t-1))
+				x_pred.append(forward_tensor)
+				&#47&#47 eligibility_traces = dy_dw_local(y=forward_tensor, params=self.params)
+				&#47&#47 self.eprop.eligibility_traces = eligibility_traces
+				&#47&#47 batch_loss = self.eprop.apply_criterion(forward_tensor, self.true_time_series[:, t].to(forward_tensor.device))
+				&#47&#47 learning_signals = self.compute_learning_signals(loss_at_t)
+				&#47&#47 errors = self.eprop.compute_errors(forward_tensor, self.true_time_series[:, t])
+				&#47&#47 learning_signals = self.eprop.compute_learning_signals(errors)
+				&#47&#47 self.eprop.update_grads(errors, batch_loss)
+				forward_tensor.detach_()
+				hh = recursive_detach(hh)
+				&#47&#47 if t % self.update_each == 0:
+				&#47&#47 	self.eprop._make_optim_step()
+			self.eprop._make_optim_step()
+			x_pred<a id="change"> = </a>torch.stack([t.cpu() for t in x_pred], dim=1)
+			pvar = PVarianceLoss()(x_pred, self.true_time_series.to(x_pred.device))
+			mse = torch.nn.MSELoss()(x_pred, self.true_time_series.to(x_pred.device))
+			progress_bar.set_postfix({"pvar": to_numpy(pvar).item(), "MSE": to_numpy(mse).item()})</code></pre><h3>After Change</h3><pre><code class='java'>
+		for _ in range(100):
+			val_x_pred = self.model.get_prediction_trace(inputs)
+			pvar = PVarianceLoss()(val_x_pred, self.raw_time_series.to(val_x_pred.device))
+			val_pvars.append(<a id="change">to_numpy(</a>pvar<a id="change">)</a>.item())
+		print(f"Validation PVariance: {np.mean(val_pvars):.3f}")
+		return x_pred, self.raw_time_series
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/neurotorch/neurotorch/commit/da8d4065502c761ccf6e28e47dd189e3b5488140#diff-bfbe6bfd7f09fee9a898ae4ce6ce338f6bfc05e7db28469ba6540dfae09a766dL109' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 48460009</div><div id='project'> Project Name: neurotorch/neurotorch</div><div id='commit'> Commit Name: da8d4065502c761ccf6e28e47dd189e3b5488140</div><div id='time'> Time: 2023-01-31</div><div id='author'> Author: 50332514+JeremieGince@users.noreply.github.com</div><div id='file'> File Name: src/neurotorch/learning_algorithms/debug_e_prop_v5.py</div><div id='m_class'> M Class Name: SimplifiedEpropFinal</div><div id='n_method'> N Class Name: SimplifiedEpropFinal</div><div id='m_method'> M Method Name: train(4)</div><div id='n_method'> N Method Name: train(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/neurotorch/learning_algorithms/debug_e_prop_v5.py</div><div id='n_file'> N File Name: src/neurotorch/learning_algorithms/debug_e_prop_v5.py</div><div id='m_start'> M Start Line: 120</div><div id='m_end'> M End Line: 153</div><div id='n_start'> N Start Line: 115</div><div id='n_end'> N End Line: 144</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+
+        if &quotmixup_loss&quot not in training_context[&quotlosses&quot]:
+            training_context[&quotlosses&quot][&quotcutmix_loss&quot]<a id="change"> = </a><a id="change">[]</a>
+        training_context[&quotcurrent_loss&quot] = training_context[&quotcurrent_loss&quot] + this_loss *self.loss_weight
+        if training_context[&quotis_collect_data&quot]:
+            training_context[&quotlosses&quot][&quotcutmix_loss&quot].append(float(to_numpy(this_loss) * self.loss_weight))
+</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        training_context[&quotcurrent_loss&quot] = training_context[&quotcurrent_loss&quot] + this_loss *self.loss_weight
+        if training_context[&quotis_collect_data&quot]:
+            training_context[&quotlosses&quot].collect(&quotcutmix_loss&quot, training_context[&quotsteps&quot], float(<a id="change">to_numpy(</a>this_loss * self.loss_weight<a id="change">)</a>))
+
+
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/allanyiin/trident/commit/a961886325f288a00b1d81d66539d8b20cf21d07#diff-87f1d359e49f5d7192ecc96a128fca1efb648962c392ccec2f70ab037cc24047L148' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 48460014</div><div id='project'> Project Name: allanyiin/trident</div><div id='commit'> Commit Name: a961886325f288a00b1d81d66539d8b20cf21d07</div><div id='time'> Time: 2020-10-20</div><div id='author'> Author: allan@asiaminer.com.tw</div><div id='file'> File Name: trident/callbacks/regularization_callbacks.py</div><div id='m_class'> M Class Name: CutMixCallback</div><div id='n_method'> N Class Name: CutMixCallback</div><div id='m_method'> M Method Name: on_loss_calculation_end(2)</div><div id='n_method'> N Method Name: on_loss_calculation_end(2)</div><div id='m_parent_class'> M Parent Class: RegularizationCallbacksBase</div><div id='n_parent_class'> N Parent Class: RegularizationCallbacksBase</div><div id='m_file'> M File Name: trident/callbacks/regularization_callbacks.py</div><div id='n_file'> N File Name: trident/callbacks/regularization_callbacks.py</div><div id='m_start'> M Start Line: 169</div><div id='m_end'> M End Line: 208</div><div id='n_start'> N Start Line: 167</div><div id='n_end'> N End Line: 205</div><BR>

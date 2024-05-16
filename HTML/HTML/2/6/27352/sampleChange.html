@@ -1,0 +1,37 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            forecast = [forecast[:, :, i] for i in range(n_outputs)]
+            backcast = [encoder_y[:, :, i] - backcast[:, :, i] for i in range(n_outputs)]
+
+            n_blocks<a id="change"> = </a><a id="change">block_predictions.size(</a>3<a id="change">)</a>
+            block_predictions = [block_predictions[:, :, i] for i in range(n_outputs)]
+            block_predictions = tuple(
+                self.transform_output([b[..., block] for b in block_predictions], target_scale=x["target_scale"])
+                for block in range(n_blocks)</code></pre><h3>After Change</h3><pre><code class='java'>
+        block_backcasts = block_backcasts.detach()
+        block_forecasts = block_forecasts.detach()
+
+        <a id="change">if </a><a id="change">isinstance(</a>self.hparams.output_size, (tuple, list)<a id="change">)</a>:
+            forecast = forecast.split(self.hparams.output_size, dim=2)
+            backcast<a id="change"> = </a>backcast.split(1, dim=2)
+            block_backcasts = tuple(
+                self.transform_output(block.squeeze(3).split(1, dim=2), target_scale=x["target_scale"])
+                for block in block_backcasts.split(1, dim=3)
+            )
+            block_forecasts = tuple(
+                self.transform_output(
+                    block.squeeze(3).split(self.hparams.output_size, dim=2), target_scale=x["target_scale"]
+                )
+                for block in block_forecasts.split(1, dim=3)
+            )
+        else:
+            block_backcasts = tuple(
+                self.transform_output(block.squeeze(3), target_scale=x["target_scale"])
+                for block in block_backcasts.split(1, dim=3)
+            )
+            block_forecasts<a id="change"> = </a>tuple(
+                self.transform_output(block.squeeze(3), target_scale=x["target_scale"])
+                for block in block_forecasts.split(1, dim=3)
+            )</code></pre>

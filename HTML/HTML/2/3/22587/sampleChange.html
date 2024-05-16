@@ -1,0 +1,20 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+  grad_weight = grad_weight.reshape(C.bs, grad_weight.shape[1] // C.bs, *grad_weight.shape[2:]).sum(dim=0)
+  grad_weight = grad_weight.view(C.groups, C.cin, C.rcout, *grad_weight.shape[1:]).transpose(2, 1)
+  &#47&#47 narrow removes excess for strided
+  dw[:] = <a id="change">grad_weight.contiguous().view(C.groups*C.rcout, C.cin, *grad_weight.shape[3:]).narrow(
+            </a>2, <a id="change">0</a>, dw.shape[2]<a id="change">)</a>.narrow(3, 0, dw.shape[3])
+  return dw
+
+def processing_op(op,x,w,ret,stride,groups):</code></pre><h3>After Change</h3><pre><code class='java'>
+  x = x.reshape(1, C.bs * C.groups * C.cin, C.iy, C.ix)
+  grad_weight = torch.conv2d(x, grad_output, dilation=stride, groups=C.bs*C.groups*C.cin)
+  grad_weight = grad_weight.reshape(C.bs, C.groups, C.cin, C.rcout, *grad_weight.shape[2:]).sum(dim=0).transpose(2, 1)
+  dw[:] = <a id="change">grad_weight.reshape(C.groups*C.rcout, C.cin, *grad_weight.shape[3:])[:, :, :dw.shape[2], :dw.shape[3]]</a>
+  return dw
+
+def processing_op(op,x,w,ret,stride,groups):
+  if op == ProcessingOps.CONV:</code></pre>

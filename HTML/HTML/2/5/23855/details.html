@@ -1,0 +1,66 @@
+<html><h3>Pattern ID :23855
+</h3><img src='74348334.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        conv_v_img = rearrange(conv_v_img, &quotB (h Ch) H W -&gt; B h (H W) Ch&quot, h=h)          &#47&#47 Shape: [B, h*Ch, H, W] -&gt; [B, h, H*W, Ch].
+
+        EV_hat_img = q_img * conv_v_img
+        zero<a id="change"> = </a><a id="change">torch.zeros(</a>(B<a id="change">, h, 1, Ch</a>)<a id="change">, dtype=q.dtype, layout=q.layout, device=q.device)</a>
+        EV_hat = torch.cat((zero, EV_hat_img), dim=2)                                &#47&#47 Shape: [B, h, N, Ch].
+
+        return EV_hat
+</code></pre><h3>After Change</h3><pre><code class='java'>
+        for i, conv in enumerate(self.conv_list):
+            conv_v_img_list.append(conv(v_img_list[i]))
+        conv_v_img = torch.cat(conv_v_img_list, dim=1)
+        conv_v_img<a id="change"> = </a><a id="change">conv_v_img.reshape(</a>B, h, Ch, H * W<a id="change">)</a>.transpose(-1, -2)
+
+        EV_hat = q_img * conv_v_img
+        EV_hat = F.pad(EV_hat, (0, 0, 1, 0, 0, 0))  &#47&#47 [B, h, N, Ch].</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 5</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/feng-lab/pytorch-image-models/commit/76739a7589ebde1fc6b015e5f9f3e2dc8a73299e#diff-515038d09601bfcc6d6f3a526f98449b70f4b62595ddd47708355d5fa9891311L96' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 74348334</div><div id='project'> Project Name: feng-lab/pytorch-image-models</div><div id='commit'> Commit Name: 76739a7589ebde1fc6b015e5f9f3e2dc8a73299e</div><div id='time'> Time: 2021-04-28</div><div id='author'> Author: rwightman@gmail.com</div><div id='file'> File Name: timm/models/coat.py</div><div id='m_class'> M Class Name: ConvRelPosEnc</div><div id='n_method'> N Class Name: ConvRelPosEnc</div><div id='m_method'> M Method Name: forward(4)</div><div id='n_method'> N Method Name: forward(4)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: timm/models/coat.py</div><div id='n_file'> N File Name: timm/models/coat.py</div><div id='m_start'> M Start Line: 96</div><div id='m_end'> M End Line: 113</div><div id='n_start'> N Start Line: 119</div><div id='n_end'> N End Line: 137</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            continue
+
+        &#47&#47 create empty new rule column
+        reduced_matches_col<a id="change"> = </a><a id="change">np.zeros(</a>(full_matches.shape[0]<a id="change"></a>,)<a id="change">)</a>
+
+        &#47&#47 the mask has to have *boolean type*, otherwise the matrix is sliced incorrectly
+        label_rule_matches = full_matches[:, to_reduce_label_mask].sum(1)
+        reduced_matches_col[label_rule_matches != 0] = 1  &#47&#47 identify matches where any original rule matched</code></pre><h3>After Change</h3><pre><code class='java'>
+        if isinstance(full_matches, ss.csr_matrix):
+            reduced_matches_col = ss.csc_matrix(reduced_matches_col).minimum(1)
+        else:
+            reduced_matches_col<a id="change"> = </a><a id="change">np.minimum(reduced_matches_col, 1).reshape(</a>-1, 1<a id="change">)</a>
+
+        reduced_matches.append(reduced_matches_col)
+
+    if isinstance(full_matches, ss.csr_matrix):</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/knodle/knodle/commit/3ed4f6f0c14a634e8976ab9d9d7ab1e95aface4d#diff-3669479fa8c5e2732a7b9dff64c6a4ac9f8502aff28bcd9ce1070115d6cf5cccL172' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 74348335</div><div id='project'> Project Name: knodle/knodle</div><div id='commit'> Commit Name: 3ed4f6f0c14a634e8976ab9d9d7ab1e95aface4d</div><div id='time'> Time: 2021-05-31</div><div id='author'> Author: 19635192+marina-sp@users.noreply.github.com</div><div id='file'> File Name: knodle/transformation/rule_reduction.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: _get_merged_matrix(3)</div><div id='n_method'> N Method Name: _get_merged_matrix(3)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: knodle/transformation/rule_reduction.py</div><div id='n_file'> N File Name: knodle/transformation/rule_reduction.py</div><div id='m_start'> M Start Line: 188</div><div id='m_end'> M End Line: 205</div><div id='n_start'> N Start Line: 229</div><div id='n_end'> N End Line: 253</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    &#47&#47 stacked_maps is the all the st maps for a given video (=num_maps) stacked.
+    stacked_maps = np.zeros((num_maps, clip_size, 25, 3))
+    &#47&#47 processed_maps will contain all the data after processing each frame, but not yet converted into maps
+    processed_maps<a id="change"> = </a><a id="change">np.zeros(</a>(num_frames<a id="change">, 25, 3</a>)<a id="change">)</a>
+    &#47&#47 processed_frames = np.zeros((num_frames, output_shape[0], output_shape[1], 3))
+    processed_frames = []
+    map_index = 0</code></pre><h3>After Change</h3><pre><code class='java'>
+    pbar.close()
+
+    (idx, w, h, c) = stacked_maps.shape
+    stacked_maps = <a id="change">stacked_maps.reshape(</a>(idx, h, w, c)<a id="change">)</a>
+    stacked_maps<a id="change"> = </a>stacked_maps.astype(np.uint8)
+    return True, stacked_maps
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/tvs-ai/pytorch_rppgs/commit/fb7669c43864d13d11528ad55745d21e2ce0635e#diff-9e56f945a06ad9d7c0b5eef59c8b6c9d69ad066e7a42e26909c38d0277fcb94cL981' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 74348332</div><div id='project'> Project Name: tvs-ai/pytorch_rppgs</div><div id='commit'> Commit Name: fb7669c43864d13d11528ad55745d21e2ce0635e</div><div id='time'> Time: 2022-10-19</div><div id='author'> Author: 57242033+najy97@users.noreply.github.com</div><div id='file'> File Name: utils/image_preprocess.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: RhythmNet_preprocessor(2)</div><div id='n_method'> N Method Name: RhythmNet_preprocessor(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: utils/image_preprocess.py</div><div id='n_file'> N File Name: utils/image_preprocess.py</div><div id='m_start'> M Start Line: 984</div><div id='m_end'> M End Line: 1102</div><div id='n_start'> N Start Line: 1004</div><div id='n_end'> N End Line: 1109</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                )
+
+            if variable_dim_index == 1:
+                b<a id="change"> = </a><a id="change">np.zeros(</a>(len(indices)<a id="change">, output.dim</a>)<a id="change">)</a>
+                b[np.arange(len(indices)), indices] = 1
+            elif variable_dim_index == 2:
+                b = np.zeros((indices.shape[0], indices.shape[1], output.dim))
+                &#47&#47 From https://stackoverflow.com/questions/36960320/convert-a-2d-matrix-to-a-3d-one-hot-matrix-numpy</code></pre><h3>After Change</h3><pre><code class='java'>
+                    f"Unsupported variable_dim_index={variable_dim_index}"
+                )
+
+            feature_scaled<a id="change"> = </a><a id="change">output.transform(raw.flatten()).reshape(</a>raw.shape<a id="change">)</a>
+
+            if output.apply_example_scaling:
+                if variable_dim_index != 2:
+                    raise RuntimeError(</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/gretelai/gretel-synthetics/commit/cf7dd31ca60b565bb50fdf0b30092e2c9ebb25bf#diff-d3a8f221673d80e72a8bdfb7b36b7ea09482e9ec10db970329d1a5c71aa08362L203' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 74348331</div><div id='project'> Project Name: gretelai/gretel-synthetics</div><div id='commit'> Commit Name: cf7dd31ca60b565bb50fdf0b30092e2c9ebb25bf</div><div id='time'> Time: 2022-11-21</div><div id='author'> Author: kendrick@gretel.ai</div><div id='file'> File Name: src/gretel_synthetics/timeseries_dgan/transformations.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: transform(4)</div><div id='n_method'> N Method Name: transform(4)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: src/gretel_synthetics/timeseries_dgan/transformations.py</div><div id='n_file'> N File Name: src/gretel_synthetics/timeseries_dgan/transformations.py</div><div id='m_start'> M Start Line: 244</div><div id='m_end'> M End Line: 293</div><div id='n_start'> N Start Line: 588</div><div id='n_end'> N End Line: 623</div><BR>

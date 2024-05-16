@@ -1,0 +1,43 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            &#47&#47 transducer tensor
+            predictions = predictions.expand(-1, -1, 2, -1)
+        loss = params.compute_cost(
+            predictions, phns, <a id="change">[</a>lens.cuda(), phn_lens.cuda()<a id="change"></a>]
+        )
+
+        if <a id="change">not train_mode</a>:
+            seq = ctc_greedy_decode(predictions, lens, blank_id=-1)
+            phns = undo_padding(phns, phn_lens)
+            stats = <a id="change">{</a>"PER": <a id="change">wer_details_for_batch(</a>ids, phns, seq<a id="change">)}</a>
+            <a id="change">return </a>loss, stats
+
+        <a id="change">return </a>loss
+
+    def on_epoch_end(self, epoch, train_stats, valid_stats):
+        print("Epoch %d complete" % epoch)</code></pre><h3>After Change</h3><pre><code class='java'>
+    def compute_objectives(self, predictions, targets, stage="train"):
+        predictions, lens = predictions
+        ids, phns, phn_lens = targets
+        if <a id="change">stage == "train"</a>:
+            loss = params.compute_cost(
+                predictions,
+                phns.to(params.device).long(),
+                lens.to(params.device),
+                phn_lens.to(params.device),
+            )
+
+        <a id="change">stats = </a><a id="change">{}</a>
+        if <a id="change">stage != "train"</a>:
+            predictions = predictions.squeeze(2)
+            loss = -predictions.squeeze(2).max(dim=-1)[0].sum(dim=-1).mean()
+            seq = ctc_greedy_decode(predictions, lens, blank_id=params.blank_id)
+            phns = undo_padding(phns, phn_lens)
+            <a id="change">stats["PER"]</a> = <a id="change">wer_details_for_batch(</a>ids, phns, seq<a id="change">)</a>
+
+        <a id="change">return </a>loss, stats
+
+    def on_epoch_end(self, epoch, train_stats, valid_stats):
+        print("Epoch %d complete" % epoch)</code></pre>

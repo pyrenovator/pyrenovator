@@ -1,0 +1,41 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        assert torch.equal(mean_reestimated, expected_mean)
+        assert torch.equal(var_reestimated, expected_var)
+
+    new_params = list(<a id="change">model.named_parameters()</a>)
+
+    &#47&#47 All the model parameters should remain the same
+    assert old_params == new_params</code></pre><h3>After Change</h3><pre><code class='java'>
+
+
+def _test_reestimation(model, data_loader, expected_mean, expected_var):
+    old_params = copy.deepcopy(list(<a id="change">model.parameters()</a>))
+
+    mean_orig, var_orig = [
+        ( bn.running_mean.clone().detach(), bn.running_var.clone().detach() )
+        for bn in _get_active_bn_modules(model)
+    ][0]
+
+    with reestimate_bn_stats(model, data_loader):
+        for bn in _get_active_bn_modules(model):
+            assert bn.momentum != 1.0
+
+        mean_reestimated, var_reestimated = [
+            ( bn.running_mean.clone().detach(), bn.running_var.clone().detach() )
+            for bn in _get_active_bn_modules(model)
+        ][0]
+
+        assert torch.equal(mean_reestimated, expected_mean)
+        assert torch.equal(var_reestimated, expected_var)
+
+    new_params = list(model.parameters())
+
+    &#47&#47 All the model parameters should remain the same
+    <a id="change">for </a>old, new in zip(old_params, new_params)<a id="change">:
+        </a>assert torch.equal(old, new)
+
+    mean_restored, var_restored = [
+        ( bn.running_mean.clone().detach(), bn.running_var.clone().detach() )</code></pre>

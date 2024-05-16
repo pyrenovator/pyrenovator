@@ -1,0 +1,189 @@
+<html><h3>Pattern ID :2832
+</h3><img src='11274957.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    print("best_acc1 = {:3.1f}".format(best_acc1))
+
+    &#47&#47 evaluate on test set
+    checkpoint = torch.load(<a id="change">logger.get_checkpoint_path(</a>&quotbest&quot<a id="change">)</a>, map_location=&quotcpu&quot)
+    G.load_state_dict(checkpoint[&quotG&quot])
+    <a id="change">F.load_state_dict(</a>checkpoint[&quotF&quot]<a id="change">)</a>
+    acc1<a id="change"> = </a><a id="change">validate(</a>test_loader, G, <a id="change">F</a>, args<a id="change">)</a>
+    print("test_acc1 = {:3.1f}".format(acc1))
+
+    logger.close()
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    print("best_acc1 = {:3.1f}".format(best_acc1))
+
+    &#47&#47 evaluate on test set
+    classifier.load_state_dict(torch.load(<a id="change">logger.get_checkpoint_path(</a>&quotbest&quot<a id="change">)</a>))
+    acc1 = validate(test_loader, classifier, args)
+    print("test_acc1 = {:3.1f}".format(acc1))
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 5</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/thuml/transfer-learning-library/commit/ec192862c520a606b9233f651f2a381307d9a26a#diff-e54d2755942fde55ec5c7a79b78a2e3b8dce87b0c7acf25dd6c52c840eaf9a77L73' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 11274957</div><div id='project'> Project Name: thuml/transfer-learning-library</div><div id='commit'> Commit Name: ec192862c520a606b9233f651f2a381307d9a26a</div><div id='time'> Time: 2021-03-05</div><div id='author'> Author: chenbx18@mails.tsinghua.edu.cn</div><div id='file'> File Name: examples-da/unsupervised/afn.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(1)</div><div id='n_method'> N Method Name: main(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples-da/unsupervised/afn.py</div><div id='n_file'> N File Name: examples-da/unsupervised/afn.py</div><div id='m_start'> M Start Line: 73</div><div id='m_end'> M End Line: 152</div><div id='n_start'> N Start Line: 73</div><div id='n_end'> N End Line: 145</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+    &#47&#47 create model
+    print("=&gt; using pre-trained model &quot{}&quot".format(args.arch))
+    <a id="change">G</a> = models.__dict__[args.arch](pretrained=True).to(device)
+    num_classes = train_source_dataset.num_classes
+    F = ImageClassifierHead(G.out_features, num_classes, args.bottleneck_dim).to(device)
+    F.apply(weights_init)
+
+    &#47&#47 define optimizer
+    &#47&#47 the learning rate is fixed according to origin paper
+    optimizer_g = SGD(G.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+    optimizer_f = SGD(F.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
+
+    &#47&#47 resume from the best checkpoint
+    if args.phase != &quottrain&quot:
+        checkpoint = torch.load(logger.get_checkpoint_path(&quotbest&quot), map_location=&quotcpu&quot)
+        G.load_state_dict(checkpoint[&quotG&quot])
+        F.load_state_dict(checkpoint[&quotF&quot])
+
+    &#47&#47 analysis the model
+    if args.phase == &quotanalysis&quot:
+        &#47&#47 extract features from both domains
+        feature_extractor = G.to(device)
+        source_feature = collect_feature(train_source_loader, feature_extractor, device)
+        target_feature = collect_feature(train_target_loader, feature_extractor, device)
+        &#47&#47 plot t-SNE
+        tSNE_filename = osp.join(logger.visualize_directory, &quotTSNE.png&quot)
+        tsne.visualize(source_feature, target_feature, tSNE_filename)
+        print("Saving t-SNE to", tSNE_filename)
+        &#47&#47 calculate A-distance, which is a measure for distribution discrepancy
+        A_distance = a_distance.calculate(source_feature, target_feature, device)
+        print("A-distance =", A_distance)
+        return
+
+    if args.phase == &quottest&quot:
+        acc1 = validate(test_loader, G, F, args)
+        print(acc1)
+        return
+
+    &#47&#47 start training
+    best_acc1 = 0.
+    for epoch in range(args.epochs):
+        &#47&#47 train for one epoch
+        train(train_source_iter, train_target_iter, G, F, optimizer_g, optimizer_f, epoch, args)
+
+        &#47&#47 evaluate on validation set
+        acc1 = validate(val_loader, G, F, args)
+
+        &#47&#47 remember best acc@1 and save checkpoint
+        torch.save({
+            &quotG&quot: G.state_dict(),
+            &quotF&quot: F.state_dict()
+        }, logger.get_checkpoint_path(&quotlatest&quot))
+        if acc1 &gt; best_acc1:
+            shutil.copy(logger.get_checkpoint_path(&quotlatest&quot), logger.get_checkpoint_path(&quotbest&quot))
+        best_acc1 = max(acc1, best_acc1)
+
+    print("best_acc1 = {:3.1f}".format(best_acc1))
+
+    &#47&#47 evaluate on test set
+    checkpoint = torch.load(<a id="change">logger.get_checkpoint_path(</a>&quotbest&quot<a id="change">)</a>, map_location=&quotcpu&quot)
+    <a id="change">G.load_state_dict(</a>checkpoint[&quotG&quot]<a id="change">)</a>
+    F.load_state_dict(checkpoint[&quotF&quot])
+    acc1<a id="change"> = </a><a id="change">validate(</a>test_loader, G, F, args<a id="change">)</a>
+    print("test_acc1 = {:3.1f}".format(acc1))
+
+    logger.close()
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    print("best_acc1 = {:3.1f}".format(best_acc1))
+
+    &#47&#47 evaluate on test set
+    classifier.load_state_dict(torch.load(<a id="change">logger.get_checkpoint_path(</a>&quotbest&quot<a id="change">)</a>))
+    acc1 = validate(test_loader, classifier, args)
+    print("test_acc1 = {:3.1f}".format(acc1))
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/thuml/transfer-learning-library/commit/ec192862c520a606b9233f651f2a381307d9a26a#diff-e54d2755942fde55ec5c7a79b78a2e3b8dce87b0c7acf25dd6c52c840eaf9a77L32' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 11274955</div><div id='project'> Project Name: thuml/transfer-learning-library</div><div id='commit'> Commit Name: ec192862c520a606b9233f651f2a381307d9a26a</div><div id='time'> Time: 2021-03-05</div><div id='author'> Author: chenbx18@mails.tsinghua.edu.cn</div><div id='file'> File Name: examples-da/unsupervised/afn.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(1)</div><div id='n_method'> N Method Name: main(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples-da/unsupervised/afn.py</div><div id='n_file'> N File Name: examples-da/unsupervised/afn.py</div><div id='m_start'> M Start Line: 73</div><div id='m_end'> M End Line: 152</div><div id='n_start'> N Start Line: 73</div><div id='n_end'> N End Line: 145</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                best_test_mAP = test_mAP_2
+
+    &#47&#47 evaluate on test set
+    <a id="change">model_1_ema.load_state_dict(</a>torch.load(<a id="change">logger.get_checkpoint_path(</a>&quotbest&quot<a id="change">)</a>)<a id="change">)</a>
+    print("Test on target domain:")
+    _<a id="change">, test_mAP = </a><a id="change">validate(</a>test_loader, model_1_ema, target_dataset.query, target_dataset.gallery, device<a id="change">,
+                           cmc_flag=True, rerank=args.rerank)</a>
+    print("test mAP on target = {}".format(test_mAP))
+    print("oracle mAP on target = {}".format(best_test_mAP))
+    logger.close()
+</code></pre><h3>After Change</h3><pre><code class='java'>
+                torch.save(model_1_ema.state_dict(), logger.get_checkpoint_path(&quotbest&quot))
+                best_test_mAP = test_mAP_1
+            if test_mAP_2 &gt; test_mAP_1 and test_mAP_2 &gt; best_test_mAP:
+                torch.save(model_2_ema.state_dict(), <a id="change">logger.get_checkpoint_path(</a>&quotbest&quot<a id="change">)</a>)
+                best_test_mAP = test_mAP_2
+
+    print("best mAP on target = {}".format(best_test_mAP))</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/thuml/transfer-learning-library/commit/91cc646b6e3c004ef8e2aba07ee26ef7b652116f#diff-48b4f4fea3a4b31b2d1b4d808bed9cca2de0b4e0ac98331f909b09f5a149404cL38' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 11274960</div><div id='project'> Project Name: thuml/transfer-learning-library</div><div id='commit'> Commit Name: 91cc646b6e3c004ef8e2aba07ee26ef7b652116f</div><div id='time'> Time: 2021-09-03</div><div id='author'> Author: chenbx18@mails.tsinghua.edu.cn</div><div id='file'> File Name: examples/domain_adaptation/reid/mmt.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(1)</div><div id='n_method'> N Method Name: main(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples/domain_adaptation/reid/mmt.py</div><div id='n_file'> N File Name: examples/domain_adaptation/reid/mmt.py</div><div id='m_start'> M Start Line: 39</div><div id='m_end'> M End Line: 164</div><div id='n_start'> N Start Line: 120</div><div id='n_end'> N End Line: 173</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    print("=&gt; using pre-trained model &quot{}&quot".format(args.arch))
+    G = models.__dict__[args.arch](pretrained=True).to(device)
+    num_classes = train_source_dataset.num_classes
+    <a id="change">F</a> = ImageClassifierHead(G.out_features, num_classes, args.bottleneck_dim).to(device)
+    F.apply(weights_init)
+
+    &#47&#47 define optimizer
+    &#47&#47 the learning rate is fixed according to origin paper
+    optimizer_g = SGD(G.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+    optimizer_f = SGD(F.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
+
+    &#47&#47 resume from the best checkpoint
+    if args.phase != &quottrain&quot:
+        checkpoint = torch.load(logger.get_checkpoint_path(&quotbest&quot), map_location=&quotcpu&quot)
+        G.load_state_dict(checkpoint[&quotG&quot])
+        F.load_state_dict(checkpoint[&quotF&quot])
+
+    &#47&#47 analysis the model
+    if args.phase == &quotanalysis&quot:
+        &#47&#47 extract features from both domains
+        feature_extractor = G.to(device)
+        source_feature = collect_feature(train_source_loader, feature_extractor, device)
+        target_feature = collect_feature(train_target_loader, feature_extractor, device)
+        &#47&#47 plot t-SNE
+        tSNE_filename = osp.join(logger.visualize_directory, &quotTSNE.png&quot)
+        tsne.visualize(source_feature, target_feature, tSNE_filename)
+        print("Saving t-SNE to", tSNE_filename)
+        &#47&#47 calculate A-distance, which is a measure for distribution discrepancy
+        A_distance = a_distance.calculate(source_feature, target_feature, device)
+        print("A-distance =", A_distance)
+        return
+
+    if args.phase == &quottest&quot:
+        acc1 = validate(test_loader, G, F, args)
+        print(acc1)
+        return
+
+    &#47&#47 start training
+    best_acc1 = 0.
+    for epoch in range(args.epochs):
+        &#47&#47 train for one epoch
+        train(train_source_iter, train_target_iter, G, F, optimizer_g, optimizer_f, epoch, args)
+
+        &#47&#47 evaluate on validation set
+        acc1 = validate(val_loader, G, F, args)
+
+        &#47&#47 remember best acc@1 and save checkpoint
+        torch.save({
+            &quotG&quot: G.state_dict(),
+            &quotF&quot: F.state_dict()
+        }, logger.get_checkpoint_path(&quotlatest&quot))
+        if acc1 &gt; best_acc1:
+            shutil.copy(logger.get_checkpoint_path(&quotlatest&quot), logger.get_checkpoint_path(&quotbest&quot))
+        best_acc1 = max(acc1, best_acc1)
+
+    print("best_acc1 = {:3.1f}".format(best_acc1))
+
+    &#47&#47 evaluate on test set
+    checkpoint = torch.load(<a id="change">logger.get_checkpoint_path(</a>&quotbest&quot<a id="change">)</a>, map_location=&quotcpu&quot)
+    G.load_state_dict(checkpoint[&quotG&quot])
+    <a id="change">F.load_state_dict(</a>checkpoint[&quotF&quot]<a id="change">)</a>
+    acc1<a id="change"> = </a><a id="change">validate(</a>test_loader, G, F, args<a id="change">)</a>
+    print("test_acc1 = {:3.1f}".format(acc1))
+
+    logger.close()
+</code></pre><h3>After Change</h3><pre><code class='java'>
+    print("best_acc1 = {:3.1f}".format(best_acc1))
+
+    &#47&#47 evaluate on test set
+    classifier.load_state_dict(torch.load(<a id="change">logger.get_checkpoint_path(</a>&quotbest&quot<a id="change">)</a>))
+    acc1 = validate(test_loader, classifier, args)
+    print("test_acc1 = {:3.1f}".format(acc1))
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/thuml/transfer-learning-library/commit/ec192862c520a606b9233f651f2a381307d9a26a#diff-2308619a27bef896d80ae6f3603a36bc9a9d9a838dba4f020212f63e98ec4ea2L33' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 11274961</div><div id='project'> Project Name: thuml/transfer-learning-library</div><div id='commit'> Commit Name: ec192862c520a606b9233f651f2a381307d9a26a</div><div id='time'> Time: 2021-03-05</div><div id='author'> Author: chenbx18@mails.tsinghua.edu.cn</div><div id='file'> File Name: examples-da/partial/afn.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(1)</div><div id='n_method'> N Method Name: main(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: examples-da/partial/afn.py</div><div id='n_file'> N File Name: examples-da/partial/afn.py</div><div id='m_start'> M Start Line: 75</div><div id='m_end'> M End Line: 154</div><div id='n_start'> N Start Line: 75</div><div id='n_end'> N End Line: 148</div><BR>

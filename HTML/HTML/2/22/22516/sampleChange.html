@@ -1,0 +1,51 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                optimizer.clear_grad()
+
+        pred = F.softmax(output)
+        acc<a id="change"> = </a>paddle.metric.accuracy(pred, <a id="change">label.unsqueeze(1</a><a id="change">)</a>)
+
+        batch_size = image.shape[0]
+        train_loss_meter.update(loss.numpy()[0], batch_size)</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    for batch_id, data in enumerate(dataloader):
+        image = data[0]
+        <a id="change">label</a> = data[1]
+        <a id="change">label_orig</a><a id="change"> = label</a><a id="change">.clone()</a>
+
+        <a id="change">if mixup_fn</a><a id="change"> is not None</a>:
+            <a id="change">image</a><a id="change">, label = </a><a id="change">mixup_fn(image</a>, <a id="change">label_orig</a><a id="change">)</a>
+        
+        if amp is True: &#47&#47 mixed precision training
+            with paddle.amp.auto_cast():
+                output = model(image)
+                loss = criterion(image, output, label)
+            scaled = scaler.scale(loss)
+            scaled.backward()
+            if ((batch_id +1) % accum_iter == 0) or (batch_id + 1 == len(dataloader)):
+                scaler.minimize(optimizer, scaled)
+                optimizer.clear_grad()
+        else: &#47&#47 full precision training
+            output = model(image)
+            loss = criterion(output, label)
+            &#47&#47NOTE: division may be needed depending on the loss function
+            &#47&#47 Here no division is needed:
+            &#47&#47 default &quotreduction&quot param in nn.CrossEntropyLoss is set to &quotmean&quot
+            &#47&#47loss =  loss / accum_iter
+            loss.backward()
+
+            if ((batch_id +1) % accum_iter == 0) or (batch_id + 1 == len(dataloader)):
+                optimizer.step()
+                optimizer.clear_grad()
+
+        pred = F.softmax(output)
+        <a id="change">if mixup_fn</a>:
+            acc<a id="change"> = </a>paddle.metric.accuracy(pred, label_orig)
+        else:
+            acc<a id="change"> = paddle.metric.accuracy(</a>pred, <a id="change">label_orig.unsqueeze(1</a><a id="change">))</a>
+
+        batch_size = image.shape[0]
+        train_loss_meter.update(loss.numpy()[0], batch_size)
+        train_acc_meter.update(acc.numpy()[0], batch_size)</code></pre>

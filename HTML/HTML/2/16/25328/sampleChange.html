@@ -1,0 +1,20 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+            block_name = stack_name + "block{}_".format(block_id + 1)
+            block_drop_rate = drop_connect_rate * global_block_id / total_blocks
+            mlp_ratio = cur_mlp_ratios[block_id] if isinstance(cur_mlp_ratios, (list, tuple)) else cur_mlp_ratios
+            is_attn_block = True<a id="change"> if block_id &gt; num_block - cur_num_attn_blocks - 1</a><a id="change"> else </a>False
+            nn = meta_block(nn, is_attn_block, mlp_ratio=mlp_ratio, layer_scale=layer_scale, drop_rate=block_drop_rate, activation=activation, name=block_name)
+            global_block_id += 1
+</code></pre><h3>After Change</h3><pre><code class='java'>
+            block_drop_rate = drop_connect_rate * global_block_id / total_blocks
+            mlp_ratio = cur_mlp_ratios[block_id] if isinstance(cur_mlp_ratios, (list, tuple)) else cur_mlp_ratios
+            if block_id &gt;= attn_block_start_id:
+                nn = <a id="change">layers.Permute([2, 3, 1])(</a>nn<a id="change">)</a> if block_id == attn_block_start_id and <a id="change">image_data_format() == "channels_first"</a> else nn
+                nn = attn_block(nn, mlp_ratio=mlp_ratio, layer_scale=layer_scale, drop_rate=block_drop_rate, activation=activation, name=block_name)
+                nn = <a id="change">layers.Permute([3</a>, <a id="change">1</a>, <a id="change">2</a>]<a id="change">)</a>(nn) if block_id == num_block - 1 and image_data_format() == "channels_first" else nn
+            else:
+                nn = conv_block(nn, mlp_ratio=mlp_ratio, layer_scale=layer_scale, drop_rate=block_drop_rate, activation=activation, name=block_name)
+</code></pre>

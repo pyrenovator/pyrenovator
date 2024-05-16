@@ -1,0 +1,106 @@
+<html><h3>Pattern ID :35456
+</h3><img src='100644831.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+    :return: A dictionary in the format "input_name": Input.
+    
+    inputs: Dict[str, Input] = {}
+    <a id="change">for </a>i, <a id="change">input_dataset</a> in <a id="change">enumerate(</a>input_datasets<a id="change">):
+        </a>input_name<a id="change"> = </a>f"INPUT_{i}"
+        version = input_dataset.version
+        &#47&#47 if version is None, this function gets the latest version
+        logging.info(
+            f"Trying to access data asset {input_dataset.name} version {version}, datastore {input_dataset.datastore}"
+        )
+        data_asset: Data = _get_or_create_v2_data_asset(
+            ml_client,
+            input_dataset.datastore,
+            input_dataset.name,
+            version=str(version) if version else None,
+        )
+        if not data_asset.path:
+            raise ValueError(f"Data asset {data_asset.id} has no path.")
+        &#47&#47 Some mismatches with the documentation here:
+        &#47&#47 data_path = data_asset.id: This works in some jobs, but in other gives a
+        &#47&#47 DataAccessError(InvalidInput { message: "invalid uri format", source: None }))
+        &#47&#47 Unclear what the difference is between failing and successful jobs
+        &#47&#47 Alternative: data_path = f"azureml:{data_asset.name}:{version}"
+        &#47&#47 This does not work at all, neither with v1 nor v2 data assets. In both cases, we get
+        &#47&#47 InvalidInput { message: "invalid uri format"
+        data_path = data_asset.path
+
+        inputs[input_name]<a id="change"> = </a>Input(
+            &#47&#47 Data assets can be of type "uri_folder", "uri_file", "mltable", all of which are value types in Input
+            type=data_asset.type,  &#47&#47 type: ignore
+            path=data_path,</code></pre><h3>After Change</h3><pre><code class='java'>
+    :param input_datasets: A list of DatasetConfigs to convert to Inputs.
+    :return: A dictionary in the format "input_name": Input.
+    
+    input_assets = [get_data_asset_from_config(ml_client, input_dataset) <a id="change">for</a> input_dataset in input_datasets]
+    &#47&#47 Data assets can be of type "uri_folder", "uri_file", "mltable", all of which are value types in Input
+    <a id="change">return </a><a id="change">{
+        f"{V2_INPUT_PATTERN}{i}": Input(  &#47&#47 type: ignore
+            type=data_asset.type,  &#47&#47 type: ignore
+            path=data_asset.path,
+            mode=InputOutputModes.MOUNT if input_datasets[i].use_mounting else InputOutputModes.DOWNLOAD
+        ) for i, data_asset in enumerate(input_assets)
+    }</a>
+
+
+def create_v2_outputs(ml_client: MLClient, output_datasets: List[DatasetConfig]) -&gt; Dict[str, Output]:
+    </code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 7</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/microsoft/hi-ml/commit/5155b5060f2ff4f9bad14a3cc6c8b5c08ce9fcc5#diff-ad3e5561c7427b2578d5051a72c3e9fb5757d7263f442a7d01f7f56915b7793dL689' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 100644831</div><div id='project'> Project Name: microsoft/hi-ml</div><div id='commit'> Commit Name: 5155b5060f2ff4f9bad14a3cc6c8b5c08ce9fcc5</div><div id='time'> Time: 2023-02-07</div><div id='author'> Author: 45258028+peterhessey@users.noreply.github.com</div><div id='file'> File Name: hi-ml-azure/src/health_azure/himl.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: create_v2_inputs(2)</div><div id='n_method'> N Method Name: create_v2_inputs(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: hi-ml-azure/src/health_azure/himl.py</div><div id='n_file'> N File Name: hi-ml-azure/src/health_azure/himl.py</div><div id='m_start'> M Start Line: 696</div><div id='m_end'> M End Line: 727</div><div id='n_start'> N Start Line: 689</div><div id='n_end'> N End Line: 697</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+		model.eval()
+		accs = []
+		with torch.no_grad():
+			<a id="change">for i</a>, (inputs, classes) in tqdm(
+					<a id="change">enumerate(</a>dataloader<a id="change">)</a>, total=len(dataloader),
+					desc=desc, disable=not verbose, position=p_bar_position,
+			)<a id="change">:
+				</a>inputs = inputs.to(model.device)
+				classes<a id="change"> = </a>classes.to(model.device)
+				outputs = model.get_prediction_proba(inputs, re_outputs_trace=False, re_hidden_states=False)
+				if isinstance(outputs, dict):
+					if not isinstance(classes, dict):
+						classes = {k: classes for k in outputs}
+					for k, v in outputs.items():
+						_<a id="change">, preds = </a>torch.max(v, -1)
+						accs.extend(torch.eq(preds, classes[k]).float().cpu().numpy())
+		return np.mean(np.asarray(accs)).item()
+</code></pre><h3>After Change</h3><pre><code class='java'>
+			)
+
+		if isinstance(y_true, dict):
+			<a id="change">return </a><a id="change">{k: accuracy_score(y_true[k], y_pred[k]) for k in y_true}</a>
+		return accuracy_score(y_true, y_pred)
+
+	@staticmethod
+	def precision(</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/neurotorch/neurotorch/commit/a12e85b06c8ee517b890c900e3f1a1e7d1caa94c#diff-cbf72c0bab1db629bb51744bddad5311e30ddab49ba2c780e98325e7423a26f1L21' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 100644858</div><div id='project'> Project Name: neurotorch/neurotorch</div><div id='commit'> Commit Name: a12e85b06c8ee517b890c900e3f1a1e7d1caa94c</div><div id='time'> Time: 2022-06-10</div><div id='author'> Author: 50332514+JeremieGince@users.noreply.github.com</div><div id='file'> File Name: src/neurotorch/metrics/classification.py</div><div id='m_class'> M Class Name: ClassificationMetrics</div><div id='n_method'> N Class Name: ClassificationMetrics</div><div id='m_method'> M Method Name: accuracy(8)</div><div id='n_method'> N Method Name: accuracy(6)</div><div id='m_parent_class'> M Parent Class: BaseMetrics</div><div id='n_parent_class'> N Parent Class: BaseMetrics</div><div id='m_file'> M File Name: src/neurotorch/metrics/classification.py</div><div id='n_file'> N File Name: src/neurotorch/metrics/classification.py</div><div id='m_start'> M Start Line: 22</div><div id='m_end'> M End Line: 48</div><div id='n_start'> N Start Line: 68</div><div id='n_end'> N End Line: 89</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    :return: A dictionary in the format "output_name": Output.
+    
+    outputs = {}
+    <a id="change">for </a>i, <a id="change">output_dataset</a> in <a id="change">enumerate(</a>output_datasets<a id="change">):
+        </a>output_name = f"OUTPUT_{i}"
+        v1_datastore_path<a id="change"> = </a>f"azureml://datastores/{output_dataset.datastore}/paths/{output_dataset.name}"
+        &#47&#47 Note that there are alternative formats that the output path can take, such as:
+        &#47&#47 v2_data_asset_path = f"azureml:{output_dataset.name}@latest"
+        outputs[output_name]<a id="change"> = </a>Output(  &#47&#47 type: ignore
+            type=AssetTypes.URI_FOLDER,
+            path=v1_datastore_path,
+            mode=InputOutputModes.DIRECT,</code></pre><h3>After Change</h3><pre><code class='java'>
+    :return: A dictionary in the format "output_name": Output.
+    
+
+    output_assets = [get_data_asset_from_config(ml_client, output_dataset) <a id="change">for</a> output_dataset in output_datasets]
+    <a id="change">return </a><a id="change">{
+        &#47&#47 Data assets can be of type "uri_folder", "uri_file", "mltable", all of which are value types in Input
+        f"{V2_OUTPUT_PATTERN}{i}": Output(  &#47&#47 type: ignore
+            type=data_asset.type,  &#47&#47 type: ignore
+            path=data_asset.path,
+            mode=InputOutputModes.MOUNT,  &#47&#47 hard-coded to mount for now, as this is the only mode that doesn&quott break
+        ) for i, data_asset in enumerate(output_assets)
+    }</a>
+
+
+def submit_to_azure_if_needed(  &#47&#47 type: ignore
+        compute_cluster_name: str = "",</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/microsoft/hi-ml/commit/5155b5060f2ff4f9bad14a3cc6c8b5c08ce9fcc5#diff-ad3e5561c7427b2578d5051a72c3e9fb5757d7263f442a7d01f7f56915b7793dL730' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 100644826</div><div id='project'> Project Name: microsoft/hi-ml</div><div id='commit'> Commit Name: 5155b5060f2ff4f9bad14a3cc6c8b5c08ce9fcc5</div><div id='time'> Time: 2023-02-07</div><div id='author'> Author: 45258028+peterhessey@users.noreply.github.com</div><div id='file'> File Name: hi-ml-azure/src/health_azure/himl.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: create_v2_outputs(2)</div><div id='n_method'> N Method Name: create_v2_outputs(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: hi-ml-azure/src/health_azure/himl.py</div><div id='n_file'> N File Name: hi-ml-azure/src/health_azure/himl.py</div><div id='m_start'> M Start Line: 737</div><div id='m_end'> M End Line: 748</div><div id='n_start'> N Start Line: 700</div><div id='n_end'> N End Line: 717</div><BR>

@@ -1,0 +1,64 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+
+        while self.num_timesteps &lt; total_timesteps:
+
+            <a id="change">if callback is not None</a>:
+                &#47&#47 Only stop training if return value is False, not when it is None.
+                <a id="change">if callback(locals(), globals()) is False</a>:
+                    <a id="change">break</a>
+
+            rollout = self.collect_rollouts(self.env, n_episodes=self.n_episodes_rollout,
+                                            n_steps=self.train_freq, action_noise=self.action_noise,
+                                            deterministic=False, callback=None,</code></pre><h3>After Change</h3><pre><code class='java'>
+
+        timesteps_since_eval, episode_num, evaluations, obs, eval_env, callback = self._setup_learn(eval_env, callback)
+
+        <a id="change">callback.on_training_start(locals()</a>, <a id="change">globals()</a><a id="change">)</a>
+
+        while self.num_timesteps &lt; total_timesteps:
+
+            rollout = self.collect_rollouts(self.env, n_episodes=self.n_episodes_rollout,
+                                            n_steps=self.train_freq, action_noise=self.action_noise,
+                                            deterministic=False, callback=callback,
+                                            learning_starts=self.learning_starts,
+                                            num_timesteps=self.num_timesteps,
+                                            replay_buffer=self.replay_buffer,
+                                            obs=obs, episode_num=episode_num,
+                                            log_interval=log_interval)
+            &#47&#47 Unpack
+            episode_reward, episode_timesteps, n_episodes, obs, continue_training = rollout
+
+            if continue_training is False:
+                break
+
+            episode_num += n_episodes
+            self.num_timesteps += episode_timesteps
+            timesteps_since_eval += episode_timesteps
+            self._update_current_progress(self.num_timesteps, total_timesteps)
+
+            if self.num_timesteps &gt; 0 and self.num_timesteps &gt; self.learning_starts:
+
+                if self.use_sde:
+                    if self.sde_log_std_scheduler is not None:
+                        &#47&#47 Call the scheduler
+                        value = self.sde_log_std_scheduler(self._current_progress)
+                        self.actor.log_std.data = th.ones_like(self.actor.log_std) * value
+                    else:
+                        &#47&#47 On-policy gradient
+                        self.train_sde()
+
+                gradient_steps = self.gradient_steps if self.gradient_steps &gt; 0 else episode_timesteps
+                self.train(gradient_steps, batch_size=self.batch_size, policy_delay=self.policy_delay)
+
+            &#47&#47 Evaluate the agent
+            timesteps_since_eval = self._eval_policy(eval_freq, eval_env, n_eval_episodes,
+                                                     timesteps_since_eval, deterministic=True)
+
+        <a id="change">callback.on_training_end()</a>
+
+        return self
+
+    def get_opt_parameters(self):</code></pre>

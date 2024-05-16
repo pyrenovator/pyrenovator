@@ -1,0 +1,74 @@
+<html><h3>Pattern ID :4392
+</h3><img src='16174580.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        final_target_logit = torch.where(
+            target_logit &gt; self.th, cos_theta_m, target_logit - self.mm
+        )
+        if <a id="change">cfg["USE_AMP"] == True and cfg["OPT_LEVEL"] == "O1"</a>:
+            final_target_logit = final_target_logit.half()
+        cos_theta.scatter_(1, label.view(-1, 1).long(), final_target_logit)
+        output = cos_theta * self.s</code></pre><h3>After Change</h3><pre><code class='java'>
+        is_half = cos_theta.dtype == torch.float16
+
+        cos_theta_m = torch.where(
+            cos_theta &gt; self.min_cos_theta, cos_theta_m, <a id="change">cos_theta.float()</a> - self.m_am,
+        )
+        if is_half:
+            cos_theta_m = cos_theta_m.half()
+        index = torch.zeros_like(cos_theta)
+        index.scatter_(1, label.data.view(-1, 1), 1)
+        index = index.byte().bool()
+        output = cos_theta * 1.0
+        output[index]<a id="change"> = </a>cos_theta_m[index]
+        output<a id="change"> *= </a>self.s
+        return output
+
+</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 4</div><BR><div id='size'>Non-data size: 6</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/cavalleria/cavaface/commit/98a21048f5dce435a6639a288dafc4c6be61be05#diff-e54d97a982dbe26c94a83bf3dd7e2d279a6049044331caf1140127bc9afbb225L67' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 16174580</div><div id='project'> Project Name: cavalleria/cavaface</div><div id='commit'> Commit Name: 98a21048f5dce435a6639a288dafc4c6be61be05</div><div id='time'> Time: 2021-08-25</div><div id='author'> Author: 605370459@qq.com</div><div id='file'> File Name: head/metrics.py</div><div id='m_class'> M Class Name: ArcFace</div><div id='n_method'> N Class Name: ArcFace</div><div id='m_method'> M Method Name: forward(3)</div><div id='n_method'> N Method Name: forward(3)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: head/metrics.py</div><div id='n_file'> N File Name: head/metrics.py</div><div id='m_start'> M Start Line: 81</div><div id='m_end'> M End Line: 103</div><div id='n_start'> N Start Line: 67</div><div id='n_end'> N End Line: 86</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+
+            out = torch.cat((out, sample), dim=-1)
+
+            if <a id="change">eos_token is not None and (sample == eos_token).all()</a>:
+                break
+
+        out = out[:, t:]</code></pre><h3>After Change</h3><pre><code class='java'>
+                if is_eos_token.any(dim = -1).all():
+                    &#47&#47 mask out everything after the eos tokens
+                    shifted_is_eos_tokens = F.pad(is_eos_tokens, (1, -1))
+                    mask<a id="change"> = </a><a id="change">shifted_is_eos_tokens.float()</a>.cumsum(dim = -1) &gt;= 1
+                    out<a id="change"> = </a>out.masked_fill(mask, self.pad_value)
+                    break
+
+        out = out[:, t:]</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lucidrains/h-transformer-1d/commit/e3cb1afee7a1c8895180d89aa3a9c51ef42c8d3a#diff-0f303296ed562e372011921aeac491b11b749bd83b2b0709c95e628de17507a6L36' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 16174566</div><div id='project'> Project Name: lucidrains/h-transformer-1d</div><div id='commit'> Commit Name: e3cb1afee7a1c8895180d89aa3a9c51ef42c8d3a</div><div id='time'> Time: 2021-08-08</div><div id='author'> Author: lucidrains@gmail.com</div><div id='file'> File Name: h_transformer_1d/autoregressive_wrapper.py</div><div id='m_class'> M Class Name: AutoregressiveWrapper</div><div id='n_method'> N Class Name: AutoregressiveWrapper</div><div id='m_method'> M Method Name: generate(7)</div><div id='n_method'> N Method Name: generate(7)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: h_transformer_1d/autoregressive_wrapper.py</div><div id='n_file'> N File Name: h_transformer_1d/autoregressive_wrapper.py</div><div id='m_start'> M Start Line: 55</div><div id='m_end'> M End Line: 60</div><div id='n_start'> N Start Line: 60</div><div id='n_end'> N End Line: 72</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            return 0
+    
+    def is_valid_crop(self, ds_item_dict):
+        if <a id="change">ds_item_dict[&quotclass_freq&quot][0] == 1 and ds_item_dict[&quotclass_freq&quot][1] == 0 and ds_item_dict[&quotclass_freq&quot][2] == 0</a>:
+            return False
+        return True
+    </code></pre><h3>After Change</h3><pre><code class='java'>
+            return 0
+    
+    def is_valid_crop(self, ds_item_dict):
+        gt_polygons_mask<a id="change"> = </a><a id="change">(0 &lt; ds_item_dict["gt_polygons_image"]).float()</a>
+        background_freq = 1 - torch.sum(ds_item_dict["class_freq"], dim=0)
+        pixel_class_freq<a id="change"> = </a>gt_polygons_mask * ds_item_dict["class_freq"][ :, None, None] + \
+                        (1 - gt_polygons_mask) * background_freq[None, None, None]
+        if pixel_class_freq.min() == 0 or (&quotsizes&quot in ds_item_dict and ds_item_dict[&quotsizes&quot].min() == 0):
+            return False</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/dsgoficial/pytorch_segmentation_models_trainer/commit/39ff21b3d7e72f48b4ea42597d381d294b60bf82#diff-5841c5a37ba77e7de4c571799ab3f96ec2329f0afd64ded5072266ed107028faL191' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 16174576</div><div id='project'> Project Name: dsgoficial/pytorch_segmentation_models_trainer</div><div id='commit'> Commit Name: 39ff21b3d7e72f48b4ea42597d381d294b60bf82</div><div id='time'> Time: 2021-06-24</div><div id='author'> Author: philipeborba@gmail.com</div><div id='file'> File Name: pytorch_segmentation_models_trainer/dataset_loader/dataset.py</div><div id='m_class'> M Class Name: FrameFieldSegmentationDataset</div><div id='n_method'> N Class Name: FrameFieldSegmentationDataset</div><div id='m_method'> M Method Name: is_valid_crop(2)</div><div id='n_method'> N Method Name: is_valid_crop(2)</div><div id='m_parent_class'> M Parent Class: SegmentationDataset</div><div id='n_parent_class'> N Parent Class: SegmentationDataset</div><div id='m_file'> M File Name: pytorch_segmentation_models_trainer/dataset_loader/dataset.py</div><div id='n_file'> N File Name: pytorch_segmentation_models_trainer/dataset_loader/dataset.py</div><div id='m_start'> M Start Line: 192</div><div id='m_end'> M End Line: 192</div><div id='n_start'> N Start Line: 192</div><div id='n_end'> N End Line: 196</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            out = torch.cat((out, sample), dim=-1)
+            mask = F.pad(mask, (0, 1), value=True)
+
+            if <a id="change">eos_token is not None and (sample == eos_token).all()</a>:
+                break
+
+        out = out[:, t:]</code></pre><h3>After Change</h3><pre><code class='java'>
+                if is_eos_token.any(dim = -1).all():
+                    &#47&#47 mask out everything after the eos tokens
+                    shifted_is_eos_tokens = F.pad(is_eos_tokens, (1, -1))
+                    mask<a id="change"> = </a><a id="change">shifted_is_eos_tokens.float()</a>.cumsum(dim = -1) &gt;= 1
+                    out<a id="change"> = </a>out.masked_fill(mask, self.pad_value)
+                    break
+
+        out = out[:, t:]</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lucidrains/x-transformers/commit/b32913eeb4fe332ee366e455f7214fc08c9a2aa6#diff-b70a3173d353a448f8f499d8b685672d9bccac7b78bc1d36b77f84afe33be694L45' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 16174572</div><div id='project'> Project Name: lucidrains/x-transformers</div><div id='commit'> Commit Name: b32913eeb4fe332ee366e455f7214fc08c9a2aa6</div><div id='time'> Time: 2021-08-10</div><div id='author'> Author: lucidrains@gmail.com</div><div id='file'> File Name: x_transformers/autoregressive_wrapper.py</div><div id='m_class'> M Class Name: AutoregressiveWrapper</div><div id='n_method'> N Class Name: AutoregressiveWrapper</div><div id='m_method'> M Method Name: generate(7)</div><div id='n_method'> N Method Name: generate(7)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: x_transformers/autoregressive_wrapper.py</div><div id='n_file'> N File Name: x_transformers/autoregressive_wrapper.py</div><div id='m_start'> M Start Line: 75</div><div id='m_end'> M End Line: 81</div><div id='n_start'> N Start Line: 80</div><div id='n_end'> N End Line: 93</div><BR>

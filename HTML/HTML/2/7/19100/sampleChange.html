@@ -1,0 +1,24 @@
+<link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        image_embed_dim = self.image_embed_dim
+
+        text_cond = self.get_text_cond(text)
+        <a id="change">return </a>self.p_sample_loop((batch_size, image_embed_dim), text_cond = text_cond)
+
+    def q_sample(self, x_start, t, noise=None):
+        noise = default(noise, lambda: torch.randn_like(x_start))</code></pre><h3>After Change</h3><pre><code class='java'>
+        text_embeds = rearrange(text_embeds, &quot(b r) d -&gt; b r d&quot, r = num_samples_per_batch)
+        image_embeds = rearrange(image_embeds, &quot(b r) d -&gt; b r d&quot, r = num_samples_per_batch)
+
+        text_image_sims<a id="change"> = </a>einsum(&quotb r d, b r d -&gt; b r&quot)
+        top_sim_indices<a id="change"> = </a>text_image_sims.topk(k = 1).indices
+
+        top_sim_indices = repeat(top_sim_indices, &quotb 1 -&gt; b d&quot, d = image_embed_dim)
+
+        top_image_embeds<a id="change"> = </a><a id="change">image_embeds.gather(1</a>, top_sim_indices<a id="change">)</a>
+        <a id="change">return </a>top_image_embeds
+
+    def q_sample(self, x_start, t, noise=None):
+        noise = default(noise, lambda: torch.randn_like(x_start))</code></pre>

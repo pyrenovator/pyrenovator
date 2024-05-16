@@ -1,0 +1,167 @@
+<html><h3>Pattern ID :20378
+</h3><img src='66036267.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+        self.diffusion_prior.load_state_dict(loaded_obj[&quotmodel&quot], strict = strict)
+        self.step.copy_(torch.ones_like(self.step) * loaded_obj[&quotstep&quot])
+
+        <a id="change">if </a>only_model:
+            return loaded_obj
+
+        self.scaler.load_state_dict(loaded_obj[&quotscaler&quot])</code></pre><h3>After Change</h3><pre><code class='java'>
+        if overwrite_lr:
+            new_lr = self.optim_kwargs["lr"]
+
+            <a id="change">self.print(</a>f"Overriding LR to be {new_lr}"<a id="change">)</a>
+
+            for group in self.optimizer.param_groups:
+                group["lr"] = new_lr
+
+        if self.use_ema:
+            assert &quotema&quot in loaded_obj
+            self.ema_diffusion_prior.load_state_dict(loaded_obj[&quotema&quot], strict = strict)
+            &#47&#47 below not be necessary, but I had a suspicion that this wasn&quott being loaded correctly
+            self.ema_diffusion_prior.ema_model.load_state_dict(loaded_obj["ema_model"])
+
+        &#47&#47 sync and inform
+        self.wait_for_everyone()
+        <a id="change">self.print(f"Loaded model"</a><a id="change">)</a>
+
+        return loaded_obj
+
+    &#47&#47 model functionality</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 3</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/lucidrains/dalle2-pytorch/commit/fe19b508ca57dfddd2743e955970b0392d177e88#diff-617450527162fa367141dbf45e8b201673573479820af0ffc56ba93b7f70947fL364' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 66036267</div><div id='project'> Project Name: lucidrains/dalle2-pytorch</div><div id='commit'> Commit Name: fe19b508ca57dfddd2743e955970b0392d177e88</div><div id='time'> Time: 2022-06-19</div><div id='author'> Author: 51308183+nousr@users.noreply.github.com</div><div id='file'> File Name: dalle2_pytorch/trainer.py</div><div id='m_class'> M Class Name: DiffusionPriorTrainer</div><div id='n_method'> N Class Name: DiffusionPriorTrainer</div><div id='m_method'> M Method Name: load(4)</div><div id='n_method'> N Method Name: load(4)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: dalle2_pytorch/trainer.py</div><div id='n_file'> N File Name: dalle2_pytorch/trainer.py</div><div id='m_start'> M Start Line: 364</div><div id='m_end'> M End Line: 375</div><div id='n_start'> N Start Line: 450</div><div id='n_end'> N End Line: 478</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    
+def initialize_training(config):
+    &#47&#47 Create the save path
+    <a id="change">if </a>"cuda" in config.train.device:
+        assert torch.cuda.is_available(), "CUDA is not available"
+    device = torch.device(config.train.device)
+    torch.cuda.set_device(device)</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    &#47&#47 Set up accelerator for configurable distributed training
+    ddp_kwargs = DistributedDataParallelKwargs(find_unused_parameters=True)
+    <a id="change">accelerator</a> = Accelerator(kwargs_handlers=[ddp_kwargs])
+    
+    &#47&#47 Set up data
+    all_shards = list(range(config.data.start_shard, config.data.end_shard + 1))
+    world_size = accelerator.num_processes
+    rank = accelerator.process_index
+    shards_per_process = len(all_shards) // world_size
+    assert shards_per_process &gt; 0, "Not enough shards to split evenly"
+    my_shards = all_shards[rank * shards_per_process: (rank + 1) * shards_per_process]
+    dataloaders = create_dataloaders (
+        available_shards=my_shards,
+        img_preproc = config.data.img_preproc,
+        train_prop = config.data.splits.train,
+        val_prop = config.data.splits.val,
+        test_prop = config.data.splits.test,
+        n_sample_images=config.train.n_sample_images,
+        **config.data.dict(),
+        rank = rank,
+        seed = config.seed,
+    )
+
+    &#47&#47 Create the decoder model and print basic info
+    decoder = config.decoder.create()
+    num_parameters = sum(p.numel() for p in decoder.parameters())
+
+    &#47&#47 Create and initialize the tracker if we are the master
+    tracker = create_tracker(accelerator, config, config_path) if rank == 0 else create_tracker(accelerator, config, config_path, tracker_type="dummy")
+
+    accelerator.print(print_ribbon("Loaded Config", repeat=40))
+    <a id="change">accelerator.print(f"Running training with {accelerator.num_processes} processes and {accelerator.distributed_type} distributed training"</a><a id="change">)</a>
+    <a id="change">accelerator.print(</a>f"Number of parameters: {num_parameters}"<a id="change">)</a>
+    train(dataloaders, decoder, accelerator,
+        tracker=tracker,
+        inference_device=accelerator.device,
+        load_config=config.load,</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lucidrains/dalle2-pytorch/commit/58892135d9bcf117921c885dda161c0b67452096#diff-1960fa4032117c7620576aea3bf67f017dd87a2077278af4c2f17abf549114b0L408' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 66036266</div><div id='project'> Project Name: lucidrains/dalle2-pytorch</div><div id='commit'> Commit Name: 58892135d9bcf117921c885dda161c0b67452096</div><div id='time'> Time: 2022-06-19</div><div id='author'> Author: aidan.dempster@gmail.com</div><div id='file'> File Name: train_decoder.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: initialize_training(2)</div><div id='n_method'> N Method Name: initialize_training(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: train_decoder.py</div><div id='n_file'> N File Name: train_decoder.py</div><div id='m_start'> M Start Line: 410</div><div id='m_end'> M End Line: 431</div><div id='n_start'> N Start Line: 486</div><div id='n_end'> N End Line: 523</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+            param_str = []
+            for k, v in sorted(vars(args).items()):
+                j = f&quot{k.replace("_", "-"): &gt;30.30} = {str(v):30.30}&quot
+                <a id="change">if </a>default_args.get(k, None) == v:
+                    param_str.append(&quot   &quot + j)
+                else:
+                    param_str.append(&quot🔧️ &quot + colored(j, &quotblue&quot, &quoton_yellow&quot))</code></pre><h3>After Change</h3><pre><code class='java'>
+def _get_run_args(print_args: bool = True):
+    from jina.parsers import get_main_parser
+
+    <a id="change">console</a> = get_rich_console()
+
+    silent_print = {&quothelp&quot, &quothub&quot}
+
+    parser = get_main_parser()
+    if len(sys.argv) &gt; 1:
+        from argparse import _StoreAction, _StoreTrueAction
+
+        args, unknown = parser.parse_known_args()
+
+        if unknown:
+            from jina.helper import warn_unknown_args
+
+            unknown = list(filter(lambda x: x.startswith(&quot--&quot), unknown))
+            warn_unknown_args(unknown)
+
+        if args.cli not in silent_print and print_args:
+            from jina import __resources_path__
+
+            p = parser._actions[-1].choices[sys.argv[1]]
+            default_args = {
+                a.dest: a.default
+                for a in p._actions
+                if isinstance(a, (_StoreAction, _StoreTrueAction))
+            }
+
+            with open(os.path.join(__resources_path__, &quotjina.logo&quot)) as fp:
+                logo_str = fp.read()
+
+            param_str = Table(title=None, box=box.ROUNDED, highlight=True)
+            param_str.add_column(&quot&quot)
+            param_str.add_column(&quotParameters&quot, justify=&quotright&quot)
+            param_str.add_column(&quotValue&quot, justify=&quotleft&quot)
+
+            for k, v in sorted(vars(args).items()):
+
+                sign = &quot &quot if default_args.get(k, None) == v else &quot🔧️&quot
+                param = f&quot{k.replace("_", "-"): &gt;30.30}&quot
+                value = f&quot=  {str(v):30.30}&quot
+
+                style = None if default_args.get(k, None) == v else &quotblue on yellow&quot
+
+                param_str.add_row(sign, param, value, style=style)
+
+            print(f&quot\n{logo_str}\n&quot)
+            <a id="change">console.print(f&quot▶️  {" ".join(sys.argv)}&quot</a><a id="change">)</a>
+            <a id="change">console.print(</a>param_str<a id="change">)</a>
+        return args
+    else:
+        parser.print_help()
+        exit()</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/jina-ai/jina/commit/5398029280fe3f4aedd8a8b7058f97fbec353d03#diff-14c6359e27f50470f636a43aeafed472f9c51b203b5ee84e1384086c2bef9472L5' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 66036264</div><div id='project'> Project Name: jina-ai/jina</div><div id='commit'> Commit Name: 5398029280fe3f4aedd8a8b7058f97fbec353d03</div><div id='time'> Time: 2022-03-11</div><div id='author'> Author: 55492238+samsja@users.noreply.github.com</div><div id='file'> File Name: cli/__init__.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: _get_run_args(1)</div><div id='n_method'> N Method Name: _get_run_args(1)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: cli/__init__.py</div><div id='n_file'> N File Name: cli/__init__.py</div><div id='m_start'> M Start Line: 35</div><div id='m_end'> M End Line: 42</div><div id='n_start'> N Start Line: 13</div><div id='n_end'> N End Line: 59</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+        self.diffusion_prior.load_state_dict(loaded_obj[&quotmodel&quot], strict = strict)
+        self.step.copy_(torch.ones_like(self.step) * loaded_obj[&quotstep&quot])
+
+        <a id="change">if </a>only_model:
+            return loaded_obj
+
+        self.scaler.load_state_dict(loaded_obj[&quotscaler&quot])</code></pre><h3>After Change</h3><pre><code class='java'>
+        if overwrite_lr:
+            new_lr = self.optim_kwargs["lr"]
+
+            <a id="change">self.print(f"Overriding LR to be {new_lr}"</a><a id="change">)</a>
+
+            for group in self.optimizer.param_groups:
+                group["lr"] = new_lr
+
+        if self.use_ema:
+            assert &quotema&quot in loaded_obj
+            self.ema_diffusion_prior.load_state_dict(loaded_obj[&quotema&quot], strict = strict)
+            &#47&#47 below not be necessary, but I had a suspicion that this wasn&quott being loaded correctly
+            self.ema_diffusion_prior.ema_model.load_state_dict(loaded_obj["ema_model"])
+
+        &#47&#47 sync and inform
+        self.wait_for_everyone()
+        <a id="change">self.print(</a>f"Loaded model"<a id="change">)</a>
+
+        return loaded_obj
+
+    &#47&#47 model functionality</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/lucidrains/dalle2-pytorch/commit/fe19b508ca57dfddd2743e955970b0392d177e88#diff-617450527162fa367141dbf45e8b201673573479820af0ffc56ba93b7f70947fL360' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 66036263</div><div id='project'> Project Name: lucidrains/dalle2-pytorch</div><div id='commit'> Commit Name: fe19b508ca57dfddd2743e955970b0392d177e88</div><div id='time'> Time: 2022-06-19</div><div id='author'> Author: 51308183+nousr@users.noreply.github.com</div><div id='file'> File Name: dalle2_pytorch/trainer.py</div><div id='m_class'> M Class Name: DiffusionPriorTrainer</div><div id='n_method'> N Class Name: DiffusionPriorTrainer</div><div id='m_method'> M Method Name: load(4)</div><div id='n_method'> N Method Name: load(4)</div><div id='m_parent_class'> M Parent Class: nn.Module</div><div id='n_parent_class'> N Parent Class: nn.Module</div><div id='m_file'> M File Name: dalle2_pytorch/trainer.py</div><div id='n_file'> N File Name: dalle2_pytorch/trainer.py</div><div id='m_start'> M Start Line: 364</div><div id='m_end'> M End Line: 375</div><div id='n_start'> N Start Line: 450</div><div id='n_end'> N End Line: 478</div><BR>

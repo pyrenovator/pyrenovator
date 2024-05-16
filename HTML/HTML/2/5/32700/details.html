@@ -1,0 +1,156 @@
+<html><h3>Pattern ID :32700
+</h3><img src='95093674.png'><BR><BR><BR><link rel="stylesheet" href="../../../../default.css">
+<script src="../../../../highlight.pack.js"></script> 
+<script>hljs.initHighlightingOnLoad();</script>
+<html><h3></h3><h3>Before Change</h3><pre><code class='java'>
+                best_metric, best_epoch = saver.save_checkpoint({
+                    &quotepoch&quot: epoch + 1,
+                    &quotarch&quot: args.model,
+                    &quotstate_dict&quot: <a id="change">model.state_dict()</a>,
+                    &quotoptimizer&quot: optimizer.state_dict(),
+                    &quotargs&quot: args,
+                    },</code></pre><h3>After Change</h3><pre><code class='java'>
+
+    if args.distributed:
+        model = DDP(model, delay_allreduce=True)
+        <a id="change">if </a><a id="change">model_ema is not None and not args.model_ema_force_cpu</a>:
+            &#47&#47 must also distribute EMA model to allow validation
+            model_ema.ema = DDP(model_ema.ema, delay_allreduce=True)
+            model_ema.ema_has_module = True</code></pre><div id='inPattern'>In pattern: SUPERPATTERN</div><BR><div id='frequency'>Frequency: 3</div><BR><div id='size'>Non-data size: 4</div><BR><h3>Instances</h3><BR><div id='link'><a href='https://github.com/feng-lab/pytorch-image-models/commit/9bcd65181badec95213b47edbf3a96bc12f8e39b#diff-ed183d67207df065a11e1289f19d34cc2abbc5448dea952683cfe9728c342b95L122' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 95093674</div><div id='project'> Project Name: feng-lab/pytorch-image-models</div><div id='commit'> Commit Name: 9bcd65181badec95213b47edbf3a96bc12f8e39b</div><div id='time'> Time: 2019-06-07</div><div id='author'> Author: rwightman@gmail.com</div><div id='file'> File Name: train.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(0)</div><div id='n_method'> N Method Name: main(0)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: train.py</div><div id='n_file'> N File Name: train.py</div><div id='m_start'> M Start Line: 122</div><div id='m_end'> M End Line: 309</div><div id='n_start'> N Start Line: 131</div><div id='n_end'> N End Line: 332</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+                    &quotepoch&quot: epoch + 1,
+                    &quotarch&quot: args.model,
+                    &quotstate_dict&quot: model.state_dict(),
+                    &quotoptimizer&quot: <a id="change">optimizer.state_dict()</a>,
+                    &quotargs&quot: args,
+                    },
+                    epoch=epoch + 1,</code></pre><h3>After Change</h3><pre><code class='java'>
+    args = parser.parse_args()
+
+    args.prefetcher = not args.no_prefetcher
+    <a id="change">args.distributed</a> = False
+    if &quotWORLD_SIZE&quot in os.environ:
+        args.distributed = int(os.environ[&quotWORLD_SIZE&quot]) &gt; 1
+        if args.distributed and args.num_gpu &gt; 1:
+            print(&quotUsing more than one GPU per process in distributed mode is not allowed. Setting num_gpu to 1.&quot)
+            args.num_gpu = 1
+
+    args.device = &quotcuda:0&quot
+    args.world_size = 1
+    args.rank = 0  &#47&#47 global rank
+    if args.distributed:
+        args.num_gpu = 1
+        args.device = &quotcuda:%d&quot % args.local_rank
+        torch.cuda.set_device(args.local_rank)
+        torch.distributed.init_process_group(
+            backend=&quotnccl&quot, init_method=&quotenv://&quot)
+        args.world_size = torch.distributed.get_world_size()
+        args.rank = torch.distributed.get_rank()
+    assert args.rank &gt;= 0
+
+    if args.distributed:
+        print(&quotTraining in distributed mode with multiple processes, 1 GPU per process. Process %d, total %d.&quot
+              % (args.rank, args.world_size))
+    else:
+        print(&quotTraining with a single process on %d GPUs.&quot % args.num_gpu)
+
+    torch.manual_seed(args.seed + args.rank)
+
+    output_dir = &quot&quot
+    if args.local_rank == 0:
+        output_base = args.output if args.output else &quot./output&quot
+        exp_name = &quot-&quot.join([
+            datetime.now().strftime("%Y%m%d-%H%M%S"),
+            args.model,
+            str(args.img_size)])
+        output_dir = get_outdir(output_base, &quottrain&quot, exp_name)
+
+    model = create_model(
+        args.model,
+        pretrained=args.pretrained,
+        num_classes=args.num_classes,
+        drop_rate=args.drop,
+        global_pool=args.gp,
+        bn_tf=args.bn_tf,
+        bn_momentum=args.bn_momentum,
+        bn_eps=args.bn_eps,
+        checkpoint_path=args.initial_checkpoint)
+
+    print(&quotModel %s created, param count: %d&quot %
+          (args.model, sum([m.numel() for m in model.parameters()])))
+
+    data_config = resolve_data_config(model, args, verbose=args.local_rank == 0)
+
+    &#47&#47 optionally resume from a checkpoint
+    start_epoch = 0
+    optimizer_state = None
+    if args.resume:
+        optimizer_state, start_epoch = resume_checkpoint(model, args.resume, args.start_epoch)
+
+    if args.num_gpu &gt; 1:
+        if args.amp:
+            print(&quotWarning: AMP does not work well with nn.DataParallel, disabling. &quot
+                  &quotUse distributed mode for multi-GPU AMP.&quot)
+            args.amp = False
+        model = nn.DataParallel(model, device_ids=list(range(args.num_gpu))).cuda()
+    else:
+        if args.distributed and args.sync_bn and has_apex:
+            model = convert_syncbn_model(model)
+        model.cuda()
+
+    optimizer = create_optimizer(args, model)
+    if optimizer_state is not None:
+        optimizer.load_state_dict(optimizer_state)
+
+    if has_apex and args.amp:
+        model, optimizer = amp.initialize(model, optimizer, opt_level=&quotO1&quot)
+        use_amp = True
+        print(&quotAMP enabled&quot)
+    else:
+        use_amp = False
+        print(&quotAMP disabled&quot)
+
+    model_ema = None
+    if args.model_ema:
+        model_ema = ModelEma(
+            model,
+            decay=args.model_ema_decay,
+            device=&quotcpu&quot if args.model_ema_force_cpu else &quot&quot,
+            resume=args.resume)
+
+    if args.distributed:
+        model = DDP(model, delay_allreduce=True)
+        <a id="change">if </a><a id="change">model_ema is not None and not args.model_ema_force_cpu</a>:
+            &#47&#47 must also distribute EMA model to allow validation
+            model_ema.ema = DDP(model_ema.ema, delay_allreduce=True)
+            model_ema.ema_has_module = True</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/alvinwan/nbdt-pytorch-image-models/commit/9bcd65181badec95213b47edbf3a96bc12f8e39b#diff-ed183d67207df065a11e1289f19d34cc2abbc5448dea952683cfe9728c342b95L121' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 95093673</div><div id='project'> Project Name: alvinwan/nbdt-pytorch-image-models</div><div id='commit'> Commit Name: 9bcd65181badec95213b47edbf3a96bc12f8e39b</div><div id='time'> Time: 2019-06-07</div><div id='author'> Author: rwightman@gmail.com</div><div id='file'> File Name: train.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: main(0)</div><div id='n_method'> N Method Name: main(0)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: train.py</div><div id='n_file'> N File Name: train.py</div><div id='m_start'> M Start Line: 122</div><div id='m_end'> M End Line: 309</div><div id='n_start'> N Start Line: 131</div><div id='n_end'> N End Line: 332</div><BR>'><BR><BR><BR><h3>Before Change</h3><pre><code class='java'>
+    print("finished training in", training_time, "seconds")
+    if saved_model is not None:
+        os.makedirs(os.path.dirname(saved_model), exist_ok=True)
+        torch.save({"encoder_state_dict": <a id="change">encoder.state_dict()</a>,
+                    "losses": losses,
+                    "training_time": training_time},
+                   saved_model)</code></pre><h3>After Change</h3><pre><code class='java'>
+    &#47&#47 Train
+    optimizer = optim.Adam(encoder.parameters(), lr=myconfig.LEARNING_RATE)
+    print("Start training")
+    for <a id="change">step</a> in range(num_steps):
+        optimizer.zero_grad()
+
+        &#47&#47 Build batched input.
+        batch_input = feature_extraction.get_batched_triplet_input(
+            spk_to_utts, myconfig.BATCH_SIZE).to(myconfig.DEVICE)
+
+        &#47&#47 Compute loss.
+        batch_output = encoder(batch_input)[:, -1, :]
+        loss = get_triplet_loss_from_batch_output(
+            batch_output, myconfig.BATCH_SIZE)
+        loss.backward()
+        optimizer.step()
+        losses.append(loss.item())
+        print("step:", step, "loss:", loss.item())
+
+        <a id="change">if </a><a id="change">(saved_model is not None and
+                (step + 1) % myconfig.SAVE_MODEL_FREQUENCY == 0)</a>:
+            save_model(saved_model + "-" + str(step + 1),
+                       encoder, losses, start_time)
+</code></pre>'><BR><BR><BR><BR><div id='link'><a href='https://github.com/wq2012/speakerrecognitionfromscratch/commit/c8b771e4d235d50bb9a41369f90121e9504ae802#diff-3f06ab74d880d0cd6059092134ddab037fe075b5c00c3200779d5724334b0298L56' target='_blank'>Link</a></div><div id='fragmentid'> Fragment ID: 95093677</div><div id='project'> Project Name: wq2012/speakerrecognitionfromscratch</div><div id='commit'> Commit Name: c8b771e4d235d50bb9a41369f90121e9504ae802</div><div id='time'> Time: 2022-05-08</div><div id='author'> Author: quanw@google.com</div><div id='file'> File Name: neural_net.py</div><div id='m_class'> M Class Name: AnonimousClass</div><div id='n_method'> N Class Name: AnonimousClass</div><div id='m_method'> M Method Name: train_network(2)</div><div id='n_method'> N Method Name: train_network(2)</div><div id='m_parent_class'> M Parent Class: </div><div id='n_parent_class'> N Parent Class: </div><div id='m_file'> M File Name: neural_net.py</div><div id='n_file'> N File Name: neural_net.py</div><div id='m_start'> M Start Line: 58</div><div id='m_end'> M End Line: 89</div><div id='n_start'> N Start Line: 67</div><div id='n_end'> N End Line: 100</div><BR>
